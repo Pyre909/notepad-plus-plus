@@ -948,7 +948,7 @@ struct ScintillaViewParams
 	int _fontGrayscaleEnhancedContrast = -1; // 0-1000, in hundredths (100 = 1.0)
 	int _fontClearTypeLevel = -1;            // 0-100, in percent (0 = grayscale-like, 100 = full ClearType color)
 	int _fontPixelGeometry = -1;             // 0: flat, 1: RGB, 2: BGR
-	int _fontLightTextGamma = -1;            // 0: monitor's gamma, 1000-2200: gamma for light text (never below the base & monitor gamma)
+	int _fontLightTextGamma = -1;            // light text gamma: 0 at least the monitor's gamma (or fontGamma if set), 1000-2200 at least this gamma
 
 	bool isClearTypeAntialiasing() const {
 		return (_textAntialiasing == textAntialiasingClearType) || (_textAntialiasing == textAntialiasingClearTypeLessColor);

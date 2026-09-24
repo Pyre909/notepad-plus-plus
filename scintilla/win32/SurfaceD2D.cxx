@@ -533,33 +533,42 @@ void SurfaceD2D::D2DPenColourAlpha(ColourRGBA fore) noexcept {
 
 namespace {
 
-// N++: the parameters of the variant, or of the nearest existing variant, else the base parameters
-IDWriteRenderingParams1 *RenderingParamsVariant(const WriteRenderingParams &base,
-	const WriteRenderingParams (&variants)[renderingVariants], int variant) noexcept {
+// N++: the variant, or the nearest existing variant, else 0 for the base parameters
+int ExistingRenderingVariant(const WriteRenderingParams (&variants)[renderingVariants], int variant) noexcept {
 	for (const int v : { variant, variant & renderingVariantLight, variant & renderingVariantSmall }) {
 		if (v && variants[v]) {
-			return variants[v].Get();
+			return v;
 		}
 	}
-	return base.Get();
+	return 0;
 }
 
 }
 
 void SurfaceD2D::SetFontQuality(FontQuality extraFontFlag, int variant) {
-	if ((fontQuality != extraFontFlag || renderingVariant != variant) && renderingParams) {	// N++: variant
+	if (!renderingParams) {
+		return;
+	}
+	const D2D1_TEXT_ANTIALIAS_MODE aaMode = DWriteMapFontQuality(extraFontFlag);
+	const bool clearType = aaMode == D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE && renderingParams->customRenderingParams;
+	// N++: the variant actually used so text using the same parameters doesn't set them again
+	if (aaMode == D2D1_TEXT_ANTIALIAS_MODE_ALIASED) {
+		variant = 0;
+	} else {
+		variant = ExistingRenderingVariant(clearType ? renderingParams->customVariants : renderingParams->defaultVariants, variant);
+	}
+	if (fontQuality != extraFontFlag || renderingVariant != variant) {	// N++: variant
 		fontQuality = extraFontFlag;
 		renderingVariant = variant;	// N++
-		const D2D1_TEXT_ANTIALIAS_MODE aaMode = DWriteMapFontQuality(extraFontFlag);
-		if (aaMode == D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE && renderingParams->customRenderingParams) {
-			pRenderTarget->SetTextRenderingParams(RenderingParamsVariant(
-				renderingParams->customRenderingParams, renderingParams->customVariants, variant));	// N++: variant
+		if (clearType) {
+			pRenderTarget->SetTextRenderingParams(variant ?
+				renderingParams->customVariants[variant].Get() : renderingParams->customRenderingParams.Get());	// N++: variant
 		} else if (aaMode == D2D1_TEXT_ANTIALIAS_MODE_ALIASED && renderingParams->monitorRenderingParams) {
 			// N++: user overrides are not applied to aliased text as their rendering mode is incompatible with it
 			pRenderTarget->SetTextRenderingParams(renderingParams->monitorRenderingParams.Get());
 		} else if (renderingParams->defaultRenderingParams) {
-			pRenderTarget->SetTextRenderingParams(RenderingParamsVariant(
-				renderingParams->defaultRenderingParams, renderingParams->defaultVariants, variant));	// N++: variant
+			pRenderTarget->SetTextRenderingParams(variant ?
+				renderingParams->defaultVariants[variant].Get() : renderingParams->defaultRenderingParams.Get());	// N++: variant
 		}
 		pRenderTarget->SetTextAntialiasMode(aaMode);
 	}
@@ -1356,12 +1365,12 @@ void SurfaceD2D::DrawTextCommon(PRectangle rc, const Font *font_, XYPOSITION yba
 		const int codePageDraw = codePageOverride ? codePageOverride : pfm->CodePageText(mode.codePage);
 		const TextWide tbuf(text, codePageDraw);
 
-		// N++: text rendering parameters variant from the text colour lightness (DirectWrite's weights:
-		// gamma correction makes text heavier above 0.5 and lighter below) and the em size in pixels
-		constexpr FLOAT lightTextMinLightness = 0.5f;
+		// N++: text rendering parameters variant from the text colour intensity (as weighted by DirectWrite's
+		// grayscale gamma correction which makes text heavier above 0.5 and lighter below) and the em size in pixels
+		constexpr FLOAT lightTextMinIntensity = 0.5f;
 		constexpr FLOAT smallTextMaxPixels = 20.0f;
-		const FLOAT lightness = 0.30f * penColour.r + 0.59f * penColour.g + 0.11f * penColour.b;
-		const int variant = ((lightness >= lightTextMinLightness) ? renderingVariantLight : 0) |
+		const FLOAT intensity = 0.25f * penColour.r + 0.5f * penColour.g + 0.25f * penColour.b;
+		const int variant = ((intensity >= lightTextMinIntensity) ? renderingVariantLight : 0) |
 			((pfm->emSize * static_cast<FLOAT>(deviceScaleFactor) <= smallTextMaxPixels) ? renderingVariantSmall : 0);
 		SetFontQuality(pfm->extraFontFlag, variant);
 		if (fuOptions & ETO_CLIPPED) {

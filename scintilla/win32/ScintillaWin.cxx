@@ -260,7 +260,7 @@ constexpr bool ValidFontRenderingValue(uptr_t parameter, sptr_t value) noexcept 
 		return value == renderingModeDefault || value == renderingModeGdiClassic || value == renderingModeGdiNatural ||
 			value == renderingModeNatural || value == renderingModeNaturalSymmetric || value == renderingModeAdaptive;
 	case fontRenderingLightTextGamma:
-		// 0: the monitor's gamma, else in thousandths
+		// 0: at least the monitor's gamma (or the overridden gamma), else at least this gamma in thousandths
 		return value == 0 || (value >= 1000 && value <= 2200);
 	default:
 		return false;
@@ -986,22 +986,26 @@ bool ScintillaWin::UpdateRenderingParams(bool force) noexcept {
 		if (customClearType) {
 			customClearTypeRenderingParams = OverriddenRenderingParams(monitorRenderingParams.Get(), clearTypeGamma, renderingMode);
 		}
-		// N++: light text is drawn with the highest of its base gamma, the monitor's gamma and the requested one
-		// as a higher gamma makes light text heavier; small text in the adaptive mode has no vertical antialiasing.
+		// N++: light text is drawn with the highest of its base gamma, the requested one and, unless the gamma
+		// is overridden, the monitor's one as a higher gamma makes light text heavier;
+		// small text in the adaptive mode has no vertical antialiasing.
 		const int lightTextGamma = fontRenderingOverrides[fontRenderingLightTextGamma];
-		const auto variantGamma = [=](FLOAT baseGamma, bool light) noexcept {
-			return light ? std::max({ baseGamma, monitorGamma, static_cast<FLOAT>(lightTextGamma) / 1000.0f }) : baseGamma;
+		const FLOAT lightTextMinGamma = std::max((gammaOverride == fontRenderingDefault) ? monitorGamma : 0.0f,
+			static_cast<FLOAT>(lightTextGamma) / 1000.0f);
+		const auto variantGamma = [lightTextMinGamma](FLOAT baseGamma, bool lightText) noexcept {
+			return lightText ? std::max(baseGamma, lightTextMinGamma) : baseGamma;
 		};
 		for (int variant = 1; variant < renderingVariants; variant++) {
-			const bool light = variant & renderingVariantLight;
-			const bool small = variant & renderingVariantSmall;
-			if ((light && lightTextGamma == fontRenderingDefault) || (small && renderingModeOverride != renderingModeAdaptive)) {
+			// not named small as rpcndr.h defines it as a macro
+			const bool lightText = variant & renderingVariantLight;
+			const bool smallText = variant & renderingVariantSmall;
+			if ((lightText && lightTextGamma == fontRenderingDefault) || (smallText && renderingModeOverride != renderingModeAdaptive)) {
 				continue;
 			}
-			const DWRITE_RENDERING_MODE variantMode = small ? DWRITE_RENDERING_MODE_NATURAL : renderingMode;
-			defaultVariants[variant] = OverriddenRenderingParams(monitorRenderingParams.Get(), variantGamma(defaultGamma, light), variantMode);
+			const DWRITE_RENDERING_MODE variantMode = smallText ? DWRITE_RENDERING_MODE_NATURAL : renderingMode;
+			defaultVariants[variant] = OverriddenRenderingParams(monitorRenderingParams.Get(), variantGamma(defaultGamma, lightText), variantMode);
 			if (customClearTypeRenderingParams) {
-				customVariants[variant] = OverriddenRenderingParams(monitorRenderingParams.Get(), variantGamma(clearTypeGamma, light), variantMode);
+				customVariants[variant] = OverriddenRenderingParams(monitorRenderingParams.Get(), variantGamma(clearTypeGamma, lightText), variantMode);
 			}
 		}
 	}
