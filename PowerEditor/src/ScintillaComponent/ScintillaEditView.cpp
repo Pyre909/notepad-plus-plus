@@ -566,7 +566,9 @@ void ScintillaEditView::applyTextRenderingSettings() const
 			break;
 
 		default: // textAntialiasingFollowWindows
-			fontQuality = getSystemFontQuality();
+			// GDI's default quality already follows the system setting (and Xft/fontconfig under WINE),
+			// DirectWrite's default antialiasing doesn't reliably, so it gets the system setting explicitly
+			fontQuality = (execute(SCI_GETTECHNOLOGY) == SC_TECHNOLOGY_DEFAULT) ? SC_EFF_QUALITY_DEFAULT : getSystemFontQuality();
 	}
 	execute(SCI_SETFONTQUALITY, fontQuality);
 

@@ -646,6 +646,7 @@ class ScintillaWin :
 	bool UpdateRenderingParams(bool force) noexcept;
 	[[nodiscard]] bool FontRenderingOverridden() const noexcept;	// N++
 	[[nodiscard]] WriteRenderingParams OverriddenRenderingParams(IDWriteRenderingParams1 *monitorParams, FLOAT gamma) const noexcept;	// N++
+	bool UpdateMeasuringMode() noexcept;	// N++
 	HRESULT Create3D() noexcept;
 	void CreateRenderTarget();
 	HRESULT SetBackBuffer(HWND hwnd, IDXGISwapChain1 *pSwapChain);
@@ -2354,6 +2355,30 @@ sptr_t ScintillaWin::IdleMessage(unsigned int iMessage, uptr_t wParam, sptr_t lP
 	return 0;
 }
 
+#if defined(USE_D2D)
+// N++: GDI rendering modes also measure text like GDI so glyphs are on whole pixels when measured and drawn.
+// GDI-compatible layouts use 1 pixel per DIP, so not while GDI scaling renders at a larger integral scale.
+// Returns whether the measuring changed: fonts must then be realised again and cached layouts dropped.
+bool ScintillaWin::UpdateMeasuringMode() noexcept {
+	int measuring = 0;
+	if (deviceScaleFactor == 1.f) {
+		const int renderingMode = fontRenderingOverrides[fontRenderingRenderingMode];
+		if (renderingMode == renderingModeGdiClassic) {
+			measuring = fontQualityMeasuringGdiClassic;
+		} else if (renderingMode == renderingModeGdiNatural) {
+			measuring = fontQualityMeasuringGdiNatural;
+		}
+	}
+	const FontQuality extraFontFlag = static_cast<FontQuality>(
+		(static_cast<int>(vs.extraFontFlag) & ~fontQualityMeasuringMask) | measuring);
+	if (extraFontFlag == vs.extraFontFlag) {
+		return false;
+	}
+	vs.extraFontFlag = extraFontFlag;
+	return true;
+}
+#endif
+
 // N++: overrides are kept whatever the technology and take effect while DirectWrite is used
 void ScintillaWin::SetFontRenderingParameter(uptr_t parameter, sptr_t value) {
 	if ((parameter >= fontRenderingOverrides.size()) || !ValidFontRenderingValue(parameter, value) ||
@@ -2362,24 +2387,10 @@ void ScintillaWin::SetFontRenderingParameter(uptr_t parameter, sptr_t value) {
 	}
 	fontRenderingOverrides[parameter] = static_cast<int>(value);
 #if defined(USE_D2D)
-	bool measuringChanged = false;
-	if (parameter == fontRenderingRenderingMode) {
-		// GDI rendering modes also measure text like GDI so glyphs are on whole pixels when measured and drawn
-		int measuring = 0;
-		if (value == renderingModeGdiClassic) {
-			measuring = fontQualityMeasuringGdiClassic;
-		} else if (value == renderingModeGdiNatural) {
-			measuring = fontQualityMeasuringGdiNatural;
-		}
-		const FontQuality extraFontFlag = static_cast<FontQuality>(
-			(static_cast<int>(vs.extraFontFlag) & ~fontQualityMeasuringMask) | measuring);
-		measuringChanged = extraFontFlag != vs.extraFontFlag;
-		vs.extraFontFlag = extraFontFlag;
-	}
 	if (technology != Technology::Default) {
 		UpdateRenderingParams(true);
 	}
-	if (measuringChanged) {
+	if (UpdateMeasuringMode()) {
 		// Realise fonts again with the new measuring and drop cached layouts
 		InvalidateStyleRedraw();
 	} else if (technology != Technology::Default) {
@@ -2443,6 +2454,7 @@ sptr_t ScintillaWin::SciMessage(Message iMessage, uptr_t wParam, sptr_t lParam) 
 						return 0;
 					}
 					UpdateRenderingParams(true);
+					UpdateMeasuringMode();	// N++: layouts are invalidated below
 #else
 					return 0;
 #endif
@@ -2582,6 +2594,7 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 #if defined(USE_D2D)
 			if (technology != Technology::Default) {
 				UpdateRenderingParams(true);
+				UpdateMeasuringMode();	// N++: layouts are invalidated below
 			}
 #endif
 			UpdateBaseElements();
@@ -2659,6 +2672,10 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 					reverseArrowCursor.Invalidate();
 					DropGraphics();
 					Redraw();
+					// N++: the device scale factor may have changed which can enable or disable GDI-compatible measuring
+					if (UpdateMeasuringMode()) {
+						InvalidateStyleRedraw();
+					}
 				}
 			}
 #endif

@@ -1745,8 +1745,8 @@ TextLayout LayoutCreate(std::wstring_view wsv, IDWriteTextFormat *pTextFormat, D
 	} else {
 		// N++: GDI-compatible measuring places glyphs on whole pixels like GDI so that they are
 		// positioned the same when measured and drawn. Font sizes and layouts are in pixels, which
-		// are DIPs on 96 DPI render targets: Notepad++ is system DPI aware without GDI scaling so
-		// its render targets are 96 DPI and 1 pixel per DIP is exact.
+		// are DIPs on 96 DPI render targets, so 1 pixel per DIP is exact. ScintillaWin only selects
+		// GDI-compatible measuring while its device scale factor is 1 (no GDI scaling).
 		constexpr FLOAT pixelsPerDip = 1.0f;
 		const BOOL useGdiNatural = (measuringMode == DWRITE_MEASURING_MODE_GDI_NATURAL) ? TRUE : FALSE;
 		hr = pIDWriteFactory->CreateGdiCompatibleTextLayout(wsv.data(), static_cast<UINT32>(wsv.length()),
