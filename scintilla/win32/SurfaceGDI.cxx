@@ -122,11 +122,13 @@ LONG GdiRegularWeight(const wchar_t *faceName) noexcept {
 
 namespace Scintilla::Internal {
 
-// N++: the weight to ask GDI for a weight of a font family lighter than regular. GDI emboldens a font by simulation
-// when the weight asked is much heavier than its weight: the regular weight asked for the GDI family of a light
-// weight ("MonoLisaCode ExtraLight", "... Thin", "... Hairline") draws it as a fake bold. Weights up to regular
-// are relative to the family's regular weight, so that its regular is drawn as is; heavier ones (bold) are asked
-// as they are, GDI emboldening the family's font for them as before.
+// N++: the weight to ask GDI for a weight of a font family. GDI emboldens a font by simulation only when the weight
+// asked is much heavier than its weight: the regular weight asked for the GDI family of a light weight
+// ("MonoLisaCode ExtraLight", "... Thin", "... Hairline") draws it as a fake bold, and bold asked for the family of a
+// semibold or extra bold weight draws it as is. The weights of a family are relative to its regular weight, as the
+// weights of GDI family names under DirectWrite: regular draws the family's font as is and bold emboldens it (except
+// black, nothing being heavier). Bold is never asked lighter than bold: some GDI implementations (Wine) embolden
+// only for a heavy weight asked.
 LONG GdiFontWeight(const wchar_t *faceName, LONG weight) noexcept {
 	try {
 		// Font lists and so the family names used are known at startup: the weights are kept for the session
@@ -142,8 +144,9 @@ LONG GdiFontWeight(const wchar_t *faceName, LONG weight) noexcept {
 			it = regularWeights.emplace(std::wstring(face), GdiRegularWeight(faceName)).first;
 		}
 		const LONG regular = it->second;
-		if ((regular > 0) && (regular < FW_NORMAL) && (weight <= FW_NORMAL)) {
-			return std::max(regular + weight - FW_NORMAL, 1L);
+		if ((regular > 0) && (regular != FW_NORMAL)) {
+			const LONG relative = regular + weight - FW_NORMAL;
+			return std::clamp((weight > FW_NORMAL) ? std::max(relative, weight) : relative, 1L, 1000L);
 		}
 	} catch (...) {
 		// the weight asked

@@ -275,26 +275,34 @@ std::optional<GdiFamilyMatch> FindGdiFamilyName(const std::wstring &faceName) {
 		return {};
 	}
 	if (exists) {
-		// A DirectWrite family name (the usual case), used as is unless DirectWrite emboldens it by simulation for
-		// the regular weight, all its fonts being much lighter: e.g. the family of a static font of a weight whose
-		// name DirectWrite doesn't parse as one ("X Hairline"). Its weights are then relative to its regular font.
+		// A DirectWrite family name (the usual case), used as is unless all its upright fonts are much lighter or
+		// heavier than regular, or DirectWrite fake-bolds it for the regular weight: its weights are then relative to
+		// its font closest to regular, as for GDI families (see GdiFontWeight). E.g. the family of a static font of a
+		// weight whose name DirectWrite doesn't parse as one ("X Hairline"), which DirectWrite fake-bolds for the
+		// regular weight, or of a semibold font only, whose bold would be drawn as is.
 		ComPtr<IDWriteFontFamily> family;
 		ComPtr<IDWriteFont> font;
 		if (FAILED(collection->GetFontFamily(index, family.GetAddressOf())) ||
-			FAILED(family->GetFirstMatchingFont(DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL, font.GetAddressOf())) ||
-			!(font->GetSimulations() & DWRITE_FONT_SIMULATIONS_BOLD)) {
+			FAILED(family->GetFirstMatchingFont(DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL, font.GetAddressOf()))) {
 			return {};
 		}
+		const bool fakeBold = (font->GetSimulations() & DWRITE_FONT_SIMULATIONS_BOLD) != 0;
 		std::optional<GdiFamilyMatch> regular;
 		for (UINT32 iFont = 0; iFont < family->GetFontCount(); ++iFont) {
 			ComPtr<IDWriteFont> member;
 			if (SUCCEEDED(family->GetFont(iFont, member.GetAddressOf())) &&
 				(member->GetSimulations() == DWRITE_FONT_SIMULATIONS_NONE) && (member->GetStyle() == DWRITE_FONT_STYLE_NORMAL)) {
-				const int distance = std::abs(static_cast<int>(member->GetWeight()) - DWRITE_FONT_WEIGHT_NORMAL);
-				if (!regular || (distance < std::abs(static_cast<int>(regular->weight) - DWRITE_FONT_WEIGHT_NORMAL))) {
+				const int weight = member->GetWeight();
+				const int distance = std::abs(weight - DWRITE_FONT_WEIGHT_NORMAL);
+				const int regularDistance = regular ? std::abs(static_cast<int>(regular->weight) - DWRITE_FONT_WEIGHT_NORMAL) : 0;
+				if (!regular || (distance < regularDistance) || ((distance == regularDistance) && (weight < static_cast<int>(regular->weight)))) {
 					regular = GdiFamilyMatch{ faceName, member->GetWeight(), member->GetStretch(), DWRITE_FONT_STYLE_NORMAL };
 				}
 			}
+		}
+		constexpr int relativeDistance = 200;	// a family of regular weight within this of normal is used as is
+		if (regular && !fakeBold && (std::abs(static_cast<int>(regular->weight) - DWRITE_FONT_WEIGHT_NORMAL) < relativeDistance)) {
+			return {};
 		}
 		return regular;
 	}
