@@ -228,8 +228,10 @@ constexpr int fontRenderingPixelGeometry = 4;
 constexpr int fontRenderingRenderingMode = 5;
 constexpr int fontRenderingLightTextGamma = 6;
 constexpr int fontRenderingTinyTextPixels = 7;
-constexpr size_t fontRenderingParameters = 8;
+constexpr int fontRenderingTinyTextMinPixels = 8;
+constexpr size_t fontRenderingParameters = 9;
 constexpr int tinyTextDefaultPixels = 12;	// the em size up to which text of the adaptive mode is tiny by default
+constexpr int tinyTextDefaultMinPixels = 4;	// and from which (lowercase letters of about 2 pixels)
 constexpr int tinyTextMaxPixels = 64;
 constexpr int pixelGeometryFlat = 0;
 constexpr int pixelGeometryBGR = 2;
@@ -269,6 +271,9 @@ constexpr bool ValidFontRenderingValue(uptr_t parameter, sptr_t value) noexcept 
 	case fontRenderingTinyTextPixels:
 		// Em size in pixels, 0: no tiny text
 		return value >= 0 && value <= tinyTextMaxPixels;
+	case fontRenderingTinyTextMinPixels:
+		// Em size in pixels
+		return value >= 1 && value <= tinyTextMaxPixels;
 	default:
 		return false;
 	}
@@ -660,6 +665,7 @@ class ScintillaWin :
 	[[nodiscard]] WriteRenderingParams OverriddenRenderingParams(IDWriteRenderingParams1 *monitorParams, FLOAT gamma, DWRITE_RENDERING_MODE renderingMode, bool gridFit = false) const noexcept;	// N++
 	bool UpdateMeasuringMode() noexcept;	// N++
 	[[nodiscard]] int TinyTextPixels() const noexcept;	// N++
+	[[nodiscard]] int TinyTextMinPixels() const noexcept;	// N++
 	HRESULT Create3D() noexcept;
 	void CreateRenderTarget();
 	HRESULT SetBackBuffer(HWND hwnd, IDXGISwapChain1 *pSwapChain);
@@ -2423,6 +2429,12 @@ int ScintillaWin::TinyTextPixels() const noexcept {
 	return (pixels == fontRenderingDefault) ? tinyTextDefaultPixels : pixels;
 }
 
+// N++: and from which (smaller text stays smooth)
+int ScintillaWin::TinyTextMinPixels() const noexcept {
+	const int pixels = fontRenderingOverrides[fontRenderingTinyTextMinPixels];
+	return (pixels == fontRenderingDefault) ? tinyTextDefaultMinPixels : pixels;
+}
+
 // N++: GDI rendering modes also measure text like GDI so glyphs are on whole pixels when measured and drawn.
 // GDI-compatible layouts use 1 pixel per DIP, so not while GDI scaling renders at a larger integral scale.
 // Returns whether the measuring changed: fonts must then be realised again and cached layouts dropped.
@@ -2434,12 +2446,12 @@ bool ScintillaWin::UpdateMeasuringMode() noexcept {
 			measuring = fontQualityMeasuringGdiClassic;
 		} else if (renderingMode == renderingModeGdiNatural) {
 			measuring = fontQualityMeasuringGdiNatural;
-		} else if (renderingMode == renderingModeAdaptive) {
-			measuring = TinyTextPixels() << fontQualityTinyTextShift;
+		} else if ((renderingMode == renderingModeAdaptive) && (TinyTextPixels() > 0)) {
+			measuring = (TinyTextPixels() << fontQualityTinyTextShift) | (TinyTextMinPixels() << fontQualityTinyTextMinShift);
 		}
 	}
 	const FontQuality extraFontFlag = static_cast<FontQuality>(
-		(static_cast<int>(vs.extraFontFlag) & ~(fontQualityMeasuringMask | fontQualityTinyTextMask)) | measuring);
+		(static_cast<int>(vs.extraFontFlag) & ~(fontQualityMeasuringMask | fontQualityTinyTextMask | fontQualityTinyTextMinMask)) | measuring);
 	if (extraFontFlag == vs.extraFontFlag) {
 		return false;
 	}

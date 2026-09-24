@@ -1783,7 +1783,7 @@ void EditingSubDlg::initTextRenderingParam()
 	_tipTextAntialiasing = createToolTip(IDC_COMBO_TEXTANTIALIASING, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
 
 	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textRenderingMode-tip",
-		L"DirectWrite only. Natural avoids the vertical blur of small text. GDI-compatible snaps the glyphs to whole pixels like classic GDI rendering (the crispest on standard-DPI screens). Adaptive draws tiny text (6 to 12 pixels: 5 to 9 pt at 100% scaling) hinted on whole pixels like GDI, small text (up to 20 pixels) with Natural and larger text with the automatic mode.");
+		L"DirectWrite only. Natural avoids the vertical blur of small text. GDI-compatible snaps the glyphs to whole pixels like classic GDI rendering (the crispest on standard-DPI screens). Adaptive draws tiny text (4 to 12 pixels: 3 to 9 pt at 100% scaling) hinted on whole pixels like GDI, small text (up to 20 pixels) with Natural and larger text with the automatic mode.");
 	_tipTextRenderingMode = createToolTip(IDC_COMBO_TEXTRENDERINGMODE, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
 
 	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textContrast-tip",

@@ -632,7 +632,9 @@ void ScintillaEditView::applyTextRenderingSettings() const
 	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_PIXELGEOMETRY, overriddenBy(SC_FONTRENDERING_DEFAULT, svp._fontPixelGeometry));
 	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_RENDERINGMODE, renderingMode);
 	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_LIGHTTEXTGAMMA, overriddenBy(lightTextGamma, svp._fontLightTextGamma));
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_TINYTEXTPIXELS, overriddenBy(SC_FONTRENDERING_DEFAULT, svp._fontTinyTextPixels));
+	// the adaptive mode's tiny text drawn hinted on whole pixels, except in overviews of documents
+	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_TINYTEXTPIXELS, _isOverview ? 0 : overriddenBy(SC_FONTRENDERING_DEFAULT, svp._fontTinyTextPixels));
+	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_TINYTEXTMINPIXELS, overriddenBy(SC_FONTRENDERING_DEFAULT, svp._fontTinyTextMinPixels));
 }
 
 void ScintillaEditView::applyTextRenderingSettingsToAll()

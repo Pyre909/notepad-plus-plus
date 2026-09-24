@@ -409,11 +409,12 @@ struct FontDirectWrite : public FontWin {
 		const std::wstring wsLocale = WStringFromUTF8(fp.localeName);
 		FLOAT fHeight = static_cast<FLOAT>(fp.size);
 		// N++: tiny text of the adaptive rendering mode is measured on whole pixels like GDI: every glyph is then
-		// drawn at the same pixel phase (as it is hinted on whole pixels). Smaller text isn't readable (document
-		// map, zoomed out views): hinting would collapse its glyphs, it stays smooth.
-		constexpr FLOAT tinyTextMinPixels = 6.0f;
+		// drawn at the same pixel phase (as it is hinted on whole pixels). Below its minimum size no glyph can be
+		// formed on the pixel grid (lowercase letters of 2 pixels): it stays smooth.
 		const int tinyTextPixels = (static_cast<int>(fp.extraFontFlag) & fontQualityTinyTextMask) >> fontQualityTinyTextShift;
-		if ((measuringMode == DWRITE_MEASURING_MODE_NATURAL) && (fHeight >= tinyTextMinPixels) && (fHeight <= static_cast<FLOAT>(tinyTextPixels))) {
+		const int tinyTextMinPixels = (static_cast<int>(fp.extraFontFlag) & fontQualityTinyTextMinMask) >> fontQualityTinyTextMinShift;
+		if ((measuringMode == DWRITE_MEASURING_MODE_NATURAL) && (fHeight >= static_cast<FLOAT>(tinyTextMinPixels)) &&
+			(fHeight <= static_cast<FLOAT>(tinyTextPixels))) {
 			measuringMode = DWRITE_MEASURING_MODE_GDI_CLASSIC;
 			tinyText = true;
 		}

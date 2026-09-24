@@ -47,10 +47,12 @@ struct RenderingParams {
 constexpr int fontQualityMeasuringGdiClassic = 0x10;
 constexpr int fontQualityMeasuringGdiNatural = 0x20;
 constexpr int fontQualityMeasuringMask = 0x30;
-// N++: and the em size in pixels up to which text of the adaptive rendering mode is tiny: measured
+// N++: and the em sizes in pixels from and up to which text of the adaptive rendering mode is tiny: measured
 // GDI-compatible on whole pixels and drawn hinted (renderingVariantTiny), 0 for none
 constexpr int fontQualityTinyTextShift = 8;
 constexpr int fontQualityTinyTextMask = 0xFF00;
+constexpr int fontQualityTinyTextMinShift = 16;
+constexpr int fontQualityTinyTextMinMask = 0xFF0000;
 
 struct ISetRenderingParams {
 	virtual void SetRenderingParams(std::shared_ptr<RenderingParams> renderingParams_) = 0;

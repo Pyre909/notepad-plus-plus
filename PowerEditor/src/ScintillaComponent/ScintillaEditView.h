@@ -278,6 +278,11 @@ public:
 
 	// Apply the text rendering settings (antialiasing, DirectWrite rendering mode, contrast & advanced overrides)
 	void applyTextRenderingSettings() const;
+	// An overview of a document (Document Map, document snapshot): its tiny text isn't hinted, its texture is kept
+	void setOverview() {
+		_isOverview = true;
+		applyTextRenderingSettings();
+	}
 	// Apply them to every live Notepad++ Scintilla (edit views, Finders, Document Map, Peeker, plugins' Scintillas...)
 	static void applyTextRenderingSettingsToAll();
 	// Send a message to every live Notepad++ Scintilla window
@@ -732,6 +737,7 @@ protected:
 	void updateForDpi(); // after WM_DPICHANGED(_AFTERPARENT): the Notepad++ pixel sizes (margins, markers) for the new DPI
 
 	bool _isMainEditZone = false;
+	bool _isOverview = false; // document map, document snapshot: its tiny text stays smooth (see applyTextRenderingSettings)
 	SCINTILLA_FUNC _pScintillaFunc = nullptr;
 	SCINTILLA_PTR  _pScintillaPtr = nullptr;
 	BufferID attachDefaultDoc();
