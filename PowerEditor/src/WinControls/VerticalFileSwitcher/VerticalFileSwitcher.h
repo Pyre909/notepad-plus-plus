@@ -136,12 +136,18 @@ protected:
 	void initPopupMenus();
 	void popupMenuCmd(int cmdID);
 
+	// Per-monitor DPI awareness (opt-in)
+	void onDpiChanged(UINT prevDpi) override;
+	void checkDpiChange();
+	HIMAGELIST getFileStateIconsForDpi(UINT dpi);
+
 private:
 	bool colHeaderRClick = false;
 	int _lastSortingColumn = 0;
 	int _lastSortingDirection = SORT_DIRECTION_NONE;
 	VerticalFileSwitcherListView _fileListView;
-	HIMAGELIST _hImaLst = nullptr;
+	HIMAGELIST _hImaLst = nullptr; // file state icons of the tab bar (for the DPI of the main window)
+	HIMAGELIST _hImaLstDpi = nullptr; // own file state icons, for a DPI of the panel which isn't the one of the tab bar's icons
 
 	static COLORREF _bgColor;
 	static LRESULT listViewNotifyCustomDraw(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

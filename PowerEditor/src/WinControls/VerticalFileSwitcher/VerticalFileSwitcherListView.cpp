@@ -89,7 +89,13 @@ void VerticalFileSwitcherListView::destroy()
 	}
 	::DestroyWindow(_hSelf);
 	_hSelf = NULL;
-} 
+
+	if (_hFontDpi != nullptr)
+	{
+		::DeleteObject(_hFontDpi);
+		_hFontDpi = nullptr;
+	}
+}
 
 void VerticalFileSwitcherListView::initList()
 {
@@ -468,10 +474,44 @@ void VerticalFileSwitcherListView::resizeColumns(int totalWidth)
 	const auto style = ::GetWindowLongPtr(_hSelf, GWL_STYLE);
 	if ((style & WS_VSCROLL) == WS_VSCROLL)
 	{
-		totalColWidthDynExceptName += ::GetSystemMetrics(SM_CXVSCROLL);
+		// with the per-monitor DPI awareness, the scroll bar has the width for the DPI of the panel
+		totalColWidthDynExceptName += DPIManagerV2::isPerMonitorV2Active() ? DPIManagerV2::getSystemMetricsForDpi(SM_CXVSCROLL, dpi) : ::GetSystemMetrics(SM_CXVSCROLL);
 	}
 
 	ListView_SetColumnWidth(_hSelf, 0, totalWidth - totalColWidthDynExceptName);
+}
+
+void VerticalFileSwitcherListView::setFontForDpi(UINT dpi)
+{
+	// the list view's default font is the icon title font; SystemParametersInfo() gives it for the system DPI
+	LOGFONT lf{};
+	if (::SystemParametersInfo(SPI_GETICONTITLELOGFONT, sizeof(LOGFONT), &lf, 0) == FALSE)
+		return;
+
+	lf.lfHeight = DPIManagerV2::scaleFromSystemDpi(lf.lfHeight, dpi);
+	lf.lfWidth = DPIManagerV2::scaleFromSystemDpi(lf.lfWidth, dpi);
+	HFONT hFontDpi = ::CreateFontIndirect(&lf);
+	if (hFontDpi != nullptr)
+	{
+		// the list view gives its font to its header, and computes the heights of the header, the groups and the rows with it
+		::SendMessage(_hSelf, WM_SETFONT, reinterpret_cast<WPARAM>(hFontDpi), FALSE);
+		if (_hFontDpi != nullptr)
+			::DeleteObject(_hFontDpi);
+		_hFontDpi = hFontDpi;
+	}
+}
+
+void VerticalFileSwitcherListView::rescaleForDpi(UINT dpi, HIMAGELIST hImaLst)
+{
+	setFontForDpi(dpi);
+
+	if (hImaLst != nullptr)
+	{
+		_hImaLst = hImaLst;
+		ListView_SetImageList(_hSelf, _hImaLst, LVSIL_SMALL); // the height of the rows follows the icons
+	}
+
+	redraw(true);
 }
 
 std::vector<BufferViewInfo> VerticalFileSwitcherListView::getSelectedFiles(bool reverse) const

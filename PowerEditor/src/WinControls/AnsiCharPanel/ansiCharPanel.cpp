@@ -16,10 +16,16 @@
 
 
 #include "ansiCharPanel.h"
+
+#include <iterator>
+
 #include "ScintillaEditView.h"
 #include "localization.h"
 
 using namespace std;
+
+// default widths of the columns (Value, Hex, Character, HTML Name, HTML Decimal, HTML Hexadecimal), for 96 DPI
+static constexpr int columnWidths[] = { 45, 45, 70, 90, 100, 120 };
 
 void AnsiCharPanel::switchEncoding()
 {
@@ -44,14 +50,22 @@ intptr_t CALLBACK AnsiCharPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 
 			StaticDialog::setDpi();
 
-			_listView.addColumn(columnInfo(valStr, _dpiManager.scale(45)));
-			_listView.addColumn(columnInfo(hexStr, _dpiManager.scale(45)));
-			_listView.addColumn(columnInfo(charStr, _dpiManager.scale(70)));
-			_listView.addColumn(columnInfo(htmlNameStr, _dpiManager.scale(90)));
-			_listView.addColumn(columnInfo(htmlNumberStr, _dpiManager.scale(100)));
-			_listView.addColumn(columnInfo(htmlHexNbStr, _dpiManager.scale(120)));
+			_listView.addColumn(columnInfo(valStr, _dpiManager.scale(columnWidths[0])));
+			_listView.addColumn(columnInfo(hexStr, _dpiManager.scale(columnWidths[1])));
+			_listView.addColumn(columnInfo(charStr, _dpiManager.scale(columnWidths[2])));
+			_listView.addColumn(columnInfo(htmlNameStr, _dpiManager.scale(columnWidths[3])));
+			_listView.addColumn(columnInfo(htmlNumberStr, _dpiManager.scale(columnWidths[4])));
+			_listView.addColumn(columnInfo(htmlHexNbStr, _dpiManager.scale(columnWidths[5])));
 
 			_listView.init(_hInst, _hSelf);
+
+			// per-monitor DPI awareness (opt-in): the panel is created on a monitor whose DPI isn't the system DPI
+			// (the list view's default font can be for the system DPI)
+			if (DPIManagerV2::isPerMonitorV2Active() && (_dpiManager.getDpi() != DPIManagerV2::getDpiForSystem()))
+			{
+				setListFontForDpi(_dpiManager.getDpi());
+			}
+
 			int codepage = (*_ppEditView)->getCurrentBuffer()->getEncoding();
 			_listView.setValues(codepage==-1?0:codepage);
 			_listView.display();
@@ -136,6 +150,8 @@ intptr_t CALLBACK AnsiCharPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 
 		case WM_SIZE:
 		{
+			checkDpiChange();
+
 			int width = LOWORD(lParam);
 			int height = HIWORD(lParam);
 			::MoveWindow(_listView.getHSelf(), 0, 0, width, height, TRUE);
@@ -146,6 +162,65 @@ intptr_t CALLBACK AnsiCharPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
 	}
 	return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
+}
+
+// Per-monitor DPI awareness (opt-in): the panel may be docked in a container of another DPI than the one it was created for
+// (no DPI change notification then), or be resized by its container before it gets WM_DPICHANGED_AFTERPARENT
+void AnsiCharPanel::checkDpiChange()
+{
+	if (DPIManagerV2::isPerMonitorV2Active())
+	{
+		const UINT prevDpi = _dpiManager.getDpi();
+		setDpi();
+		if (_dpiManager.getDpi() != prevDpi)
+		{
+			onDpiChanged(prevDpi);
+		}
+	}
+}
+
+// Per-monitor DPI awareness (opt-in): the list view's default font (the icon title font) for the DPI;
+// the list view gives it to its header and computes the heights of the header and of the rows with it
+void AnsiCharPanel::setListFontForDpi(UINT dpi)
+{
+	// SystemParametersInfo() gives the icon title font for the system DPI
+	LOGFONT lf{};
+	if (::SystemParametersInfo(SPI_GETICONTITLELOGFONT, sizeof(LOGFONT), &lf, 0) == FALSE)
+		return;
+
+	lf.lfHeight = DPIManagerV2::scaleFromSystemDpi(lf.lfHeight, dpi);
+	lf.lfWidth = DPIManagerV2::scaleFromSystemDpi(lf.lfWidth, dpi);
+	HFONT hFontDpi = ::CreateFontIndirect(&lf);
+	if (hFontDpi != nullptr)
+	{
+		::SendMessage(_listView.getHSelf(), WM_SETFONT, reinterpret_cast<WPARAM>(hFontDpi), FALSE);
+		if (_hFontDpi != nullptr)
+			::DeleteObject(_hFontDpi);
+		_hFontDpi = hFontDpi;
+	}
+}
+
+void AnsiCharPanel::onDpiChanged(UINT prevDpi)
+{
+	HWND hList = _listView.getHSelf();
+	if (hList == nullptr)
+		return;
+
+	const UINT dpi = _dpiManager.getDpi();
+
+	setListFontForDpi(dpi);
+
+	// the columns: the default width for the new DPI, or the width set by the user rescaled
+	const int nbColumns = static_cast<int>(std::size(columnWidths));
+	for (int i = 0; i < nbColumns; ++i)
+	{
+		const int width = ListView_GetColumnWidth(hList, i);
+		const int newWidth = (width == DPIManagerV2::scale(columnWidths[i], prevDpi)) ?
+			DPIManagerV2::scale(columnWidths[i], dpi) : DPIManagerV2::scale(width, dpi, prevDpi);
+		ListView_SetColumnWidth(hList, i, newWidth);
+	}
+
+	_listView.redraw(true);
 }
 
 void AnsiCharPanel::insertChar(unsigned char char2insert) const

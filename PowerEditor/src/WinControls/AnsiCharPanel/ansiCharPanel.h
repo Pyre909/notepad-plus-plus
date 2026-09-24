@@ -32,6 +32,14 @@ class AnsiCharPanel : public DockingDlgInterface {
 public:
 	AnsiCharPanel(): DockingDlgInterface(IDD_ANSIASCII_PANEL) {}
 
+	~AnsiCharPanel() override {
+		if (_hFontDpi != nullptr)
+		{
+			::DeleteObject(_hFontDpi);
+			_hFontDpi = nullptr;
+		}
+	}
+
 	void init(HINSTANCE hInst, HWND hPere, ScintillaEditView **ppEditView) {
 		DockingDlgInterface::init(hInst, hPere);
 		_ppEditView = ppEditView;
@@ -59,7 +67,13 @@ public:
 protected:
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 
+	// Per-monitor DPI awareness (opt-in)
+	void onDpiChanged(UINT prevDpi) override;
+	void checkDpiChange();
+	void setListFontForDpi(UINT dpi);
+
 private:
 	ScintillaEditView **_ppEditView = nullptr;
 	AsciiListView _listView;
+	HFONT _hFontDpi = nullptr; // per-monitor DPI awareness (opt-in): the font of the list set by setListFontForDpi()
 };

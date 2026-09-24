@@ -212,6 +212,8 @@ intptr_t CALLBACK ClipboardHistoryPanel::run_dlgProc(UINT message, WPARAM wParam
 	{
 		case WM_INITDIALOG:
 		{
+			StaticDialog::setDpi(); // the DPI of the dialog's font
+
 			_hwndNextCbViewer = ::SetClipboardViewer(_hSelf);
 			NppDarkMode::setDarkScrollBar(::GetDlgItem(_hSelf, IDC_LIST_CLIPBOARD));
 			return TRUE;
@@ -315,6 +317,8 @@ intptr_t CALLBACK ClipboardHistoryPanel::run_dlgProc(UINT message, WPARAM wParam
 		
         case WM_SIZE:
         {
+			checkDpiChange();
+
             int width = LOWORD(lParam);
             int height = HIWORD(lParam);
 			::MoveWindow(::GetDlgItem(_hSelf, IDC_LIST_CLIPBOARD), 0, 0, width, height, TRUE);
@@ -337,5 +341,65 @@ intptr_t CALLBACK ClipboardHistoryPanel::run_dlgProc(UINT message, WPARAM wParam
             return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
     }
 	return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
+}
+
+// Per-monitor DPI awareness (opt-in): the panel may be docked in a container of another DPI than the one it was created for
+// (no DPI change notification then), or be resized by its container before it gets WM_DPICHANGED_AFTERPARENT
+void ClipboardHistoryPanel::checkDpiChange()
+{
+	if (DPIManagerV2::isPerMonitorV2Active())
+	{
+		const UINT prevDpi = _dpiManager.getDpi();
+		setDpi();
+		if (_dpiManager.getDpi() != prevDpi)
+		{
+			onDpiChanged(prevDpi);
+		}
+	}
+}
+
+void ClipboardHistoryPanel::onDpiChanged(UINT prevDpi)
+{
+	HWND hList = ::GetDlgItem(_hSelf, IDC_LIST_CLIPBOARD);
+	if (hList == nullptr)
+		return;
+
+	// the font (the dialog's font) and the item height the list has had since its creation, for the DPI it had then
+	if (_dpiOriginal == 0)
+	{
+		auto hFont = reinterpret_cast<HFONT>(::SendMessage(hList, WM_GETFONT, 0, 0));
+		if (hFont == nullptr)
+			hFont = static_cast<HFONT>(::GetStockObject(SYSTEM_FONT));
+
+		const auto itemHeight = ::SendMessage(hList, LB_GETITEMHEIGHT, 0, 0);
+		if ((::GetObject(hFont, sizeof(LOGFONT), &_lfOriginal) != 0) && (itemHeight != LB_ERR) && (itemHeight > 0))
+		{
+			_itemHeightOriginal = static_cast<int>(itemHeight);
+			_dpiOriginal = prevDpi;
+		}
+	}
+
+	if (_dpiOriginal != 0)
+	{
+		const UINT dpi = _dpiManager.getDpi();
+
+		LOGFONT lf{ _lfOriginal };
+		lf.lfHeight = DPIManagerV2::scale(_lfOriginal.lfHeight, dpi, _dpiOriginal);
+		lf.lfWidth = DPIManagerV2::scale(_lfOriginal.lfWidth, dpi, _dpiOriginal);
+		HFONT hFontDpi = ::CreateFontIndirect(&lf);
+		if (hFontDpi != nullptr)
+		{
+			// the font of the items drawn by drawItem()
+			::SendMessage(hList, WM_SETFONT, reinterpret_cast<WPARAM>(hFontDpi), FALSE);
+			if (_hFontDpi != nullptr)
+				::DeleteObject(_hFontDpi);
+			_hFontDpi = hFontDpi;
+		}
+
+		// owner drawn items of fixed height: their height doesn't follow the font
+		::SendMessage(hList, LB_SETITEMHEIGHT, 0, DPIManagerV2::scale(_itemHeightOriginal, dpi, _dpiOriginal));
+	}
+
+	::InvalidateRect(hList, nullptr, TRUE);
 }
 
