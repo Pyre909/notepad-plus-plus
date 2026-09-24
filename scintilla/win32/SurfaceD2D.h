@@ -25,11 +25,13 @@ extern HRESULT CreateD3D(D3D11Device &device) noexcept;
 using WriteRenderingParams = ComPtr<IDWriteRenderingParams1>;
 
 // N++: text drawn with its own rendering parameters when SCI_SETFONTRENDERINGPARAMETER asks for it,
-// combined as bits: light text gets a higher gamma which makes it heavier (dark text gets lighter),
-// small text is drawn without vertical antialiasing in the adaptive rendering mode.
+// combined as bits: light text gets a higher gamma which makes it heavier (dark text gets lighter);
+// in the adaptive rendering mode, small text is drawn without vertical antialiasing and tiny text (small or
+// tiny, not both) hinted on whole pixels like GDI's ClearType, the grid fitting of its font being forced.
 constexpr int renderingVariantLight = 1;
 constexpr int renderingVariantSmall = 2;
-constexpr int renderingVariants = 4;
+constexpr int renderingVariantTiny = 4;
+constexpr int renderingVariants = 8;
 
 struct RenderingParams {
 	WriteRenderingParams defaultRenderingParams;
@@ -45,6 +47,10 @@ struct RenderingParams {
 constexpr int fontQualityMeasuringGdiClassic = 0x10;
 constexpr int fontQualityMeasuringGdiNatural = 0x20;
 constexpr int fontQualityMeasuringMask = 0x30;
+// N++: and the em size in pixels up to which text of the adaptive rendering mode is tiny: measured
+// GDI-compatible on whole pixels and drawn hinted (renderingVariantTiny), 0 for none
+constexpr int fontQualityTinyTextShift = 8;
+constexpr int fontQualityTinyTextMask = 0xFF00;
 
 struct ISetRenderingParams {
 	virtual void SetRenderingParams(std::shared_ptr<RenderingParams> renderingParams_) = 0;

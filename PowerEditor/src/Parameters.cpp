@@ -7119,7 +7119,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 // wrapSymbolShow="hide" Wrap="no" borderEdge="yes" isEdgeBgMode="no" edgeMultiColumnPos="" zoom="0" zoom2="0" whiteSpaceShow="hide"
 // eolShow="hide" eolMode="1" npcShow="hide" npcMode="1" npcCustomColor="no" npcIncludeCcUniEOL="no" npcNoInputC0="yes" ccShow="yes"
 // borderWidth="2" smoothFont="no" fontAntialiasing="0" fontRenderingMode="0" fontContrast="0" fontGamma="-1" fontEnhancedContrast="-1"
-// fontGrayscaleEnhancedContrast="-1" fontClearTypeLevel="-1" fontPixelGeometry="-1" fontLightTextGamma="-1" paddingLeft="0" paddingRight="0"
+// fontGrayscaleEnhancedContrast="-1" fontClearTypeLevel="-1" fontPixelGeometry="-1" fontLightTextGamma="-1" fontTinyTextPixels="-1" paddingLeft="0" paddingRight="0"
 // distractionFreeDivPart="4" lineCopyCutWithoutSelection="yes" multiSelection="yes" columnSel2MultiEdit="yes" disableSelectedTextDragDrop="no" />
 void NppParameters::feedScintillaParam(const NppXml::Element& element)
 {
@@ -7340,6 +7340,7 @@ void NppParameters::feedScintillaParam(const NppXml::Element& element)
 	{
 		_svp._fontLightTextGamma = fontLightTextGamma;
 	}
+	_svp._fontTinyTextPixels = getRangeDefaultAttribute(element, "fontTinyTextPixels", -1, 64, _svp._fontTinyTextPixels);
 
 	_svp._paddingLeft = getRangeClampAttribute<unsigned char>(element, "paddingLeft", 0U, 30U, _svp._paddingLeft);
 	_svp._paddingRight = getRangeClampAttribute<unsigned char>(element, "paddingRight", 0U, 30U, _svp._paddingRight);
@@ -7641,6 +7642,7 @@ bool NppParameters::writeScintillaParams()
 	NppXml::setAttribute(scintNode, "fontClearTypeLevel", _svp._fontClearTypeLevel);
 	NppXml::setAttribute(scintNode, "fontPixelGeometry", _svp._fontPixelGeometry);
 	NppXml::setAttribute(scintNode, "fontLightTextGamma", _svp._fontLightTextGamma);
+	NppXml::setAttribute(scintNode, "fontTinyTextPixels", _svp._fontTinyTextPixels);
 	NppXml::setAttribute(scintNode, "paddingLeft", _svp._paddingLeft);
 	NppXml::setAttribute(scintNode, "paddingRight", _svp._paddingRight);
 	NppXml::setAttribute(scintNode, "distractionFreeDivPart", _svp._distractionFreeDivPart);
@@ -8312,7 +8314,7 @@ void NppParameters::createXmlTreeFromGUIParams()
 	// wrapSymbolShow="hide" Wrap="no" borderEdge="yes" isEdgeBgMode="no" edgeMultiColumnPos="" zoom="0" zoom2="0" whiteSpaceShow="hide"
 	// eolShow="hide" eolMode="1" npcShow="hide" npcMode="1" npcCustomColor="no" npcIncludeCcUniEOL="no" npcNoInputC0="yes" ccShow="yes"
 	// borderWidth="2" smoothFont="no" fontAntialiasing="0" fontRenderingMode="0" fontContrast="0" fontGamma="-1" fontEnhancedContrast="-1"
-	// fontGrayscaleEnhancedContrast="-1" fontClearTypeLevel="-1" fontPixelGeometry="-1" fontLightTextGamma="-1" paddingLeft="0" paddingRight="0"
+	// fontGrayscaleEnhancedContrast="-1" fontClearTypeLevel="-1" fontPixelGeometry="-1" fontLightTextGamma="-1" fontTinyTextPixels="-1" paddingLeft="0" paddingRight="0"
 	// distractionFreeDivPart="4" lineCopyCutWithoutSelection="yes" multiSelection="yes" columnSel2MultiEdit="yes" disableSelectedTextDragDrop="no" />
 	writeScintillaParams();
 

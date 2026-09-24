@@ -392,6 +392,7 @@ struct FontDirectWrite : public FontWin {
 	CharacterSet characterSet = CharacterSet::Ansi;
 	DWRITE_MEASURING_MODE measuringMode = DWRITE_MEASURING_MODE_NATURAL;	// N++: used for every layout of this font
 	FLOAT emSize = 1.0f;	// N++: in DIPs
+	bool tinyText = false;	// N++: measured on whole pixels and drawn hinted (see fontQualityTinyTextMask)
 	std::wstring gdiFaceName;	// N++: GDI family name matched to a DirectWrite family (see MatchGdiFamilyName), for HFont()
 	LONG gdiWeight = FW_NORMAL;	// N++: weight requested with gdiFaceName
 	BYTE gdiItalic = FALSE;	// N++: italic requested with gdiFaceName
@@ -407,6 +408,15 @@ struct FontDirectWrite : public FontWin {
 		const std::wstring wsFace = WStringFromUTF8(fp.faceName);
 		const std::wstring wsLocale = WStringFromUTF8(fp.localeName);
 		FLOAT fHeight = static_cast<FLOAT>(fp.size);
+		// N++: tiny text of the adaptive rendering mode is measured on whole pixels like GDI: every glyph is then
+		// drawn at the same pixel phase (as it is hinted on whole pixels). Smaller text isn't readable (document
+		// map, zoomed out views): hinting would collapse its glyphs, it stays smooth.
+		constexpr FLOAT tinyTextMinPixels = 6.0f;
+		const int tinyTextPixels = (static_cast<int>(fp.extraFontFlag) & fontQualityTinyTextMask) >> fontQualityTinyTextShift;
+		if ((measuringMode == DWRITE_MEASURING_MODE_NATURAL) && (fHeight >= tinyTextMinPixels) && (fHeight <= static_cast<FLOAT>(tinyTextPixels))) {
+			measuringMode = DWRITE_MEASURING_MODE_GDI_CLASSIC;
+			tinyText = true;
+		}
 		if (measuringMode != DWRITE_MEASURING_MODE_NATURAL) {
 			// N++: whole pixel em size like GDI's integer font height (13 px, not 13.33 px, for 10 points at 96 DPI)
 			fHeight = std::max(1.0f, std::round(fHeight));
@@ -473,8 +483,10 @@ struct FontDirectWrite : public FontWin {
 		characterSet = other.characterSet;
 		measuringMode = other.measuringMode;	// N++
 		emSize = other.emSize;	// N++
+		tinyText = other.tinyText;	// N++
 		gdiFaceName = other.gdiFaceName;	// N++
 		gdiWeight = other.gdiWeight;	// N++
+		gdiItalic = other.gdiItalic;	// N++
 		yAscent = other.yAscent;
 		yDescent = other.yDescent;
 		yInternalLeading = other.yInternalLeading;
@@ -774,7 +786,9 @@ namespace {
 
 // N++: the variant, or the nearest existing variant, else 0 for the base parameters
 int ExistingRenderingVariant(const WriteRenderingParams (&variants)[renderingVariants], int variant) noexcept {
-	for (const int v : { variant, variant & renderingVariantLight, variant & renderingVariantSmall }) {
+	// tiny text without its parameters is drawn as small text
+	const int asSmall = (variant & renderingVariantTiny) ? ((variant & ~renderingVariantTiny) | renderingVariantSmall) : variant;
+	for (const int v : { variant, asSmall, variant & renderingVariantLight, asSmall & renderingVariantSmall }) {
 		if (v && variants[v]) {
 			return v;
 		}
@@ -1610,7 +1624,8 @@ void SurfaceD2D::DrawTextCommon(PRectangle rc, const Font *font_, XYPOSITION yba
 		constexpr FLOAT smallTextMaxPixels = 20.0f;
 		const FLOAT intensity = 0.25f * penColour.r + 0.5f * penColour.g + 0.25f * penColour.b;
 		const int variant = ((intensity >= lightTextMinIntensity) ? renderingVariantLight : 0) |
-			((pfm->emSize * static_cast<FLOAT>(deviceScaleFactor) <= smallTextMaxPixels) ? renderingVariantSmall : 0);
+			(pfm->tinyText ? renderingVariantTiny :
+			(pfm->emSize * static_cast<FLOAT>(deviceScaleFactor) <= smallTextMaxPixels) ? renderingVariantSmall : 0);
 		SetFontQuality(pfm->extraFontFlag, variant);
 		if (fuOptions & ETO_CLIPPED) {
 			const D2D1_RECT_F rcClip = RectangleFromPRectangle(rc);

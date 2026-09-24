@@ -952,13 +952,14 @@ struct ScintillaViewParams
 	int _fontClearTypeLevel = -1;            // 0-100, in percent (0 = grayscale-like, 100 = full ClearType color)
 	int _fontPixelGeometry = -1;             // 0: flat, 1: RGB, 2: BGR
 	int _fontLightTextGamma = -1;            // light text gamma: 0 at least the monitor's gamma (or fontGamma if set), 1000-2200 at least this gamma
+	int _fontTinyTextPixels = -1;            // adaptive rendering mode: em size in pixels up to which text is hinted on whole pixels (default 12), 0: none
 
 	bool isClearTypeAntialiasing() const {
 		return (_textAntialiasing == textAntialiasingClearType) || (_textAntialiasing == textAntialiasingClearTypeLessColor);
 	}
 
 	bool hasFontRenderingOverride() const {
-		return (_fontGamma >= 0) || (_fontEnhancedContrast >= 0) || (_fontGrayscaleEnhancedContrast >= 0) || (_fontClearTypeLevel >= 0) || (_fontPixelGeometry >= 0) || (_fontLightTextGamma >= 0);
+		return (_fontGamma >= 0) || (_fontEnhancedContrast >= 0) || (_fontGrayscaleEnhancedContrast >= 0) || (_fontClearTypeLevel >= 0) || (_fontPixelGeometry >= 0) || (_fontLightTextGamma >= 0) || (_fontTinyTextPixels >= 0);
 	}
 
 	bool _showBorderEdge = true;

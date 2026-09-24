@@ -477,6 +477,7 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 					addOverride(L"fontClearTypeLevel", svp._fontClearTypeLevel);
 					addOverride(L"fontPixelGeometry", svp._fontPixelGeometry);
 					addOverride(L"fontLightTextGamma", svp._fontLightTextGamma);
+					addOverride(L"fontTinyTextPixels", svp._fontTinyTextPixels);
 
 					_debugInfoStr += L"Text Rendering Overrides: ";
 					_debugInfoStr += overrides;
