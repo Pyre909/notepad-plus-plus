@@ -126,6 +126,16 @@ int DPIManagerV2::getSystemMetricsForDpi(int nIndex, UINT dpi)
 	return _fnGetSystemMetricsForDpi(nIndex, dpi);
 }
 
+int DPIManagerV2::getSystemMetricsForWindow(int nIndex, HWND hWnd)
+{
+	// the per-monitor v2 DPI awareness requires Windows 10 1703+, so GetSystemMetricsForDpi() is available then
+	if (_isPerMonitorV2Active)
+	{
+		return _fnGetSystemMetricsForDpi(nIndex, DPIManagerV2::getDpiForWindow(hWnd));
+	}
+	return ::GetSystemMetrics(nIndex);
+}
+
 bool DPIManagerV2::isValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT value)
 {
 	return _fnIsValidDpiAwarenessContext(value) == TRUE;

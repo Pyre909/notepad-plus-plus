@@ -12,6 +12,7 @@ Modified by Don HO <don.h@free.fr>
 
 #include "BabyGrid.h"
 #include "Parameters.h"
+#include "dpiManagerV2.h"
 
 #define MAX_ROWS 32000
 #define MAX_COLS 256
@@ -2791,9 +2792,9 @@ LRESULT CALLBACK GridProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				innerHeight -= BGHS[SelfIndex].titleheight;
 				innerHeight -= BGHS[SelfIndex].headerrowheight;
 				if (::GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_CLIENTEDGE)
-					innerHeight -= ::GetSystemMetrics(SM_CYEDGE) * 2;
+					innerHeight -= DPIManagerV2::getSystemMetricsForWindow(SM_CYEDGE, hWnd) * 2;
 				if (BGHS[SelfIndex].HSCROLL)
-					innerHeight -= ::GetSystemMetrics(SM_CYHSCROLL);
+					innerHeight -= DPIManagerV2::getSystemMetricsForWindow(SM_CYHSCROLL, hWnd);
 
 				if (innerHeight <= BGHS[SelfIndex].rowheight * 4)
 					break;

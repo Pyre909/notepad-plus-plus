@@ -175,6 +175,14 @@ protected:
 	bool updateCaption();
 	LPARAM NotifyParent(UINT message);
 
+	// caption and close button sizes for the DPI of _dpiManager
+	void setDpiDynamicalSizes();
+
+	// x in pixels of the system DPI (legacy sizes), for the DPI of the container with the per-monitor DPI awareness
+	int scaleFromSystemDpi(int x) const {
+		return DPIManagerV2::isPerMonitorV2Active() ? DPIManagerV2::scaleFromSystemDpi(x, _dpiManager.getDpi()) : x;
+	}
+
 private:
 	// handles
 	BOOL _isActive = FALSE;

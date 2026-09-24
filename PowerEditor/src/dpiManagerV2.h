@@ -51,6 +51,10 @@ public:
 		return getSystemMetricsForDpi(nIndex, _dpi);
 	}
 
+	// for a window of the GUI thread: with the (opt-in) per-monitor DPI awareness, the metric for the DPI of hWnd,
+	// otherwise exactly ::GetSystemMetrics() (unchanged behaviour, also where GetSystemMetricsForDpi() isn't available)
+	static int getSystemMetricsForWindow(int nIndex, HWND hWnd);
+
 	[[nodiscard]] static bool isValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT value);
 	// includes check for `DPI_AWARENESS_CONTEXT dpiContext` via `isValidDpiAwarenessContext`
 	static DPI_AWARENESS_CONTEXT setThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT dpiContext);
@@ -121,6 +125,12 @@ public:
 	// identity for the system DPI, which is always the DPI of the windows without per-monitor DPI awareness
 	static int scaleFromSystemDpi(int x, UINT dpi) {
 		return scale(x, dpi, getDpiForSystem());
+	}
+
+	// same for a window of the GUI thread: with the (opt-in) per-monitor DPI awareness, scaleFromSystemDpi() for the DPI
+	// of hWnd, otherwise x unchanged (also for the dialogs made per-monitor DPI aware without it, e.g. Preferences)
+	static int scaleFromSystemDpiForWindow(int x, HWND hWnd) {
+		return isPerMonitorV2Active() ? scaleFromSystemDpi(x, getDpiForWindow(hWnd)) : x;
 	}
 
 	int scale(int x) const {

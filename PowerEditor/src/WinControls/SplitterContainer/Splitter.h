@@ -91,6 +91,8 @@ private:
 	static LRESULT CALLBACK staticWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK spliterWndProc(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+	// x in pixels of the system DPI (legacy sizes), for the DPI of the splitter with the per-monitor DPI awareness
+	int scaleFromSystemDpi(int x) const;
 	int getClickZone(WH which);
 	void adjustZoneToDraw(RECT & rc2def, ZONE_TYPE whichZone);
 	void drawSplitter();

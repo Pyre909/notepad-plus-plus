@@ -137,7 +137,11 @@ void DockingManager::init(HINSTANCE hInst, HWND hWnd, Window ** ppWin)
 
 	// with the per-monitor DPI awareness, the window can be created on a monitor whose DPI isn't the system DPI
 	if (DPIManagerV2::isPerMonitorV2Active())
-		_splitterWidth = DPIManagerV2::scaleFromSystemDpi(SPLITTER_WIDTH, DPIManagerV2::getDpiForWindow(_hParent));
+	{
+		const UINT dpi = DPIManagerV2::getDpiForWindow(_hParent);
+		_splitterWidth = DPIManagerV2::scaleFromSystemDpi(SPLITTER_WIDTH, dpi);
+		_minWorkWidth = DPIManagerV2::scaleFromSystemDpi(WORK_MIN_WIDTH, dpi);
+	}
 
 	// create docking container
 	for (int iCont = 0; iCont < DOCKCONT_MAX; ++iCont)
@@ -313,7 +317,7 @@ LRESULT DockingManager::runProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 							nppGUI._dockingData._minDockedPanelVisibility = currentPanelHeight;
 							nppGUI._dockingData._minFloatingPanelSize.cy = currentPanelHeight;
 							nppGUI._dockingData._minFloatingPanelSize.cx = std::max(static_cast<int>(nppGUI._dockingData._minFloatingPanelSize.cy * 6),
-								DPIManagerV2::isPerMonitorV2Active() ? DPIManagerV2::getSystemMetricsForDpi(SM_CXMINTRACK, DPIManagerV2::getDpiForWindow(_hParent)) : ::GetSystemMetrics(SM_CXMINTRACK));
+								DPIManagerV2::getSystemMetricsForWindow(SM_CXMINTRACK, _hParent));
 						}
 					}
 
@@ -504,11 +508,11 @@ void DockingManager::reSizeTo(RECT & rc)
 		_rcWork.right	-= _dockData.rcRegion[CONT_RIGHT].right + _splitterWidth;
 
 		// correct the visibility of right container when width is NULL
-		if (_rcWork.right < 15)
+		if (_rcWork.right < _minWorkWidth)
 		{
-			rcRight.left    = _rcWork.left + 15 + _splitterWidth;
-			rcRight.right  += _rcWork.right - 15;
-			_rcWork.right	= 15;
+			rcRight.left    = _rcWork.left + _minWorkWidth + _splitterWidth;
+			rcRight.right  += _rcWork.right - _minWorkWidth;
+			_rcWork.right	= _minWorkWidth;
 		}
 
 		// set size of splitter
@@ -752,14 +756,28 @@ void DockingManager::setDockedContSize(int iCont, int iSize)
 void DockingManager::rescaleForDpi(UINT dpi, UINT prevDpi)
 {
 	_splitterWidth = DPIManagerV2::scaleFromSystemDpi(SPLITTER_WIDTH, dpi);
+	_minWorkWidth = DPIManagerV2::scaleFromSystemDpi(WORK_MIN_WIDTH, dpi);
 
 	if ((prevDpi != 0) && (prevDpi != dpi))
 	{
-		_dockData.rcRegion[CONT_LEFT].right = DPIManagerV2::scale(_dockData.rcRegion[CONT_LEFT].right, dpi, prevDpi);
-		_dockData.rcRegion[CONT_RIGHT].right = DPIManagerV2::scale(_dockData.rcRegion[CONT_RIGHT].right, dpi, prevDpi);
-		_dockData.rcRegion[CONT_TOP].bottom = DPIManagerV2::scale(_dockData.rcRegion[CONT_TOP].bottom, dpi, prevDpi);
-		_dockData.rcRegion[CONT_BOTTOM].bottom = DPIManagerV2::scale(_dockData.rcRegion[CONT_BOTTOM].bottom, dpi, prevDpi);
+		rescaleDockedSize(CONT_LEFT, _dockData.rcRegion[CONT_LEFT].right, dpi, prevDpi);
+		rescaleDockedSize(CONT_RIGHT, _dockData.rcRegion[CONT_RIGHT].right, dpi, prevDpi);
+		rescaleDockedSize(CONT_TOP, _dockData.rcRegion[CONT_TOP].bottom, dpi, prevDpi);
+		rescaleDockedSize(CONT_BOTTOM, _dockData.rcRegion[CONT_BOTTOM].bottom, dpi, prevDpi);
 	}
+}
+
+void DockingManager::rescaleDockedSize(int iCont, LONG& size, UINT dpi, UINT prevDpi)
+{
+	DpiSizeRef& ref = _dockedSizeRef[iCont];
+	if ((ref.dpi == 0) || (size != ref.scaled))
+	{
+		// first DPI change, or the size has changed since the last one (user, layout): it's the new reference
+		ref.size = size;
+		ref.dpi = prevDpi;
+	}
+	size = DPIManagerV2::scale(static_cast<int>(ref.size), dpi, ref.dpi);
+	ref.scaled = size;
 }
 
 int DockingManager::getDockedContSize(int iCont)

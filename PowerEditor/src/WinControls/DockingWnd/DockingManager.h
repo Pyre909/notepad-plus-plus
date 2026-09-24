@@ -80,8 +80,8 @@ public:
 	void destroy() override;
 	void resize();
 
-	// after a DPI change (per-monitor DPI awareness): sets the splitters width for dpi and rescales the docked containers sizes
-	// from prevDpi (kept if prevDpi == dpi), the layout is updated on the next resize
+	// after a DPI change (per-monitor DPI awareness): sets the splitters width and the minimal views width for dpi, and rescales
+	// the docked containers sizes from prevDpi (kept if prevDpi == dpi; round trips don't drift), the layout is updated on the next resize
 	void rescaleForDpi(UINT dpi, UINT prevDpi);
 
 private:
@@ -96,6 +96,19 @@ private:
 	int							_iContMap[CONT_MAP_MAX] = { 0 };
 	std::vector<DockingSplitter*>	_vSplitter;
 	int							_splitterWidth = SPLITTER_WIDTH; // SPLITTER_WIDTH at the system DPI
+	static constexpr int		WORK_MIN_WIDTH = 15; // kept for the views beside a right docked container, in pixels of the system DPI
+	int							_minWorkWidth = WORK_MIN_WIDTH; // WORK_MIN_WIDTH at the DPI of the main window
+
+	// per docked container: the size the DPI changes rescale from (and its DPI), and the size the last one gave,
+	// so that a round trip between DPIs doesn't accumulate rounding errors
+	struct DpiSizeRef
+	{
+		LONG size = 0;
+		UINT dpi = 0;
+		LONG scaled = 0;
+	};
+	DpiSizeRef					_dockedSizeRef[DOCKCONT_MAX] = {};
+	void rescaleDockedSize(int iCont, LONG& size, UINT dpi, UINT prevDpi);
 
 
 	static LRESULT CALLBACK staticWinProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);

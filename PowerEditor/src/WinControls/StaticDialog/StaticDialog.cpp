@@ -129,7 +129,7 @@ void StaticDialog::display(bool toShow) const
 		::GetWindowRect(_hSelf, &rc);
 		int newLeft = rc.left;
 		int newTop = rc.top;
-		int margin = ::GetSystemMetrics(SM_CYSMCAPTION);
+		int margin = DPIManagerV2::getSystemMetricsForWindow(SM_CYSMCAPTION, _hSelf);
 
 		if (newLeft > ::GetSystemMetrics(SM_CXVIRTUALSCREEN) - margin)
 			newLeft -= rc.right - workAreaRect.right;
@@ -184,7 +184,8 @@ RECT StaticDialog::getViewablePositionRect(RECT testPositionRc) const
 
 		::GetMonitorInfo(hMon, &mi);
 		
-		int margin = ::GetSystemMetrics(SM_CYBORDER) + ::GetSystemMetrics(SM_CYSIZEFRAME) + ::GetSystemMetrics(SM_CYCAPTION);
+		int margin = DPIManagerV2::getSystemMetricsForWindow(SM_CYBORDER, _hSelf) + DPIManagerV2::getSystemMetricsForWindow(SM_CYSIZEFRAME, _hSelf)
+			+ DPIManagerV2::getSystemMetricsForWindow(SM_CYCAPTION, _hSelf);
 
 		// require that the title bar of the window be in a viewable place so the user can see it to grab it with the mouse
 		if ((testPositionRc.top >= mi.rcWork.top) && (testPositionRc.top + margin <= mi.rcWork.bottom) &&

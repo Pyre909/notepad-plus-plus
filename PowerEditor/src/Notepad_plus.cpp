@@ -9173,7 +9173,9 @@ HBITMAP Notepad_plus::generateSolidColourMenuItemIcon(COLORREF colour)
 	if (!hDC)
 		return nullptr;
 
-	static constexpr int bitmapXYsize = 16;
+	// in pixels of the system DPI, for the DPI of the main window with the per-monitor DPI awareness
+	const int bitmapXYsize = DPIManagerV2::scaleFromSystemDpiForWindow(16, _pPublicInterface->getHSelf());
+	const int borderSize = DPIManagerV2::scaleFromSystemDpiForWindow(1, _pPublicInterface->getHSelf());
 	HBITMAP hNewBitmap = ::CreateCompatibleBitmap(hDC, bitmapXYsize, bitmapXYsize);
 	if (hNewBitmap)
 	{
@@ -9198,8 +9200,8 @@ HBITMAP Notepad_plus::generateSolidColourMenuItemIcon(COLORREF colour)
 			}
 
 			// overpaint a slightly smaller colored square
-			rc.left = rc.top = 1;
-			rc.right = rc.bottom = bitmapXYsize - 1;
+			rc.left = rc.top = borderSize;
+			rc.right = rc.bottom = bitmapXYsize - borderSize;
 			hBrush = ::CreateSolidBrush(colour);
 			if (hBrush)
 			{

@@ -664,23 +664,26 @@ void Gripper::drawRectangle(const POINT* pPt)
 		::FillRect(_hdcOverlayMem, &rcFrame, hBrushTransparent);
 		::DeleteObject(hBrushTransparent);
 
+		// frame thickness in pixels of the system DPI, for the DPI of the moved container with the per-monitor DPI awareness
+		const LONG frame = scaleFromSystemDpi(3, _pCont->getHSelf());
+
 		HBRUSH hBrushGray = ::CreateSolidBrush(RGB(128, 128, 128));
-		RECT rcTop = { newOverlayX, newOverlayY, newOverlayX + newWidth, newOverlayY + 3 };
+		RECT rcTop = { newOverlayX, newOverlayY, newOverlayX + newWidth, newOverlayY + frame };
 		::FillRect(_hdcOverlayMem, &rcTop, hBrushGray);
-		RECT rcBottom = { newOverlayX, newOverlayY + newHeight - 3, newOverlayX + newWidth, newOverlayY + newHeight };
+		RECT rcBottom = { newOverlayX, newOverlayY + newHeight - frame, newOverlayX + newWidth, newOverlayY + newHeight };
 		::FillRect(_hdcOverlayMem, &rcBottom, hBrushGray);
-		RECT rcLeft = { newOverlayX, newOverlayY, newOverlayX + 3, newOverlayY + newHeight };
+		RECT rcLeft = { newOverlayX, newOverlayY, newOverlayX + frame, newOverlayY + newHeight };
 		::FillRect(_hdcOverlayMem, &rcLeft, hBrushGray);
-		RECT rcRight = { newOverlayX + newWidth - 3, newOverlayY, newOverlayX + newWidth, newOverlayY + newHeight };
+		RECT rcRight = { newOverlayX + newWidth - frame, newOverlayY, newOverlayX + newWidth, newOverlayY + newHeight };
 		::FillRect(_hdcOverlayMem, &rcRight, hBrushGray);
 		::DeleteObject(hBrushGray);
 
 		HBRUSH hOldBrush = static_cast<HBRUSH>(::SelectObject(_hdcOverlayMem, _hbrush));
 		::SetBrushOrgEx(_hdcOverlayMem, rcNewAbsolute.left % 8, rcNewAbsolute.top % 8, nullptr);
-		::PatBlt(_hdcOverlayMem, newOverlayX, newOverlayY, newWidth, 3, PATINVERT);
-		::PatBlt(_hdcOverlayMem, newOverlayX, newOverlayY + newHeight - 3, newWidth, 3, PATINVERT);
-		::PatBlt(_hdcOverlayMem, newOverlayX, newOverlayY, 3, newHeight, PATINVERT);
-		::PatBlt(_hdcOverlayMem, newOverlayX + newWidth - 3, newOverlayY, 3, newHeight, PATINVERT);
+		::PatBlt(_hdcOverlayMem, newOverlayX, newOverlayY, newWidth, frame, PATINVERT);
+		::PatBlt(_hdcOverlayMem, newOverlayX, newOverlayY + newHeight - frame, newWidth, frame, PATINVERT);
+		::PatBlt(_hdcOverlayMem, newOverlayX, newOverlayY, frame, newHeight, PATINVERT);
+		::PatBlt(_hdcOverlayMem, newOverlayX + newWidth - frame, newOverlayY, frame, newHeight, PATINVERT);
 		::SelectObject(_hdcOverlayMem, hOldBrush);
 	}
 
@@ -792,7 +795,7 @@ DockingCont* Gripper::contHitTest(POINT pt)
 				RECT	rc	= {};
 
 				vCont[iCont]->getWindowRect(rc);
-				if ((rc.top < pt.y) && (pt.y < (rc.top + 24)))
+				if ((rc.top < pt.y) && (pt.y < (rc.top + scaleFromSystemDpi(24, vCont[iCont]->getHSelf()))))
 				{
 					/* when it is the same container start moving immediately */
 					if (vCont[iCont] == _pCont)
@@ -850,6 +853,9 @@ DockingCont* Gripper::workHitTest(POINT pt, RECT *rc)
 		}
 	}
 
+	/* the thickness is in pixels of the system DPI, for the DPI of the main window with the per-monitor DPI awareness */
+	const LONG hitTestThickness = scaleFromSystemDpi(HIT_TEST_THICKNESS, _hParent);
+
 	/* now search if cusor hits a possible docking area */
 	for (int iWork = 0; iWork < DOCKCONT_MAX; ++iWork)
 	{
@@ -868,20 +874,20 @@ DockingCont* Gripper::workHitTest(POINT pt, RECT *rc)
 			switch(iWork)
 			{
 				case CONT_LEFT:
-					rcCont.right   = rcCont.left + HIT_TEST_THICKNESS;
-					rcCont.left   -= HIT_TEST_THICKNESS;
+					rcCont.right   = rcCont.left + hitTestThickness;
+					rcCont.left   -= hitTestThickness;
 					break;
 				case CONT_RIGHT:
-					rcCont.left    = rcCont.right - HIT_TEST_THICKNESS;
-					rcCont.right  += HIT_TEST_THICKNESS;
+					rcCont.left    = rcCont.right - hitTestThickness;
+					rcCont.right  += hitTestThickness;
 					break;
 				case CONT_TOP:
-					rcCont.bottom  = rcCont.top + HIT_TEST_THICKNESS;
-					rcCont.top    -= HIT_TEST_THICKNESS;
+					rcCont.bottom  = rcCont.top + hitTestThickness;
+					rcCont.top    -= hitTestThickness;
 					break;
 				case CONT_BOTTOM:
-					rcCont.top     = rcCont.bottom - HIT_TEST_THICKNESS;
-					rcCont.bottom += HIT_TEST_THICKNESS;
+					rcCont.top     = rcCont.bottom - hitTestThickness;
+					rcCont.bottom += hitTestThickness;
 					break;
 				default:
 					break;

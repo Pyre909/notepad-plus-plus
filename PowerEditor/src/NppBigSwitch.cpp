@@ -3940,6 +3940,9 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 					dmd._minFloatingPanelSize.cy = dmd._minDockedPanelVisibility;
 					dmd._minFloatingPanelSize.cx = std::max(static_cast<int>(dmd._minFloatingPanelSize.cy * 6),
 						DPIManagerV2::getSystemMetricsForDpi(SM_CXMINTRACK, dpi));
+
+					// colour samples of the main menu items, sized for the DPI (the previous ones stay valid: the context menus share them)
+					setupColorSampleBitmapsOnMainMenuItems();
 				}
 
 				// suggested window rectangle for the new DPI, except for the startup placement which keeps the saved size

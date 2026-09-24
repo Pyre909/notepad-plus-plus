@@ -218,20 +218,29 @@ void Splitter::setSplitterSize(int splitterSize)
 }
 
 
+int Splitter::scaleFromSystemDpi(int x) const
+{
+	return DPIManagerV2::scaleFromSystemDpiForWindow(x, _hSelf);
+}
+
+
 int Splitter::getClickZone(WH which)
 {
 	// determined by (_dwFlags & SV_VERTICAL) && _splitterSize
-	if (_splitterSize <= 8)
+	// (the zone sizes are in pixels of the system DPI, while _splitterSize is already scaled for the DPI)
+	const int zoneThickness = scaleFromSystemDpi(8);
+	const int zoneLength = scaleFromSystemDpi(HEIGHT_MINIMAL);
+	if (_splitterSize <= zoneThickness)
 	{
 		return isVertical()
-			? (which == WH::width ? _splitterSize  : HEIGHT_MINIMAL)
-			: (which == WH::width ? HEIGHT_MINIMAL : _splitterSize);
+			? (which == WH::width ? _splitterSize  : zoneLength)
+			: (which == WH::width ? zoneLength : _splitterSize);
 	}
 	else // (_splitterSize > 8)
 	{
 		return isVertical()
-			? ((which == WH::width) ? 8  : 15)
-			: ((which == WH::width) ? 15 : 8);
+			? ((which == WH::width) ? zoneThickness  : zoneLength)
+			: ((which == WH::width) ? zoneLength : zoneThickness);
 	}
 }
 
@@ -318,6 +327,8 @@ LRESULT CALLBACK Splitter::spliterWndProc(UINT uMsg, WPARAM wParam, LPARAM lPara
 				::GetCursorPos(&pt);
 				::ScreenToClient(_hParent, &pt);
 
+				const int endMargin = scaleFromSystemDpi(5);
+
 				if (_dwFlags & SV_HORIZONTAL)
 				{
 					if (pt.y <= 1)
@@ -327,14 +338,14 @@ LRESULT CALLBACK Splitter::spliterWndProc(UINT uMsg, WPARAM wParam, LPARAM lPara
 					}
 					else
 					{
-						if (pt.y <= (rt.bottom - 5))
+						if (pt.y <= (rt.bottom - endMargin))
 						{
 							_rect.top = pt.y;
 							_splitPercent = ((pt.y * 100 / (double)rt.bottom*100) / 100);
 						}
 						else
 						{
-							_rect.top = rt.bottom - 5;
+							_rect.top = rt.bottom - endMargin;
 							_splitPercent = 99;
 						}
 					}
@@ -348,14 +359,14 @@ LRESULT CALLBACK Splitter::spliterWndProc(UINT uMsg, WPARAM wParam, LPARAM lPara
 					}
 					else
 					{
-						if (pt.x <= (rt.right - 5))
+						if (pt.x <= (rt.right - endMargin))
 						{
 							_rect.left = pt.x;
 							_splitPercent = ((pt.x*100 / (double)rt.right*100) / 100);
 						}
 						else
 						{
-							_rect.left = rt.right - 5;
+							_rect.left = rt.right - endMargin;
 							_splitPercent = 99;
 						}
 					}
@@ -485,8 +496,11 @@ void Splitter::resizeSpliter(RECT *pRect)
 
 	RECT rc{};
 	getClientRect(rc);
-	_clickZone2BR.right = getClickZone(WH::width);
-	_clickZone2BR.bottom = getClickZone(WH::height);
+	// both zones, their sizes can follow the DPI (per-monitor DPI awareness)
+	_clickZone2TL.right = getClickZone(WH::width);
+	_clickZone2TL.bottom = getClickZone(WH::height);
+	_clickZone2BR.right = _clickZone2TL.right;
+	_clickZone2BR.bottom = _clickZone2TL.bottom;
 	_clickZone2BR.left = rc.right - _clickZone2BR.right;
 	_clickZone2BR.top = rc.bottom - _clickZone2BR.bottom;
 
@@ -741,20 +755,21 @@ void Splitter::paintArrow(HDC hdc, const RECT &rect, Arrow arrowDir)
 
 void Splitter::adjustZoneToDraw(RECT& rc2def, ZONE_TYPE whichZone)
 {
-	if (_splitterSize < 4)
+	// the arrow sizes are in pixels of the system DPI, like the click zones
+	if (_splitterSize < scaleFromSystemDpi(4))
 		return;
 
 	int x0 = 0, y0 = 0, x1 = 0, y1 = 0, w = 0, h = 0;
 
-	if (/*(4 <= _splitterSize) && */(_splitterSize <= 8))
+	if (/*(4 <= _splitterSize) && */(_splitterSize <= scaleFromSystemDpi(8)))
 	{
-		w = (isVertical() ? 4 : 7);
-		h = (isVertical() ? 7 : 4);
+		w = scaleFromSystemDpi(isVertical() ? 4 : 7);
+		h = scaleFromSystemDpi(isVertical() ? 7 : 4);
 	}
 	else // (_splitterSize > 8)
 	{
-		w = (isVertical() ? 6  : 11);
-		h = (isVertical() ? 11 : 6);
+		w = scaleFromSystemDpi(isVertical() ? 6  : 11);
+		h = scaleFromSystemDpi(isVertical() ? 11 : 6);
 	}
 
 	if (isVertical())

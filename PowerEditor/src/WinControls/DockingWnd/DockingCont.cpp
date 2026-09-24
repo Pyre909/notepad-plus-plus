@@ -59,6 +59,11 @@ static LRESULT CALLBACK hookProcMouse(int nCode, WPARAM wParam, LPARAM lParam)
 DockingCont::DockingCont()
 {
 	setDpi();
+	setDpiDynamicalSizes();
+}
+
+void DockingCont::setDpiDynamicalSizes()
+{
 	_captionHeightDynamic = _dpiManager.scale(HIGH_CAPTION);
 	_captionGapDynamic = _dpiManager.scale(CAPTION_GAP);
 	_closeButtonPosLeftDynamic = _dpiManager.scale(CLOSEBTN_POS_LEFT);
@@ -414,13 +419,13 @@ LRESULT DockingCont::runProcCaption(HWND hwnd, UINT Message, WPARAM wParam, LPAR
 			toolTip.init(_hInst, hwnd);
 			if (_hoverMPos == posCaption)
 			{
-				toolTip.Show(rc, _pszCaption.c_str(), pt.x, pt.y + 20);
+				toolTip.Show(rc, _pszCaption.c_str(), pt.x, pt.y + scaleFromSystemDpi(20));
 			}
 			else
 			{
 				NativeLangSpeaker *pNativeSpeaker = (NppParameters::getInstance()).getNativeLangSpeaker();
 				wstring tip = pNativeSpeaker->getLocalizedStrFromID("close-panel-tip", L"Close");
-				toolTip.Show(rc, tip.c_str(), pt.x, pt.y + 20);
+				toolTip.Show(rc, tip.c_str(), pt.x, pt.y + scaleFromSystemDpi(20));
 			}
 			return 0;
 		}
@@ -529,9 +534,9 @@ void DockingCont::drawCaptionItem(DRAWITEMSTRUCT *pDrawItemStruct)
 		}
 
 		// draw text
-		rc.left		+= 2;
-		rc.top		+= 1;
-		rc.right	-= 16;
+		rc.left		+= scaleFromSystemDpi(2);
+		rc.top		+= scaleFromSystemDpi(1);
+		rc.right	-= scaleFromSystemDpi(16);
 		hOldFont = static_cast<HFONT>(::SelectObject(hDc, _hFontCaption));
 		::DrawText(hDc, _pszCaption.c_str(), length, &rc, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX);
 
@@ -570,11 +575,11 @@ void DockingCont::drawCaptionItem(DRAWITEMSTRUCT *pDrawItemStruct)
 		}
 
 		// draw text
-		rc.left		+= 1;
+		rc.left		+= scaleFromSystemDpi(1);
 		rc.top += _captionHeightDynamic;
 		// to make ellipsis working
 		rc.right	= rc.bottom - rc.top;
-		rc.bottom	+= 14;
+		rc.bottom	+= scaleFromSystemDpi(14);
 
 		LOGFONT lf{ DPIManagerV2::getDefaultGUIFontForDpi(_hParent, DPIManagerV2::FontType::smcaption) };
 		lf.lfEscapement = 900;
@@ -940,7 +945,7 @@ LRESULT DockingCont::runProcTab(HWND hwnd, UINT Message, WPARAM wParam, LPARAM l
 						toolTip.destroy();
 
 						toolTip.init(_hInst, hwnd);
-						toolTip.Show(rc, dwData->pszName, info.pt.x, info.pt.y + 20);
+						toolTip.Show(rc, dwData->pszName, info.pt.x, info.pt.y + scaleFromSystemDpi(20));
 					}
 				}
 
@@ -974,7 +979,7 @@ LRESULT DockingCont::runProcTab(HWND hwnd, UINT Message, WPARAM wParam, LPARAM l
 				break;
 
 			toolTip.init(_hInst, hwnd);
-			toolTip.Show(rc, reinterpret_cast<DockedWidgetData*>(tcItem.lParam)->pszName, info.pt.x, info.pt.y + 20);
+			toolTip.Show(rc, reinterpret_cast<DockedWidgetData*>(tcItem.lParam)->pszName, info.pt.x, info.pt.y + scaleFromSystemDpi(20));
 			return 0;
 		}
 
@@ -1147,6 +1152,14 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			_hContTab = ::GetDlgItem(_hSelf, IDC_TAB_CONT);
 			_hCaption = ::GetDlgItem(_hSelf, IDC_BTN_CAPTION);
 
+			// with the per-monitor DPI awareness, the container's DPI isn't always the system DPI set by the constructor:
+			// the DPI of the main window, like the fonts (a docked container becomes its child)
+			if (DPIManagerV2::isPerMonitorV2Active())
+			{
+				_dpiManager.setDpi(_hParent);
+				setDpiDynamicalSizes();
+			}
+
 			// intial subclassing of caption
 			::SetWindowSubclass(_hCaption, DockingCaptionSubclass, static_cast<UINT_PTR>(SubclassID::first), reinterpret_cast<DWORD_PTR>(this));
 
@@ -1187,8 +1200,10 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			RECT rc{};
 			getClientRect(rc);
 
+			// a hidden tab control (single panel) covers nothing, and its rectangle can be stale (e.g. after a DPI change)
 			RECT rcTab{};
-			getMappedChildRect(_hContTab, rcTab);
+			if (::IsWindowVisible(_hContTab))
+				getMappedChildRect(_hContTab, rcTab);
 
 			RECT rcClientTab{};
 			getMappedChildRect(IDC_CLIENT_TAB, rcClientTab);
@@ -1273,13 +1288,7 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			{
 				_dpiManager.setDpi(_hParent);
 			}
-			_captionHeightDynamic = _dpiManager.scale(HIGH_CAPTION);
-			_captionGapDynamic = _dpiManager.scale(CAPTION_GAP);
-			_closeButtonPosLeftDynamic = _dpiManager.scale(CLOSEBTN_POS_LEFT);
-			_closeButtonPosTopDynamic = _dpiManager.scale(CLOSEBTN_POS_TOP);
-
-			_closeButtonWidth = _dpiManager.scale(g_dockingContCloseBtnSize);
-			_closeButtonHeight = _dpiManager.scale(g_dockingContCloseBtnSize);
+			setDpiDynamicalSizes();
 
 			const int tabDpiPadding = _dpiManager.scale(g_dockingContTabIconSize + g_dockingContTabIconPadding * 2);
 			::SendMessage(_hContTab, TCM_SETMINTABWIDTH, 0, tabDpiPadding);
@@ -1294,7 +1303,7 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			LOGFONT lfCaption{ _dpiManager.getDefaultGUIFontForDpi(DPIManagerV2::FontType::smcaption) };
 			_hFontCaption = ::CreateFontIndirect(&lfCaption);
 
-			if (Message == WM_DPICHANGED)
+			if ((Message == WM_DPICHANGED) && (lParam != 0)) // the suggested rectangle (lParam 0: e.g. a synthetic message)
 			{
 				_dpiManager.setPositionDpi(lParam, _hSelf);
 			}
