@@ -95,12 +95,26 @@ class EditingSubDlg : public StaticDialog
 friend class PreferenceDlg;
 public :
 	EditingSubDlg() = default;
-	~EditingSubDlg() override = default;
-	
+	~EditingSubDlg() override {
+		for (HWND* pTip : { &_tipTextAntialiasing, &_tipTextRenderingMode, &_tipTextContrast })
+		{
+			if (*pTip)
+			{
+				::DestroyWindow(*pTip);
+				*pTip = nullptr;
+			}
+		}
+	}
+
 private :
+	HWND _tipTextAntialiasing = nullptr;
+	HWND _tipTextRenderingMode = nullptr;
+	HWND _tipTextContrast = nullptr;
+
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	void initScintParam();
 	void changeLineHiliteMode(bool enableSlider);
+	void initTextRenderingParam();
 };
 
 class Editing2SubDlg : public StaticDialog

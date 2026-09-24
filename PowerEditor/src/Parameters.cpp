@@ -7116,8 +7116,9 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 // virtualSpace="no" scrollBeyondLastLine="yes" rightClickKeepsSelection="no" selectedTextForegroundSingleColor="no" disableAdvancedScrolling="no"
 // wrapSymbolShow="hide" Wrap="no" borderEdge="yes" isEdgeBgMode="no" edgeMultiColumnPos="" zoom="0" zoom2="0" whiteSpaceShow="hide"
 // eolShow="hide" eolMode="1" npcShow="hide" npcMode="1" npcCustomColor="no" npcIncludeCcUniEOL="no" npcNoInputC0="yes" ccShow="yes"
-// borderWidth="2" smoothFont="no" paddingLeft="0" paddingRight="0" distractionFreeDivPart="4" lineCopyCutWithoutSelection="yes"
-// multiSelection="yes" columnSel2MultiEdit="yes" disableSelectedTextDragDrop="no" />
+// borderWidth="2" smoothFont="no" fontAntialiasing="0" fontRenderingMode="0" fontContrast="0" fontGamma="-1" fontEnhancedContrast="-1"
+// fontGrayscaleEnhancedContrast="-1" fontClearTypeLevel="-1" fontPixelGeometry="-1" paddingLeft="0" paddingRight="0" distractionFreeDivPart="4"
+// lineCopyCutWithoutSelection="yes" multiSelection="yes" columnSel2MultiEdit="yes" disableSelectedTextDragDrop="no" />
 void NppParameters::feedScintillaParam(const NppXml::Element& element)
 {
 	// Line Number Margin
@@ -7304,8 +7305,34 @@ void NppParameters::feedScintillaParam(const NppXml::Element& element)
 
 	_svp._borderWidth = getRangeClampAttribute(element, "borderWidth", 0, 30, _svp._borderWidth);
 
-	// Do antialiased font
-	_svp._doSmoothFont = getBoolAttribute(element, "smoothFont");
+	// Text antialiasing
+	if (NppXml::attribute(element, "fontAntialiasing"))
+	{
+		_svp._textAntialiasing = getRangeDefaultAttribute(element, "fontAntialiasing", textAntialiasingFollowWindows, textAntialiasingNone, _svp._textAntialiasing);
+	}
+	else // retro-compatibility: smoothFont="yes" was ClearType, smoothFont="no" was the Windows setting
+	{
+		const XmlAttrResult smoothFont = getResultAttribute(element, "smoothFont");
+		if (smoothFont == XmlAttrResult::isTrue)
+			_svp._textAntialiasing = textAntialiasingClearType;
+		else if (smoothFont == XmlAttrResult::isFalse)
+			_svp._textAntialiasing = textAntialiasingFollowWindows;
+	}
+
+	// Text rendering mode & contrast (DirectWrite only)
+	_svp._textRenderingMode = getRangeDefaultAttribute(element, "fontRenderingMode", textRenderingModeAutomatic, textRenderingModeGdiCompatible, _svp._textRenderingMode);
+	_svp._textContrast = getRangeDefaultAttribute(element, "fontContrast", textContrastWindows, textContrastVeryHigh, _svp._textContrast);
+
+	// Advanced DirectWrite text rendering overrides (-1: not set)
+	if (const int fontGamma = getRangeDefaultAttribute(element, "fontGamma", -1, 2200, _svp._fontGamma);
+		fontGamma == -1 || fontGamma >= 1000)
+	{
+		_svp._fontGamma = fontGamma;
+	}
+	_svp._fontEnhancedContrast = getRangeDefaultAttribute(element, "fontEnhancedContrast", -1, 1000, _svp._fontEnhancedContrast);
+	_svp._fontGrayscaleEnhancedContrast = getRangeDefaultAttribute(element, "fontGrayscaleEnhancedContrast", -1, 1000, _svp._fontGrayscaleEnhancedContrast);
+	_svp._fontClearTypeLevel = getRangeDefaultAttribute(element, "fontClearTypeLevel", -1, 100, _svp._fontClearTypeLevel);
+	_svp._fontPixelGeometry = getRangeDefaultAttribute(element, "fontPixelGeometry", -1, 2, _svp._fontPixelGeometry);
 
 	_svp._paddingLeft = getRangeClampAttribute<unsigned char>(element, "paddingLeft", 0U, 30U, _svp._paddingLeft);
 	_svp._paddingRight = getRangeClampAttribute<unsigned char>(element, "paddingRight", 0U, 30U, _svp._paddingRight);
@@ -7577,7 +7604,15 @@ bool NppParameters::writeScintillaParams()
 	setBoolAttribute(scintNode, "npcNoInputC0", _svp._npcNoInputC0);
 	setBoolAttribute(scintNode, "ccShow", _svp._ccUniEolShow);
 	NppXml::setAttribute(scintNode, "borderWidth", _svp._borderWidth);
-	setBoolAttribute(scintNode, "smoothFont", _svp._doSmoothFont);
+	setBoolAttribute(scintNode, "smoothFont", _svp.isClearTypeAntialiasing()); // for the older Notepad++ versions sharing this config.xml
+	NppXml::setAttribute(scintNode, "fontAntialiasing", _svp._textAntialiasing);
+	NppXml::setAttribute(scintNode, "fontRenderingMode", _svp._textRenderingMode);
+	NppXml::setAttribute(scintNode, "fontContrast", _svp._textContrast);
+	NppXml::setAttribute(scintNode, "fontGamma", _svp._fontGamma);
+	NppXml::setAttribute(scintNode, "fontEnhancedContrast", _svp._fontEnhancedContrast);
+	NppXml::setAttribute(scintNode, "fontGrayscaleEnhancedContrast", _svp._fontGrayscaleEnhancedContrast);
+	NppXml::setAttribute(scintNode, "fontClearTypeLevel", _svp._fontClearTypeLevel);
+	NppXml::setAttribute(scintNode, "fontPixelGeometry", _svp._fontPixelGeometry);
 	NppXml::setAttribute(scintNode, "paddingLeft", _svp._paddingLeft);
 	NppXml::setAttribute(scintNode, "paddingRight", _svp._paddingRight);
 	NppXml::setAttribute(scintNode, "distractionFreeDivPart", _svp._distractionFreeDivPart);
@@ -8246,8 +8281,9 @@ void NppParameters::createXmlTreeFromGUIParams()
 	// virtualSpace="no" scrollBeyondLastLine="yes" rightClickKeepsSelection="no" selectedTextForegroundSingleColor="no" disableAdvancedScrolling="no"
 	// wrapSymbolShow="hide" Wrap="no" borderEdge="yes" isEdgeBgMode="no" edgeMultiColumnPos="" zoom="0" zoom2="0" whiteSpaceShow="hide"
 	// eolShow="hide" eolMode="1" npcShow="hide" npcMode="1" npcCustomColor="no" npcIncludeCcUniEOL="no" npcNoInputC0="yes" ccShow="yes"
-	// borderWidth="2" smoothFont="no" paddingLeft="0" paddingRight="0" distractionFreeDivPart="4" lineCopyCutWithoutSelection="yes"
-	// multiSelection="yes" columnSel2MultiEdit="yes" disableSelectedTextDragDrop="no" />
+	// borderWidth="2" smoothFont="no" fontAntialiasing="0" fontRenderingMode="0" fontContrast="0" fontGamma="-1" fontEnhancedContrast="-1"
+	// fontGrayscaleEnhancedContrast="-1" fontClearTypeLevel="-1" fontPixelGeometry="-1" paddingLeft="0" paddingRight="0" distractionFreeDivPart="4"
+	// lineCopyCutWithoutSelection="yes" multiSelection="yes" columnSel2MultiEdit="yes" disableSelectedTextDragDrop="no" />
 	writeScintillaParams();
 
 	// <GUIConfig name="DockingManager" leftWidth="328" rightWidth="359" topHeight="200" bottomHeight="436">

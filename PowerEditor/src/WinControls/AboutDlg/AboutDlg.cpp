@@ -389,6 +389,97 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			}
 			_debugInfoStr += L"\r\n";
 
+			// Text rendering
+			{
+				const ScintillaViewParams& svp = nppParam.getSVP();
+
+				_debugInfoStr += L"Text Antialiasing: ";
+				switch (svp._textAntialiasing)
+				{
+					case textAntialiasingFollowWindows:
+						_debugInfoStr += L"Follow Windows setting (0)";
+						break;
+					case textAntialiasingClearType:
+						_debugInfoStr += L"ClearType (1)";
+						break;
+					case textAntialiasingClearTypeLessColor:
+						_debugInfoStr += L"ClearType less color fringing (2)";
+						break;
+					case textAntialiasingGrayscale:
+						_debugInfoStr += L"Grayscale (3)";
+						break;
+					case textAntialiasingNone:
+						_debugInfoStr += L"None (4)";
+						break;
+					default:
+						_debugInfoStr += L"unknown (" + std::to_wstring(svp._textAntialiasing) + L")";
+				}
+				_debugInfoStr += L"\r\n";
+
+				_debugInfoStr += L"Text Rendering Mode: ";
+				switch (svp._textRenderingMode)
+				{
+					case textRenderingModeAutomatic:
+						_debugInfoStr += L"Automatic (0)";
+						break;
+					case textRenderingModeNatural:
+						_debugInfoStr += L"Natural (1)";
+						break;
+					case textRenderingModeSymmetric:
+						_debugInfoStr += L"Symmetric (2)";
+						break;
+					case textRenderingModeGdiCompatible:
+						_debugInfoStr += L"GDI-compatible (3)";
+						break;
+					default:
+						_debugInfoStr += L"unknown (" + std::to_wstring(svp._textRenderingMode) + L")";
+				}
+				_debugInfoStr += L"\r\n";
+
+				_debugInfoStr += L"Text Contrast: ";
+				switch (svp._textContrast)
+				{
+					case textContrastWindows:
+						_debugInfoStr += L"Windows setting (0)";
+						break;
+					case textContrastMedium:
+						_debugInfoStr += L"Medium (1)";
+						break;
+					case textContrastHigh:
+						_debugInfoStr += L"High (2)";
+						break;
+					case textContrastVeryHigh:
+						_debugInfoStr += L"Very high (3)";
+						break;
+					default:
+						_debugInfoStr += L"unknown (" + std::to_wstring(svp._textContrast) + L")";
+				}
+				_debugInfoStr += L"\r\n";
+
+				// advanced overrides from config.xml, only the set ones
+				if (svp.hasFontRenderingOverride())
+				{
+					wstring overrides;
+					auto addOverride = [&overrides](const wchar_t* name, int value) {
+						if (value < 0)
+							return;
+						if (!overrides.empty())
+							overrides += L", ";
+						overrides += name;
+						overrides += L"=" + std::to_wstring(value);
+					};
+					addOverride(L"fontGamma", svp._fontGamma);
+					addOverride(L"fontEnhancedContrast", svp._fontEnhancedContrast);
+					addOverride(L"fontGrayscaleEnhancedContrast", svp._fontGrayscaleEnhancedContrast);
+					addOverride(L"fontClearTypeLevel", svp._fontClearTypeLevel);
+					addOverride(L"fontPixelGeometry", svp._fontPixelGeometry);
+
+					_debugInfoStr += L"Text Rendering Overrides: ";
+					_debugInfoStr += overrides;
+					_debugInfoStr += L"\r\n";
+				}
+			}
+
 			// Multi-instance
 			_debugInfoStr += L"Multi-instance Mode: ";
 			switch (nppGui._multiInstSetting)
