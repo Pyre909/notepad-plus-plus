@@ -183,6 +183,9 @@ protected:
 
 	void initPopupMenus();
 	void destroyMenus();
+	void setToolbarImageLists(int iconSize);
+	std::vector<int> getTreeImageIds();
+	void onDpiChanged(UINT prevDpi) override;
 
 	BrowserNodeType getNodeType(HTREEITEM hItem);
 	void popupMenuCmd(int cmdID);
