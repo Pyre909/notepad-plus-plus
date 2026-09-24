@@ -952,7 +952,7 @@ struct ScintillaViewParams
 	int _fontClearTypeLevel = -1;            // 0-100, in percent (0 = grayscale-like, 100 = full ClearType color)
 	int _fontPixelGeometry = -1;             // 0: flat, 1: RGB, 2: BGR
 	int _fontLightTextGamma = -1;            // light text gamma: 0 at least the monitor's gamma (or fontGamma if set), 1000-2200 at least this gamma
-	int _fontTinyTextPixels = -1;            // adaptive rendering mode: em size in pixels up to which text is hinted on whole pixels (default 12), 0: none
+	int _fontTinyTextPixels = -1;            // adaptive rendering mode: em size in pixels up to which text is hinted on whole pixels (default 0: none, e.g. 12)
 	int _fontTinyTextMinPixels = -1;         // and from which, 1-64 (default 4: smaller text stays smooth)
 
 	bool isClearTypeAntialiasing() const {

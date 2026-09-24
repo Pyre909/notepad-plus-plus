@@ -230,7 +230,9 @@ constexpr int fontRenderingLightTextGamma = 6;
 constexpr int fontRenderingTinyTextPixels = 7;
 constexpr int fontRenderingTinyTextMinPixels = 8;
 constexpr size_t fontRenderingParameters = 9;
-constexpr int tinyTextDefaultPixels = 12;	// the em size up to which text of the adaptive mode is tiny by default
+// The em size up to which text of the adaptive mode is tiny (hinted on whole pixels): none by default, as with
+// ClearType at 150% scaling it measured 1-3% less sharp than the natural mode and didn't look sharper
+constexpr int tinyTextDefaultPixels = 0;
 constexpr int tinyTextDefaultMinPixels = 4;	// and from which (lowercase letters of about 2 pixels)
 constexpr int tinyTextMaxPixels = 64;
 constexpr int pixelGeometryFlat = 0;
@@ -240,7 +242,7 @@ constexpr int renderingModeGdiClassic = 2;
 constexpr int renderingModeGdiNatural = 3;
 constexpr int renderingModeNatural = 4;
 constexpr int renderingModeNaturalSymmetric = 5;
-constexpr int renderingModeAdaptive = 100;	// hinted on whole pixels for tiny text, Natural for small text, else the monitor's mode
+constexpr int renderingModeAdaptive = 100;	// Natural for small text (and hinted on whole pixels for tiny text if asked), else the monitor's mode
 
 // N++: whether SCI_SETFONTRENDERINGPARAMETER accepts value for a valid parameter
 constexpr bool ValidFontRenderingValue(uptr_t parameter, sptr_t value) noexcept {

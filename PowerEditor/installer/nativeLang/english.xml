@@ -1059,7 +1059,7 @@ Translation note:
 						<Element name="Natural (sharper small text)"/>
 						<Element name="Symmetric (smoother)"/>
 						<Element name="GDI-compatible (pixel-aligned)"/>
-						<Element name="Adaptive (crispest small text)"/>
+						<Element name="Adaptive (Natural for small text)"/>
 					</ComboBox>
 					<ComboBox id="6286">
 						<Element name="Windows setting"/>
@@ -1956,7 +1956,7 @@ If you select advanced mode but do not edit files in the aforementioned language
 			<scintillaRenderingTechnology-tip value="May improve rendering of special characters or resolve some graphics issues, restart Notepad++ to apply the changes."/>
 			<!-- Don't translate "ClearType", "DirectWrite", "GDI" and "DPI" in the 3 following tips -->
 			<textAntialiasing-tip value="Grayscale is recommended for OLED screens and for rotated (portrait) screens, where ClearType color fringes are more visible."/>
-			<textRenderingMode-tip value="DirectWrite only. Natural avoids the vertical blur of small text. GDI-compatible snaps the glyphs to whole pixels like classic GDI rendering (the crispest on standard-DPI screens). Adaptive draws tiny text (4 to 12 pixels: 3 to 9 pt at 100% scaling) hinted on whole pixels like GDI, small text (up to 20 pixels) with Natural and larger text with the automatic mode."/>
+			<textRenderingMode-tip value="DirectWrite only. Natural avoids the vertical blur of small text. GDI-compatible snaps the glyphs to whole pixels like classic GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text."/>
 			<textContrast-tip value="DirectWrite only. Makes the strokes heavier: darkens dark text on light backgrounds and thickens light text on dark themes."/>
 
 			<!-- Due to the limited space on the status bar, if the translations for 'length' & 'lines' are much longer than the English words, please leave them in English instead of translating them. -->

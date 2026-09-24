@@ -1767,7 +1767,7 @@ void EditingSubDlg::initTextRenderingParam()
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Natural (sharper small text)"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Symmetric (smoother)"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"GDI-compatible (pixel-aligned)"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Adaptive (crispest small text)"));
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Adaptive (Natural for small text)"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_SETCURSEL, svp._textRenderingMode, 0);
 
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Windows setting"));
@@ -1783,7 +1783,7 @@ void EditingSubDlg::initTextRenderingParam()
 	_tipTextAntialiasing = createToolTip(IDC_COMBO_TEXTANTIALIASING, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
 
 	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textRenderingMode-tip",
-		L"DirectWrite only. Natural avoids the vertical blur of small text. GDI-compatible snaps the glyphs to whole pixels like classic GDI rendering (the crispest on standard-DPI screens). Adaptive draws tiny text (4 to 12 pixels: 3 to 9 pt at 100% scaling) hinted on whole pixels like GDI, small text (up to 20 pixels) with Natural and larger text with the automatic mode.");
+		L"DirectWrite only. Natural avoids the vertical blur of small text. GDI-compatible snaps the glyphs to whole pixels like classic GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text.");
 	_tipTextRenderingMode = createToolTip(IDC_COMBO_TEXTRENDERINGMODE, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
 
 	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textContrast-tip",
