@@ -242,6 +242,28 @@ GdiFamilyMatch MatchOfFont(IDWriteFont *font) {
 	return match;
 }
 
+// The fonts of a family whose Win32 family name (name ID 1) is faceName: its regular member, else its lightest upright one.
+// Simulated fonts (DirectWrite's bold / oblique variants) are ignored.
+void MatchFamilyFonts(IDWriteFontFamily *family, const std::wstring &faceName, std::optional<GdiFamilyMatch> &best, bool &bestIsRegular) {
+	for (UINT32 iFont = 0; iFont < family->GetFontCount(); ++iFont) {
+		ComPtr<IDWriteFont> font;
+		if (FAILED(family->GetFont(iFont, font.GetAddressOf())) || (font->GetSimulations() != DWRITE_FONT_SIMULATIONS_NONE) ||
+			!HasInformationalString(font.Get(), DWRITE_INFORMATIONAL_STRING_WIN32_FAMILY_NAMES, faceName)) {
+			continue;
+		}
+		const bool isRegular = HasInformationalString(font.Get(), DWRITE_INFORMATIONAL_STRING_WIN32_SUBFAMILY_NAMES, L"Regular");
+		const bool isUpright = font->GetStyle() == DWRITE_FONT_STYLE_NORMAL;
+		if (!best || (isRegular && !bestIsRegular) ||
+			(!bestIsRegular && isUpright && ((best->style != DWRITE_FONT_STYLE_NORMAL) || (font->GetWeight() < best->weight)))) {
+			GdiFamilyMatch match = MatchOfFont(font.Get());
+			if (!match.family.empty()) {
+				best = std::move(match);
+				bestIsRegular = isRegular;
+			}
+		}
+	}
+}
+
 std::optional<GdiFamilyMatch> FindGdiFamilyName(const std::wstring &faceName) {
 	ComPtr<IDWriteFontCollection> collection;
 	if (FAILED(pIDWriteFactory->GetSystemFontCollection(collection.GetAddressOf(), FALSE))) {
@@ -253,7 +275,34 @@ std::optional<GdiFamilyMatch> FindGdiFamilyName(const std::wstring &faceName) {
 		return {};	// a DirectWrite family name (the usual case): nothing to match
 	}
 
-	// The GDI font mapping of DirectWrite
+	// The fonts whose Win32 family name it is: in the family named by the start of the name first
+	// ("MonoLisaCode" for "MonoLisaCode ExtraLight"), else in all the families.
+	// Named instances of variable fonts are fonts of their family there too.
+	std::optional<GdiFamilyMatch> best;
+	bool bestIsRegular = false;
+	for (size_t pos = faceName.rfind(L' '); (pos != std::wstring::npos) && (pos > 0); pos = faceName.rfind(L' ', pos - 1)) {
+		const std::wstring prefix = faceName.substr(0, pos);
+		ComPtr<IDWriteFontFamily> family;
+		if (SUCCEEDED(collection->FindFamilyName(prefix.c_str(), &index, &exists)) && exists &&
+			SUCCEEDED(collection->GetFontFamily(index, family.GetAddressOf()))) {
+			MatchFamilyFonts(family.Get(), faceName, best, bestIsRegular);
+			if (best) {
+				return best;
+			}
+		}
+	}
+	for (UINT32 iFamily = 0; (iFamily < collection->GetFontFamilyCount()) && !bestIsRegular; ++iFamily) {
+		ComPtr<IDWriteFontFamily> family;
+		if (SUCCEEDED(collection->GetFontFamily(iFamily, family.GetAddressOf()))) {
+			MatchFamilyFonts(family.Get(), faceName, best, bestIsRegular);
+		}
+	}
+	if (best) {
+		return best;
+	}
+
+	// Else the GDI font mapping of DirectWrite, unless it's a simulation: it emboldens the fonts of a GDI family much
+	// lighter than the regular weight asked (e.g. "MonoLisaCode ExtraLight" as a simulated bold of weight 700)
 	ComPtr<IDWriteGdiInterop> gdiInterop;
 	if (SUCCEEDED(pIDWriteFactory->GetGdiInterop(gdiInterop.GetAddressOf()))) {
 		LOGFONTW lf{};
@@ -261,44 +310,15 @@ std::optional<GdiFamilyMatch> FindGdiFamilyName(const std::wstring &faceName) {
 		lf.lfWeight = FW_NORMAL;
 		lf.lfCharSet = DEFAULT_CHARSET;
 		ComPtr<IDWriteFont> font;
-		if (SUCCEEDED(gdiInterop->CreateFontFromLOGFONT(&lf, font.GetAddressOf()))) {
+		if (SUCCEEDED(gdiInterop->CreateFontFromLOGFONT(&lf, font.GetAddressOf())) &&
+			(font->GetSimulations() == DWRITE_FONT_SIMULATIONS_NONE)) {
 			GdiFamilyMatch match = MatchOfFont(font.Get());
 			if (!match.family.empty()) {
 				return match;
 			}
 		}
 	}
-
-	// Otherwise the fonts whose Win32 family name (name ID 1) it is: its regular member, else its lightest upright one
-	std::optional<GdiFamilyMatch> best;
-	bool bestIsRegular = false;
-	for (UINT32 iFamily = 0; iFamily < collection->GetFontFamilyCount(); ++iFamily) {
-		ComPtr<IDWriteFontFamily> family;
-		if (FAILED(collection->GetFontFamily(iFamily, family.GetAddressOf()))) {
-			continue;
-		}
-		for (UINT32 iFont = 0; iFont < family->GetFontCount(); ++iFont) {
-			ComPtr<IDWriteFont> font;
-			if (FAILED(family->GetFont(iFont, font.GetAddressOf())) || (font->GetSimulations() != DWRITE_FONT_SIMULATIONS_NONE) ||
-				!HasInformationalString(font.Get(), DWRITE_INFORMATIONAL_STRING_WIN32_FAMILY_NAMES, faceName)) {
-				continue;
-			}
-			const bool isRegular = HasInformationalString(font.Get(), DWRITE_INFORMATIONAL_STRING_WIN32_SUBFAMILY_NAMES, L"Regular");
-			const bool isUpright = font->GetStyle() == DWRITE_FONT_STYLE_NORMAL;
-			if (!best || (isRegular && !bestIsRegular) ||
-				(!bestIsRegular && isUpright && ((best->style != DWRITE_FONT_STYLE_NORMAL) || (font->GetWeight() < best->weight)))) {
-				GdiFamilyMatch match = MatchOfFont(font.Get());
-				if (!match.family.empty()) {
-					best = std::move(match);
-					bestIsRegular = isRegular;
-				}
-			}
-		}
-		if (bestIsRegular) {
-			break;
-		}
-	}
-	return best;
+	return {};
 }
 
 std::optional<GdiFamilyMatch> MatchGdiFamilyName(const std::wstring &faceName) noexcept {
