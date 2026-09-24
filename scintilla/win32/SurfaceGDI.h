@@ -12,7 +12,9 @@ namespace Scintilla::Internal {
 
 std::shared_ptr<Font> FontGDI_Allocate(const FontParameters &fp);
 std::unique_ptr<Surface> SurfaceGDI_Allocate();
-LONG GdiFontWeight(const wchar_t *faceName, LONG weight) noexcept;	// N++
+void GdiLogFont(LOGFONTW &lf) noexcept;	// N++
+bool DirectWriteGdiLogFont(LOGFONTW &lf) noexcept;	// N++: in SurfaceD2D.cxx
+LONG GdiMemberWeight(const wchar_t *faceName, LONG weight, bool italic) noexcept;	// N++
 
 }
 
