@@ -164,10 +164,26 @@ constexpr D2D1_TEXT_ANTIALIAS_MODE DWriteMapFontQuality(FontQuality extraFontFla
 	}
 }
 
+// N++: measuring mode selected by the FontQuality bits above FontQuality::QualityMask
+constexpr DWRITE_MEASURING_MODE DWriteMapMeasuringMode(FontQuality extraFontFlag) noexcept {
+	switch (static_cast<int>(extraFontFlag) & fontQualityMeasuringMask) {
+
+		case fontQualityMeasuringGdiClassic:
+			return DWRITE_MEASURING_MODE_GDI_CLASSIC;
+
+		case fontQualityMeasuringGdiNatural:
+			return DWRITE_MEASURING_MODE_GDI_NATURAL;
+
+		default:
+			return DWRITE_MEASURING_MODE_NATURAL;
+	}
+}
+
 struct FontDirectWrite : public FontWin {
 	ComPtr<IDWriteTextFormat> pTextFormat;
 	FontQuality extraFontFlag = FontQuality::QualityDefault;
 	CharacterSet characterSet = CharacterSet::Ansi;
+	DWRITE_MEASURING_MODE measuringMode = DWRITE_MEASURING_MODE_NATURAL;	// N++: used for every layout of this font
 	static constexpr FLOAT minimalAscent = 2.0f;
 	FLOAT yAscent = minimalAscent;
 	FLOAT yDescent = 1.0f;
@@ -175,7 +191,8 @@ struct FontDirectWrite : public FontWin {
 
 	explicit FontDirectWrite(const FontParameters &fp) :
 		extraFontFlag(fp.extraFontFlag),
-		characterSet(fp.characterSet) {
+		characterSet(fp.characterSet),
+		measuringMode(DWriteMapMeasuringMode(fp.extraFontFlag)) {	// N++
 		const std::wstring wsFace = WStringFromUTF8(fp.faceName);
 		const std::wstring wsLocale = WStringFromUTF8(fp.localeName);
 		const FLOAT fHeight = static_cast<FLOAT>(fp.size);
@@ -196,7 +213,7 @@ struct FontDirectWrite : public FontWin {
 		if (SUCCEEDED(hr)) {
 			pTextFormat->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
 
-			if (TextLayout pTextLayout = LayoutCreate(L"X", pTextFormat.Get())) {
+			if (TextLayout pTextLayout = LayoutCreate(L"X", pTextFormat.Get(), measuringMode)) {	// N++: measuringMode
 				constexpr int maxLines = 2;
 				DWRITE_LINE_METRICS lineMetrics[maxLines]{};
 				UINT32 lineCount = 0;
@@ -220,6 +237,7 @@ struct FontDirectWrite : public FontWin {
 		pTextFormat = other.pTextFormat;
 		extraFontFlag = other.extraFontFlag;
 		characterSet = other.characterSet;
+		measuringMode = other.measuringMode;	// N++
 		yAscent = other.yAscent;
 		yDescent = other.yDescent;
 		yInternalLeading = other.yInternalLeading;
@@ -508,6 +526,9 @@ void SurfaceD2D::SetFontQuality(FontQuality extraFontFlag) {
 		const D2D1_TEXT_ANTIALIAS_MODE aaMode = DWriteMapFontQuality(extraFontFlag);
 		if (aaMode == D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE && renderingParams->customRenderingParams) {
 			pRenderTarget->SetTextRenderingParams(renderingParams->customRenderingParams.Get());
+		} else if (aaMode == D2D1_TEXT_ANTIALIAS_MODE_ALIASED && renderingParams->monitorRenderingParams) {
+			// N++: user overrides are not applied to aliased text as their rendering mode is incompatible with it
+			pRenderTarget->SetTextRenderingParams(renderingParams->monitorRenderingParams.Get());
 		} else if (renderingParams->defaultRenderingParams) {
 			pRenderTarget->SetTextRenderingParams(renderingParams->defaultRenderingParams.Get());
 		}
@@ -1146,6 +1167,7 @@ ScreenLineLayout::ScreenLineLayout(const IScreenLine *screenLine) {
 	textLayout = LayoutCreate(
 		buffer,
 		pfm->pTextFormat.Get(),
+		pfm->measuringMode,	// N++
 		static_cast<FLOAT>(screenLine->Width()),
 		static_cast<FLOAT>(screenLine->Height()));
 	if (!textLayout) {
@@ -1315,6 +1337,7 @@ void SurfaceD2D::DrawTextCommon(PRectangle rc, const Font *font_, XYPOSITION yba
 		TextLayout pTextLayout = LayoutCreate(
 				tbuf.AsView(),
 				pfm->pTextFormat.Get(),
+				pfm->measuringMode,	// N++
 				static_cast<FLOAT>(rc.Width()),
 				static_cast<FLOAT>(rc.Height()));
 		if (pTextLayout) {
@@ -1360,7 +1383,7 @@ void SurfaceD2D::DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITIO
 	}
 }
 
-HRESULT MeasurePositions(TextPositions &poses, const TextWide &tbuf, IDWriteTextFormat *pTextFormat) {
+HRESULT MeasurePositions(TextPositions &poses, const TextWide &tbuf, IDWriteTextFormat *pTextFormat, DWRITE_MEASURING_MODE measuringMode) {	// N++: measuringMode
 	if (!pTextFormat) {
 		// Unexpected failure like no access to DirectWrite so give up.
 		return E_FAIL;
@@ -1369,7 +1392,7 @@ HRESULT MeasurePositions(TextPositions &poses, const TextWide &tbuf, IDWriteText
 	// Initialize poses for safety.
 	std::fill(poses.buffer, poses.buffer + tbuf.tlen, 0.0f);
 	// Create a layout
-	TextLayout pTextLayout = LayoutCreate(tbuf.AsView(), pTextFormat);
+	TextLayout pTextLayout = LayoutCreate(tbuf.AsView(), pTextFormat, measuringMode);
 	if (!pTextLayout) {
 		return E_FAIL;
 	}
@@ -1399,7 +1422,7 @@ void SurfaceD2D::MeasureWidths(const Font *font_, std::string_view text, XYPOSIT
 	const int codePageText = pfm->CodePageText(mode.codePage);
 	const TextWide tbuf(text, codePageText);
 	TextPositions poses(tbuf.tlen);
-	if (FAILED(MeasurePositions(poses, tbuf, pfm->pTextFormat.Get()))) {
+	if (FAILED(MeasurePositions(poses, tbuf, pfm->pTextFormat.Get(), pfm->measuringMode))) {	// N++: measuringMode
 		return;
 	}
 	if (codePageText == CpUtf8) {
@@ -1451,7 +1474,7 @@ XYPOSITION SurfaceD2D::WidthText(const Font *font_, std::string_view text) {
 	if (pfm->pTextFormat) {
 		const TextWide tbuf(text, pfm->CodePageText(mode.codePage));
 		// Create a layout
-		if (TextLayout pTextLayout = LayoutCreate(tbuf.AsView(), pfm->pTextFormat.Get())) {
+		if (TextLayout pTextLayout = LayoutCreate(tbuf.AsView(), pfm->pTextFormat.Get(), pfm->measuringMode)) {	// N++: measuringMode
 			DWRITE_TEXT_METRICS textMetrics;
 			if (SUCCEEDED(pTextLayout->GetMetrics(&textMetrics)))
 				width = textMetrics.widthIncludingTrailingWhitespace;
@@ -1496,7 +1519,7 @@ void SurfaceD2D::MeasureWidthsUTF8(const Font *font_, std::string_view text, XYP
 	const FontDirectWrite *pfm = FontDirectWrite::Cast(font_);
 	const TextWide tbuf(text, CpUtf8);
 	TextPositions poses(tbuf.tlen);
-	if (FAILED(MeasurePositions(poses, tbuf, pfm->pTextFormat.Get()))) {
+	if (FAILED(MeasurePositions(poses, tbuf, pfm->pTextFormat.Get(), pfm->measuringMode))) {	// N++: measuringMode
 		return;
 	}
 	// Map the widths given for UTF-16 characters back onto the UTF-8 input string
@@ -1524,7 +1547,7 @@ XYPOSITION SurfaceD2D::WidthTextUTF8(const Font * font_, std::string_view text) 
 	if (pfm->pTextFormat) {
 		const TextWide tbuf(text, CpUtf8);
 		// Create a layout
-		if (TextLayout pTextLayout = LayoutCreate(tbuf.AsView(), pfm->pTextFormat.Get())) {
+		if (TextLayout pTextLayout = LayoutCreate(tbuf.AsView(), pfm->pTextFormat.Get(), pfm->measuringMode)) {	// N++: measuringMode
 			DWRITE_TEXT_METRICS textMetrics;
 			if (SUCCEEDED(pTextLayout->GetMetrics(&textMetrics)))
 				width = textMetrics.widthIncludingTrailingWhitespace;
@@ -1559,7 +1582,7 @@ XYPOSITION SurfaceD2D::AverageCharWidth(const Font *font_) {
 	if (pfm->pTextFormat) {
 		// Create a layout
 		static constexpr std::wstring_view wsvAllAlpha = L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		if (TextLayout pTextLayout = LayoutCreate(wsvAllAlpha, pfm->pTextFormat.Get())) {
+		if (TextLayout pTextLayout = LayoutCreate(wsvAllAlpha, pfm->pTextFormat.Get(), pfm->measuringMode)) {	// N++: measuringMode
 			DWRITE_TEXT_METRICS textMetrics;
 			if (SUCCEEDED(pTextLayout->GetMetrics(&textMetrics)))
 				width = textMetrics.width / wsvAllAlpha.length();
@@ -1713,10 +1736,22 @@ StrokeStyle StrokeStyleCreate(const D2D1_STROKE_STYLE_PROPERTIES &strokeStylePro
 	return strokeStyle;
 }
 
-TextLayout LayoutCreate(std::wstring_view wsv, IDWriteTextFormat *pTextFormat, FLOAT maxWidth, FLOAT maxHeight) noexcept {
+TextLayout LayoutCreate(std::wstring_view wsv, IDWriteTextFormat *pTextFormat, DWRITE_MEASURING_MODE measuringMode, FLOAT maxWidth, FLOAT maxHeight) noexcept {
 	TextLayout layout;
-	const HRESULT hr = pIDWriteFactory->CreateTextLayout(wsv.data(), static_cast<UINT32>(wsv.length()),
-		pTextFormat, maxWidth, maxHeight, layout.GetAddressOf());
+	HRESULT hr = S_OK;
+	if (measuringMode == DWRITE_MEASURING_MODE_NATURAL) {
+		hr = pIDWriteFactory->CreateTextLayout(wsv.data(), static_cast<UINT32>(wsv.length()),
+			pTextFormat, maxWidth, maxHeight, layout.GetAddressOf());
+	} else {
+		// N++: GDI-compatible measuring places glyphs on whole pixels like GDI so that they are
+		// positioned the same when measured and drawn. Font sizes and layouts are in pixels, which
+		// are DIPs on 96 DPI render targets: Notepad++ is system DPI aware without GDI scaling so
+		// its render targets are 96 DPI and 1 pixel per DIP is exact.
+		constexpr FLOAT pixelsPerDip = 1.0f;
+		const BOOL useGdiNatural = (measuringMode == DWRITE_MEASURING_MODE_GDI_NATURAL) ? TRUE : FALSE;
+		hr = pIDWriteFactory->CreateGdiCompatibleTextLayout(wsv.data(), static_cast<UINT32>(wsv.length()),
+			pTextFormat, maxWidth, maxHeight, pixelsPerDip, nullptr, useGdiNatural, layout.GetAddressOf());
+	}
 	if (FAILED(hr)) {
 		return {};
 	}

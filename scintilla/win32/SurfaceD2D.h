@@ -27,7 +27,14 @@ using WriteRenderingParams = ComPtr<IDWriteRenderingParams1>;
 struct RenderingParams {
 	WriteRenderingParams defaultRenderingParams;
 	WriteRenderingParams customRenderingParams;
+	WriteRenderingParams monitorRenderingParams;	// N++: monitor's parameters without user overrides, for aliased text
 };
+
+// N++: FontQuality bits above FontQuality::QualityMask select DirectWrite GDI-compatible
+// text measuring so that fonts are realised and cached separately for each measuring mode.
+constexpr int fontQualityMeasuringGdiClassic = 0x10;
+constexpr int fontQualityMeasuringGdiNatural = 0x20;
+constexpr int fontQualityMeasuringMask = 0x30;
 
 struct ISetRenderingParams {
 	virtual void SetRenderingParams(std::shared_ptr<RenderingParams> renderingParams_) = 0;
@@ -43,7 +50,8 @@ BrushSolid BrushSolidCreate(ID2D1RenderTarget *pTarget, COLORREF colour) noexcep
 Geometry GeometryCreate() noexcept;
 GeometrySink GeometrySinkCreate(ID2D1PathGeometry *geometry) noexcept;
 StrokeStyle StrokeStyleCreate(const D2D1_STROKE_STYLE_PROPERTIES &strokeStyleProperties) noexcept;
-TextLayout LayoutCreate(std::wstring_view wsv, IDWriteTextFormat *pTextFormat, FLOAT maxWidth=10000.0F, FLOAT maxHeight=1000.0F) noexcept;
+// N++: measuringMode added, pass the font's mode so text is measured as it is drawn
+TextLayout LayoutCreate(std::wstring_view wsv, IDWriteTextFormat *pTextFormat, DWRITE_MEASURING_MODE measuringMode=DWRITE_MEASURING_MODE_NATURAL, FLOAT maxWidth=10000.0F, FLOAT maxHeight=1000.0F) noexcept;
 
 }
 
