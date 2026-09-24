@@ -89,6 +89,7 @@ struct Position
 	intptr_t _xOffset = 0;
 	intptr_t _selMode = 0;
 	intptr_t _scrollWidth = 1;
+	UINT _scrollDpi = 0; // DPI of _scrollWidth & _xOffset (0: the one of the view)
 	intptr_t _offset = 0;
 	intptr_t _wrapCount = 0;
 };

@@ -3961,6 +3961,10 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 
 		case NPPM_INTERNAL_DPICHANGEDRELAYOUT:
 		{
+			// posted after a DPI change of the main window or of a floating panels container: the panels have their new DPI,
+			// the icons of their tabs are loaded again for it
+			refreshInternalPanelIcons();
+
 			::SendMessage(hwnd, WM_SIZE, 0, 0);
 			::RedrawWindow(hwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
 			return TRUE;

@@ -193,6 +193,7 @@ private:
 
 	// horizontal font for caption and tab
 	HFONT _hFont = nullptr;
+	bool _isTabFontSet = false; // _hFont has been set to the tab control (after a DPI change)
 	HFONT _hFontCaption = nullptr;
 
 	// caption params

@@ -727,6 +727,7 @@ protected:
 	void setNppMarginWidth(int whichMarge, int width);
 
 	int _markerImagesSize = 0; // size of the RGBA images of the bookmark & hide lines markers
+	UINT _viewDpi = 0; // DPI of the view, for its pixel sizes (scroll width, x offset) after a DPI change
 	void setMarkerImagesForDpi(UINT dpi);
 	void updateForDpi(); // after WM_DPICHANGED(_AFTERPARENT): the Notepad++ pixel sizes (margins, markers) for the new DPI
 

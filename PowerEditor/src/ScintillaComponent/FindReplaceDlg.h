@@ -160,7 +160,6 @@ public:
 protected :
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	bool notify(SCNotification *notification);
-	void onDpiChanged(UINT prevDpi) override;
 
 private:
 	enum { searchHeaderLevel = SC_FOLDLEVELBASE, fileHeaderLevel, resultLevel };

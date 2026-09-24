@@ -416,6 +416,7 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 	setElementColour(SC_ELEMENT_HIDDEN_LINE, hiddenLinesGreenWithAlpha);
 
 	setMarkerImagesForDpi(DPIManagerV2::getDpiForWindow(_hParent));
+	_viewDpi = DPIManagerV2::getDpiForWindow(_hSelf);
 
     execute(SCI_SETMARGINSENSITIVEN, _SC_MARGE_FOLDER, true); // Make margin sensitive for getting notification on mouse click
     execute(SCI_SETMARGINSENSITIVEN, _SC_MARGE_SYMBOL, true); // Make margin sensitive for getting notification on mouse click
@@ -2362,6 +2363,7 @@ void ScintillaEditView::saveCurrentPos()
 	pos._xOffset = execute(SCI_GETXOFFSET);
 	pos._selMode = execute(SCI_GETSELECTIONMODE);
 	pos._scrollWidth = execute(SCI_GETSCROLLWIDTH);
+	pos._scrollDpi = _viewDpi;
 	pos._offset = offset;
 	pos._wrapCount = wrapCount;
 
@@ -2383,8 +2385,15 @@ void ScintillaEditView::restoreCurrentPosPreStep()
 	execute(SCI_CANCEL);							//disable
 	if (!isWrap()) //only offset if not wrapping, otherwise the offset isn't needed at all
 	{
-		execute(SCI_SETSCROLLWIDTH, pos._scrollWidth);
-		execute(SCI_SETXOFFSET, pos._xOffset);
+		intptr_t scrollWidth = pos._scrollWidth;
+		intptr_t xOffset = pos._xOffset;
+		if ((pos._scrollDpi != 0) && (_viewDpi != 0) && (pos._scrollDpi != _viewDpi)) // saved on a monitor of another DPI (per-monitor DPI awareness)
+		{
+			scrollWidth = std::max(1, DPIManagerV2::scale(static_cast<int>(scrollWidth), _viewDpi, pos._scrollDpi));
+			xOffset = DPIManagerV2::scale(static_cast<int>(xOffset), _viewDpi, pos._scrollDpi);
+		}
+		execute(SCI_SETSCROLLWIDTH, scrollWidth);
+		execute(SCI_SETXOFFSET, xOffset);
 	}
 	execute(SCI_CHOOSECARETX); // choose current x position
 	intptr_t lineToShow = execute(SCI_VISIBLEFROMDOCLINE, pos._firstVisibleLine);
@@ -3239,6 +3248,17 @@ void ScintillaEditView::updateForDpi()
 {
 	if (!_hSelf || !_pScintillaFunc)
 		return;
+
+	// the horizontal scrolling width (the widest line displayed, tracked by Scintilla) and offset are in pixels of the previous DPI
+	const UINT dpi = DPIManagerV2::getDpiForWindow(_hSelf);
+	if ((_viewDpi != 0) && (dpi != _viewDpi))
+	{
+		const int scrollWidth = static_cast<int>(execute(SCI_GETSCROLLWIDTH));
+		execute(SCI_SETSCROLLWIDTH, std::max(1, DPIManagerV2::scale(scrollWidth, dpi, _viewDpi)));
+		const int xOffset = static_cast<int>(execute(SCI_GETXOFFSET));
+		execute(SCI_SETXOFFSET, DPIManagerV2::scale(xOffset, dpi, _viewDpi));
+	}
+	_viewDpi = dpi;
 
 	setMarkerImagesForDpi(DPIManagerV2::getDpiForWindow(_hParent));
 

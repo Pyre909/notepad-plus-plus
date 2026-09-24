@@ -6138,17 +6138,6 @@ void Finder::setFinderStyleForNpc(bool onlyColor)
 	}
 }
 
-void Finder::onDpiChanged(UINT prevDpi)
-{
-	// Per-monitor DPI awareness (opt-in): the view (a child, it follows) scales its text, margins and markers itself,
-	// the horizontal scrolling width it has tracked (widest line displayed, in pixels) is for the previous DPI
-	if (_scintView.getHSelf() == nullptr)
-		return;
-
-	const auto scrollWidth = static_cast<int>(_scintView.execute(SCI_GETSCROLLWIDTH));
-	_scintView.execute(SCI_SETSCROLLWIDTH, std::max(1, DPIManagerV2::scale(scrollWidth, _dpiManager.getDpi(), prevDpi)));
-}
-
 intptr_t CALLBACK Finder::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)

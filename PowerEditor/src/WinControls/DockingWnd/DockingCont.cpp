@@ -21,6 +21,7 @@
 #include "ToolTip.h"
 #include "Parameters.h"
 #include "localization.h"
+#include "resource.h"
 
 using namespace std;
 
@@ -260,6 +261,13 @@ bool DockingCont::isTbVis(DockedWidgetData* data)
 
 void DockingCont::destroyFonts()
 {
+	if (_isTabFontSet && (_hContTab != nullptr))
+	{
+		// the tab control mustn't keep a deleted font
+		::SendMessage(_hContTab, WM_SETFONT, 0, FALSE);
+		_isTabFontSet = false;
+	}
+
 	if (_hFont != nullptr)
 	{
 		::DeleteObject(_hFont);
@@ -1302,6 +1310,21 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 
 			LOGFONT lfCaption{ _dpiManager.getDefaultGUIFontForDpi(DPIManagerV2::FontType::smcaption) };
 			_hFontCaption = ::CreateFontIndirect(&lfCaption);
+
+			// the tab control sizes the tabs with its own font: the one of the owner drawn tabs for the new DPI,
+			// otherwise the tab texts are cut when the DPI increases
+			if (_hFont != nullptr)
+			{
+				::SendMessage(_hContTab, WM_SETFONT, reinterpret_cast<WPARAM>(_hFont), TRUE);
+				_isTabFontSet = true;
+			}
+
+			// a floating container: the main window (parent of the docking manager) loads again the icons of the tabs
+			// for the new DPI of the panels
+			if (Message == WM_DPICHANGED)
+			{
+				::PostMessage(::GetParent(_hParent), NPPM_INTERNAL_DPICHANGEDRELAYOUT, 0, 0);
+			}
 
 			if ((Message == WM_DPICHANGED) && (lParam != 0)) // the suggested rectangle (lParam 0: e.g. a synthetic message)
 			{
