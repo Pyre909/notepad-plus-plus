@@ -415,22 +415,7 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 	long hiddenLinesGreenWithAlpha = hiddenLinesGreen | 0xFF000000;
 	setElementColour(SC_ELEMENT_HIDDEN_LINE, hiddenLinesGreenWithAlpha);
 
-	if (DPIManagerV2::scale(100, _hParent) >= 150)
-	{
-		execute(SCI_RGBAIMAGESETWIDTH, 18);
-		execute(SCI_RGBAIMAGESETHEIGHT, 18);
-		execute(SCI_MARKERDEFINERGBAIMAGE, MARK_BOOKMARK, reinterpret_cast<LPARAM>(bookmark18));
-		execute(SCI_MARKERDEFINERGBAIMAGE, MARK_HIDELINESBEGIN, reinterpret_cast<LPARAM>(hidelines_begin18));
-		execute(SCI_MARKERDEFINERGBAIMAGE, MARK_HIDELINESEND, reinterpret_cast<LPARAM>(hidelines_end18));
-	}
-	else
-	{
-		execute(SCI_RGBAIMAGESETWIDTH, 14);
-		execute(SCI_RGBAIMAGESETHEIGHT, 14);
-		execute(SCI_MARKERDEFINERGBAIMAGE, MARK_BOOKMARK, reinterpret_cast<LPARAM>(bookmark14));
-		execute(SCI_MARKERDEFINERGBAIMAGE, MARK_HIDELINESBEGIN, reinterpret_cast<LPARAM>(hidelines_begin14));
-		execute(SCI_MARKERDEFINERGBAIMAGE, MARK_HIDELINESEND, reinterpret_cast<LPARAM>(hidelines_end14));
-	}
+	setMarkerImagesForDpi(DPIManagerV2::getDpiForWindow(_hParent));
 
     execute(SCI_SETMARGINSENSITIVEN, _SC_MARGE_FOLDER, true); // Make margin sensitive for getting notification on mouse click
     execute(SCI_SETMARGINSENSITIVEN, _SC_MARGE_SYMBOL, true); // Make margin sensitive for getting notification on mouse click
@@ -698,6 +683,15 @@ LRESULT CALLBACK ScintillaEditView::ScintillaProc(
 		{
 			NppDarkMode::setDarkScrollBar(hWnd);
 			return TRUE;
+		}
+
+		case WM_DPICHANGED:
+		case WM_DPICHANGED_AFTERPARENT:
+		{
+			// Scintilla updates its DPI (fonts...) first, then the Notepad++ sizes (margins, markers) are recomputed with it
+			const LRESULT result = ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+			pScint->updateForDpi();
+			return result;
 		}
 
 		case DOCUMENTMAP_MOUSEWHEEL:
@@ -3198,14 +3192,73 @@ void ScintillaEditView::showMargin(int whichMarge, bool willBeShown)
 		else
 			width = DPIManagerV2::scale(3, dpi);
 
-		execute(SCI_SETMARGINWIDTHN, whichMarge, willBeShown ? width : 0);
+		setNppMarginWidth(whichMarge, willBeShown ? width : 0);
 	}
 }
 
 void ScintillaEditView::showChangeHistoryMargin(bool willBeShown)
 {
 	const int width = DPIManagerV2::scale(9, _hParent);
-	execute(SCI_SETMARGINWIDTHN, _SC_MARGE_CHANGEHISTORY, willBeShown ? width : 0);
+	setNppMarginWidth(_SC_MARGE_CHANGEHISTORY, willBeShown ? width : 0);
+}
+
+void ScintillaEditView::setNppMarginWidth(int whichMarge, int width)
+{
+	execute(SCI_SETMARGINWIDTHN, whichMarge, width);
+	if ((whichMarge >= 0) && (whichMarge < _nbNppMargins))
+		_nppMarginWidths[whichMarge] = width;
+}
+
+void ScintillaEditView::setMarkerImagesForDpi(UINT dpi)
+{
+	const int imagesSize = (DPIManagerV2::scale(100, dpi) >= 150) ? 18 : 14;
+	if (imagesSize == _markerImagesSize)
+		return;
+
+	const bool isFirstTime = (_markerImagesSize == 0);
+	_markerImagesSize = imagesSize;
+
+	const bool isSize18 = (imagesSize == 18);
+	const std::pair<int, const unsigned char*> markerImages[] = {
+		{ MARK_BOOKMARK, isSize18 ? bookmark18 : bookmark14 },
+		{ MARK_HIDELINESBEGIN, isSize18 ? hidelines_begin18 : hidelines_begin14 },
+		{ MARK_HIDELINESEND, isSize18 ? hidelines_end18 : hidelines_end14 }
+	};
+
+	execute(SCI_RGBAIMAGESETWIDTH, imagesSize);
+	execute(SCI_RGBAIMAGESETHEIGHT, imagesSize);
+	for (const auto& [markerNumber, image] : markerImages)
+	{
+		// after a DPI change, a marker redefined by a plugin is left as it is
+		if (isFirstTime || (execute(SCI_MARKERSYMBOLDEFINED, markerNumber) == SC_MARK_RGBAIMAGE))
+			execute(SCI_MARKERDEFINERGBAIMAGE, markerNumber, reinterpret_cast<LPARAM>(image));
+	}
+}
+
+void ScintillaEditView::updateForDpi()
+{
+	if (!_hSelf || !_pScintillaFunc)
+		return;
+
+	setMarkerImagesForDpi(DPIManagerV2::getDpiForWindow(_hParent));
+
+	// only the margins whose width is still the one set by Notepad++
+	auto isNppMargin = [this](int whichMarge) -> bool {
+		const int width = _nppMarginWidths[whichMarge];
+		return (width > 0) && (execute(SCI_GETMARGINWIDTHN, whichMarge) == width);
+	};
+
+	if (isNppMargin(_SC_MARGE_SYMBOL))
+		showMargin(_SC_MARGE_SYMBOL, true);
+
+	if (isNppMargin(_SC_MARGE_FOLDER))
+		showMargin(_SC_MARGE_FOLDER, true);
+
+	if (isNppMargin(_SC_MARGE_CHANGEHISTORY))
+		showChangeHistoryMargin(true);
+
+	if (isNppMargin(_SC_MARGE_LINENUMBER))
+		updateLineNumberWidth(); // with the text width of Scintilla for the new DPI
 }
 
 void ScintillaEditView::updateBeginEndSelectPosition(bool is_insert, size_t position, size_t length)
@@ -3734,8 +3787,10 @@ void ScintillaEditView::updateLineNumberWidth()
 				nbDigits = nbDigits < 4 ? 4 : nbDigits;
 			}
 
-			auto pixelWidth = 8 + nbDigits * execute(SCI_TEXTWIDTH, STYLE_LINENUMBER, reinterpret_cast<LPARAM>("8"));
-			execute(SCI_SETMARGINWIDTHN, _SC_MARGE_LINENUMBER, pixelWidth);
+			// the padding is in pixels of the system DPI, with the per-monitor DPI awareness it's scaled for the DPI of the view
+			const int padding = DPIManagerV2::isPerMonitorV2Active() ? DPIManagerV2::scaleFromSystemDpi(8, DPIManagerV2::getDpiForWindow(_hSelf)) : 8;
+			auto pixelWidth = padding + nbDigits * execute(SCI_TEXTWIDTH, STYLE_LINENUMBER, reinterpret_cast<LPARAM>("8"));
+			setNppMarginWidth(_SC_MARGE_LINENUMBER, static_cast<int>(pixelWidth));
 		}
 	}
 }

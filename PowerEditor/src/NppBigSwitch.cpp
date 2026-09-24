@@ -3914,6 +3914,49 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			_statusBar.setPartWidth(STATUSBAR_UNICODE_TYPE, DPIManagerV2::scale(120, dpi));
 			_statusBar.setPartWidth(STATUSBAR_TYPING_MODE, DPIManagerV2::scale(45, dpi));
 
+			// Per-monitor DPI awareness (opt-in): only then the system sends WM_DPICHANGED
+			if (DPIManagerV2::isPerMonitorV2Active() && (_currentDpi != 0))
+			{
+				const UINT prevDpi = _currentDpi;
+				if (dpi != prevDpi)
+				{
+					_currentDpi = dpi;
+
+					// splitters between the 2 views & between the views and the docked UDL dialog
+					const int splitterSizeDyn = DPIManagerV2::scale(splitterSize, dpi);
+					_subSplitter.setSplitterSize(splitterSizeDyn);
+					if (_pMainSplitter)
+						_pMainSplitter->setSplitterSize(splitterSizeDyn);
+
+					// docking splitters & docked panels: the sizes saved in config.xml are already right for the DPI of the startup placement
+					_dockingManager.rescaleForDpi(dpi, _isStartupPlacement ? dpi : prevDpi);
+
+					// minimal panel dimensions (as preset by init)
+					DockingManagerData& dmd = nppParam.getNppGUI()._dockingData;
+					dmd._minDockedPanelVisibility = DPIManagerV2::scale(HIGH_CAPTION, dpi);
+					dmd._minFloatingPanelSize.cy = dmd._minDockedPanelVisibility;
+					dmd._minFloatingPanelSize.cx = std::max(static_cast<int>(dmd._minFloatingPanelSize.cy * 6),
+						DPIManagerV2::getSystemMetricsForDpi(SM_CXMINTRACK, dpi));
+				}
+
+				// suggested window rectangle for the new DPI, except for the startup placement which keeps the saved size
+				if (!_isStartupPlacement && (lParam != 0))
+				{
+					DPIManagerV2::setPositionDpi(lParam, hwnd);
+				}
+
+				// the children receive WM_DPICHANGED_AFTERPARENT after this message (status bar, docking containers, Scintilla views...),
+				// the layout must be done after them
+				::PostMessage(hwnd, NPPM_INTERNAL_DPICHANGEDRELAYOUT, 0, 0);
+			}
+
+			return TRUE;
+		}
+
+		case NPPM_INTERNAL_DPICHANGEDRELAYOUT:
+		{
+			::SendMessage(hwnd, WM_SIZE, 0, 0);
+			::RedrawWindow(hwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
 			return TRUE;
 		}
 

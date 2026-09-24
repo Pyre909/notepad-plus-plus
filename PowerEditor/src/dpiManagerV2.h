@@ -55,6 +55,13 @@ public:
 	// includes check for `DPI_AWARENESS_CONTEXT dpiContext` via `isValidDpiAwarenessContext`
 	static DPI_AWARENESS_CONTEXT setThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT dpiContext);
 
+	// Opt-in per-monitor v2 DPI awareness: makes the calling (GUI) thread per-monitor v2 DPI aware for the rest of the session.
+	// Must be called before any window is created. Returns false (the thread stays system DPI aware) if it isn't supported
+	// (before Windows 10 1703) or has failed.
+	static bool enablePerMonitorV2ForThread();
+	// true if enablePerMonitorV2ForThread() has succeeded, windows can then receive WM_DPICHANGED
+	[[nodiscard]] static bool isPerMonitorV2Active();
+
 	static bool adjustWindowRectExForDpi(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi);
 
 	static UINT getDpiForSystem();
@@ -108,6 +115,12 @@ public:
 
 	static int unscale(int x, HWND hWnd) {
 		return scale(x, USER_DEFAULT_SCREEN_DPI, getDpiForWindow(hWnd));
+	}
+
+	// for the legacy sizes defined in pixels of the system DPI (not scaled from 96 dpi):
+	// identity for the system DPI, which is always the DPI of the windows without per-monitor DPI awareness
+	static int scaleFromSystemDpi(int x, UINT dpi) {
+		return scale(x, dpi, getDpiForSystem());
 	}
 
 	int scale(int x) const {

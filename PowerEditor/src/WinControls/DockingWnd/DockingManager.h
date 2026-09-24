@@ -80,6 +80,10 @@ public:
 	void destroy() override;
 	void resize();
 
+	// after a DPI change (per-monitor DPI awareness): sets the splitters width for dpi and rescales the docked containers sizes
+	// from prevDpi (kept if prevDpi == dpi), the layout is updated on the next resize
+	void rescaleForDpi(UINT dpi, UINT prevDpi);
+
 private:
 	Window						**_ppWindow = nullptr;
 	RECT						_rcWork = {};
@@ -91,6 +95,7 @@ private:
 	BOOL						_isInitialized = FALSE;
 	int							_iContMap[CONT_MAP_MAX] = { 0 };
 	std::vector<DockingSplitter*>	_vSplitter;
+	int							_splitterWidth = SPLITTER_WIDTH; // SPLITTER_WIDTH at the system DPI
 
 
 	static LRESULT CALLBACK staticWinProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);

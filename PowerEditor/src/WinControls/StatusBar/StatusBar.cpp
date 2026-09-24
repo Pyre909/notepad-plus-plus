@@ -255,6 +255,8 @@ static LRESULT CALLBACK StatusBarSubclass(HWND hWnd, UINT uMsg, WPARAM wParam, L
 			
 			if (uMsg != WM_THEMECHANGED)
 			{
+				// the control computes its height with its font (the parent relayouts it after the DPI change)
+				::DefSubclassProc(hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(pStatusBarInfo->_hFont), FALSE);
 				return 0;
 			}
 			break;

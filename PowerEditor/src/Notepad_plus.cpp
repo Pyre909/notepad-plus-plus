@@ -880,6 +880,8 @@ LRESULT Notepad_plus::init(HWND hwnd)
 
 	_mainEditView.grabFocus();
 
+	_currentDpi = dpi; // from now on, WM_DPICHANGED can rescale the GUI elements created above
+
 	return TRUE;
 }
 

@@ -60,6 +60,13 @@ public:
 		return ((_dwSplitterStyle & SV_VERTICAL) != 0);
 	}
 
+	// e.g. after a DPI change, the new size is applied by the next reSizeTo()
+	void setSplitterSize(int splitterSize)
+	{
+		_splitterSize = splitterSize;
+		_splitter.setSplitterSize(splitterSize);
+	}
+
 private:
 	Window* _pWin0 = nullptr; // left or top window
 	Window* _pWin1 = nullptr; // right or bottom window

@@ -100,6 +100,8 @@ static fnIsValidDpiAwarenessContext _fnIsValidDpiAwarenessContext = DummyIsValid
 static fnSetThreadDpiAwarenessContext _fnSetThreadDpiAwarenessContext = DummySetThreadDpiAwarenessContext;
 static fnAdjustWindowRectExForDpi _fnAdjustWindowRectExForDpi = DummyAdjustWindowRectExForDpi;
 
+static bool _isPerMonitorV2Active = false;
+
 void DPIManagerV2::initDpiAPI()
 {
 	if (NppDarkMode::isWindows10())
@@ -136,6 +138,20 @@ DPI_AWARENESS_CONTEXT DPIManagerV2::setThreadDpiAwarenessContext(DPI_AWARENESS_C
 		return _fnSetThreadDpiAwarenessContext(dpiContext);
 	}
 	return nullptr;
+}
+
+bool DPIManagerV2::enablePerMonitorV2ForThread()
+{
+	if (DPIManagerV2::setThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) != nullptr)
+	{
+		_isPerMonitorV2Active = true;
+	}
+	return _isPerMonitorV2Active;
+}
+
+bool DPIManagerV2::isPerMonitorV2Active()
+{
+	return _isPerMonitorV2Active;
 }
 
 bool DPIManagerV2::adjustWindowRectExForDpi(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi)

@@ -3398,6 +3398,7 @@ intptr_t CALLBACK MiscSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_DETECTENCODING, BM_SETCHECK, nppGUI._detectEncoding, 0);
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_SAVEALLCONFIRM, BM_SETCHECK, nppGUI._saveAllConfirm, 0);
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_ALOOWSIMLINKFAW, BM_SETCHECK, nppGUI._isFawSymlinkAllowed, 0);
+			::SendDlgItemMessage(_hSelf, IDC_CHECK_PERMONITORDPIAWARENESS, BM_SETCHECK, nppGUI._perMonitorDpiAwareness ? BST_CHECKED : BST_UNCHECKED, 0);
 
 			::SendDlgItemMessage(_hSelf, IDC_COMBO_AUTOUPDATE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Disable"));
 			::SendDlgItemMessage(_hSelf, IDC_COMBO_AUTOUPDATE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Enable on Notepad++ startup"));
@@ -3571,6 +3572,13 @@ intptr_t CALLBACK MiscSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 							MB_OK | MB_ICONWARNING | MB_APPLMODAL);
 						isFirstTime = false;
 					}
+					return TRUE;
+				}
+
+				case IDC_CHECK_PERMONITORDPIAWARENESS:
+				{
+					// applied at the next startup
+					nppGUI._perMonitorDpiAwareness = isCheckedOrNot(IDC_CHECK_PERMONITORDPIAWARENESS);
 					return TRUE;
 				}
 

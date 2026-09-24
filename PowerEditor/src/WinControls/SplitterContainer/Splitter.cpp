@@ -200,6 +200,24 @@ void Splitter::destroy()
 }
 
 
+void Splitter::setSplitterSize(int splitterSize)
+{
+	if ((splitterSize <= 0) || (splitterSize == _splitterSize))
+		return;
+
+	_splitterSize = splitterSize;
+
+	if (_dwFlags & SV_HORIZONTAL)
+		_rect.bottom = _splitterSize; // the height of the splitter
+	else
+		_rect.right = _splitterSize; // the width of the splitter
+
+	// _clickZone2BR is updated by resizeSpliter()
+	_clickZone2TL.right = getClickZone(WH::width);
+	_clickZone2TL.bottom = getClickZone(WH::height);
+}
+
+
 int Splitter::getClickZone(WH which)
 {
 	// determined by (_dwFlags & SV_VERTICAL) && _splitterSize
