@@ -130,6 +130,14 @@ public:
 	void setForegroundColor(COLORREF fgColour) override {
 		_fileListView.setForegroundColor(fgColour);
 	}
+
+	// Per-monitor DPI awareness (opt-in): the tab bar's icons, shared with the panel, have been resized for the DPI of the
+	// main window, the panel takes the file state icons of its own DPI (the tab bar's ones or its own ones)
+	void updateFileStateIconsForDpi() {
+		if (_hSelf != nullptr)
+			onDpiChanged(_dpiManager.getDpi());
+	}
+
 protected:
 	HMENU _hGlobalMenu = NULL;
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;

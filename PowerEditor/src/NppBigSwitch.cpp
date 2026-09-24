@@ -3906,7 +3906,10 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			_subDocTab.setPinBtnImageList();
 			::SendMessage(_pPublicInterface->getHSelf(), NPPM_INTERNAL_REDUCETABBAR, 0, 0);
 
-			changeDocumentListIconSet(false);
+			// the Document List shares the tab icons resized in place above: it takes the icons of its DPI
+			// (its DPI changes later with WM_DPICHANGED_AFTERPARENT if it's docked), no need to recreate it
+			if (_pDocumentListPanel != nullptr)
+				_pDocumentListPanel->updateFileStateIconsForDpi();
 
 			_statusBar.setPartWidth(STATUSBAR_DOC_SIZE, DPIManagerV2::scale(220, dpi));
 			_statusBar.setPartWidth(STATUSBAR_CUR_POS, DPIManagerV2::scale(260, dpi));

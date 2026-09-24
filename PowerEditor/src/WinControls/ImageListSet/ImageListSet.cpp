@@ -54,6 +54,15 @@ void IconList::create(int iconSize, HINSTANCE hInst, const int* iconIDArray, int
 		addIcon(iconIDArray[i], iconSize, iconSize);
 }
 
+void IconList::resize(int iconSize)
+{
+	_iconSize = iconSize;
+	ImageList_SetIconSize(_hImglst, iconSize, iconSize); // removes all the images too
+
+	for (int i = 0; i < _iconIDArraySize; ++i)
+		addIcon(_pIconIDArray[i], iconSize, iconSize);
+}
+
 void IconList::addIcon(int iconID, int cx, int cy, int failIconID, bool isToolbarNormal) const
 {
 	HICON hIcon = nullptr;

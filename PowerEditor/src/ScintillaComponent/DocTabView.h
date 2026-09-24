@@ -63,13 +63,13 @@ public:
 	void reSizeTo(RECT & rc) override;
 
 	void resizeIconsDpi() {
-		UINT newSize = dpiManager().scale(g_TabIconSize);
-		for (const IconList* const& i : _pIconListVector)
+		// the image lists are kept (the Document List panel can use them too) with their icons reloaded at the new size,
+		// creating new ones leaked the previous ones
+		const int newSize = dpiManager().scale(g_TabIconSize);
+		for (IconList* const i : _pIconListVector)
 		{
-			ImageList_SetIconSize(i->getHandle(), newSize, newSize);
+			i->resize(newSize);
 		}
-
-		createIconSets();
 
 		if (_iconListIndexChoice < 0 || static_cast<size_t>(_iconListIndexChoice) >= _pIconListVector.size())
 			_iconListIndexChoice = 0;

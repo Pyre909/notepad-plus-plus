@@ -30,6 +30,8 @@ public :
 	IconList() = default;
 	void init(HINSTANCE hInst, int iconSize);
 	void create(int iconSize, HINSTANCE hInst, const int* iconIDArray, int iconIDArraySize);
+	// reloads the icons of create() at another size in the same image list
+	void resize(int iconSize);
 
 	void destroy() {
 		ImageList_Destroy(_hImglst);
