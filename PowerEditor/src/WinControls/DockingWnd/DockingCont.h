@@ -138,6 +138,10 @@ public:
 
 	void destroyFonts();
 
+	// sends WM_DPICHANGED_AFTERPARENT to a window and its descendants
+	static void notifyDpiChangedAfterParent(HWND hWnd);
+	static BOOL CALLBACK notifyDpiChangedAfterParentProc(HWND hWnd, LPARAM lParam);
+
 protected:
 
 	// Subclassing caption

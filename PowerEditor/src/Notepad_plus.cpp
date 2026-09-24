@@ -2776,14 +2776,10 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 		const Style * pStyle = styleArray.findByID(bitmapOnStyleMenuItemsInfo[j].styleIndic);
 		if (pStyle)
 		{
-			HBITMAP hNewBitmap = generateSolidColourMenuItemIcon(pStyle->_bgColor);
+			HBITMAP hNewBitmap = getMainMenuColourBitmap(pStyle->_bgColor);
 			if (hNewBitmap)
 			{
-				if (!::SetMenuItemBitmaps(_mainMenuHandle, bitmapOnStyleMenuItemsInfo[j].firstOfThisColorMenuId, MF_BYCOMMAND, hNewBitmap, hNewBitmap))
-				{
-					::DeleteObject(hNewBitmap);
-				}
-				else
+				if (::SetMenuItemBitmaps(_mainMenuHandle, bitmapOnStyleMenuItemsInfo[j].firstOfThisColorMenuId, MF_BYCOMMAND, hNewBitmap, hNewBitmap))
 				{
 					for (int relatedMenuId : bitmapOnStyleMenuItemsInfo[j].sameColorMenuIds)
 					{
@@ -2798,13 +2794,27 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 	for (int i = 0; i < TAB_COLORS_COUNT; ++i)
 	{
 		COLORREF colour = nppParam.getIndividualTabColor(i, NppDarkMode::isEnabled(), true);
-		HBITMAP hBitmap = generateSolidColourMenuItemIcon(colour);
+		HBITMAP hBitmap = getMainMenuColourBitmap(colour);
 		if (hBitmap)
 		{
-			if (!::SetMenuItemBitmaps(_mainMenuHandle, IDM_VIEW_TAB_COLOUR_1 + i, MF_BYCOMMAND, hBitmap, hBitmap))
-				::DeleteObject(hBitmap);
+			::SetMenuItemBitmaps(_mainMenuHandle, IDM_VIEW_TAB_COLOUR_1 + i, MF_BYCOMMAND, hBitmap, hBitmap);
 		}
 	}
+}
+
+HBITMAP Notepad_plus::getMainMenuColourBitmap(COLORREF colour)
+{
+	// same size as generateSolidColourMenuItemIcon()
+	const int bitmapXYsize = DPIManagerV2::scaleFromSystemDpiForWindow(16, _pPublicInterface->getHSelf());
+	const auto key = std::make_pair(bitmapXYsize, colour);
+
+	if (const auto it = _mainMenuColourBitmaps.find(key); it != _mainMenuColourBitmaps.end())
+		return it->second;
+
+	HBITMAP hBitmap = generateSolidColourMenuItemIcon(colour);
+	if (hBitmap)
+		_mainMenuColourBitmaps[key] = hBitmap;
+	return hBitmap;
 }
 
 // doCheck searches for the menu item matching the provided id across the main menu and all of its submenus,
@@ -7502,7 +7512,7 @@ void Notepad_plus::launchDocumentListPanel(bool changeFromBtnCmd)
 		HIMAGELIST hImgLst = _mainDocTab.getImgLst(tabIconSet);
 
 
-		_pDocumentListPanel->init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), hImgLst);
+		_pDocumentListPanel->init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), hImgLst, tabIconSet);
 		NativeLangSpeaker *pNativeSpeaker = nppParams.getNativeLangSpeaker();
 		bool isRTL = pNativeSpeaker->isRTL();
 		DockedWidgetData	data{};

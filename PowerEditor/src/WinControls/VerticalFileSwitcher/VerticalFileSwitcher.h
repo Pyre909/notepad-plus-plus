@@ -33,9 +33,10 @@ class VerticalFileSwitcher : public DockingDlgInterface {
 public:
 	VerticalFileSwitcher() : DockingDlgInterface(IDD_DOCLIST) {}
 
-	void init(HINSTANCE hInst, HWND hPere, HIMAGELIST hImaLst) {
+	void init(HINSTANCE hInst, HWND hPere, HIMAGELIST hImaLst, int tabIconSet = -1) {
 		DockingDlgInterface::init(hInst, hPere);
 		_hImaLst = hImaLst;
+		_tabIconSet = tabIconSet;
 	}
 
 	void display(bool toShow = true) const override;
@@ -156,6 +157,7 @@ private:
 	VerticalFileSwitcherListView _fileListView;
 	HIMAGELIST _hImaLst = nullptr; // file state icons of the tab bar (for the DPI of the main window)
 	HIMAGELIST _hImaLstDpi = nullptr; // own file state icons, for a DPI of the panel which isn't the one of the tab bar's icons
+	int _tabIconSet = -1; // icon set of _hImaLst (0 standard, 1 alternate, 2 dark mode), -1 if unknown
 
 	static COLORREF _bgColor;
 	static LRESULT listViewNotifyCustomDraw(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

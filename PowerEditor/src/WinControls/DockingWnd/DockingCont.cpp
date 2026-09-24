@@ -133,6 +133,14 @@ DockedWidgetData* DockingCont::createDockedWidget(const DockedWidgetData& data)
 	// set attached child window
 	::SetParent(pTbData->hClient, ::GetDlgItem(_hSelf, IDC_CLIENT_TAB));
 
+	// Per-monitor DPI awareness (opt-in): a panel moved from a container on a monitor of another DPI gets no DPI message,
+	// so it and its descendants (views...) get WM_DPICHANGED_AFTERPARENT top-down, as when the DPI of a parent changes
+	// (a window whose DPI hasn't changed ignores it, e.g. DockingDlgInterface compares its DPI)
+	if (DPIManagerV2::isPerMonitorV2Active())
+	{
+		notifyDpiChangedAfterParent(pTbData->hClient);
+	}
+
 	// set names for captions and view toolbar
 	viewDockedWidget(pTbData);
 
@@ -259,12 +267,25 @@ bool DockingCont::isTbVis(DockedWidgetData* data)
 }
 
 
+BOOL CALLBACK DockingCont::notifyDpiChangedAfterParentProc(HWND hWnd, [[maybe_unused]] LPARAM lParam)
+{
+	::SendMessage(hWnd, WM_DPICHANGED_AFTERPARENT, 0, 0);
+	return TRUE;
+}
+
+void DockingCont::notifyDpiChangedAfterParent(HWND hWnd)
+{
+	::SendMessage(hWnd, WM_DPICHANGED_AFTERPARENT, 0, 0);
+	::EnumChildWindows(hWnd, notifyDpiChangedAfterParentProc, 0); // all the descendants, a parent before its children
+}
+
 void DockingCont::destroyFonts()
 {
-	if (_isTabFontSet && (_hContTab != nullptr))
+	if (_isTabFontSet)
 	{
-		// the tab control mustn't keep a deleted font
-		::SendMessage(_hContTab, WM_SETFONT, 0, FALSE);
+		// the tab control mustn't keep a deleted font (it's already destroyed with the container when called by the destructor)
+		if ((_hContTab != nullptr) && ::IsWindow(_hContTab))
+			::SendMessage(_hContTab, WM_SETFONT, 0, FALSE);
 		_isTabFontSet = false;
 	}
 

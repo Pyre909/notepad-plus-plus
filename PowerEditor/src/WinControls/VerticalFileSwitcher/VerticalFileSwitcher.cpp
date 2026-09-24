@@ -773,9 +773,9 @@ HIMAGELIST VerticalFileSwitcher::getFileStateIconsForDpi(UINT dpi)
 		return _hImaLstDpi;
 	}
 
-	// same choice of the icon set as Notepad_plus::launchDocumentListPanel()
+	// the icon set of the tab bar's icons given by Notepad_plus::launchDocumentListPanel(), else the same choice as it
 	const bool isDarkMode = NppDarkMode::isEnabled();
-	int tabIconSet = NppDarkMode::getTabIconSet(isDarkMode);
+	int tabIconSet = (_tabIconSet != -1) ? _tabIconSet : NppDarkMode::getTabIconSet(isDarkMode);
 	if (tabIconSet == -1)
 	{
 		const int tabBarStatus = NppParameters::getInstance().getNppGUI()._tabStatus;
