@@ -16,6 +16,7 @@
 #include <climits>
 
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <vector>
 #include <map>
@@ -56,7 +57,7 @@
 using namespace Scintilla;
 using namespace Scintilla::Internal;
 
-// All file hidden in unnamed namespace except for FontGDI_Allocate and SurfaceGDI_Allocate
+// All file hidden in unnamed namespace except for FontGDI_Allocate and SurfaceGDI_Allocate (and N++ GdiFontWeight)
 namespace {
 
 constexpr Supports SupportsGDI[] = {
@@ -91,6 +92,69 @@ void SetLogFont(LOGFONTW &lf, const char *faceName, CharacterSet characterSet, X
 	UTF16FromUTF8(faceName, lf.lfFaceName, LF_FACESIZE);
 }
 
+// N++: the weight of the regular font of a GDI family, its upright font of weight closest to normal (0 if none)
+int CALLBACK RegularWeightProc(const LOGFONTW *plf, const TEXTMETRICW *, DWORD, LPARAM lParam) {
+	LONG &regular = *reinterpret_cast<LONG *>(lParam);
+	const LONG weight = plf->lfWeight;
+	if (!plf->lfItalic && (weight > 0)) {
+		const LONG distance = std::abs(weight - FW_NORMAL);
+		const LONG regularDistance = std::abs(regular - FW_NORMAL);
+		if ((regular == 0) || (distance < regularDistance) || ((distance == regularDistance) && (weight < regular))) {
+			regular = weight;
+		}
+	}
+	return TRUE;
+}
+
+LONG GdiRegularWeight(const wchar_t *faceName) noexcept {
+	LOGFONTW lf{};
+	wcsncpy_s(lf.lfFaceName, faceName, _TRUNCATE);
+	lf.lfCharSet = DEFAULT_CHARSET;
+	LONG regular = 0;
+	if (HDC hdc = ::CreateCompatibleDC({})) {
+		::EnumFontFamiliesExW(hdc, &lf, RegularWeightProc, reinterpret_cast<LPARAM>(&regular), 0);
+		::DeleteDC(hdc);
+	}
+	return regular;
+}
+
+}
+
+namespace Scintilla::Internal {
+
+// N++: the weight to ask GDI for a weight of a font family lighter than regular. GDI emboldens a font by simulation
+// when the weight asked is much heavier than its weight: the regular weight asked for the GDI family of a light
+// weight ("MonoLisaCode ExtraLight", "... Thin", "... Hairline") draws it as a fake bold. Weights up to regular
+// are relative to the family's regular weight, so that its regular is drawn as is; heavier ones (bold) are asked
+// as they are, GDI emboldening the family's font for them as before.
+LONG GdiFontWeight(const wchar_t *faceName, LONG weight) noexcept {
+	try {
+		// Font lists and so the family names used are known at startup: the weights are kept for the session
+		static std::mutex regularWeightsMutex;
+		static std::map<std::wstring, LONG, std::less<>> regularWeights;
+		const std::wstring_view face(faceName);
+		if (face.empty() || (face.length() >= LF_FACESIZE)) {
+			return weight;
+		}
+		std::lock_guard<std::mutex> guard(regularWeightsMutex);
+		auto it = regularWeights.find(face);
+		if (it == regularWeights.end()) {
+			it = regularWeights.emplace(std::wstring(face), GdiRegularWeight(faceName)).first;
+		}
+		const LONG regular = it->second;
+		if ((regular > 0) && (regular < FW_NORMAL) && (weight <= FW_NORMAL)) {
+			return std::max(regular + weight - FW_NORMAL, 1L);
+		}
+	} catch (...) {
+		// the weight asked
+	}
+	return weight;
+}
+
+}
+
+namespace {
+
 struct FontGDI : public FontWin {
 	HFONT hfont = {};
 	CharacterSet characterSet = CharacterSet::Ansi;
@@ -100,6 +164,7 @@ struct FontGDI : public FontWin {
 	explicit FontGDI(const FontParameters &fp) : characterSet(fp.characterSet) {
 		LOGFONTW lf;
 		SetLogFont(lf, fp.faceName, fp.characterSet, fp.size, fp.weight, fp.italic, fp.extraFontFlag);
+		lf.lfWeight = GdiFontWeight(lf.lfFaceName, lf.lfWeight);	// N++
 		hfont = ::CreateFontIndirectW(&lf);
 	}
 	// Deleted so FontGDI objects can not be copied.

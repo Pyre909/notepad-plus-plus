@@ -271,8 +271,32 @@ std::optional<GdiFamilyMatch> FindGdiFamilyName(const std::wstring &faceName) {
 	}
 	UINT32 index = 0;
 	BOOL exists = FALSE;
-	if (FAILED(collection->FindFamilyName(faceName.c_str(), &index, &exists)) || exists) {
-		return {};	// a DirectWrite family name (the usual case): nothing to match
+	if (FAILED(collection->FindFamilyName(faceName.c_str(), &index, &exists))) {
+		return {};
+	}
+	if (exists) {
+		// A DirectWrite family name (the usual case), used as is unless DirectWrite emboldens it by simulation for
+		// the regular weight, all its fonts being much lighter: e.g. the family of a static font of a weight whose
+		// name DirectWrite doesn't parse as one ("X Hairline"). Its weights are then relative to its regular font.
+		ComPtr<IDWriteFontFamily> family;
+		ComPtr<IDWriteFont> font;
+		if (FAILED(collection->GetFontFamily(index, family.GetAddressOf())) ||
+			FAILED(family->GetFirstMatchingFont(DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL, font.GetAddressOf())) ||
+			!(font->GetSimulations() & DWRITE_FONT_SIMULATIONS_BOLD)) {
+			return {};
+		}
+		std::optional<GdiFamilyMatch> regular;
+		for (UINT32 iFont = 0; iFont < family->GetFontCount(); ++iFont) {
+			ComPtr<IDWriteFont> member;
+			if (SUCCEEDED(family->GetFont(iFont, member.GetAddressOf())) &&
+				(member->GetSimulations() == DWRITE_FONT_SIMULATIONS_NONE) && (member->GetStyle() == DWRITE_FONT_STYLE_NORMAL)) {
+				const int distance = std::abs(static_cast<int>(member->GetWeight()) - DWRITE_FONT_WEIGHT_NORMAL);
+				if (!regular || (distance < std::abs(static_cast<int>(regular->weight) - DWRITE_FONT_WEIGHT_NORMAL))) {
+					regular = GdiFamilyMatch{ faceName, member->GetWeight(), member->GetStretch(), DWRITE_FONT_STYLE_NORMAL };
+				}
+			}
+		}
+		return regular;
 	}
 
 	// The fonts whose Win32 family name it is: in the family named by the start of the name first
@@ -378,7 +402,9 @@ struct FontDirectWrite : public FontWin {
 			gdiFaceName = wsFace;
 			gdiWeight = weight;
 			wsFamily = match->family;
-			weight = std::clamp(static_cast<int>(match->weight) + weight - static_cast<int>(FontWeight::Normal), 1, 999);
+			// (at most extra black: heavier weights are refused by some DirectWrite implementations, drawing nothing)
+			weight = std::clamp(static_cast<int>(match->weight) + weight - static_cast<int>(FontWeight::Normal), 1,
+				static_cast<int>(DWRITE_FONT_WEIGHT_EXTRA_BLACK));
 			if (fp.stretch == FontStretch::Normal) {
 				stretch = match->stretch;
 			}
@@ -444,7 +470,7 @@ struct FontDirectWrite : public FontWin {
 		if (!gdiFaceName.empty()) {
 			// N++: GDI knows the font by its GDI family name
 			gdiFaceName.copy(lf.lfFaceName, LF_FACESIZE - 1);
-			lf.lfWeight = gdiWeight;
+			lf.lfWeight = GdiFontWeight(lf.lfFaceName, gdiWeight);
 			lf.lfItalic = pTextFormat->GetFontStyle() == DWRITE_FONT_STYLE_ITALIC;
 			lf.lfHeight = -static_cast<int>(pTextFormat->GetFontSize());
 			return ::CreateFontIndirectW(&lf);
