@@ -151,16 +151,13 @@ namespace {
 
 // Two idle messages SC_WIN_IDLE and SC_WORK_IDLE.
 
-// N++: moved from 5001 and 5002 which are the private SCI_SETFONTRENDERINGPARAMETER and
-// SCI_GETFONTRENDERINGPARAMETER, above the range 5000+ of Notepad++'s private Scintilla messages.
-
 // SC_WIN_IDLE is low priority so should occur after the next WM_PAINT
 // It is for lengthy actions like wrapping and background styling
-constexpr UINT SC_WIN_IDLE = 6001;
+constexpr UINT SC_WIN_IDLE = 5001;
 // SC_WORK_IDLE is high priority and should occur before the next WM_PAINT
 // It is for shorter actions like restyling the text just inserted
 // and delivering SCN_UPDATEUI
-constexpr UINT SC_WORK_IDLE = 6002;
+constexpr UINT SC_WORK_IDLE = 5002;
 
 using SetCoalescableTimerSig = UINT_PTR (WINAPI *)(HWND hwnd, UINT_PTR nIDEvent,
 	UINT uElapse, TIMERPROC lpTimerFunc, ULONG uToleranceDelay);

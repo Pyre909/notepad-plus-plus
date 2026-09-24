@@ -1357,9 +1357,9 @@ typedef sptr_t (*SciFnDirectStatus)(sptr_t ptr, unsigned int iMessage, uptr_t wP
 
 #define SC_SEARCHRESULT_LINEBUFFERMAXLENGTH 2048
 #define SCI_GETBOOSTREGEXERRMSG 5000
-/* N++: Win32 DirectWrite text rendering overrides (private range, not in Scintilla.iface) */
-#define SCI_SETFONTRENDERINGPARAMETER 5001
-#define SCI_GETFONTRENDERINGPARAMETER 5002
+/* N++: Win32 DirectWrite text rendering overrides (private, not in Scintilla.iface; 5001/5002 are ScintillaWin idle messages) */
+#define SCI_SETFONTRENDERINGPARAMETER 5101
+#define SCI_GETFONTRENDERINGPARAMETER 5102
 #define SC_FONTRENDERING_DEFAULT -1
 #define SC_FONTRENDERING_GAMMA 0
 #define SC_FONTRENDERING_ENHANCEDCONTRAST 1
