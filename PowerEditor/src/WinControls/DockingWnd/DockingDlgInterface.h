@@ -105,9 +105,26 @@ protected :
 
 	using StaticDialog::create;
 
+	// Per-monitor DPI awareness (opt-in): called when the panel's DPI has changed (its container has moved
+	// to a monitor of another DPI), after _dpiManager has been updated. The panel rescales its fonts, images,
+	// item heights... for _dpiManager.getDpi(); its layout follows with the WM_SIZE of the container's relayout.
+	virtual void onDpiChanged([[maybe_unused]] UINT prevDpi) {}
+
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override {
 		switch (message)
 		{
+			case WM_DPICHANGED_AFTERPARENT:
+			{
+				// a panel is always a child window (of a docked or floating container): only this message is sent to it
+				const UINT prevDpi = _dpiManager.getDpi();
+				setDpi();
+				if (_dpiManager.getDpi() != prevDpi)
+				{
+					onDpiChanged(prevDpi);
+				}
+				break;
+			}
+
 			case WM_ERASEBKGND:
 			{
 				if (!NppDarkMode::isEnabled())
