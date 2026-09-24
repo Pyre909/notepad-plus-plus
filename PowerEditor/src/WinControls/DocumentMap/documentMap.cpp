@@ -25,6 +25,7 @@
 
 #define DOCUMENTMAP_SCROLL        (WM_USER + 4) // DM_SETDEFID uses WM_USER + 1
 #define DOCUMENTMAP_MOUSECLICKED  (WM_USER + 5) // DM_REPOSITION uses WM_USER + 2
+#define DOCUMENTMAP_DPICHANGED    (WM_USER + 6)
 
 static constexpr bool moveDown = true;
 static constexpr bool moveUp = false;
@@ -184,6 +185,16 @@ void DocumentMap::wrapMap(const ScintillaEditView *editView)
 		// compute doc map width: dzw/ezw = 1/zoomRatio
 		double docMapWidth = editZoneWidth / zr;
 
+		// per-monitor DPI awareness (opt-in): a floating map can be on a monitor whose DPI isn't the DPI of the edit view,
+		// the texts of both are scaled for their DPI
+		if (DPIManagerV2::isPerMonitorV2Active())
+		{
+			const UINT mapDpi = DPIManagerV2::getDpiForWindow(_pMapView->getHSelf());
+			const UINT editDpi = DPIManagerV2::getDpiForWindow(pEditView->getHSelf());
+			if ((mapDpi != editDpi) && (editDpi != 0))
+				docMapWidth = docMapWidth * mapDpi / editDpi;
+		}
+
 		::MoveWindow(_pMapView->getHSelf(), 0, 0, int(docMapWidth), rect.bottom-rect.top, TRUE);
 		_pMapView->wrap(true);
 
@@ -329,6 +340,15 @@ void DocumentMap::redraw(bool) const
 	DockingDlgInterface::redraw(true);
 }
 
+void DocumentMap::onDpiChanged([[maybe_unused]] UINT prevDpi)
+{
+	// Per-monitor DPI awareness (opt-in): the map view, a child of this dialog, receives WM_DPICHANGED_AFTERPARENT after it
+	// and scales its text for the new DPI: the wrapping of the map and the view zone are computed again afterwards, also after
+	// the relayout of a docked map (the main window has posted NPPM_INTERNAL_DPICHANGEDRELAYOUT before)
+	_displayWidth = -1; // wrapMap() is needed
+	::PostMessage(_hSelf, DOCUMENTMAP_DPICHANGED, 0, 0);
+}
+
 intptr_t CALLBACK DocumentMap::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -448,6 +468,17 @@ intptr_t CALLBACK DocumentMap::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 		case DOCUMENTMAP_MOUSEWHEEL:
 		{
 			::SendMessage((*_ppEditView)->getHSelf(), DOCUMENTMAP_MOUSEWHEEL, wParam, lParam);
+			return TRUE;
+		}
+
+		case DOCUMENTMAP_DPICHANGED:
+		{
+			// the map view has its text size for the new DPI (see onDpiChanged)
+			if (_pMapView && _ppEditView && _vzDlg.isCreated())
+			{
+				doMove();
+				reloadMap(); // wrapping and view zone
+			}
 			return TRUE;
 		}
 

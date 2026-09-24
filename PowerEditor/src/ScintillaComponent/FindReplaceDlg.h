@@ -160,6 +160,7 @@ public:
 protected :
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	bool notify(SCNotification *notification);
+	void onDpiChanged(UINT prevDpi) override;
 
 private:
 	enum { searchHeaderLevel = SC_FOLDLEVELBASE, fileHeaderLevel, resultLevel };
@@ -585,10 +586,15 @@ private :
 
 	std::vector<MatchPosition> _matches;
 
+	// Per-monitor DPI awareness (opt-in): layout of the dialog for the DPI it was created with,
+	// the dialog (in the bottom rebar of the main window) follows the DPI changes of the main window
+	DialogDpiLayout _dpiLayout;
+
 	using Window::init;
 
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	void markSelectedTextInc(bool enable, FindOption *opt = NULL);
+	void rescaleForDpi();
 };
 
 

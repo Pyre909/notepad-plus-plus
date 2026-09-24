@@ -132,6 +132,7 @@ public:
 protected:
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	bool needToRecomputeWith(const ScintillaEditView *editView = nullptr);
+	void onDpiChanged(UINT prevDpi) override;
 
 private:
 	ScintillaEditView**_ppEditView = nullptr;

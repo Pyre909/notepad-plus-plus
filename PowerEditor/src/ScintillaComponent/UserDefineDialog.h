@@ -377,6 +377,10 @@ private :
     int _yScrollPos = 0;
     int _prevHightVal = 0;
 
+	// Per-monitor DPI awareness (opt-in): layout of the dialog and of its tabs for the DPI it was created with,
+	// the docked dialog (a child of the main window) follows the DPI changes of the main window
+	DialogDpiLayout _dpiLayout;
+
 	using Window::init;
 
     void getActualPosSize() {
@@ -386,6 +390,7 @@ private :
     }
     void restorePosSize(){ reSizeTo(_dlgPos); }
     void enableLangAndControlsBy(size_t index);
+	void updateDockedDpi();
 protected :
     void setKeywords2List(int) override {}
     void updateDlg() override;

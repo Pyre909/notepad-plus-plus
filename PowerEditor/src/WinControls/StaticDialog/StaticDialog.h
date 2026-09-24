@@ -19,6 +19,8 @@
 
 #include <windows.h>
 
+#include <vector>
+
 #include "Window.h"
 #include "dpiManagerV2.h"
 
@@ -105,4 +107,69 @@ protected:
 
 	HWND myCreateDialogIndirectParam(int dialogID, bool isRTL, WORD fontSize, DLGPROC myDlgProc = StaticDialog::dlgProc);
 	INT_PTR myCreateDialogBoxIndirectParam(int dialogID, bool isRTL, WORD fontSize = 8);
+};
+
+// Per-monitor DPI awareness (opt-in): the layout of dialogs (the positions and sizes of their controls, the fonts), saved
+// for a DPI to be applied again for another DPI the way the dialog manager lays out a dialog template: fonts of the same
+// point size, positions and sizes in the dialog units of the dialog font. Applying it is absolute: the result doesn't
+// depend on what the dialog manager may have rescaled already (a child dialog of a window which isn't a dialog, e.g. a
+// dialog docked in the main window or in a rebar, only receives WM_DPICHANGED_AFTERPARENT).
+class DialogDpiLayout final
+{
+public:
+	DialogDpiLayout() = default;
+	DialogDpiLayout(const DialogDpiLayout&) = delete;
+	DialogDpiLayout& operator=(const DialogDpiLayout&) = delete;
+	~DialogDpiLayout();
+
+	// saves the client size of hDlg, the positions and sizes of its direct children (in its client coordinates) and their
+	// fonts, for dpi. Several dialogs (e.g. a dialog and its child dialogs) can be saved, for the same DPI.
+	void save(HWND hDlg, UINT dpi);
+
+	bool isSaved() const {
+		return _dpi != 0;
+	}
+
+	// DPI of the saved layout
+	UINT getDpi() const {
+		return _dpi;
+	}
+
+	// moves and resizes the saved windows, and sets them their font, for dpi
+	void apply(UINT dpi);
+
+	// client size of a saved dialog, for the DPI of the last apply() (before it, the saved size)
+	SIZE getClientSize(HWND hDlg) const;
+
+private:
+	struct SavedFont
+	{
+		HFONT _hFont = nullptr; // the font when saved, only to recognize a font shared by several windows
+		LOGFONT _lf{};
+	};
+
+	struct Dlg
+	{
+		HWND _hDlg = nullptr;
+		int _iFont = -1; // index in _fonts of the dialog font, -1 if none
+		SIZE _baseUnits{}; // dialog base units of the dialog font for the saved DPI, 0 if unknown (then scaled with the DPI)
+		SIZE _size{}; // client size for the saved DPI
+		SIZE _sizeForDpi{}; // client size for the last applied DPI
+	};
+
+	struct Ctrl
+	{
+		HWND _hWnd = nullptr;
+		size_t _iDlg = 0; // index in _dlgs of its dialog
+		RECT _rc{}; // in pixels for the saved DPI
+		int _iFont = -1; // index in _fonts, -1 when the font isn't set (child dialog, system font)
+	};
+
+	std::vector<SavedFont> _fonts;
+	std::vector<Dlg> _dlgs;
+	std::vector<Ctrl> _ctrls;
+	std::vector<HFONT> _fontsForDpi; // created for the last applied DPI and set to the controls
+	UINT _dpi = 0;
+
+	int saveFont(HFONT hFont);
 };

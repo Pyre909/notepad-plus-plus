@@ -21,6 +21,7 @@
 #include <cstring>
 #include <cwchar>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "Common.h"
@@ -406,4 +407,187 @@ intptr_t CALLBACK StaticDialog::dlgProc(HWND hwnd, UINT message, WPARAM wParam, 
 			return pStaticDlg->run_dlgProc(message, wParam, lParam);
 		}
 	}
+}
+
+DialogDpiLayout::~DialogDpiLayout()
+{
+	for (HFONT hFont : _fontsForDpi)
+	{
+		if (hFont != nullptr)
+			::DeleteObject(hFont);
+	}
+}
+
+int DialogDpiLayout::saveFont(HFONT hFont)
+{
+	if (hFont == nullptr)
+		return -1;
+
+	for (size_t i = 0; i < _fonts.size(); ++i)
+	{
+		if (_fonts[i]._hFont == hFont)
+			return static_cast<int>(i);
+	}
+
+	static constexpr int lfSize = static_cast<int>(sizeof(LOGFONT));
+	SavedFont savedFont;
+	if (::GetObject(hFont, lfSize, &savedFont._lf) != lfSize)
+		return -1;
+
+	savedFont._hFont = hFont;
+	_fonts.push_back(savedFont);
+	return static_cast<int>(_fonts.size() - 1);
+}
+
+void DialogDpiLayout::save(HWND hDlg, UINT dpi)
+{
+	if ((hDlg == nullptr) || (dpi == 0) || ((_dpi != 0) && (dpi != _dpi)))
+		return;
+
+	_dpi = dpi;
+
+	Dlg dlg;
+	dlg._hDlg = hDlg;
+	dlg._iFont = saveFont(reinterpret_cast<HFONT>(::SendMessage(hDlg, WM_GETFONT, 0, 0)));
+
+	RECT rcBaseUnits{ 0, 0, 4, 8 };
+	if (::MapDialogRect(hDlg, &rcBaseUnits) && (rcBaseUnits.right >= 4) && (rcBaseUnits.bottom >= 8))
+		dlg._baseUnits = { rcBaseUnits.right, rcBaseUnits.bottom };
+
+	RECT rcClient{};
+	::GetClientRect(hDlg, &rcClient);
+	dlg._size = { rcClient.right - rcClient.left, rcClient.bottom - rcClient.top };
+	dlg._sizeForDpi = dlg._size;
+
+	_dlgs.push_back(dlg);
+
+	for (HWND hChild = ::GetWindow(hDlg, GW_CHILD); hChild != nullptr; hChild = ::GetWindow(hChild, GW_HWNDNEXT))
+	{
+		Ctrl ctrl;
+		ctrl._hWnd = hChild;
+		ctrl._iDlg = _dlgs.size() - 1;
+		::GetWindowRect(hChild, &ctrl._rc);
+
+		static constexpr int classNameLen = 32;
+		wchar_t className[classNameLen]{};
+		::GetClassNameW(hChild, className, classNameLen);
+
+		if (wcscmp(className, L"ComboBox") == 0)
+		{
+			// the height given to a combo box includes its drop-down list
+			RECT rcDropped{};
+			if ((::SendMessage(hChild, CB_GETDROPPEDCONTROLRECT, 0, reinterpret_cast<LPARAM>(&rcDropped)) != 0) && (rcDropped.bottom > ctrl._rc.bottom))
+				ctrl._rc.bottom = ctrl._rc.top + (rcDropped.bottom - rcDropped.top);
+		}
+
+		// 2 points: the rectangle is right in a mirrored (RTL) dialog too
+		::MapWindowPoints(nullptr, hDlg, reinterpret_cast<LPPOINT>(&ctrl._rc), 2);
+
+		// a child dialog sets the font of its own controls
+		if (wcscmp(className, L"#32770") != 0)
+			ctrl._iFont = saveFont(reinterpret_cast<HFONT>(::SendMessage(hChild, WM_GETFONT, 0, 0)));
+
+		_ctrls.push_back(ctrl);
+	}
+}
+
+// dialog base units of a font, as the dialog manager computes them: average width of the alphabet letters, font height
+static SIZE getDialogBaseUnits(HWND hWnd, HFONT hFont)
+{
+	SIZE baseUnits{};
+	HDC hdc = ::GetDC(hWnd);
+	if (hdc == nullptr)
+		return baseUnits;
+
+	static constexpr wchar_t alphabet[] = L"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	const HGDIOBJ hOldFont = ::SelectObject(hdc, hFont);
+	TEXTMETRIC tm{};
+	SIZE szAlphabet{};
+	if (::GetTextMetrics(hdc, &tm) && ::GetTextExtentPoint32W(hdc, alphabet, 52, &szAlphabet))
+		baseUnits = { (szAlphabet.cx / 26 + 1) / 2, tm.tmHeight };
+	::SelectObject(hdc, hOldFont);
+	::ReleaseDC(hWnd, hdc);
+	return baseUnits;
+}
+
+void DialogDpiLayout::apply(UINT dpi)
+{
+	if ((_dpi == 0) || (dpi == 0))
+		return;
+
+	const bool isSavedDpi = (dpi == _dpi);
+
+	// fonts of the same point size for dpi (the dialog manager creates the font of a dialog template for the DPI)
+	std::vector<HFONT> fontsForDpi;
+	for (const SavedFont& savedFont : _fonts)
+	{
+		LOGFONT lf{ savedFont._lf };
+		if (!isSavedDpi)
+		{
+			lf.lfHeight = (lf.lfHeight < 0) ? -::MulDiv(::MulDiv(-lf.lfHeight, 72, _dpi), dpi, 72) : DPIManagerV2::scale(lf.lfHeight, dpi, _dpi);
+			lf.lfWidth = DPIManagerV2::scale(lf.lfWidth, dpi, _dpi);
+		}
+		fontsForDpi.push_back(::CreateFontIndirect(&lf));
+	}
+
+	for (size_t iDlg = 0; iDlg < _dlgs.size(); ++iDlg)
+	{
+		Dlg& dlg = _dlgs[iDlg];
+
+		// positions and sizes in the dialog units of the dialog font, as the dialog manager lays out a dialog template
+		// (scaled with the DPI if the dialog units aren't known)
+		SIZE baseUnits{};
+		const HFONT hDlgFont = (dlg._iFont >= 0) ? fontsForDpi[static_cast<size_t>(dlg._iFont)] : nullptr;
+		if (!isSavedDpi && (dlg._baseUnits.cx != 0) && (hDlgFont != nullptr))
+			baseUnits = getDialogBaseUnits(dlg._hDlg, hDlgFont);
+		const bool isDlu = (baseUnits.cx != 0) && (baseUnits.cy != 0);
+
+		const auto scaleX = [&](LONG x) -> LONG {
+			if (isSavedDpi)
+				return x;
+			return isDlu ? ::MulDiv(::MulDiv(x, 4, dlg._baseUnits.cx), baseUnits.cx, 4) : DPIManagerV2::scale(x, dpi, _dpi);
+		};
+		const auto scaleY = [&](LONG y) -> LONG {
+			if (isSavedDpi)
+				return y;
+			return isDlu ? ::MulDiv(::MulDiv(y, 8, dlg._baseUnits.cy), baseUnits.cy, 8) : DPIManagerV2::scale(y, dpi, _dpi);
+		};
+
+		dlg._sizeForDpi = { scaleX(dlg._size.cx), scaleY(dlg._size.cy) };
+
+		for (const Ctrl& ctrl : _ctrls)
+		{
+			if ((ctrl._iDlg != iDlg) || !::IsWindow(ctrl._hWnd))
+				continue;
+
+			// position and size converted separately, as the dialog manager does
+			const LONG left = scaleX(ctrl._rc.left);
+			const LONG top = scaleY(ctrl._rc.top);
+			const LONG width = scaleX(ctrl._rc.right - ctrl._rc.left);
+			const LONG height = scaleY(ctrl._rc.bottom - ctrl._rc.top);
+			::SetWindowPos(ctrl._hWnd, nullptr, left, top, width, height, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+
+			const HFONT hCtrlFont = (ctrl._iFont >= 0) ? fontsForDpi[static_cast<size_t>(ctrl._iFont)] : nullptr;
+			if (hCtrlFont != nullptr)
+				::SendMessage(ctrl._hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(hCtrlFont), FALSE);
+		}
+	}
+
+	// the fonts created for the previous DPI aren't used any more
+	for (HFONT hFont : _fontsForDpi)
+	{
+		if (hFont != nullptr)
+			::DeleteObject(hFont);
+	}
+	_fontsForDpi = std::move(fontsForDpi);
+}
+
+SIZE DialogDpiLayout::getClientSize(HWND hDlg) const
+{
+	for (const Dlg& dlg : _dlgs)
+	{
+		if (dlg._hDlg == hDlg)
+			return dlg._sizeForDpi;
+	}
+	return {};
 }
