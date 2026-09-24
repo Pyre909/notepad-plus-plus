@@ -211,17 +211,21 @@ std::wstring LocalizedString(IDWriteLocalizedStrings *strings) {
 	return value;
 }
 
+// Whether a font has a string, or one GDI truncates to it: GDI family names are at most 31 characters
+// ("Bahnschrift SemiBold SemiConden" for "Bahnschrift SemiBold SemiCondensed")
 bool HasInformationalString(IDWriteFont *font, DWRITE_INFORMATIONAL_STRING_ID id, const std::wstring &value) {
 	ComPtr<IDWriteLocalizedStrings> strings;
 	BOOL exists = FALSE;
 	if (FAILED(font->GetInformationalStrings(id, strings.GetAddressOf(), &exists)) || !exists || !strings) {
 		return false;
 	}
+	const bool truncated = value.length() == (LF_FACESIZE - 1);
 	for (UINT32 i = 0; i < strings->GetCount(); ++i) {
 		UINT32 length = 0;
-		if (SUCCEEDED(strings->GetStringLength(i, &length)) && (length == value.length())) {
+		if (SUCCEEDED(strings->GetStringLength(i, &length)) && ((length == value.length()) || (truncated && (length > value.length())))) {
 			std::wstring s(length + 1, L'\0');
-			if (SUCCEEDED(strings->GetString(i, s.data(), length + 1)) && (::_wcsicmp(s.c_str(), value.c_str()) == 0)) {
+			if (SUCCEEDED(strings->GetString(i, s.data(), length + 1)) &&
+				(::_wcsnicmp(s.c_str(), value.c_str(), value.length()) == 0)) {
 				return true;
 			}
 		}
@@ -2075,11 +2079,11 @@ bool DirectWriteGdiLogFont([[maybe_unused]] LOGFONTW &lf) noexcept {
 			return false;
 		}
 		const std::wstring name = LocalizedString(names.Get());
-		if (name.empty() || (name.length() >= LF_FACESIZE)) {
+		if (name.empty()) {
 			return false;
 		}
 		std::fill(std::begin(lf.lfFaceName), std::end(lf.lfFaceName), L'\0');
-		name.copy(lf.lfFaceName, LF_FACESIZE - 1);
+		name.copy(lf.lfFaceName, LF_FACESIZE - 1);	// truncated as GDI does
 		lf.lfItalic = font->GetStyle() != DWRITE_FONT_STYLE_NORMAL;
 		if (font->GetSimulations() & DWRITE_FONT_SIMULATIONS_BOLD) {
 			lf.lfWeight = font->GetWeight();	// of its simulation: GDI emboldens it too

@@ -179,17 +179,21 @@ LONG GdiMemberWeight(const wchar_t *faceName, LONG weight, bool italic) noexcept
 // weight asked is much heavier than its weight (and not a variable font's semibold or heavier), so the regular weight
 // asked for the family of a light weight draws it as a fake bold, and bold of a heavy one draws it as is. Bold is
 // never asked lighter than bold: some GDI implementations (Wine) embolden only for a heavy weight asked.
+// A family of regular weight with a heavier font (its bold) keeps GDI's own weights.
 void GdiLogFont(LOGFONTW &lf) noexcept {
 	try {
 		// the weight of the family's regular font: its upright font of weight closest to normal
-		const LONG regular = ClosestWeight(FamilyMembers(lf.lfFaceName), FW_NORMAL, false);
-		if ((regular <= 0) || (regular == FW_NORMAL)) {
-			return;	// the usual case, a family of regular weight: GDI's own weights
+		const std::vector<GdiFamilyMember> members = FamilyMembers(lf.lfFaceName);
+		const LONG regular = ClosestWeight(members, FW_NORMAL, false);
+		const LONG weight = (lf.lfWeight == FW_DONTCARE) ? FW_NORMAL : lf.lfWeight;
+		const bool heavierFont = std::any_of(members.begin(), members.end(),
+			[regular](const GdiFamilyMember &member) noexcept { return member.weight > regular; });
+		if ((regular <= 0) || ((regular == FW_NORMAL) && ((weight <= FW_NORMAL) || heavierFont))) {
+			return;	// the usual case, a family of regular weight with its bold: GDI's own weights
 		}
 		if (DirectWriteGdiLogFont(lf)) {
 			return;
 		}
-		const LONG weight = (lf.lfWeight == FW_DONTCARE) ? FW_NORMAL : lf.lfWeight;
 		const LONG relative = regular + weight - FW_NORMAL;
 		lf.lfWeight = std::clamp((weight > FW_NORMAL) ? std::max(relative, weight) : relative, 1L, 1000L);
 	} catch (...) {
