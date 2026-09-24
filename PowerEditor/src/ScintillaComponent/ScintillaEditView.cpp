@@ -590,6 +590,10 @@ void ScintillaEditView::applyTextRenderingSettings() const
 			renderingMode = SC_RENDERINGMODE_GDICLASSIC;
 			break;
 
+		case textRenderingModeAdaptive:
+			renderingMode = SC_RENDERINGMODE_ADAPTIVE;
+			break;
+
 		default: // textRenderingModeAutomatic
 			break;
 	}
@@ -598,23 +602,31 @@ void ScintillaEditView::applyTextRenderingSettings() const
 	if (fontQuality == SC_EFF_QUALITY_NON_ANTIALIASED)
 		renderingMode = SC_FONTRENDERING_DEFAULT;
 
+	// DirectWrite's enhanced contrast only darkens dark text (it's reduced to nothing for light text),
+	// light text (on dark themes) gets heavier with a higher gamma, which would make dark text lighter:
+	// so light text gets its own gamma, never lower than the monitor's one (0) even with the Windows setting,
+	// as the ClearType gamma of Windows (1.2-1.4) makes light text thinner than the monitor's one (1.8-2.2)
 	int enhancedContrast = SC_FONTRENDERING_DEFAULT;          // in hundredths, for ClearType
 	int grayscaleEnhancedContrast = SC_FONTRENDERING_DEFAULT; // in hundredths, for grayscale antialiasing
+	int lightTextGamma = 0;                                   // in thousandths, 0: monitor's gamma
 	switch (svp._textContrast)
 	{
 		case textContrastMedium:
 			enhancedContrast = 100;
 			grayscaleEnhancedContrast = 150;
+			lightTextGamma = 2000;
 			break;
 
 		case textContrastHigh:
 			enhancedContrast = 200;
 			grayscaleEnhancedContrast = 250;
+			lightTextGamma = 2200;
 			break;
 
 		case textContrastVeryHigh:
 			enhancedContrast = 300;
 			grayscaleEnhancedContrast = 350;
+			lightTextGamma = 2200; // the highest gamma DirectWrite's text blending uses
 			break;
 
 		default: // textContrastWindows
@@ -633,6 +645,7 @@ void ScintillaEditView::applyTextRenderingSettings() const
 	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_CLEARTYPELEVEL, overriddenBy(clearTypeLevel, svp._fontClearTypeLevel));
 	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_PIXELGEOMETRY, overriddenBy(SC_FONTRENDERING_DEFAULT, svp._fontPixelGeometry));
 	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_RENDERINGMODE, renderingMode);
+	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_LIGHTTEXTGAMMA, overriddenBy(lightTextGamma, svp._fontLightTextGamma));
 }
 
 void ScintillaEditView::applyTextRenderingSettingsToAll()

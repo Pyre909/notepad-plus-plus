@@ -431,6 +431,9 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 					case textRenderingModeGdiCompatible:
 						_debugInfoStr += L"GDI-compatible (3)";
 						break;
+					case textRenderingModeAdaptive:
+						_debugInfoStr += L"Adaptive (4)";
+						break;
 					default:
 						_debugInfoStr += L"unknown (" + std::to_wstring(svp._textRenderingMode) + L")";
 				}
@@ -473,6 +476,7 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 					addOverride(L"fontGrayscaleEnhancedContrast", svp._fontGrayscaleEnhancedContrast);
 					addOverride(L"fontClearTypeLevel", svp._fontClearTypeLevel);
 					addOverride(L"fontPixelGeometry", svp._fontPixelGeometry);
+					addOverride(L"fontLightTextGamma", svp._fontLightTextGamma);
 
 					_debugInfoStr += L"Text Rendering Overrides: ";
 					_debugInfoStr += overrides;

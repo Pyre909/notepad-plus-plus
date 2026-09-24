@@ -1767,6 +1767,7 @@ void EditingSubDlg::initTextRenderingParam()
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Natural (sharper small text)"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Symmetric (smoother)"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"GDI-compatible (pixel-aligned)"));
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Adaptive (Natural for small text)"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_SETCURSEL, svp._textRenderingMode, 0);
 
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Windows setting"));
@@ -1782,11 +1783,11 @@ void EditingSubDlg::initTextRenderingParam()
 	_tipTextAntialiasing = createToolTip(IDC_COMBO_TEXTANTIALIASING, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
 
 	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textRenderingMode-tip",
-		L"DirectWrite only. Natural avoids the vertical blur of small text. GDI-compatible snaps the glyphs to whole pixels like classic GDI rendering (the crispest on standard-DPI screens).");
+		L"DirectWrite only. Natural avoids the vertical blur of small text. GDI-compatible snaps the glyphs to whole pixels like classic GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text.");
 	_tipTextRenderingMode = createToolTip(IDC_COMBO_TEXTRENDERINGMODE, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
 
 	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textContrast-tip",
-		L"DirectWrite only. Darkens dark text on light backgrounds, it has little effect on light-on-dark themes.");
+		L"DirectWrite only. Makes the strokes heavier: darkens dark text on light backgrounds and thickens light text on dark themes.");
 	_tipTextContrast = createToolTip(IDC_COMBO_TEXTCONTRAST, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
 }
 
@@ -2104,7 +2105,7 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 
 								if (LOWORD(wParam) == IDC_COMBO_TEXTANTIALIASING && selIndex >= textAntialiasingFollowWindows && selIndex <= textAntialiasingNone)
 									svp._textAntialiasing = static_cast<textAntialiasing>(selIndex);
-								else if (LOWORD(wParam) == IDC_COMBO_TEXTRENDERINGMODE && selIndex >= textRenderingModeAutomatic && selIndex <= textRenderingModeGdiCompatible)
+								else if (LOWORD(wParam) == IDC_COMBO_TEXTRENDERINGMODE && selIndex >= textRenderingModeAutomatic && selIndex <= textRenderingModeAdaptive)
 									svp._textRenderingMode = static_cast<textRenderingMode>(selIndex);
 								else if (LOWORD(wParam) == IDC_COMBO_TEXTCONTRAST && selIndex >= textContrastWindows && selIndex <= textContrastVeryHigh)
 									svp._textContrast = static_cast<textContrast>(selIndex);

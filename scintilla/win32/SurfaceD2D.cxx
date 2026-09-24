@@ -184,6 +184,7 @@ struct FontDirectWrite : public FontWin {
 	FontQuality extraFontFlag = FontQuality::QualityDefault;
 	CharacterSet characterSet = CharacterSet::Ansi;
 	DWRITE_MEASURING_MODE measuringMode = DWRITE_MEASURING_MODE_NATURAL;	// N++: used for every layout of this font
+	FLOAT emSize = 1.0f;	// N++: in DIPs
 	static constexpr FLOAT minimalAscent = 2.0f;
 	FLOAT yAscent = minimalAscent;
 	FLOAT yDescent = 1.0f;
@@ -195,7 +196,12 @@ struct FontDirectWrite : public FontWin {
 		measuringMode(DWriteMapMeasuringMode(fp.extraFontFlag)) {	// N++
 		const std::wstring wsFace = WStringFromUTF8(fp.faceName);
 		const std::wstring wsLocale = WStringFromUTF8(fp.localeName);
-		const FLOAT fHeight = static_cast<FLOAT>(fp.size);
+		FLOAT fHeight = static_cast<FLOAT>(fp.size);
+		if (measuringMode != DWRITE_MEASURING_MODE_NATURAL) {
+			// N++: whole pixel em size like GDI's integer font height (13 px, not 13.33 px, for 10 points at 96 DPI)
+			fHeight = std::max(1.0f, std::round(fHeight));
+		}
+		emSize = fHeight;	// N++
 		const DWRITE_FONT_STYLE style = fp.italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL;
 		HRESULT hr = pIDWriteFactory->CreateTextFormat(wsFace.c_str(), nullptr,
 			static_cast<DWRITE_FONT_WEIGHT>(fp.weight),
@@ -238,6 +244,7 @@ struct FontDirectWrite : public FontWin {
 		extraFontFlag = other.extraFontFlag;
 		characterSet = other.characterSet;
 		measuringMode = other.measuringMode;	// N++
+		emSize = other.emSize;	// N++
 		yAscent = other.yAscent;
 		yDescent = other.yDescent;
 		yInternalLeading = other.yInternalLeading;
@@ -335,15 +342,17 @@ class SurfaceD2D : public Surface, public ISetRenderingParams {
 	int clipsActive = 0;
 
 	BrushSolid pBrush = nullptr;
+	D2D_COLOR_F penColour {};	// N++: colour of pBrush, not read back with GetColor as MinGW gets its struct return wrong
 
 	static constexpr FontQuality invalidFontQuality = FontQuality::QualityMask;
 	FontQuality fontQuality = invalidFontQuality;
+	int renderingVariant = 0;	// N++: renderingVariant* bits of the current text rendering parameters
 	int logPixelsY = USER_DEFAULT_SCREEN_DPI;
 	int deviceScaleFactor = 1;
 	std::shared_ptr<RenderingParams> renderingParams;
 
 	void Clear() noexcept;
-	void SetFontQuality(FontQuality extraFontFlag);
+	void SetFontQuality(FontQuality extraFontFlag, int variant=0);	// N++: variant
 	HRESULT GetBitmap(ID2D1Bitmap **ppBitmap);
 	void SetDeviceScaleFactor(const ID2D1RenderTarget *const pD2D1RenderTarget) noexcept;
 
@@ -464,6 +473,7 @@ void SurfaceD2D::Release() noexcept {
 
 void SurfaceD2D::SetScale(WindowID wid) noexcept {
 	fontQuality = invalidFontQuality;
+	renderingVariant = 0;	// N++
 	logPixelsY = DpiForWindow(wid);
 }
 
@@ -509,6 +519,7 @@ HRESULT SurfaceD2D::GetBitmap(ID2D1Bitmap **ppBitmap) {
 void SurfaceD2D::D2DPenColourAlpha(ColourRGBA fore) noexcept {
 	if (pRenderTarget) {
 		const D2D_COLOR_F col = ColorFromColourAlpha(fore);
+		penColour = col;	// N++
 		if (pBrush) {
 			pBrush->SetColor(col);
 		} else {
@@ -520,17 +531,35 @@ void SurfaceD2D::D2DPenColourAlpha(ColourRGBA fore) noexcept {
 	}
 }
 
-void SurfaceD2D::SetFontQuality(FontQuality extraFontFlag) {
-	if ((fontQuality != extraFontFlag) && renderingParams) {
+namespace {
+
+// N++: the parameters of the variant, or of the nearest existing variant, else the base parameters
+IDWriteRenderingParams1 *RenderingParamsVariant(const WriteRenderingParams &base,
+	const WriteRenderingParams (&variants)[renderingVariants], int variant) noexcept {
+	for (const int v : { variant, variant & renderingVariantLight, variant & renderingVariantSmall }) {
+		if (v && variants[v]) {
+			return variants[v].Get();
+		}
+	}
+	return base.Get();
+}
+
+}
+
+void SurfaceD2D::SetFontQuality(FontQuality extraFontFlag, int variant) {
+	if ((fontQuality != extraFontFlag || renderingVariant != variant) && renderingParams) {	// N++: variant
 		fontQuality = extraFontFlag;
+		renderingVariant = variant;	// N++
 		const D2D1_TEXT_ANTIALIAS_MODE aaMode = DWriteMapFontQuality(extraFontFlag);
 		if (aaMode == D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE && renderingParams->customRenderingParams) {
-			pRenderTarget->SetTextRenderingParams(renderingParams->customRenderingParams.Get());
+			pRenderTarget->SetTextRenderingParams(RenderingParamsVariant(
+				renderingParams->customRenderingParams, renderingParams->customVariants, variant));	// N++: variant
 		} else if (aaMode == D2D1_TEXT_ANTIALIAS_MODE_ALIASED && renderingParams->monitorRenderingParams) {
 			// N++: user overrides are not applied to aliased text as their rendering mode is incompatible with it
 			pRenderTarget->SetTextRenderingParams(renderingParams->monitorRenderingParams.Get());
 		} else if (renderingParams->defaultRenderingParams) {
-			pRenderTarget->SetTextRenderingParams(renderingParams->defaultRenderingParams.Get());
+			pRenderTarget->SetTextRenderingParams(RenderingParamsVariant(
+				renderingParams->defaultRenderingParams, renderingParams->defaultVariants, variant));	// N++: variant
 		}
 		pRenderTarget->SetTextAntialiasMode(aaMode);
 	}
@@ -1327,7 +1356,14 @@ void SurfaceD2D::DrawTextCommon(PRectangle rc, const Font *font_, XYPOSITION yba
 		const int codePageDraw = codePageOverride ? codePageOverride : pfm->CodePageText(mode.codePage);
 		const TextWide tbuf(text, codePageDraw);
 
-		SetFontQuality(pfm->extraFontFlag);
+		// N++: text rendering parameters variant from the text colour lightness (DirectWrite's weights:
+		// gamma correction makes text heavier above 0.5 and lighter below) and the em size in pixels
+		constexpr FLOAT lightTextMinLightness = 0.5f;
+		constexpr FLOAT smallTextMaxPixels = 20.0f;
+		const FLOAT lightness = 0.30f * penColour.r + 0.59f * penColour.g + 0.11f * penColour.b;
+		const int variant = ((lightness >= lightTextMinLightness) ? renderingVariantLight : 0) |
+			((pfm->emSize * static_cast<FLOAT>(deviceScaleFactor) <= smallTextMaxPixels) ? renderingVariantSmall : 0);
+		SetFontQuality(pfm->extraFontFlag, variant);
 		if (fuOptions & ETO_CLIPPED) {
 			const D2D1_RECT_F rcClip = RectangleFromPRectangle(rc);
 			pRenderTarget->PushAxisAlignedClip(rcClip, D2D1_ANTIALIAS_MODE_ALIASED);

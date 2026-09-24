@@ -225,7 +225,8 @@ constexpr int fontRenderingGrayscaleEnhancedContrast = 2;
 constexpr int fontRenderingClearTypeLevel = 3;
 constexpr int fontRenderingPixelGeometry = 4;
 constexpr int fontRenderingRenderingMode = 5;
-constexpr size_t fontRenderingParameters = 6;
+constexpr int fontRenderingLightTextGamma = 6;
+constexpr size_t fontRenderingParameters = 7;
 constexpr int pixelGeometryFlat = 0;
 constexpr int pixelGeometryBGR = 2;
 constexpr int renderingModeDefault = 0;
@@ -233,6 +234,7 @@ constexpr int renderingModeGdiClassic = 2;
 constexpr int renderingModeGdiNatural = 3;
 constexpr int renderingModeNatural = 4;
 constexpr int renderingModeNaturalSymmetric = 5;
+constexpr int renderingModeAdaptive = 100;	// Natural for small text, else the monitor's (usually automatic) mode
 
 // N++: whether SCI_SETFONTRENDERINGPARAMETER accepts value for a valid parameter
 constexpr bool ValidFontRenderingValue(uptr_t parameter, sptr_t value) noexcept {
@@ -254,9 +256,12 @@ constexpr bool ValidFontRenderingValue(uptr_t parameter, sptr_t value) noexcept 
 		// DWRITE_PIXEL_GEOMETRY
 		return value >= pixelGeometryFlat && value <= pixelGeometryBGR;
 	case fontRenderingRenderingMode:
-		// DWRITE_RENDERING_MODE except the aliased and outline modes
+		// DWRITE_RENDERING_MODE except the aliased and outline modes, plus the adaptive mode
 		return value == renderingModeDefault || value == renderingModeGdiClassic || value == renderingModeGdiNatural ||
-			value == renderingModeNatural || value == renderingModeNaturalSymmetric;
+			value == renderingModeNatural || value == renderingModeNaturalSymmetric || value == renderingModeAdaptive;
+	case fontRenderingLightTextGamma:
+		// 0: the monitor's gamma, else in thousandths
+		return value == 0 || (value >= 1000 && value <= 2200);
 	default:
 		return false;
 	}
@@ -645,7 +650,7 @@ class ScintillaWin :
 #if defined(USE_D2D)
 	bool UpdateRenderingParams(bool force) noexcept;
 	[[nodiscard]] bool FontRenderingOverridden() const noexcept;	// N++
-	[[nodiscard]] WriteRenderingParams OverriddenRenderingParams(IDWriteRenderingParams1 *monitorParams, FLOAT gamma) const noexcept;	// N++
+	[[nodiscard]] WriteRenderingParams OverriddenRenderingParams(IDWriteRenderingParams1 *monitorParams, FLOAT gamma, DWRITE_RENDERING_MODE renderingMode) const noexcept;	// N++
 	bool UpdateMeasuringMode() noexcept;	// N++
 	HRESULT Create3D() noexcept;
 	void CreateRenderTarget();
@@ -946,27 +951,58 @@ bool ScintillaWin::UpdateRenderingParams(bool force) noexcept {
 	// ClearType parameters. Without overrides, the monitor's parameters are the default ones.
 	WriteRenderingParams defaultRenderingParams = monitorRenderingParams;
 	WriteRenderingParams customClearTypeRenderingParams;
+	WriteRenderingParams defaultVariants[renderingVariants];	// N++
+	WriteRenderingParams customVariants[renderingVariants];	// N++
 	UINT clearTypeContrast = 0;
 	if (SUCCEEDED(hr) && monitorRenderingParams) {
 		const bool overridden = FontRenderingOverridden();
 		bool customClearType = overridden;
-		FLOAT clearTypeGamma = monitorRenderingParams->GetGamma();
+		const FLOAT monitorGamma = monitorRenderingParams->GetGamma();
+		const int gammaOverride = fontRenderingOverrides[fontRenderingGamma];
+		const FLOAT defaultGamma = (gammaOverride == fontRenderingDefault) ?
+			monitorGamma : static_cast<FLOAT>(gammaOverride) / 1000.0f;
+		FLOAT clearTypeGamma = defaultGamma;
 		if (::SystemParametersInfo(SPI_GETFONTSMOOTHINGCONTRAST, 0, &clearTypeContrast, 0) != 0) {
 			constexpr UINT minContrast = 1000;
 			constexpr UINT maxContrast = 2200;
 			if (clearTypeContrast >= minContrast && clearTypeContrast <= maxContrast) {
-				clearTypeGamma = static_cast<FLOAT>(clearTypeContrast) / 1000.0f;
+				if (gammaOverride == fontRenderingDefault) {
+					clearTypeGamma = static_cast<FLOAT>(clearTypeContrast) / 1000.0f;
+				}
 				customClearType = true;
 			}
 		}
+		// The adaptive mode uses the monitor's rendering mode except for small text
+		const int renderingModeOverride = fontRenderingOverrides[fontRenderingRenderingMode];
+		const DWRITE_RENDERING_MODE renderingMode =
+			(renderingModeOverride == fontRenderingDefault || renderingModeOverride == renderingModeAdaptive) ?
+			monitorRenderingParams->GetRenderingMode() : static_cast<DWRITE_RENDERING_MODE>(renderingModeOverride);
 		if (overridden) {
 			if (WriteRenderingParams overriddenRenderingParams = OverriddenRenderingParams(
-				monitorRenderingParams.Get(), monitorRenderingParams->GetGamma())) {
+				monitorRenderingParams.Get(), defaultGamma, renderingMode)) {
 				defaultRenderingParams = std::move(overriddenRenderingParams);
 			}
 		}
 		if (customClearType) {
-			customClearTypeRenderingParams = OverriddenRenderingParams(monitorRenderingParams.Get(), clearTypeGamma);
+			customClearTypeRenderingParams = OverriddenRenderingParams(monitorRenderingParams.Get(), clearTypeGamma, renderingMode);
+		}
+		// N++: light text is drawn with the highest of its base gamma, the monitor's gamma and the requested one
+		// as a higher gamma makes light text heavier; small text in the adaptive mode has no vertical antialiasing.
+		const int lightTextGamma = fontRenderingOverrides[fontRenderingLightTextGamma];
+		const auto variantGamma = [=](FLOAT baseGamma, bool light) noexcept {
+			return light ? std::max({ baseGamma, monitorGamma, static_cast<FLOAT>(lightTextGamma) / 1000.0f }) : baseGamma;
+		};
+		for (int variant = 1; variant < renderingVariants; variant++) {
+			const bool light = variant & renderingVariantLight;
+			const bool small = variant & renderingVariantSmall;
+			if ((light && lightTextGamma == fontRenderingDefault) || (small && renderingModeOverride != renderingModeAdaptive)) {
+				continue;
+			}
+			const DWRITE_RENDERING_MODE variantMode = small ? DWRITE_RENDERING_MODE_NATURAL : renderingMode;
+			defaultVariants[variant] = OverriddenRenderingParams(monitorRenderingParams.Get(), variantGamma(defaultGamma, light), variantMode);
+			if (customClearTypeRenderingParams) {
+				customVariants[variant] = OverriddenRenderingParams(monitorRenderingParams.Get(), variantGamma(clearTypeGamma, light), variantMode);
+			}
 		}
 	}
 
@@ -979,6 +1015,10 @@ bool ScintillaWin::UpdateRenderingParams(bool force) noexcept {
 	renderingParams->defaultRenderingParams = std::move(defaultRenderingParams);
 	renderingParams->customRenderingParams = std::move(customClearTypeRenderingParams);
 	renderingParams->monitorRenderingParams = std::move(monitorRenderingParams);	// N++
+	for (int variant = 0; variant < renderingVariants; variant++) {	// N++
+		renderingParams->defaultVariants[variant] = std::move(defaultVariants[variant]);
+		renderingParams->customVariants[variant] = std::move(customVariants[variant]);
+	}
 	// N++: the autocompletion list draws its text with the same parameters
 	if (ISetRenderingParams *setListParams = dynamic_cast<ISetRenderingParams *>(ac.lb.get())) {
 		setListParams->SetRenderingParams(renderingParams);
@@ -992,9 +1032,9 @@ bool ScintillaWin::FontRenderingOverridden() const noexcept {
 		[](int value) noexcept { return value != fontRenderingDefault; });
 }
 
-// N++: rendering parameters with each overridden value in DirectWrite units, else the monitor's value
-// (gamma, when not overridden, is given by the caller)
-WriteRenderingParams ScintillaWin::OverriddenRenderingParams(IDWriteRenderingParams1 *monitorParams, FLOAT gamma) const noexcept {
+// N++: rendering parameters with each overridden value in DirectWrite units, else the monitor's value,
+// with the gamma and rendering mode given by the caller
+WriteRenderingParams ScintillaWin::OverriddenRenderingParams(IDWriteRenderingParams1 *monitorParams, FLOAT gamma, DWRITE_RENDERING_MODE renderingMode) const noexcept {
 	const auto valueOf = [this](int parameter, FLOAT divisor, FLOAT monitorValue) noexcept {
 		const int value = fontRenderingOverrides[parameter];
 		return (value == fontRenderingDefault) ? monitorValue : static_cast<FLOAT>(value) / divisor;
@@ -1004,17 +1044,15 @@ WriteRenderingParams ScintillaWin::OverriddenRenderingParams(IDWriteRenderingPar
 	static_assert(DWRITE_RENDERING_MODE_CLEARTYPE_GDI_CLASSIC == renderingModeGdiClassic &&
 		DWRITE_RENDERING_MODE_CLEARTYPE_NATURAL_SYMMETRIC == renderingModeNaturalSymmetric);
 	const int pixelGeometry = fontRenderingOverrides[fontRenderingPixelGeometry];
-	const int renderingMode = fontRenderingOverrides[fontRenderingRenderingMode];
 	WriteRenderingParams params;
 	const HRESULT hr = pIDWriteFactory->CreateCustomRenderingParams(
-		valueOf(fontRenderingGamma, 1000.0f, gamma),
+		gamma,
 		valueOf(fontRenderingEnhancedContrast, 100.0f, monitorParams->GetEnhancedContrast()),
 		valueOf(fontRenderingGrayscaleEnhancedContrast, 100.0f, monitorParams->GetGrayscaleEnhancedContrast()),
 		valueOf(fontRenderingClearTypeLevel, 100.0f, monitorParams->GetClearTypeLevel()),
 		(pixelGeometry == fontRenderingDefault) ?
 			monitorParams->GetPixelGeometry() : static_cast<DWRITE_PIXEL_GEOMETRY>(pixelGeometry),
-		(renderingMode == fontRenderingDefault) ?
-			monitorParams->GetRenderingMode() : static_cast<DWRITE_RENDERING_MODE>(renderingMode),
+		renderingMode,
 		params.GetAddressOf());
 	if (FAILED(hr)) {
 		return {};
