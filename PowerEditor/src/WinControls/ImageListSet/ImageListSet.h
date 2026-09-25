@@ -172,3 +172,7 @@ private:
 
 	std::vector<IconList> _iconListVector;
 };
+
+// the light and dark mode image lists of a panel's toolbar icons, replacing the ones of imageLists (destroyed),
+// the one of the current mode is set to hToolbar
+void setPanelToolbarImageLists(HWND hToolbar, HINSTANCE hInst, int iconSize, const int* iconIDs, const int* iconDarkModeIDs, int nbIcons, std::vector<HIMAGELIST>& imageLists);

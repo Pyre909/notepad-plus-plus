@@ -48,13 +48,13 @@ void TreeView::init(HINSTANCE hInst, HWND parent, int treeViewID)
 
 	NppDarkMode::setTreeViewStyle(_hSelf, true);
 
-	// with the per-monitor DPI awareness, the parent can be on a monitor whose DPI isn't the system DPI
+	// the default font of the tree view is for the system DPI
 	if (DPIManagerV2::isPerMonitorV2Active())
 	{
 		const UINT dpi = DPIManagerV2::getDpiForWindow(_hParent);
 		if (dpi != DPIManagerV2::getDpiForSystem())
 		{
-			setFontForDpi(dpi);
+			DPIManagerV2::replaceWindowFont(_hSelf, DPIManagerV2::getIconTitleFontForDpi(dpi), _hFontDpi);
 		}
 	}
 
@@ -79,49 +79,6 @@ void TreeView::destroy()
 	}
 }
 
-LOGFONT TreeView::getControlFontForDpi(UINT dpi)
-{
-	LOGFONT lf{};
-
-	// SystemParametersInfoForDpi (Windows 10 1607+)
-	using fnSystemParametersInfoForDpi = BOOL (WINAPI*)(UINT, UINT, PVOID, UINT, UINT);
-	static const auto pfnSystemParametersInfoForDpi = []() -> fnSystemParametersInfoForDpi {
-		HMODULE hUser32 = ::GetModuleHandleW(L"user32.dll");
-		FARPROC proc = (hUser32 != nullptr) ? ::GetProcAddress(hUser32, "SystemParametersInfoForDpi") : nullptr;
-		return reinterpret_cast<fnSystemParametersInfoForDpi>(reinterpret_cast<INT_PTR>(proc));
-	}();
-
-	if ((pfnSystemParametersInfoForDpi != nullptr) && (pfnSystemParametersInfoForDpi(SPI_GETICONTITLELOGFONT, sizeof(LOGFONT), &lf, 0, dpi) == TRUE))
-	{
-		return lf;
-	}
-
-	// before Windows 10 1607 (only system DPI awareness): the font for the system DPI
-	if (::SystemParametersInfoW(SPI_GETICONTITLELOGFONT, sizeof(LOGFONT), &lf, 0) != TRUE)
-	{
-		auto* hf = static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT));
-		::GetObjectW(hf, sizeof(LOGFONT), &lf);
-	}
-	lf.lfHeight = DPIManagerV2::scaleFromSystemDpi(lf.lfHeight, dpi);
-	return lf;
-}
-
-void TreeView::setFontForDpi(UINT dpi)
-{
-	LOGFONT lf{ getControlFontForDpi(dpi) };
-	HFONT hFont = ::CreateFontIndirect(&lf);
-	if (hFont == nullptr)
-		return;
-
-	::SendMessage(_hSelf, WM_SETFONT, reinterpret_cast<WPARAM>(hFont), TRUE);
-
-	if (_hFontDpi != nullptr)
-	{
-		::DeleteObject(_hFontDpi);
-	}
-	_hFontDpi = hFont;
-}
-
 void TreeView::rescaleForDpi(UINT dpi, UINT prevDpi, const std::vector<int>& imageIds)
 {
 	if (_hSelf == nullptr)
@@ -133,7 +90,7 @@ void TreeView::rescaleForDpi(UINT dpi, UINT prevDpi, const std::vector<int>& ima
 		_indentBaseDpi = prevDpi;
 	}
 
-	setFontForDpi(dpi);
+	DPIManagerV2::replaceWindowFont(_hSelf, DPIManagerV2::getIconTitleFontForDpi(dpi), _hFontDpi);
 
 	const int itemHeight = DPIManagerV2::scale(g_treeviewIcoSize + g_treeviewItemPadding * 2, dpi);
 	TreeView_SetItemHeight(_hSelf, itemHeight);

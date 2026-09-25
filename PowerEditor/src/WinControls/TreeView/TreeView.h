@@ -120,22 +120,17 @@ public:
 	bool setImageList(const std::vector<int>& imageIds, int imgSize = 0);
 	std::vector<int> getImageIds(std::vector<int> stdIds, std::vector<int>darkIds, std::vector<int> lightIds);
 
-	// Per-monitor DPI awareness (opt-in): rescales the tree when the DPI of its parent has changed from prevDpi to dpi:
-	// font, item height, images (imageIds as for setImageList) and indent
+	// font, item height, images (imageIds as for setImageList) and indent for the new DPI of the parent
 	void rescaleForDpi(UINT dpi, UINT prevDpi, const std::vector<int>& imageIds);
-
-	// The default font of the tree view and toolbar controls (the icon title font) for a DPI
-	static LOGFONT getControlFontForDpi(UINT dpi);
 
 protected:
 	HIMAGELIST _hImaLst = nullptr;
 	NppDarkMode::TreeViewStyle _tvStyleType = NppDarkMode::TreeViewStyle::classic;
 
 	// per-monitor DPI awareness
-	HFONT _hFontDpi = nullptr; // font set for the DPI of the parent (the default font of the control is for the system DPI)
+	HFONT _hFontDpi = nullptr; // font for the DPI of the parent
 	int _indentBase = 0; // indent before the first DPI change, and its DPI
 	UINT _indentBaseDpi = 0;
-	void setFontForDpi(UINT dpi);
 
 	static LRESULT CALLBACK staticProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 

@@ -377,8 +377,7 @@ private :
     int _yScrollPos = 0;
     int _prevHightVal = 0;
 
-	// Per-monitor DPI awareness (opt-in): layout of the dialog and of its tabs for the DPI it was created with,
-	// the docked dialog (a child of the main window) follows the DPI changes of the main window
+	// per-monitor DPI awareness: layout of the dialog and of its tabs for the DPI it was created with
 	DialogDpiLayout _dpiLayout;
 
 	using Window::init;

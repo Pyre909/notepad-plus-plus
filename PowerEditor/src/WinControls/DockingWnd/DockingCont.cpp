@@ -56,6 +56,19 @@ static LRESULT CALLBACK hookProcMouse(int nCode, WPARAM wParam, LPARAM lParam)
 	return ::CallNextHookEx(hookMouse, nCode, wParam, lParam);
 }
 
+static BOOL CALLBACK notifyDpiChangedAfterParentProc(HWND hWnd, [[maybe_unused]] LPARAM lParam)
+{
+	::SendMessage(hWnd, WM_DPICHANGED_AFTERPARENT, 0, 0);
+	return TRUE;
+}
+
+// sends WM_DPICHANGED_AFTERPARENT to a window and its descendants, a parent before its children
+static void notifyDpiChangedAfterParent(HWND hWnd)
+{
+	::SendMessage(hWnd, WM_DPICHANGED_AFTERPARENT, 0, 0);
+	::EnumChildWindows(hWnd, notifyDpiChangedAfterParentProc, 0);
+}
+
 
 DockingCont::DockingCont()
 {
@@ -133,9 +146,7 @@ DockedWidgetData* DockingCont::createDockedWidget(const DockedWidgetData& data)
 	// set attached child window
 	::SetParent(pTbData->hClient, ::GetDlgItem(_hSelf, IDC_CLIENT_TAB));
 
-	// Per-monitor DPI awareness (opt-in): a panel moved from a container on a monitor of another DPI gets no DPI message,
-	// so it and its descendants (views...) get WM_DPICHANGED_AFTERPARENT top-down, as when the DPI of a parent changes
-	// (a window whose DPI hasn't changed ignores it, e.g. DockingDlgInterface compares its DPI)
+	// a panel moved from a container of another DPI gets no DPI message (unchanged DPIs ignore this one)
 	if (DPIManagerV2::isPerMonitorV2Active())
 	{
 		notifyDpiChangedAfterParent(pTbData->hClient);
@@ -267,28 +278,8 @@ bool DockingCont::isTbVis(DockedWidgetData* data)
 }
 
 
-BOOL CALLBACK DockingCont::notifyDpiChangedAfterParentProc(HWND hWnd, [[maybe_unused]] LPARAM lParam)
-{
-	::SendMessage(hWnd, WM_DPICHANGED_AFTERPARENT, 0, 0);
-	return TRUE;
-}
-
-void DockingCont::notifyDpiChangedAfterParent(HWND hWnd)
-{
-	::SendMessage(hWnd, WM_DPICHANGED_AFTERPARENT, 0, 0);
-	::EnumChildWindows(hWnd, notifyDpiChangedAfterParentProc, 0); // all the descendants, a parent before its children
-}
-
 void DockingCont::destroyFonts()
 {
-	if (_isTabFontSet)
-	{
-		// the tab control mustn't keep a deleted font (it's already destroyed with the container when called by the destructor)
-		if ((_hContTab != nullptr) && ::IsWindow(_hContTab))
-			::SendMessage(_hContTab, WM_SETFONT, 0, FALSE);
-		_isTabFontSet = false;
-	}
-
 	if (_hFont != nullptr)
 	{
 		::DeleteObject(_hFont);
@@ -1181,8 +1172,7 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			_hContTab = ::GetDlgItem(_hSelf, IDC_TAB_CONT);
 			_hCaption = ::GetDlgItem(_hSelf, IDC_BTN_CAPTION);
 
-			// with the per-monitor DPI awareness, the container's DPI isn't always the system DPI set by the constructor:
-			// the DPI of the main window, like the fonts (a docked container becomes its child)
+			// the DPI of the main window (like the fonts), not always the system DPI set by the constructor
 			if (DPIManagerV2::isPerMonitorV2Active())
 			{
 				_dpiManager.setDpi(_hParent);
@@ -1229,9 +1219,9 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			RECT rc{};
 			getClientRect(rc);
 
-			// a hidden tab control (single panel) covers nothing, and its rectangle can be stale (e.g. after a DPI change)
+			// a hidden tab control (single panel) can have a stale rectangle after a DPI change
 			RECT rcTab{};
-			if (::IsWindowVisible(_hContTab))
+			if (!DPIManagerV2::isPerMonitorV2Active() || ::IsWindowVisible(_hContTab))
 				getMappedChildRect(_hContTab, rcTab);
 
 			RECT rcClientTab{};
@@ -1324,7 +1314,8 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			TabCtrl_SetPadding(_hContTab, tabDpiPadding / 2, 0);
 			TabCtrl_SetItemSize(_hContTab, 2 * tabDpiPadding, tabDpiPadding);
 
-			destroyFonts();
+			HFONT hPrevFont = _hFont;
+			HFONT hPrevFontCaption = _hFontCaption;
 
 			LOGFONT lfTab{ _dpiManager.getDefaultGUIFontForDpi() };
 			_hFont = ::CreateFontIndirect(&lfTab);
@@ -1332,23 +1323,18 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			LOGFONT lfCaption{ _dpiManager.getDefaultGUIFontForDpi(DPIManagerV2::FontType::smcaption) };
 			_hFontCaption = ::CreateFontIndirect(&lfCaption);
 
-			// the tab control sizes the tabs with its own font: the one of the owner drawn tabs for the new DPI,
-			// otherwise the tab texts are cut when the DPI increases
-			if (_hFont != nullptr)
-			{
-				::SendMessage(_hContTab, WM_SETFONT, reinterpret_cast<WPARAM>(_hFont), TRUE);
-				_isTabFontSet = true;
-			}
+			// the tab control sizes the tabs with its font, the texts are cut otherwise when the DPI increases
+			::SendMessage(_hContTab, WM_SETFONT, reinterpret_cast<WPARAM>(_hFont), TRUE);
 
-			// a floating container: the main window (parent of the docking manager) loads again the icons of the tabs
-			// for the new DPI of the panels
+			if (hPrevFont != nullptr)
+				::DeleteObject(hPrevFont);
+			if (hPrevFontCaption != nullptr)
+				::DeleteObject(hPrevFontCaption);
+
 			if (Message == WM_DPICHANGED)
 			{
+				// a floating container: the main window reloads the tab icons for the new DPI
 				::PostMessage(::GetParent(_hParent), NPPM_INTERNAL_DPICHANGEDRELAYOUT, 0, 0);
-			}
-
-			if ((Message == WM_DPICHANGED) && (lParam != 0)) // the suggested rectangle (lParam 0: e.g. a synthetic message)
-			{
 				_dpiManager.setPositionDpi(lParam, _hSelf);
 			}
 			else

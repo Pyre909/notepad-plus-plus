@@ -992,7 +992,7 @@ void UserDefineDialog::changeStyle()
 
     ::SetParent(_hSelf, (_status == DOCK)?_hParent:NULL);
 
-    // Per-monitor DPI awareness (opt-in): docked, the dialog has the DPI of the main window (it can have been floating on a monitor of another DPI)
+    // docked, the dialog has the DPI of the main window (it can have been floating on a monitor of another DPI)
     if ((_status == DOCK) && _dpiLayout.isSaved())
         updateDockedDpi();
 }
@@ -1140,7 +1140,7 @@ intptr_t CALLBACK UserDefineDialog::run_dlgProc(UINT message, WPARAM wParam, LPA
             NppDarkMode::autoSubclassAndThemeWindowNotify(_hSelf);
             ::SetWindowPos(_ctrlTab.getHSelf(), HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOREDRAW | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
 
-            // Per-monitor DPI awareness (opt-in): layout of the dialog and of its tabs (not scrolled) for its DPI
+            // layout of the dialog and of its tabs (not scrolled) for its DPI
             if (DPIManagerV2::isPerMonitorV2Active())
             {
                 const UINT dpi = DPIManagerV2::getDpiForWindow(_hSelf);
@@ -1220,7 +1220,7 @@ intptr_t CALLBACK UserDefineDialog::run_dlgProc(UINT message, WPARAM wParam, LPA
 
         case WM_DPICHANGED_AFTERPARENT:
         {
-            // Per-monitor DPI awareness (opt-in): docked, the dialog is a child of the main window, whose DPI has changed
+            // docked, the dialog is a child of the main window, whose DPI has changed
             if (!_dpiLayout.isSaved())
                 break;
 

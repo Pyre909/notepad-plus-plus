@@ -678,10 +678,10 @@ private:
 
 	HBITMAP generateSolidColourMenuItemIcon(COLORREF colour);
 
-	// Colour samples of the main menu items by (size, colour): the context menus share them (so they are never deleted),
-	// they are reused instead of generated again (and leaked) at each DPI change or style update
+	// per-monitor DPI awareness: colour samples of the main menu items by (size, colour), shared with the context menus
 	std::map<std::pair<int, COLORREF>, HBITMAP> _mainMenuColourBitmaps;
 	HBITMAP getMainMenuColourBitmap(COLORREF colour);
+	void setMinPanelSizesForDpi(UINT dpi);
 
 	void clearChangesHistory(int iView);
 	void changedHistoryGoTo(int idGoTo);

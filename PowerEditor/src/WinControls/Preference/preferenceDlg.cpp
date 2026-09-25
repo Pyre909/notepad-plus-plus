@@ -3432,7 +3432,8 @@ intptr_t CALLBACK MiscSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_DETECTENCODING, BM_SETCHECK, nppGUI._detectEncoding, 0);
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_SAVEALLCONFIRM, BM_SETCHECK, nppGUI._saveAllConfirm, 0);
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_ALOOWSIMLINKFAW, BM_SETCHECK, nppGUI._isFawSymlinkAllowed, 0);
-			::SendDlgItemMessage(_hSelf, IDC_CHECK_PERMONITORDPIAWARENESS, BM_SETCHECK, nppGUI._perMonitorDpiAwareness ? BST_CHECKED : BST_UNCHECKED, 0);
+			setChecked(IDC_CHECK_PERMONITORDPIAWARENESS, nppGUI._perMonitorDpiAwareness);
+			::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_PERMONITORDPIAWARENESS), DPIManagerV2::isValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2));
 
 			::SendDlgItemMessage(_hSelf, IDC_COMBO_AUTOUPDATE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Disable"));
 			::SendDlgItemMessage(_hSelf, IDC_COMBO_AUTOUPDATE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Enable on Notepad++ startup"));

@@ -26,7 +26,6 @@
 
 #include <commctrl.h>
 
-#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -6330,7 +6329,7 @@ void FindIncrementDlg::init(HINSTANCE hInst, HWND hPere, FindReplaceDlg *pFRDlg,
 	create(IDD_INCREMENT_FIND, isRTL);
 	_isRTL = isRTL;
 
-	// Per-monitor DPI awareness (opt-in): layout of the dialog for its DPI, to follow the DPI changes of the main window
+	// layout of the dialog for its DPI, to follow the DPI changes of the main window
 	if (DPIManagerV2::isPerMonitorV2Active())
 		_dpiLayout.save(_hSelf, _dpiManager.getDpi());
 }
@@ -6416,7 +6415,7 @@ intptr_t CALLBACK FindIncrementDlg::run_dlgProc(UINT message, WPARAM wParam, LPA
 
 		case WM_DPICHANGED_AFTERPARENT:
 		{
-			// Per-monitor DPI awareness (opt-in): the DPI of the main window has changed
+			// the DPI of the main window has changed
 			const UINT prevDpi = _dpiManager.getDpi();
 			setDpi();
 			if (!_dpiLayout.isSaved())
@@ -6875,8 +6874,7 @@ DWORD WINAPI Progress::threadFunc(LPVOID data)
 
 int Progress::thread()
 {
-	// the window is scaled for the DPI of the caller window: with the per-monitor DPI awareness of the GUI thread,
-	// this thread must be per-monitor DPI aware too, otherwise its window would be scaled twice
+	// the window is scaled for the DPI of the caller window: like the GUI thread, otherwise it would be scaled twice
 	if (DPIManagerV2::isPerMonitorV2Active())
 		DPIManagerV2::setThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 

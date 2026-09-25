@@ -585,8 +585,7 @@ private :
 
 	std::vector<MatchPosition> _matches;
 
-	// Per-monitor DPI awareness (opt-in): layout of the dialog for the DPI it was created with,
-	// the dialog (in the bottom rebar of the main window) follows the DPI changes of the main window
+	// per-monitor DPI awareness: layout of the dialog (in the rebar of the main window) for the DPI it was created with
 	DialogDpiLayout _dpiLayout;
 
 	using Window::init;

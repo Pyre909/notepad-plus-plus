@@ -795,7 +795,7 @@ void CmdLineArgsDlg::setEditFont()
 
 	if (hNewFont)
 	{
-		SendDlgItemMessage(_hSelf, IDC_COMMANDLINEARGS_EDIT, WM_SETFONT, (WPARAM)hNewFont, TRUE);
+		SendDlgItemMessage(_hSelf, IDC_COMMANDLINEARGS_EDIT, WM_SETFONT, reinterpret_cast<WPARAM>(hNewFont), TRUE);
 		if (hCmdLineEditFont)
 			DeleteObject(hCmdLineEditFont);
 		hCmdLineEditFont = hNewFont;

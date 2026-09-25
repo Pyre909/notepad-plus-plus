@@ -676,7 +676,6 @@ LRESULT CALLBACK ScintillaEditView::ScintillaProc(
 			return TRUE;
 		}
 
-		case WM_DPICHANGED:
 		case WM_DPICHANGED_AFTERPARENT:
 		{
 			// Scintilla updates its DPI (fonts...) first, then the Notepad++ sizes (margins, markers) are recomputed with it
@@ -3228,7 +3227,7 @@ void ScintillaEditView::setMarkerImagesForDpi(UINT dpi)
 	execute(SCI_RGBAIMAGESETHEIGHT, imagesSize);
 	for (const auto& [markerNumber, image] : markerImages)
 	{
-		// after a DPI change, a marker redefined by a plugin is left as it is
+		// after a DPI change, a marker redefined by a plugin with a non-RGBA symbol is left as it is
 		if (isFirstTime || (execute(SCI_MARKERSYMBOLDEFINED, markerNumber) == SC_MARK_RGBAIMAGE))
 			execute(SCI_MARKERDEFINERGBAIMAGE, markerNumber, reinterpret_cast<LPARAM>(image));
 	}
@@ -3797,8 +3796,7 @@ void ScintillaEditView::updateLineNumberWidth()
 				nbDigits = nbDigits < 4 ? 4 : nbDigits;
 			}
 
-			// the padding is in pixels of the system DPI, with the per-monitor DPI awareness it's scaled for the DPI of the view
-			const int padding = DPIManagerV2::isPerMonitorV2Active() ? DPIManagerV2::scaleFromSystemDpi(8, DPIManagerV2::getDpiForWindow(_hSelf)) : 8;
+			const int padding = DPIManagerV2::scaleFromSystemDpiForWindow(8, _hSelf); // in pixels of the system DPI
 			auto pixelWidth = padding + nbDigits * execute(SCI_TEXTWIDTH, STYLE_LINENUMBER, reinterpret_cast<LPARAM>("8"));
 			setNppMarginWidth(_SC_MARGE_LINENUMBER, static_cast<int>(pixelWidth));
 		}

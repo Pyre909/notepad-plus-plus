@@ -20,6 +20,7 @@
 #include <cstddef>
 #include <cstring>
 #include <cwchar>
+#include <iterator>
 #include <string>
 #include <utility>
 #include <vector>
@@ -409,6 +410,11 @@ intptr_t CALLBACK StaticDialog::dlgProc(HWND hwnd, UINT message, WPARAM wParam, 
 	}
 }
 
+// dialog units per dialog base unit, and points per inch (font sizes)
+static constexpr int dluPerBaseUnitX = 4;
+static constexpr int dluPerBaseUnitY = 8;
+static constexpr int pointsPerInch = 72;
+
 DialogDpiLayout::~DialogDpiLayout()
 {
 	for (HFONT hFont : _fontsForDpi)
@@ -430,7 +436,7 @@ int DialogDpiLayout::saveFont(HFONT hFont)
 	}
 
 	static constexpr int lfSize = static_cast<int>(sizeof(LOGFONT));
-	SavedFont savedFont;
+	SavedFont savedFont{};
 	if (::GetObject(hFont, lfSize, &savedFont._lf) != lfSize)
 		return -1;
 
@@ -446,12 +452,12 @@ void DialogDpiLayout::save(HWND hDlg, UINT dpi)
 
 	_dpi = dpi;
 
-	Dlg dlg;
+	Dlg dlg{};
 	dlg._hDlg = hDlg;
 	dlg._iFont = saveFont(reinterpret_cast<HFONT>(::SendMessage(hDlg, WM_GETFONT, 0, 0)));
 
-	RECT rcBaseUnits{ 0, 0, 4, 8 };
-	if (::MapDialogRect(hDlg, &rcBaseUnits) && (rcBaseUnits.right >= 4) && (rcBaseUnits.bottom >= 8))
+	RECT rcBaseUnits{ 0, 0, dluPerBaseUnitX, dluPerBaseUnitY };
+	if (::MapDialogRect(hDlg, &rcBaseUnits) && (rcBaseUnits.right >= dluPerBaseUnitX) && (rcBaseUnits.bottom >= dluPerBaseUnitY))
 		dlg._baseUnits = { rcBaseUnits.right, rcBaseUnits.bottom };
 
 	RECT rcClient{};
@@ -463,7 +469,7 @@ void DialogDpiLayout::save(HWND hDlg, UINT dpi)
 
 	for (HWND hChild = ::GetWindow(hDlg, GW_CHILD); hChild != nullptr; hChild = ::GetWindow(hChild, GW_HWNDNEXT))
 	{
-		Ctrl ctrl;
+		Ctrl ctrl{};
 		ctrl._hWnd = hChild;
 		ctrl._iDlg = _dlgs.size() - 1;
 		::GetWindowRect(hChild, &ctrl._rc);
@@ -500,11 +506,12 @@ static SIZE getDialogBaseUnits(HWND hWnd, HFONT hFont)
 		return baseUnits;
 
 	static constexpr wchar_t alphabet[] = L"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	static constexpr int alphabetLen = static_cast<int>(std::size(alphabet)) - 1;
 	const HGDIOBJ hOldFont = ::SelectObject(hdc, hFont);
 	TEXTMETRIC tm{};
 	SIZE szAlphabet{};
-	if (::GetTextMetrics(hdc, &tm) && ::GetTextExtentPoint32W(hdc, alphabet, 52, &szAlphabet))
-		baseUnits = { (szAlphabet.cx / 26 + 1) / 2, tm.tmHeight };
+	if (::GetTextMetrics(hdc, &tm) && ::GetTextExtentPoint32W(hdc, alphabet, alphabetLen, &szAlphabet))
+		baseUnits = { (szAlphabet.cx / (alphabetLen / 2) + 1) / 2, tm.tmHeight }; // rounded average width
 	::SelectObject(hdc, hOldFont);
 	::ReleaseDC(hWnd, hdc);
 	return baseUnits;
@@ -524,7 +531,7 @@ void DialogDpiLayout::apply(UINT dpi)
 		LOGFONT lf{ savedFont._lf };
 		if (!isSavedDpi)
 		{
-			lf.lfHeight = (lf.lfHeight < 0) ? -::MulDiv(::MulDiv(-lf.lfHeight, 72, _dpi), dpi, 72) : DPIManagerV2::scale(lf.lfHeight, dpi, _dpi);
+			lf.lfHeight = (lf.lfHeight < 0) ? -::MulDiv(::MulDiv(-lf.lfHeight, pointsPerInch, _dpi), dpi, pointsPerInch) : DPIManagerV2::scale(lf.lfHeight, dpi, _dpi);
 			lf.lfWidth = DPIManagerV2::scale(lf.lfWidth, dpi, _dpi);
 		}
 		fontsForDpi.push_back(::CreateFontIndirect(&lf));
@@ -545,12 +552,12 @@ void DialogDpiLayout::apply(UINT dpi)
 		const auto scaleX = [&](LONG x) -> LONG {
 			if (isSavedDpi)
 				return x;
-			return isDlu ? ::MulDiv(::MulDiv(x, 4, dlg._baseUnits.cx), baseUnits.cx, 4) : DPIManagerV2::scale(x, dpi, _dpi);
+			return isDlu ? ::MulDiv(::MulDiv(x, dluPerBaseUnitX, dlg._baseUnits.cx), baseUnits.cx, dluPerBaseUnitX) : DPIManagerV2::scale(x, dpi, _dpi);
 		};
 		const auto scaleY = [&](LONG y) -> LONG {
 			if (isSavedDpi)
 				return y;
-			return isDlu ? ::MulDiv(::MulDiv(y, 8, dlg._baseUnits.cy), baseUnits.cy, 8) : DPIManagerV2::scale(y, dpi, _dpi);
+			return isDlu ? ::MulDiv(::MulDiv(y, dluPerBaseUnitY, dlg._baseUnits.cy), baseUnits.cy, dluPerBaseUnitY) : DPIManagerV2::scale(y, dpi, _dpi);
 		};
 
 		dlg._sizeForDpi = { scaleX(dlg._size.cx), scaleY(dlg._size.cy) };

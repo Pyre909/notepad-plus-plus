@@ -27,6 +27,12 @@
 #include "ScintillaEditView.h"
 #include "TabBar.h"
 #include "Window.h"
+#include "resource.h"
+
+// file state icons of the tabs (also used by the Document List)
+inline constexpr int docTabIconIDs[] = { IDI_SAVED_ICON, IDI_UNSAVED_ICON, IDI_READONLY_ICON, IDI_READONLYSYS_ICON, IDI_MONITORING_ICON };
+inline constexpr int docTabIconIDs_darkMode[] = { IDI_SAVED_DM_ICON, IDI_UNSAVED_DM_ICON, IDI_READONLY_DM_ICON, IDI_READONLYSYS_DM_ICON, IDI_MONITORING_DM_ICON };
+inline constexpr int docTabIconIDs_alt[] = { IDI_SAVED_ALT_ICON, IDI_UNSAVED_ALT_ICON, IDI_READONLY_ALT_ICON, IDI_READONLYSYS_ALT_ICON, IDI_MONITORING_ICON };
 
 
 class DocTabView : public TabBarPlus
@@ -63,8 +69,7 @@ public:
 	void reSizeTo(RECT & rc) override;
 
 	void resizeIconsDpi() {
-		// the image lists are kept (the Document List panel can use them too) with their icons reloaded at the new size,
-		// creating new ones leaked the previous ones
+		// resized in place: the Document List can share them
 		const int newSize = dpiManager().scale(g_TabIconSize);
 		for (IconList* const i : _pIconListVector)
 		{

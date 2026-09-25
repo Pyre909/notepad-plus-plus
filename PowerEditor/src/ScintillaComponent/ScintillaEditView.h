@@ -723,13 +723,13 @@ protected:
 	// Margins widths set by Notepad++ (indexed by _SC_MARGE_*), to be recomputed after a DPI change (see updateForDpi()).
 	// A margin whose width has been changed by someone else (a plugin) is left as it is.
 	static constexpr int _nbNppMargins = 4;
-	int _nppMarginWidths[_nbNppMargins] = { 0, 0, 0, 0 };
+	int _nppMarginWidths[_nbNppMargins]{};
 	void setNppMarginWidth(int whichMarge, int width);
 
 	int _markerImagesSize = 0; // size of the RGBA images of the bookmark & hide lines markers
 	UINT _viewDpi = 0; // DPI of the view, for its pixel sizes (scroll width, x offset) after a DPI change
 	void setMarkerImagesForDpi(UINT dpi);
-	void updateForDpi(); // after WM_DPICHANGED(_AFTERPARENT): the Notepad++ pixel sizes (margins, markers) for the new DPI
+	void updateForDpi(); // after WM_DPICHANGED_AFTERPARENT: the Notepad++ pixel sizes (margins, markers) for the new DPI
 
 	bool _isMainEditZone = false;
 	SCINTILLA_FUNC _pScintillaFunc = nullptr;

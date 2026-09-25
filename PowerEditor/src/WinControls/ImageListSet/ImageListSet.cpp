@@ -602,3 +602,33 @@ HBITMAP ToolBarIcons::resizeHBitmap(HBITMAP srcBmp, int destW, int destH)
 
 	return cleanup(hbmDst);
 }
+
+void setPanelToolbarImageLists(HWND hToolbar, HINSTANCE hInst, int iconSize, const int* iconIDs, const int* iconDarkModeIDs, int nbIcons, std::vector<HIMAGELIST>& imageLists)
+{
+	HIMAGELIST hImageList = ImageList_Create(iconSize, iconSize, ILC_COLOR32 | ILC_MASK, nbIcons, 0);
+	HIMAGELIST hImageListDm = ImageList_Create(iconSize, iconSize, ILC_COLOR32 | ILC_MASK, nbIcons, 0);
+
+	for (int i = 0; i < nbIcons; ++i)
+	{
+		HICON hIcon = nullptr;
+		DPIManagerV2::loadIcon(hInst, MAKEINTRESOURCE(iconIDs[i]), iconSize, iconSize, &hIcon, LR_LOADMAP3DCOLORS | LR_LOADTRANSPARENT);
+		ImageList_AddIcon(hImageList, hIcon);
+		::DestroyIcon(hIcon);
+		hIcon = nullptr;
+
+		DPIManagerV2::loadIcon(hInst, MAKEINTRESOURCE(iconDarkModeIDs[i]), iconSize, iconSize, &hIcon, LR_LOADMAP3DCOLORS | LR_LOADTRANSPARENT);
+		ImageList_AddIcon(hImageListDm, hIcon);
+		::DestroyIcon(hIcon);
+	}
+
+	// the image lists of a previous DPI are destroyed once replaced in the toolbar
+	const std::vector<HIMAGELIST> prevImageLists = imageLists;
+	imageLists = { hImageList, hImageListDm };
+	::SendMessage(hToolbar, TB_SETIMAGELIST, 0, reinterpret_cast<LPARAM>(imageLists.at(NppDarkMode::isEnabled() ? 1 : 0)));
+
+	for (HIMAGELIST hPrevImageList : prevImageLists)
+	{
+		if (hPrevImageList != nullptr)
+			::ImageList_Destroy(hPrevImageList);
+	}
+}

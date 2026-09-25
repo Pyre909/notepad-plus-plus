@@ -218,25 +218,19 @@ void Splitter::setSplitterSize(int splitterSize)
 }
 
 
-int Splitter::scaleFromSystemDpi(int x) const
-{
-	return DPIManagerV2::scaleFromSystemDpiForWindow(x, _hSelf);
-}
-
-
 int Splitter::getClickZone(WH which)
 {
 	// determined by (_dwFlags & SV_VERTICAL) && _splitterSize
 	// (the zone sizes are in pixels of the system DPI, while _splitterSize is already scaled for the DPI)
-	const int zoneThickness = scaleFromSystemDpi(8);
-	const int zoneLength = scaleFromSystemDpi(HEIGHT_MINIMAL);
+	const int zoneThickness = DPIManagerV2::scaleFromSystemDpiForWindow(8, _hSelf);
+	const int zoneLength = DPIManagerV2::scaleFromSystemDpiForWindow(HEIGHT_MINIMAL, _hSelf);
 	if (_splitterSize <= zoneThickness)
 	{
 		return isVertical()
 			? (which == WH::width ? _splitterSize  : zoneLength)
 			: (which == WH::width ? zoneLength : _splitterSize);
 	}
-	else // (_splitterSize > 8)
+	else // (_splitterSize > zoneThickness)
 	{
 		return isVertical()
 			? ((which == WH::width) ? zoneThickness  : zoneLength)
@@ -327,7 +321,7 @@ LRESULT CALLBACK Splitter::spliterWndProc(UINT uMsg, WPARAM wParam, LPARAM lPara
 				::GetCursorPos(&pt);
 				::ScreenToClient(_hParent, &pt);
 
-				const int endMargin = scaleFromSystemDpi(5);
+				const int endMargin = DPIManagerV2::scaleFromSystemDpiForWindow(5, _hSelf);
 
 				if (_dwFlags & SV_HORIZONTAL)
 				{
@@ -496,7 +490,7 @@ void Splitter::resizeSpliter(RECT *pRect)
 
 	RECT rc{};
 	getClientRect(rc);
-	// both zones, their sizes can follow the DPI (per-monitor DPI awareness)
+	// both zones, their sizes can follow the DPI
 	_clickZone2TL.right = getClickZone(WH::width);
 	_clickZone2TL.bottom = getClickZone(WH::height);
 	_clickZone2BR.right = _clickZone2TL.right;
@@ -756,20 +750,20 @@ void Splitter::paintArrow(HDC hdc, const RECT &rect, Arrow arrowDir)
 void Splitter::adjustZoneToDraw(RECT& rc2def, ZONE_TYPE whichZone)
 {
 	// the arrow sizes are in pixels of the system DPI, like the click zones
-	if (_splitterSize < scaleFromSystemDpi(4))
+	if (_splitterSize < DPIManagerV2::scaleFromSystemDpiForWindow(4, _hSelf))
 		return;
 
 	int x0 = 0, y0 = 0, x1 = 0, y1 = 0, w = 0, h = 0;
 
-	if (/*(4 <= _splitterSize) && */(_splitterSize <= scaleFromSystemDpi(8)))
+	if (/*(4 <= _splitterSize) && */(_splitterSize <= DPIManagerV2::scaleFromSystemDpiForWindow(8, _hSelf)))
 	{
-		w = scaleFromSystemDpi(isVertical() ? 4 : 7);
-		h = scaleFromSystemDpi(isVertical() ? 7 : 4);
+		w = DPIManagerV2::scaleFromSystemDpiForWindow(isVertical() ? 4 : 7, _hSelf);
+		h = DPIManagerV2::scaleFromSystemDpiForWindow(isVertical() ? 7 : 4, _hSelf);
 	}
-	else // (_splitterSize > 8)
+	else // (_splitterSize > 8 pixels of the system DPI)
 	{
-		w = scaleFromSystemDpi(isVertical() ? 6  : 11);
-		h = scaleFromSystemDpi(isVertical() ? 11 : 6);
+		w = DPIManagerV2::scaleFromSystemDpiForWindow(isVertical() ? 6 : 11, _hSelf);
+		h = DPIManagerV2::scaleFromSystemDpiForWindow(isVertical() ? 11 : 6, _hSelf);
 	}
 
 	if (isVertical())

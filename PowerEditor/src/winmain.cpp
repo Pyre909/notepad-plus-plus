@@ -869,12 +869,11 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstance
         }
 	}
 
-	// Experimental opt-in per-monitor v2 DPI awareness (the manifest declares the system DPI awareness).
-	// It's set for the GUI thread for the whole session, not only for the main window creation:
-	// the windows created later (panels, plugins' dialogs...) must have the DPI awareness of their parent, otherwise they cannot be (re)parented.
+	// Opt-in per-monitor v2 DPI awareness (the manifest declares the system DPI awareness), for the whole session:
+	// a window must have the DPI awareness of its parent to be (re)parented (panels, plugins' dialogs...)
 	if (nppGui._perMonitorDpiAwareness && DPIManagerV2::enablePerMonitorV2ForThread())
 	{
-		// the floating panels positions have been validated in system DPI aware coordinates by nppParameters.load()
+		// load() has validated them in system DPI aware coordinates
 		nppParameters.validateFloatingWindowsPositions();
 	}
 

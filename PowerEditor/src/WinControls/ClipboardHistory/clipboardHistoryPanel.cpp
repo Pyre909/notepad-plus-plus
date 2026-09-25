@@ -343,19 +343,10 @@ intptr_t CALLBACK ClipboardHistoryPanel::run_dlgProc(UINT message, WPARAM wParam
 	return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
 }
 
-// Per-monitor DPI awareness (opt-in): the panel may be docked in a container of another DPI than the one it was created for
-// (no DPI change notification then), or be resized by its container before it gets WM_DPICHANGED_AFTERPARENT
-void ClipboardHistoryPanel::checkDpiChange()
+ClipboardHistoryPanel::~ClipboardHistoryPanel()
 {
-	if (DPIManagerV2::isPerMonitorV2Active())
-	{
-		const UINT prevDpi = _dpiManager.getDpi();
-		setDpi();
-		if (_dpiManager.getDpi() != prevDpi)
-		{
-			onDpiChanged(prevDpi);
-		}
-	}
+	if (_hFontDpi != nullptr)
+		::DeleteObject(_hFontDpi);
 }
 
 void ClipboardHistoryPanel::onDpiChanged(UINT prevDpi)
@@ -383,18 +374,11 @@ void ClipboardHistoryPanel::onDpiChanged(UINT prevDpi)
 	{
 		const UINT dpi = _dpiManager.getDpi();
 
+		// the font of the items drawn by drawItem()
 		LOGFONT lf{ _lfOriginal };
 		lf.lfHeight = DPIManagerV2::scale(_lfOriginal.lfHeight, dpi, _dpiOriginal);
 		lf.lfWidth = DPIManagerV2::scale(_lfOriginal.lfWidth, dpi, _dpiOriginal);
-		HFONT hFontDpi = ::CreateFontIndirect(&lf);
-		if (hFontDpi != nullptr)
-		{
-			// the font of the items drawn by drawItem()
-			::SendMessage(hList, WM_SETFONT, reinterpret_cast<WPARAM>(hFontDpi), FALSE);
-			if (_hFontDpi != nullptr)
-				::DeleteObject(_hFontDpi);
-			_hFontDpi = hFontDpi;
-		}
+		DPIManagerV2::replaceWindowFont(hList, lf, _hFontDpi);
 
 		// owner drawn items of fixed height: their height doesn't follow the font
 		::SendMessage(hList, LB_SETITEMHEIGHT, 0, DPIManagerV2::scale(_itemHeightOriginal, dpi, _dpiOriginal));

@@ -474,36 +474,16 @@ void VerticalFileSwitcherListView::resizeColumns(int totalWidth)
 	const auto style = ::GetWindowLongPtr(_hSelf, GWL_STYLE);
 	if ((style & WS_VSCROLL) == WS_VSCROLL)
 	{
-		// with the per-monitor DPI awareness, the scroll bar has the width for the DPI of the panel
-		totalColWidthDynExceptName += DPIManagerV2::isPerMonitorV2Active() ? DPIManagerV2::getSystemMetricsForDpi(SM_CXVSCROLL, dpi) : ::GetSystemMetrics(SM_CXVSCROLL);
+		totalColWidthDynExceptName += DPIManagerV2::getSystemMetricsForWindow(SM_CXVSCROLL, _hParent);
 	}
 
 	ListView_SetColumnWidth(_hSelf, 0, totalWidth - totalColWidthDynExceptName);
 }
 
-void VerticalFileSwitcherListView::setFontForDpi(UINT dpi)
-{
-	// the list view's default font is the icon title font; SystemParametersInfo() gives it for the system DPI
-	LOGFONT lf{};
-	if (::SystemParametersInfo(SPI_GETICONTITLELOGFONT, sizeof(LOGFONT), &lf, 0) == FALSE)
-		return;
-
-	lf.lfHeight = DPIManagerV2::scaleFromSystemDpi(lf.lfHeight, dpi);
-	lf.lfWidth = DPIManagerV2::scaleFromSystemDpi(lf.lfWidth, dpi);
-	HFONT hFontDpi = ::CreateFontIndirect(&lf);
-	if (hFontDpi != nullptr)
-	{
-		// the list view gives its font to its header, and computes the heights of the header, the groups and the rows with it
-		::SendMessage(_hSelf, WM_SETFONT, reinterpret_cast<WPARAM>(hFontDpi), FALSE);
-		if (_hFontDpi != nullptr)
-			::DeleteObject(_hFontDpi);
-		_hFontDpi = hFontDpi;
-	}
-}
-
 void VerticalFileSwitcherListView::rescaleForDpi(UINT dpi, HIMAGELIST hImaLst)
 {
-	setFontForDpi(dpi);
+	// the list view sizes its header, its groups and its rows with its font
+	DPIManagerV2::replaceWindowFont(_hSelf, DPIManagerV2::getIconTitleFontForDpi(dpi), _hFontDpi);
 
 	if (hImaLst != nullptr)
 	{

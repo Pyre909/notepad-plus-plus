@@ -664,8 +664,8 @@ void Gripper::drawRectangle(const POINT* pPt)
 		::FillRect(_hdcOverlayMem, &rcFrame, hBrushTransparent);
 		::DeleteObject(hBrushTransparent);
 
-		// frame thickness in pixels of the system DPI, for the DPI of the moved container with the per-monitor DPI awareness
-		const LONG frame = scaleFromSystemDpi(3, _pCont->getHSelf());
+		// frame thickness in pixels of the system DPI
+		const LONG frame = DPIManagerV2::scaleFromSystemDpiForWindow(3, _pCont->getHSelf());
 
 		HBRUSH hBrushGray = ::CreateSolidBrush(RGB(128, 128, 128));
 		RECT rcTop = { newOverlayX, newOverlayY, newOverlayX + newWidth, newOverlayY + frame };
@@ -795,7 +795,7 @@ DockingCont* Gripper::contHitTest(POINT pt)
 				RECT	rc	= {};
 
 				vCont[iCont]->getWindowRect(rc);
-				if ((rc.top < pt.y) && (pt.y < (rc.top + scaleFromSystemDpi(24, vCont[iCont]->getHSelf()))))
+				if ((rc.top < pt.y) && (pt.y < (rc.top + DPIManagerV2::scaleFromSystemDpiForWindow(24, vCont[iCont]->getHSelf()))))
 				{
 					/* when it is the same container start moving immediately */
 					if (vCont[iCont] == _pCont)
@@ -853,8 +853,8 @@ DockingCont* Gripper::workHitTest(POINT pt, RECT *rc)
 		}
 	}
 
-	/* the thickness is in pixels of the system DPI, for the DPI of the main window with the per-monitor DPI awareness */
-	const LONG hitTestThickness = scaleFromSystemDpi(HIT_TEST_THICKNESS, _hParent);
+	// in pixels of the system DPI
+	const LONG hitTestThickness = DPIManagerV2::scaleFromSystemDpiForWindow(HIT_TEST_THICKNESS, _hParent);
 
 	/* now search if cusor hits a possible docking area */
 	for (int iWork = 0; iWork < DOCKCONT_MAX; ++iWork)

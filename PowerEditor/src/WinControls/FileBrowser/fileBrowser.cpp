@@ -33,6 +33,7 @@
 
 #include "Common.h"
 #include "DockingDlgInterface.h"
+#include "ImageListSet.h"
 #include "Notepad_plus_msgs.h"
 #include "NppDarkMode.h"
 #include "Parameters.h"
@@ -54,6 +55,8 @@ enum ItemIdx
 	INDEX_CLOSE_NODE,
 	INDEX_LEAF
 };
+
+static constexpr int toolbarIconSize = 16; // for 96 DPI
 
 #define FB_ADDFILE (WM_USER + 1024)
 #define FB_RMFILE  (WM_USER + 1025)
@@ -141,7 +144,7 @@ intptr_t CALLBACK FileBrowser::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 			::SendMessage(_hToolbarMenu, TB_SETEXTENDEDSTYLE, 0, tbExStyle | TBSTYLE_EX_DOUBLEBUFFER);
 
 			setDpi();
-			const int iconSizeDyn = _dpiManager.scale(16);
+			const int iconSizeDyn = _dpiManager.scale(toolbarIconSize);
 			constexpr int nbIcons = 3;
 
 			// Create the image lists for the toolbar icons and attach one to the toolbar
@@ -368,43 +371,9 @@ intptr_t CALLBACK FileBrowser::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 
 void FileBrowser::setToolbarImageLists(int iconSize)
 {
-	constexpr int nbIcons = 3;
-	int iconIDs[nbIcons] = { IDI_FB_SELECTCURRENTFILE, IDI_FB_FOLDALL, IDI_FB_EXPANDALL};
-	int iconDarkModeIDs[nbIcons] = { IDI_FB_SELECTCURRENTFILE_DM, IDI_FB_FOLDALL_DM, IDI_FB_EXPANDALL_DM};
-
-	// Create an image lists for the toolbar icons
-	HIMAGELIST hImageList = ImageList_Create(iconSize, iconSize, ILC_COLOR32 | ILC_MASK, nbIcons, 0);
-	HIMAGELIST hImageListDm = ImageList_Create(iconSize, iconSize, ILC_COLOR32 | ILC_MASK, nbIcons, 0);
-
-	for (size_t i = 0; i < nbIcons; ++i)
-	{
-		int icoID = iconIDs[i];
-		HICON hIcon = nullptr;
-		DPIManagerV2::loadIcon(_hInst, MAKEINTRESOURCE(icoID), iconSize, iconSize, &hIcon, LR_LOADMAP3DCOLORS | LR_LOADTRANSPARENT);
-		ImageList_AddIcon(hImageList, hIcon);
-		::DestroyIcon(hIcon);
-		hIcon = nullptr;
-
-		icoID = iconDarkModeIDs[i];
-		DPIManagerV2::loadIcon(_hInst, MAKEINTRESOURCE(icoID), iconSize, iconSize, &hIcon, LR_LOADMAP3DCOLORS | LR_LOADTRANSPARENT);
-		ImageList_AddIcon(hImageListDm, hIcon);
-		::DestroyIcon(hIcon); // Clean up the loaded icon
-	}
-
-	// the image lists of the previous DPI (per-monitor DPI awareness), released once replaced in the toolbar
-	const std::vector<HIMAGELIST> prevIconLists = _iconListVector;
-	_iconListVector = { hImageList, hImageListDm };
-
-	// Attach the image list to the toolbar
-	::SendMessage(_hToolbarMenu, TB_SETIMAGELIST, 0, reinterpret_cast<LPARAM>(_iconListVector.at(NppDarkMode::isEnabled() ? 1 : 0)));
-
-	for (auto hImgList : prevIconLists)
-	{
-		if (hImgList != nullptr)
-		{
-			::ImageList_Destroy(hImgList);
-		}
-	}
+	static constexpr int iconIDs[] = { IDI_FB_SELECTCURRENTFILE, IDI_FB_FOLDALL, IDI_FB_EXPANDALL };
+	static constexpr int iconDarkModeIDs[] = { IDI_FB_SELECTCURRENTFILE_DM, IDI_FB_FOLDALL_DM, IDI_FB_EXPANDALL_DM };
+	setPanelToolbarImageLists(_hToolbarMenu, _hInst, iconSize, iconIDs, iconDarkModeIDs, static_cast<int>(std::size(iconIDs)), _iconListVector);
 }
 
 std::vector<int> FileBrowser::getTreeImageIds()
@@ -419,7 +388,7 @@ std::vector<int> FileBrowser::getTreeImageIds()
 void FileBrowser::onDpiChanged(UINT prevDpi)
 {
 	// toolbar: icons and buttons size, as in WM_INITDIALOG
-	const int iconSizeDyn = _dpiManager.scale(16);
+	const int iconSizeDyn = _dpiManager.scale(toolbarIconSize);
 	setToolbarImageLists(iconSizeDyn);
 	::SendMessage(_hToolbarMenu, TB_SETBUTTONSIZE, 0, MAKELONG(iconSizeDyn, iconSizeDyn));
 	::SendMessage(_hToolbarMenu, TB_AUTOSIZE, 0, 0);
