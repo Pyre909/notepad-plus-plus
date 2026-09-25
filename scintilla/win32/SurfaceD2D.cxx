@@ -798,7 +798,9 @@ void SurfaceD2D::SetFontQuality(FontQuality extraFontFlag, int variant) {
 	if (aaMode == D2D1_TEXT_ANTIALIAS_MODE_ALIASED) {
 		variant = 0;
 	} else {
-		variant = ExistingRenderingVariant(clearType ? renderingParams->customVariants : renderingParams->defaultVariants, variant);
+		// (not a conditional of the arrays: MSVC decays them to pointers)
+		variant = clearType ? ExistingRenderingVariant(renderingParams->customVariants, variant) :
+			ExistingRenderingVariant(renderingParams->defaultVariants, variant);
 	}
 	if ((fontQuality != extraFontFlag) || (renderingVariant != variant)) {	// N++: variant
 		fontQuality = extraFontFlag;
