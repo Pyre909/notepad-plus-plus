@@ -989,7 +989,7 @@ void GdiLogFont(LOGFONTW &lf) noexcept {
 		// the weight of the family's regular font: its upright font of weight closest to normal
 		const std::vector<GdiFamilyMember> &members = FamilyMembers(lf.lfFaceName);
 		const LONG regular = ClosestWeight(members, FW_NORMAL, false);
-		const LONG weight = (lf.lfWeight == FW_DONTCARE) ? FW_NORMAL : lf.lfWeight;
+		const LONG weight = (lf.lfWeight == FW_DONTCARE) ? FW_NORMAL : std::clamp(lf.lfWeight, 1L, 1000L);	// the sum below can't overflow
 		const bool heavierFont = std::any_of(members.begin(), members.end(),
 			[regular](const GdiFamilyMember &member) noexcept { return member.weight > regular; });
 		if ((regular <= 0) || ((regular == FW_NORMAL) && ((weight <= FW_NORMAL) || heavierFont))) {

@@ -1051,7 +1051,7 @@ Translation note:
 						<Element name="DirectWrite (rendu sur GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="mode de rendu"/>
+					<Item id="6363" name="Mode de rendu :"/>
 				</Scintillas>
 
 				<Scintillas2 title="Zones d’édition 2">

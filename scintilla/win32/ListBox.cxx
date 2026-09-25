@@ -560,7 +560,7 @@ void ListBoxX::SetOptions(ListOptions options_) {
 }
 
 #if defined(USE_D2D)
-// N++: the editor's rendering parameters, applied when the line surface is next allocated
+// N++: the editor's rendering parameters (none: drawn as upstream), applied when the line surface is next allocated
 void ListBoxX::SetRenderingParams(std::shared_ptr<RenderingParams> renderingParams_) {
 	renderingParams = std::move(renderingParams_);
 	graphics.Release();
@@ -800,11 +800,11 @@ void ListBoxX::AllocateBitMap() {
 
 		const FLOAT dpiTarget = dpiDefault * static_cast<float>(integralDeviceScaleFactor);
 
-		// N++: opaque (alpha ignored) so text can be ClearType. Draw fills every pixel that is
-		// copied to the list before drawing text and the bitmap is only copied with SRCCOPY.
+		// N++: opaque (alpha ignored) with the editor's rendering parameters so text can be ClearType.
+		// Draw fills every pixel that is copied to the list before drawing text and the bitmap is only copied with SRCCOPY.
 		const D2D1_RENDER_TARGET_PROPERTIES drtp = D2D1::RenderTargetProperties(
 			D2D1_RENDER_TARGET_TYPE_DEFAULT,
-			{ DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE },
+			{ DXGI_FORMAT_B8G8R8A8_UNORM, renderingParams ? D2D1_ALPHA_MODE_IGNORE : D2D1_ALPHA_MODE_PREMULTIPLIED },
 			dpiTarget, dpiTarget);
 
 		HRESULT hr = CreateDCRenderTarget(&drtp, graphics.pBMDCTarget);

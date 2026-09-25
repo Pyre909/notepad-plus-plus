@@ -651,6 +651,7 @@ class ScintillaWin :
 	void Finalise() override;
 #if defined(USE_D2D)
 	bool UpdateRenderingParams(bool force) noexcept;
+	void SetListRenderingParams() noexcept;	// N++
 	[[nodiscard]] bool FontRenderingOverridden() const noexcept;	// N++
 	[[nodiscard]] WriteRenderingParams OverriddenRenderingParams(IDWriteRenderingParams1 *monitorParams, FLOAT gamma, DWRITE_RENDERING_MODE renderingMode) const noexcept;	// N++
 	bool UpdateMeasuringMode() noexcept;	// N++
@@ -1025,11 +1026,20 @@ bool ScintillaWin::UpdateRenderingParams(bool force) noexcept {
 		renderingParams->defaultVariants[variant] = std::move(defaultVariants[variant]);
 		renderingParams->customVariants[variant] = std::move(customVariants[variant]);
 	}
-	// N++: the autocompletion list draws its text with the same parameters
-	if (ISetRenderingParams *setListParams = dynamic_cast<ISetRenderingParams *>(ac.lb.get())) {
-		setListParams->SetRenderingParams(renderingParams);
-	}
+	SetListRenderingParams();	// N++
 	return true;
+}
+
+// N++: the autocompletion list draws its text with the editor's parameters once the text rendering is
+// customised (font quality or overrides), else as upstream (without parameters, grayscale antialiasing)
+void ScintillaWin::SetListRenderingParams() noexcept {
+	ISetRenderingParams *setListParams = dynamic_cast<ISetRenderingParams *>(ac.lb.get());
+	if (!setListParams) {
+		return;
+	}
+	const bool defaultQuality = (static_cast<int>(vs.extraFontFlag) & static_cast<int>(FontQuality::QualityMask)) ==
+		static_cast<int>(FontQuality::QualityDefault);
+	setListParams->SetRenderingParams((defaultQuality && !FontRenderingOverridden()) ? nullptr : renderingParams);
 }
 
 // N++: whether any SCI_SETFONTRENDERINGPARAMETER override is set
@@ -2524,6 +2534,14 @@ sptr_t ScintillaWin::SciMessage(Message iMessage, uptr_t wParam, sptr_t lParam) 
 		InvalidateStyleRedraw();
 		break;
 
+	// N++: the autocompletion list follows the font quality (see SetListRenderingParams)
+	case Message::SetFontQuality:
+		ScintillaBase::WndProc(iMessage, wParam, lParam);
+#if defined(USE_D2D)
+		SetListRenderingParams();
+#endif
+		break;
+
 	// N++: DirectWrite text rendering overrides
 	case Message::SetFontRenderingParameter:
 		SetFontRenderingParameter(wParam, lParam);
@@ -2761,6 +2779,7 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 #endif
 		case Message::GrabFocus:
 		case Message::SetTechnology:
+		case Message::SetFontQuality:	// N++
 		case Message::SetFontRenderingParameter:	// N++
 		case Message::GetFontRenderingParameter:	// N++
 		case Message::SetBidirectional:

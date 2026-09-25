@@ -1002,7 +1002,7 @@
 						<Element name="DirectWrite（繪製到 GDI DC）"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="繪製模式"/>
+					<Item id="6363" name="繪製模式："/>
 				</Scintillas>
 
 				<Scintillas2 title="編輯二">

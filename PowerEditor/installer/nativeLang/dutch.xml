@@ -1058,7 +1058,7 @@ Last modified on 2026-07-11 by BdR76.
 						<Element name="DirectWrite (tekenen naar GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="rendermodus"/>
+					<Item id="6363" name="Rendermodus:"/>
 				</Scintillas>
 
 				<Scintillas2 title="Bewerken 2">

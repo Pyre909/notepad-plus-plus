@@ -361,10 +361,12 @@ std::optional<GdiFamilyMatch> FindGdiFamilyName(const std::wstring &faceName) {
 }
 
 // The weight of the typographic family drawing a weight of a GDI family name, relative to the name's weight
-// (at most extra black: heavier weights are refused by some DirectWrite implementations, drawing nothing)
+// (at most extra black: heavier weights are refused by some DirectWrite implementations, drawing nothing;
+// the weight asked is first limited to the GDI range so the sum can't overflow)
 DWRITE_FONT_WEIGHT RelativeWeight(const GdiFamilyMatch &match, int weight) noexcept {
-	return static_cast<DWRITE_FONT_WEIGHT>(std::clamp(static_cast<int>(match.weight) + weight - static_cast<int>(FontWeight::Normal), 1,
-		static_cast<int>(DWRITE_FONT_WEIGHT_EXTRA_BLACK)));
+	constexpr int maxGdiWeight = 1000;
+	return static_cast<DWRITE_FONT_WEIGHT>(std::clamp(static_cast<int>(match.weight) + std::clamp(weight, 1, maxGdiWeight) -
+		static_cast<int>(FontWeight::Normal), 1, static_cast<int>(DWRITE_FONT_WEIGHT_EXTRA_BLACK)));
 }
 
 std::optional<GdiFamilyMatch> MatchGdiFamilyName(const std::wstring &faceName) noexcept {
@@ -497,6 +499,9 @@ struct FontDirectWrite : public FontWin {
 			lf.lfHeight = -static_cast<LONG>(emSize);
 			GdiLogFont(lf);
 			return ::CreateFontIndirectW(&lf);
+		}
+		if (!pTextFormat) {
+			return {};	// N++: the font couldn't be created (a weight or stretch refused by DirectWrite)
 		}
 		const HRESULT hr = pTextFormat->GetFontFamilyName(lf.lfFaceName, LF_FACESIZE);
 		if (!SUCCEEDED(hr)) {
@@ -2052,7 +2057,7 @@ bool DirectWriteGdiLogFont([[maybe_unused]] LOGFONTW &lf) noexcept {
 		if (!LoadD2D()) {
 			return false;
 		}
-		const std::optional<GdiFamilyMatch> match = MatchGdiFamilyName(lf.lfFaceName);
+		const std::optional<GdiFamilyMatch> match = MatchGdiFamilyName(std::wstring(lf.lfFaceName, ::wcsnlen(lf.lfFaceName, LF_FACESIZE)));
 		ComPtr<IDWriteFontCollection> collection;
 		if (!match || FAILED(pIDWriteFactory->GetSystemFontCollection(collection.GetAddressOf(), FALSE))) {
 			return false;

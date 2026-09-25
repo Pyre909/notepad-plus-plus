@@ -338,13 +338,6 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			// (mouse wheel vertical & horizontal scroll amount, DirectWrite rendering params, base elements, style etc.)
 			ScintillaEditView::sendMessageToAll(WM_SETTINGCHANGE, wParam, lParam);
 
-			// keep the "Follow Windows" text antialiasing in sync with the Windows font smoothing (Scintilla updates the other parameters)
-			if ((wParam == SPI_SETFONTSMOOTHING || wParam == SPI_SETFONTSMOOTHINGTYPE) &&
-				(nppParam.getSVP()._textAntialiasing == textAntialiasingFollowWindows))
-			{
-				ScintillaEditView::applyTextRenderingSettingsToAll();
-			}
-
 			return ::DefWindowProc(hwnd, message, wParam, lParam);
 		}
 
