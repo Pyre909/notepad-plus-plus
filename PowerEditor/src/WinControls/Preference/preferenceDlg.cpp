@@ -422,14 +422,14 @@ intptr_t CALLBACK PreferenceDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			if (_indentationSubDlg._tipAutoIndentAdvanced)
 				NppDarkMode::setDarkTooltips(_indentationSubDlg._tipAutoIndentAdvanced, NppDarkMode::ToolTipsType::tooltip);
 
-			if (_miscSubDlg._tipScintillaRenderingTechnology)
-				NppDarkMode::setDarkTooltips(_miscSubDlg._tipScintillaRenderingTechnology, NppDarkMode::ToolTipsType::tooltip);
-
-			for (HWND tip : { _editingSubDlg._tipTextAntialiasing, _editingSubDlg._tipTextRenderingMode, _editingSubDlg._tipTextContrast })
-			{
-				if (tip != nullptr)
-					NppDarkMode::setDarkTooltips(tip, NppDarkMode::ToolTipsType::tooltip);
-			}
+			if (_editingSubDlg._tipScintillaRenderingTechnology)
+				NppDarkMode::setDarkTooltips(_editingSubDlg._tipScintillaRenderingTechnology, NppDarkMode::ToolTipsType::tooltip);
+			if (_editingSubDlg._tipTextAntialiasing)
+				NppDarkMode::setDarkTooltips(_editingSubDlg._tipTextAntialiasing, NppDarkMode::ToolTipsType::tooltip);
+			if (_editingSubDlg._tipTextRenderingMode)
+				NppDarkMode::setDarkTooltips(_editingSubDlg._tipTextRenderingMode, NppDarkMode::ToolTipsType::tooltip);
+			if (_editingSubDlg._tipTextContrast)
+				NppDarkMode::setDarkTooltips(_editingSubDlg._tipTextContrast, NppDarkMode::ToolTipsType::tooltip);
 
 			// groupbox label in dark mode support disabled text color
 			if (NppDarkMode::isEnabled())
@@ -1753,7 +1753,27 @@ void EditingSubDlg::changeLineHiliteMode(bool enableSlider)
 void EditingSubDlg::initTextRenderingParam()
 {
 	NppParameters& nppParam = NppParameters::getInstance();
+	NppGUI& nppGUI = nppParam.getNppGUI();
 	const ScintillaViewParams& svp = nppParam.getSVP();
+
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"GDI (most compatible)"));
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DirectWrite (default)"));
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DirectWrite (retain frames)"));
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DirectWrite (draw to GDI DC)"));
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DirectWrite (DirectX 11)"));
+
+	if ((nppGUI._writeTechnologyEngine < 0) || (nppGUI._writeTechnologyEngine > directWriteTechnologyUnavailable))
+		nppGUI._writeTechnologyEngine = directWriteTechnology;
+
+	if (nppGUI._writeTechnologyEngine != directWriteTechnologyUnavailable)
+	{
+		::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_SETCURSEL, nppGUI._writeTechnologyEngine, 0);
+	}
+	else
+	{
+		::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_SETCURSEL, defaultTechnology, 0);
+		::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE), false);
+	}
 
 	// the items order has to match the textAntialiasing, textRenderingMode & textContrast enums
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTANTIALIASING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Follow Windows setting"));
@@ -1776,19 +1796,43 @@ void EditingSubDlg::initTextRenderingParam()
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Very high"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_SETCURSEL, svp._textContrast, 0);
 
+	enableDirectWriteTextRendering();
+
 	NativeLangSpeaker* pNativeSpeaker = nppParam.getNativeLangSpeaker();
 
-	wstring tip2Show = pNativeSpeaker->getLocalizedStrFromID("textAntialiasing-tip",
+	wstring tip2Show = pNativeSpeaker->getLocalizedStrFromID("scintillaRenderingTechnology-tip",
+		L"May improve rendering of special characters or resolve some graphics issues, restart Notepad++ to apply the changes.");
+	_tipScintillaRenderingTechnology = createToolTip(IDC_COMBO_SC_TECHNOLOGY_CHOICE, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
+
+	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textAntialiasing-tip",
 		L"Grayscale is recommended for OLED screens and for rotated (portrait) screens, where ClearType color fringes are more visible.");
 	_tipTextAntialiasing = createToolTip(IDC_COMBO_TEXTANTIALIASING, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
 
 	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textRenderingMode-tip",
-		L"DirectWrite only. Natural avoids the vertical blur of small text. GDI-compatible snaps the glyphs to whole pixels like classic GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text.");
+		L"Natural avoids the vertical blur of small text. GDI-compatible snaps the glyphs to whole pixels like classic GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text.");
 	_tipTextRenderingMode = createToolTip(IDC_COMBO_TEXTRENDERINGMODE, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
 
 	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textContrast-tip",
 		L"DirectWrite only. Makes the strokes heavier: darkens dark text on light backgrounds and thickens light text on dark themes.");
 	_tipTextContrast = createToolTip(IDC_COMBO_TEXTCONTRAST, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
+}
+
+static bool isDirectWriteTechnology()
+{
+	const writeTechnologyEngine technology = NppParameters::getInstance().getNppGUI()._writeTechnologyEngine;
+	return (technology > defaultTechnology) && (technology < directWriteTechnologyUnavailable);
+}
+
+// the DirectWrite mode & the text contrast don't apply to the GDI rendering mode
+void EditingSubDlg::enableDirectWriteTextRendering() const
+{
+	const bool isDirectWrite = isDirectWriteTechnology();
+	::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_TEXTRENDERINGMODE), isDirectWrite);
+	::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_TEXTCONTRAST), isDirectWrite);
+
+	// the labels show the state with their text color (see WM_CTLCOLORSTATIC)
+	redrawDlgItem(IDC_TEXTRENDERINGMODE_STATIC);
+	redrawDlgItem(IDC_TEXTCONTRAST_STATIC);
 }
 
 static bool hasOnlyNumSpaceInClipboard()
@@ -1974,6 +2018,11 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			{
 				return NppDarkMode::onCtlColorDlgStaticText(reinterpret_cast<HDC>(wParam), (svp._currentLineHiliteMode == LINEHILITE_FRAME));
 			}
+
+			if (dlgCtrlID == IDC_TEXTRENDERINGMODE_STATIC || dlgCtrlID == IDC_TEXTCONTRAST_STATIC)
+			{
+				return NppDarkMode::onCtlColorDlgStaticText(reinterpret_cast<HDC>(wParam), isDirectWriteTechnology());
+			}
 			return NppDarkMode::onCtlColorDlg(reinterpret_cast<HDC>(wParam));
 		}
 
@@ -2096,6 +2145,14 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 							{
 								nppGUI._caretWidth = static_cast<int>(::SendDlgItemMessage(_hSelf, IDC_WIDTH_COMBO, CB_GETCURSEL, 0, 0));
 								::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_SETCARETWIDTH, 0, 0);
+								return TRUE;
+							}
+
+							if (LOWORD(wParam) == IDC_COMBO_SC_TECHNOLOGY_CHOICE)
+							{
+								nppGUI._writeTechnologyEngine = static_cast<writeTechnologyEngine>(::SendDlgItemMessage(_hSelf,
+									IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_GETCURSEL, 0, 0));
+								enableDirectWriteTextRendering();
 								return TRUE;
 							}
 
@@ -3370,31 +3427,6 @@ intptr_t CALLBACK MiscSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 
 			::SendDlgItemMessage(_hSelf, IDC_COMBO_SYSTRAY_ACTION_CHOICE, CB_SETCURSEL, nppGUI._isMinimizedToTray, 0);
 
-			::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"GDI (most compatible)"));
-			::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DirectWrite (default)"));
-			::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DirectWrite (retain frames)"));
-			::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DirectWrite (draw to GDI DC)"));
-			::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DirectWrite (DirectX 11)"));
-
-			if ((nppGUI._writeTechnologyEngine < 0) || (nppGUI._writeTechnologyEngine > directWriteTechnologyUnavailable))
-				nppGUI._writeTechnologyEngine = directWriteTechnology;
-
-			if (nppGUI._writeTechnologyEngine != directWriteTechnologyUnavailable)
-			{
-				::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_SETCURSEL, nppGUI._writeTechnologyEngine, 0);
-			}
-			else
-			{
-				::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_SETCURSEL, defaultTechnology, 0);
-				::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE), false);
-			}
-
-			NativeLangSpeaker* pNativeSpeaker = nppParam.getNativeLangSpeaker();
-			wstring tipScintillaRenderingTechnology2Show = pNativeSpeaker->getLocalizedStrFromID("scintillaRenderingTechnology-tip",
-				L"May improve rendering of special characters or resolve some graphics issues, restart Notepad++ to apply the changes.");
-			_tipScintillaRenderingTechnology = createToolTip(IDC_COMBO_SC_TECHNOLOGY_CHOICE, _hSelf, _hInst,
-				tipScintillaRenderingTechnology2Show.data(), pNativeSpeaker->isRTL());
-
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_DETECTENCODING, BM_SETCHECK, nppGUI._detectEncoding, 0);
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_SAVEALLCONFIRM, BM_SETCHECK, nppGUI._saveAllConfirm, 0);
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_ALOOWSIMLINKFAW, BM_SETCHECK, nppGUI._isFawSymlinkAllowed, 0);
@@ -3627,12 +3659,6 @@ intptr_t CALLBACK MiscSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 						{
 							nppGUI._isMinimizedToTray = static_cast<int>(::SendDlgItemMessage(_hSelf,
 								IDC_COMBO_SYSTRAY_ACTION_CHOICE, CB_GETCURSEL, 0, 0));
-						}
-
-						else if (LOWORD(wParam) == IDC_COMBO_SC_TECHNOLOGY_CHOICE)
-						{
-							nppGUI._writeTechnologyEngine = static_cast<writeTechnologyEngine>(::SendDlgItemMessage(_hSelf,
-								IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_GETCURSEL, 0, 0));
 						}
 
 						else if (LOWORD(wParam) == IDC_COMBO_AUTOUPDATE)
