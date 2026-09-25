@@ -56,7 +56,6 @@ using Microsoft::WRL::ComPtr;
 #include <d2d1_1.h>
 #include <d3d11_1.h>
 #include <dwrite_1.h>
-#include <dwrite_2.h>
 #endif
 
 #include "ScintillaTypes.h"
@@ -104,6 +103,7 @@ using Microsoft::WRL::ComPtr;
 
 #include "WinTypes.h"
 #include "PlatWin.h"
+#include "SurfaceGDI.h"
 #if defined(USE_D2D)
 #include "SurfaceD2D.h"
 #endif
@@ -227,14 +227,7 @@ constexpr int fontRenderingClearTypeLevel = 3;
 constexpr int fontRenderingPixelGeometry = 4;
 constexpr int fontRenderingRenderingMode = 5;
 constexpr int fontRenderingLightTextGamma = 6;
-constexpr int fontRenderingTinyTextPixels = 7;
-constexpr int fontRenderingTinyTextMinPixels = 8;
-constexpr size_t fontRenderingParameters = 9;
-// The em size up to which text of the adaptive mode is tiny (hinted on whole pixels): none by default, as with
-// ClearType at 150% scaling it measured 1-3% less sharp than the natural mode and didn't look sharper
-constexpr int tinyTextDefaultPixels = 0;
-constexpr int tinyTextDefaultMinPixels = 4;	// and from which (lowercase letters of about 2 pixels)
-constexpr int tinyTextMaxPixels = 64;
+constexpr size_t fontRenderingParameters = 7;
 constexpr int pixelGeometryFlat = 0;
 constexpr int pixelGeometryBGR = 2;
 constexpr int renderingModeDefault = 0;
@@ -242,7 +235,7 @@ constexpr int renderingModeGdiClassic = 2;
 constexpr int renderingModeGdiNatural = 3;
 constexpr int renderingModeNatural = 4;
 constexpr int renderingModeNaturalSymmetric = 5;
-constexpr int renderingModeAdaptive = 100;	// Natural for small text (and hinted on whole pixels for tiny text if asked), else the monitor's mode
+constexpr int renderingModeAdaptive = 100;	// Natural for small text, else the monitor's (usually automatic) mode
 
 // N++: whether SCI_SETFONTRENDERINGPARAMETER accepts value for a valid parameter
 constexpr bool ValidFontRenderingValue(uptr_t parameter, sptr_t value) noexcept {
@@ -270,12 +263,6 @@ constexpr bool ValidFontRenderingValue(uptr_t parameter, sptr_t value) noexcept 
 	case fontRenderingLightTextGamma:
 		// 0: at least the monitor's gamma (or the overridden gamma), else at least this gamma in thousandths
 		return value == 0 || (value >= 1000 && value <= 2200);
-	case fontRenderingTinyTextPixels:
-		// Em size in pixels, 0: no tiny text
-		return value >= 0 && value <= tinyTextMaxPixels;
-	case fontRenderingTinyTextMinPixels:
-		// Em size in pixels
-		return value >= 1 && value <= tinyTextMaxPixels;
 	default:
 		return false;
 	}
@@ -445,6 +432,7 @@ public:
 		if (vs.styles[style].fontName) {
 			const char *fontName = vs.styles[style].fontName;
 			UTF16FromUTF8(std::string_view(fontName), lf.lfFaceName, LF_FACESIZE);
+			GdiLogFont(lf);	// N++: the font the text of this family name and weight is drawn with
 		}
 
 		::ImmSetCompositionFontW(hIMC, &lf);
@@ -664,10 +652,8 @@ class ScintillaWin :
 #if defined(USE_D2D)
 	bool UpdateRenderingParams(bool force) noexcept;
 	[[nodiscard]] bool FontRenderingOverridden() const noexcept;	// N++
-	[[nodiscard]] WriteRenderingParams OverriddenRenderingParams(IDWriteRenderingParams1 *monitorParams, FLOAT gamma, DWRITE_RENDERING_MODE renderingMode, bool gridFit = false) const noexcept;	// N++
+	[[nodiscard]] WriteRenderingParams OverriddenRenderingParams(IDWriteRenderingParams1 *monitorParams, FLOAT gamma, DWRITE_RENDERING_MODE renderingMode) const noexcept;	// N++
 	bool UpdateMeasuringMode() noexcept;	// N++
-	[[nodiscard]] int TinyTextPixels() const noexcept;	// N++
-	[[nodiscard]] int TinyTextMinPixels() const noexcept;	// N++
 	HRESULT Create3D() noexcept;
 	void CreateRenderTarget();
 	HRESULT SetBackBuffer(HWND hwnd, IDXGISwapChain1 *pSwapChain);
@@ -1004,7 +990,7 @@ bool ScintillaWin::UpdateRenderingParams(bool force) noexcept {
 		}
 		// N++: light text is drawn with the highest of its base gamma, the requested one and, unless the gamma
 		// is overridden, the monitor's one as a higher gamma makes light text heavier;
-		// small text in the adaptive mode has no vertical antialiasing, tiny text is hinted on whole pixels.
+		// small text in the adaptive mode has no vertical antialiasing.
 		const int lightTextGamma = fontRenderingOverrides[fontRenderingLightTextGamma];
 		const FLOAT lightTextMinGamma = std::max((gammaOverride == fontRenderingDefault) ? monitorGamma : 0.0f,
 			static_cast<FLOAT>(lightTextGamma) / 1000.0f);
@@ -1013,18 +999,15 @@ bool ScintillaWin::UpdateRenderingParams(bool force) noexcept {
 		};
 		for (int variant = 1; variant < renderingVariants; variant++) {
 			// not named small as rpcndr.h defines it as a macro
-			const bool lightText = variant & renderingVariantLight;
-			const bool smallText = variant & renderingVariantSmall;
-			const bool tinyText = variant & renderingVariantTiny;
-			if ((lightText && lightTextGamma == fontRenderingDefault) || ((smallText || tinyText) && renderingModeOverride != renderingModeAdaptive) ||
-				(smallText && tinyText) || (tinyText && TinyTextPixels() == 0)) {
+			const bool lightText = (variant & renderingVariantLight) != 0;
+			const bool smallText = (variant & renderingVariantSmall) != 0;
+			if ((lightText && lightTextGamma == fontRenderingDefault) || (smallText && renderingModeOverride != renderingModeAdaptive)) {
 				continue;
 			}
-			const DWRITE_RENDERING_MODE variantMode = tinyText ? DWRITE_RENDERING_MODE_GDI_CLASSIC :
-				smallText ? DWRITE_RENDERING_MODE_NATURAL : renderingMode;
-			defaultVariants[variant] = OverriddenRenderingParams(monitorRenderingParams.Get(), variantGamma(defaultGamma, lightText), variantMode, tinyText);
+			const DWRITE_RENDERING_MODE variantMode = smallText ? DWRITE_RENDERING_MODE_NATURAL : renderingMode;
+			defaultVariants[variant] = OverriddenRenderingParams(monitorRenderingParams.Get(), variantGamma(defaultGamma, lightText), variantMode);
 			if (customClearTypeRenderingParams) {
-				customVariants[variant] = OverriddenRenderingParams(monitorRenderingParams.Get(), variantGamma(clearTypeGamma, lightText), variantMode, tinyText);
+				customVariants[variant] = OverriddenRenderingParams(monitorRenderingParams.Get(), variantGamma(clearTypeGamma, lightText), variantMode);
 			}
 		}
 	}
@@ -1057,8 +1040,8 @@ bool ScintillaWin::FontRenderingOverridden() const noexcept {
 
 // N++: rendering parameters with each overridden value in DirectWrite units, else the monitor's value,
 // with the gamma and rendering mode given by the caller
-WriteRenderingParams ScintillaWin::OverriddenRenderingParams(IDWriteRenderingParams1 *monitorParams, FLOAT gamma, DWRITE_RENDERING_MODE renderingMode, bool gridFit) const noexcept {
-	const auto valueOf = [this](int parameter, FLOAT divisor, FLOAT monitorValue) noexcept {
+WriteRenderingParams ScintillaWin::OverriddenRenderingParams(IDWriteRenderingParams1 *monitorParams, FLOAT gamma, DWRITE_RENDERING_MODE renderingMode) const noexcept {
+	const auto valueOf = [this](size_t parameter, FLOAT divisor, FLOAT monitorValue) noexcept {
 		const int value = fontRenderingOverrides[parameter];
 		return (value == fontRenderingDefault) ? monitorValue : static_cast<FLOAT>(value) / divisor;
 	};
@@ -1067,24 +1050,16 @@ WriteRenderingParams ScintillaWin::OverriddenRenderingParams(IDWriteRenderingPar
 	static_assert(DWRITE_RENDERING_MODE_CLEARTYPE_GDI_CLASSIC == renderingModeGdiClassic &&
 		DWRITE_RENDERING_MODE_CLEARTYPE_NATURAL_SYMMETRIC == renderingModeNaturalSymmetric);
 	const int pixelGeometry = fontRenderingOverrides[fontRenderingPixelGeometry];
-	const FLOAT enhancedContrast = valueOf(fontRenderingEnhancedContrast, 100.0f, monitorParams->GetEnhancedContrast());
-	const FLOAT grayscaleEnhancedContrast = valueOf(fontRenderingGrayscaleEnhancedContrast, 100.0f, monitorParams->GetGrayscaleEnhancedContrast());
-	const FLOAT clearTypeLevel = valueOf(fontRenderingClearTypeLevel, 100.0f, monitorParams->GetClearTypeLevel());
-	const DWRITE_PIXEL_GEOMETRY geometry = (pixelGeometry == fontRenderingDefault) ?
-		monitorParams->GetPixelGeometry() : static_cast<DWRITE_PIXEL_GEOMETRY>(pixelGeometry);
-	// Grid fitting (hinting) forced even where the font's gasp table turns it off, at the smallest sizes
-	// (Windows 8.1 and later, else the font decides)
-	ComPtr<IDWriteFactory2> factory2;
-	if (gridFit && SUCCEEDED(pIDWriteFactory->QueryInterface(IID_PPV_ARGS(factory2.GetAddressOf())))) {
-		ComPtr<IDWriteRenderingParams2> params2;
-		if (SUCCEEDED(factory2->CreateCustomRenderingParams(gamma, enhancedContrast, grayscaleEnhancedContrast, clearTypeLevel,
-			geometry, renderingMode, DWRITE_GRID_FIT_MODE_ENABLED, params2.GetAddressOf()))) {
-			return params2;
-		}
-	}
 	WriteRenderingParams params;
-	const HRESULT hr = pIDWriteFactory->CreateCustomRenderingParams(gamma, enhancedContrast, grayscaleEnhancedContrast, clearTypeLevel,
-		geometry, renderingMode, params.GetAddressOf());
+	const HRESULT hr = pIDWriteFactory->CreateCustomRenderingParams(
+		gamma,
+		valueOf(fontRenderingEnhancedContrast, 100.0f, monitorParams->GetEnhancedContrast()),
+		valueOf(fontRenderingGrayscaleEnhancedContrast, 100.0f, monitorParams->GetGrayscaleEnhancedContrast()),
+		valueOf(fontRenderingClearTypeLevel, 100.0f, monitorParams->GetClearTypeLevel()),
+		(pixelGeometry == fontRenderingDefault) ?
+			monitorParams->GetPixelGeometry() : static_cast<DWRITE_PIXEL_GEOMETRY>(pixelGeometry),
+		renderingMode,
+		params.GetAddressOf());
 	if (FAILED(hr)) {
 		return {};
 	}
@@ -2425,18 +2400,6 @@ sptr_t ScintillaWin::IdleMessage(unsigned int iMessage, uptr_t wParam, sptr_t lP
 }
 
 #if defined(USE_D2D)
-// N++: the em size in pixels up to which text of the adaptive mode is tiny (drawn hinted on whole pixels)
-int ScintillaWin::TinyTextPixels() const noexcept {
-	const int pixels = fontRenderingOverrides[fontRenderingTinyTextPixels];
-	return (pixels == fontRenderingDefault) ? tinyTextDefaultPixels : pixels;
-}
-
-// N++: and from which (smaller text stays smooth)
-int ScintillaWin::TinyTextMinPixels() const noexcept {
-	const int pixels = fontRenderingOverrides[fontRenderingTinyTextMinPixels];
-	return (pixels == fontRenderingDefault) ? tinyTextDefaultMinPixels : pixels;
-}
-
 // N++: GDI rendering modes also measure text like GDI so glyphs are on whole pixels when measured and drawn.
 // GDI-compatible layouts use 1 pixel per DIP, so not while GDI scaling renders at a larger integral scale.
 // Returns whether the measuring changed: fonts must then be realised again and cached layouts dropped.
@@ -2448,12 +2411,10 @@ bool ScintillaWin::UpdateMeasuringMode() noexcept {
 			measuring = fontQualityMeasuringGdiClassic;
 		} else if (renderingMode == renderingModeGdiNatural) {
 			measuring = fontQualityMeasuringGdiNatural;
-		} else if ((renderingMode == renderingModeAdaptive) && (TinyTextPixels() > 0)) {
-			measuring = (TinyTextPixels() << fontQualityTinyTextShift) | (TinyTextMinPixels() << fontQualityTinyTextMinShift);
 		}
 	}
 	const FontQuality extraFontFlag = static_cast<FontQuality>(
-		(static_cast<int>(vs.extraFontFlag) & ~(fontQualityMeasuringMask | fontQualityTinyTextMask | fontQualityTinyTextMinMask)) | measuring);
+		(static_cast<int>(vs.extraFontFlag) & ~fontQualityMeasuringMask) | measuring);
 	if (extraFontFlag == vs.extraFontFlag) {
 		return false;
 	}

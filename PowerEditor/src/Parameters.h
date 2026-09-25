@@ -944,23 +944,17 @@ struct ScintillaViewParams
 	textRenderingMode _textRenderingMode = textRenderingModeAutomatic;
 	textContrast _textContrast = textContrastWindows;
 
-	// advanced DirectWrite text rendering overrides (config.xml only), -1: not set
+	// advanced DirectWrite text rendering overrides (config.xml only), SC_FONTRENDERING_DEFAULT: not set
 	// a set value overrides the one derived from the settings above
-	int _fontGamma = -1;                     // 1000-2200, in thousandths (1800 = gamma 1.8)
-	int _fontEnhancedContrast = -1;          // 0-1000, in hundredths (100 = 1.0)
-	int _fontGrayscaleEnhancedContrast = -1; // 0-1000, in hundredths (100 = 1.0)
-	int _fontClearTypeLevel = -1;            // 0-100, in percent (0 = grayscale-like, 100 = full ClearType color)
-	int _fontPixelGeometry = -1;             // 0: flat, 1: RGB, 2: BGR
-	int _fontLightTextGamma = -1;            // light text gamma: 0 at least the monitor's gamma (or fontGamma if set), 1000-2200 at least this gamma
-	int _fontTinyTextPixels = -1;            // adaptive rendering mode: em size in pixels up to which text is hinted on whole pixels (default 0: none, e.g. 12)
-	int _fontTinyTextMinPixels = -1;         // and from which, 1-64 (default 4: smaller text stays smooth)
+	int _fontGamma = SC_FONTRENDERING_DEFAULT;                     // 1000-2200, in thousandths (1800 = gamma 1.8)
+	int _fontEnhancedContrast = SC_FONTRENDERING_DEFAULT;          // 0-1000, in hundredths (100 = 1.0)
+	int _fontGrayscaleEnhancedContrast = SC_FONTRENDERING_DEFAULT; // 0-1000, in hundredths (100 = 1.0)
+	int _fontClearTypeLevel = SC_FONTRENDERING_DEFAULT;            // 0-100, in percent (0 = grayscale-like, 100 = full ClearType color)
+	int _fontPixelGeometry = SC_FONTRENDERING_DEFAULT;             // SC_PIXELGEOMETRY_FLAT, _RGB or _BGR
+	int _fontLightTextGamma = SC_FONTRENDERING_DEFAULT;            // 1000-2200, in thousandths: the minimum gamma of light text
 
 	bool isClearTypeAntialiasing() const {
 		return (_textAntialiasing == textAntialiasingClearType) || (_textAntialiasing == textAntialiasingClearTypeLessColor);
-	}
-
-	bool hasFontRenderingOverride() const {
-		return (_fontGamma >= 0) || (_fontEnhancedContrast >= 0) || (_fontGrayscaleEnhancedContrast >= 0) || (_fontClearTypeLevel >= 0) || (_fontPixelGeometry >= 0) || (_fontLightTextGamma >= 0) || (_fontTinyTextPixels >= 0) || (_fontTinyTextMinPixels >= 0);
 	}
 
 	bool _showBorderEdge = true;

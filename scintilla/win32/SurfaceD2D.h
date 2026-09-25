@@ -25,13 +25,11 @@ extern HRESULT CreateD3D(D3D11Device &device) noexcept;
 using WriteRenderingParams = ComPtr<IDWriteRenderingParams1>;
 
 // N++: text drawn with its own rendering parameters when SCI_SETFONTRENDERINGPARAMETER asks for it,
-// combined as bits: light text gets a higher gamma which makes it heavier (dark text gets lighter);
-// in the adaptive rendering mode, small text is drawn without vertical antialiasing and tiny text (small or
-// tiny, not both) hinted on whole pixels like GDI's ClearType, the grid fitting of its font being forced.
+// combined as bits: light text gets a higher gamma which makes it heavier (dark text gets lighter),
+// small text is drawn without vertical antialiasing in the adaptive rendering mode.
 constexpr int renderingVariantLight = 1;
 constexpr int renderingVariantSmall = 2;
-constexpr int renderingVariantTiny = 4;
-constexpr int renderingVariants = 8;
+constexpr int renderingVariants = 4;
 
 struct RenderingParams {
 	WriteRenderingParams defaultRenderingParams;
@@ -47,12 +45,6 @@ struct RenderingParams {
 constexpr int fontQualityMeasuringGdiClassic = 0x10;
 constexpr int fontQualityMeasuringGdiNatural = 0x20;
 constexpr int fontQualityMeasuringMask = 0x30;
-// N++: and the em sizes in pixels from and up to which text of the adaptive rendering mode is tiny: measured
-// GDI-compatible on whole pixels and drawn hinted (renderingVariantTiny), 0 for none
-constexpr int fontQualityTinyTextShift = 8;
-constexpr int fontQualityTinyTextMask = 0xFF00;
-constexpr int fontQualityTinyTextMinShift = 16;
-constexpr int fontQualityTinyTextMinMask = 0xFF0000;
 
 struct ISetRenderingParams {
 	virtual void SetRenderingParams(std::shared_ptr<RenderingParams> renderingParams_) = 0;
@@ -69,7 +61,7 @@ Geometry GeometryCreate() noexcept;
 GeometrySink GeometrySinkCreate(ID2D1PathGeometry *geometry) noexcept;
 StrokeStyle StrokeStyleCreate(const D2D1_STROKE_STYLE_PROPERTIES &strokeStyleProperties) noexcept;
 // N++: measuringMode added, pass the font's mode so text is measured as it is drawn
-TextLayout LayoutCreate(std::wstring_view wsv, IDWriteTextFormat *pTextFormat, DWRITE_MEASURING_MODE measuringMode=DWRITE_MEASURING_MODE_NATURAL, FLOAT maxWidth=10000.0F, FLOAT maxHeight=1000.0F) noexcept;
+TextLayout LayoutCreate(std::wstring_view wsv, IDWriteTextFormat *pTextFormat, DWRITE_MEASURING_MODE measuringMode, FLOAT maxWidth=10000.0F, FLOAT maxHeight=1000.0F) noexcept;
 
 }
 

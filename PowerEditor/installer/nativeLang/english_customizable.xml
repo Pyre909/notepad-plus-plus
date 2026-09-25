@@ -1043,12 +1043,20 @@ Translation note:
 					<Item id="6653" name="Highlight Background"/>
 					<Item id="6654" name="Frame"/>
 					<Item id="6655" name="Width:"/>
-					<Item id="6280" name="Text rendering"/>
+					<Item id="6280" name="Text Rendering"/>
+					<Item id="6363" name="Rendering mode:"/>
 					<Item id="6281" name="Antialiasing:"/>
-					<Item id="6283" name="Rendering mode:"/>
+					<Item id="6283" name="DirectWrite mode:"/>
 					<Item id="6285" name="Text contrast:"/>
+					<ComboBox id="6362">
+						<Element name="GDI (most compatible)"/>
+						<Element name="DirectWrite (default)"/>
+						<Element name="DirectWrite (retain frames)"/>
+						<Element name="DirectWrite (draw to GDI DC)"/>
+						<Element name="DirectWrite (DirectX 11)"/>
+					</ComboBox>
 					<ComboBox id="6282">
-						<Element name="Follow Windows setting"/>
+						<Element name="Follow Windows"/>
 						<Element name="ClearType"/>
 						<Element name="ClearType (less color fringing)"/>
 						<Element name="Grayscale"/>
@@ -1058,11 +1066,11 @@ Translation note:
 						<Element name="Automatic"/>
 						<Element name="Natural (sharper small text)"/>
 						<Element name="Symmetric (smoother)"/>
-						<Element name="GDI-compatible (pixel-aligned)"/>
+						<Element name="GDI classic (pixel-aligned)"/>
 						<Element name="Adaptive (Natural for small text)"/>
 					</ComboBox>
 					<ComboBox id="6286">
-						<Element name="Windows setting"/>
+						<Element name="Follow Windows"/>
 						<Element name="Medium"/>
 						<Element name="High"/>
 						<Element name="Very high"/>
@@ -1394,20 +1402,12 @@ Translation note:
 						<Element name="Close to"/>
 						<Element name="Minimize / Close to"/>
 					</ComboBox>
-					<ComboBox id="6362">
-						<Element name="GDI (most compatible)"/>
-						<Element name="DirectWrite (default)"/>
-						<Element name="DirectWrite (retain frames)"/>
-						<Element name="DirectWrite (draw to GDI DC)"/>
-						<Element name="DirectWrite (DirectX 11)"/>
-					</ComboBox>
 					<ComboBox id="6364">
 						<Element name="Disable"/>
 						<Element name="Enable on Notepad++ startup"/>
 						<Element name="Enable on Notepad++ exit"/>
 					</ComboBox>
 					<Item id="6308" name="system tray"/>
-					<Item id="6363" name="rendering mode"/>
 					<Item id="6365" name="Auto-updater:"/>
 					<Item id="6312" name="File Status Auto-Detection"/>
 					<Item id="6313" name="Update silently"/>
@@ -1955,7 +1955,7 @@ If you select advanced mode but do not edit files in the aforementioned language
 			<scintillaRenderingTechnology-tip value="May improve rendering of special characters or resolve some graphics issues, restart Notepad++ to apply the changes."/>
 			<!-- Don't translate "ClearType", "DirectWrite", "GDI" and "DPI" in the 3 following tips -->
 			<textAntialiasing-tip value="Grayscale is recommended for OLED screens and for rotated (portrait) screens, where ClearType color fringes are more visible."/>
-			<textRenderingMode-tip value="DirectWrite only. Natural avoids the vertical blur of small text. GDI-compatible snaps the glyphs to whole pixels like classic GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text."/>
+			<textRenderingMode-tip value="Natural avoids the vertical blur of small text. GDI classic snaps the glyphs to whole pixels like GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text."/>
 			<textContrast-tip value="DirectWrite only. Makes the strokes heavier: darkens dark text on light backgrounds and thickens light text on dark themes."/>
 
 			<!-- Due to the limited space on the status bar, if the translations for 'length' & 'lines' are much longer than the English words, please leave them in English instead of translating them. -->
