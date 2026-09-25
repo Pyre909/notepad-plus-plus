@@ -128,8 +128,7 @@ int DPIManagerV2::getSystemMetricsForDpi(int nIndex, UINT dpi)
 
 int DPIManagerV2::getSystemMetricsForWindow(int nIndex, HWND hWnd)
 {
-	// the per-monitor v2 DPI awareness requires Windows 10 1703+, so GetSystemMetricsForDpi() is available then
-	if (_isPerMonitorV2Active)
+	if (_isPerMonitorV2Active) // Windows 10 1703+: GetSystemMetricsForDpi() is available
 	{
 		return _fnGetSystemMetricsForDpi(nIndex, DPIManagerV2::getDpiForWindow(hWnd));
 	}
@@ -248,6 +247,32 @@ LOGFONT DPIManagerV2::getDefaultGUIFontForDpi(UINT dpi, FontType type)
 	}
 
 	return lf;
+}
+
+LOGFONT DPIManagerV2::getIconTitleFontForDpi(UINT dpi)
+{
+	LOGFONT lf{};
+	if (_fnSystemParametersInfoForDpi(SPI_GETICONTITLELOGFONT, sizeof(LOGFONT), &lf, 0, dpi) == TRUE)
+	{
+		return lf;
+	}
+	return getDefaultGUIFontForDpi(dpi); // should not happen, fallback
+}
+
+void DPIManagerV2::replaceWindowFont(HWND hWnd, const LOGFONT& lf, HFONT& hFont)
+{
+	HFONT hNewFont = ::CreateFontIndirect(&lf);
+	if (hNewFont == nullptr)
+	{
+		return;
+	}
+
+	::SendMessage(hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(hNewFont), TRUE);
+	if (hFont != nullptr)
+	{
+		::DeleteObject(hFont);
+	}
+	hFont = hNewFont;
 }
 
 void DPIManagerV2::loadIcon(HINSTANCE hinst, const wchar_t* pszName, int cx, int cy, HICON* phico, UINT fuLoad)

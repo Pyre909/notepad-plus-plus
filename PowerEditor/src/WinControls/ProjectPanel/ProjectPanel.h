@@ -120,7 +120,7 @@ protected:
 	std::wstring _selDirOfFilesFromDirDlg;
 	bool _isDirty = false;
 	int _panelID = 0;
-	HFONT _hToolbarFontDpi = nullptr; // per-monitor DPI awareness: toolbar font for the DPI of the panel
+	HFONT _hToolbarFontDpi = nullptr; // toolbar font for the DPI of the panel (per-monitor DPI awareness)
 
 	void initMenus();
 	void destroyMenus() const;
@@ -138,7 +138,6 @@ protected:
 	POINT getMenuDisplayPoint(int iButton) const;
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	void onDpiChanged(UINT prevDpi) override;
-	void setToolbarFontForDpi(UINT dpi);
 	std::vector<int> getTreeImageIds();
 	bool buildTreeFrom(const NppXml::Element& projectRoot, HTREEITEM hParentItem);
 	void notified(LPNMHDR notification);

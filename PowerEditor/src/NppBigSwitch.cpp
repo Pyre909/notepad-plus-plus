@@ -3906,8 +3906,7 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			_subDocTab.setPinBtnImageList();
 			::SendMessage(_pPublicInterface->getHSelf(), NPPM_INTERNAL_REDUCETABBAR, 0, 0);
 
-			// the Document List shares the tab icons resized in place above: it takes the icons of its DPI
-			// (its DPI changes later with WM_DPICHANGED_AFTERPARENT if it's docked), no need to recreate it
+			// the Document List shares the tab icons resized above (no need to recreate it)
 			if (_pDocumentListPanel != nullptr)
 				_pDocumentListPanel->updateFileStateIconsForDpi();
 
@@ -3934,12 +3933,7 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 					// docking splitters & docked panels: the sizes saved in config.xml are already right for the DPI of the startup placement
 					_dockingManager.rescaleForDpi(dpi, _isStartupPlacement ? dpi : prevDpi);
 
-					// minimal panel dimensions (as preset by init)
-					DockingManagerData& dmd = nppParam.getNppGUI()._dockingData;
-					dmd._minDockedPanelVisibility = DPIManagerV2::scale(HIGH_CAPTION, dpi);
-					dmd._minFloatingPanelSize.cy = dmd._minDockedPanelVisibility;
-					dmd._minFloatingPanelSize.cx = std::max(static_cast<int>(dmd._minFloatingPanelSize.cy * 6),
-						DPIManagerV2::getSystemMetricsForDpi(SM_CXMINTRACK, dpi));
+					setMinPanelSizesForDpi(dpi);
 
 					// colour samples of the main menu items, sized for the DPI (the previous ones stay valid: the context menus share them)
 					setupColorSampleBitmapsOnMainMenuItems();

@@ -135,12 +135,10 @@ void DockingManager::init(HINSTANCE hInst, HWND hWnd, Window ** ppWin)
 
 	setClientWnd(ppWin);
 
-	// with the per-monitor DPI awareness, the window can be created on a monitor whose DPI isn't the system DPI
+	// the window can be created on a monitor whose DPI isn't the system DPI
 	if (DPIManagerV2::isPerMonitorV2Active())
 	{
-		const UINT dpi = DPIManagerV2::getDpiForWindow(_hParent);
-		_splitterWidth = DPIManagerV2::scaleFromSystemDpi(SPLITTER_WIDTH, dpi);
-		_minWorkWidth = DPIManagerV2::scaleFromSystemDpi(WORK_MIN_WIDTH, dpi);
+		rescaleForDpi(DPIManagerV2::getDpiForWindow(_hParent), 0);
 	}
 
 	// create docking container
@@ -770,14 +768,14 @@ void DockingManager::rescaleForDpi(UINT dpi, UINT prevDpi)
 void DockingManager::rescaleDockedSize(int iCont, LONG& size, UINT dpi, UINT prevDpi)
 {
 	DpiSizeRef& ref = _dockedSizeRef[iCont];
-	if ((ref.dpi == 0) || (size != ref.scaled))
+	if ((ref._dpi == 0) || (size != ref._scaled))
 	{
 		// first DPI change, or the size has changed since the last one (user, layout): it's the new reference
-		ref.size = size;
-		ref.dpi = prevDpi;
+		ref._size = size;
+		ref._dpi = prevDpi;
 	}
-	size = DPIManagerV2::scale(static_cast<int>(ref.size), dpi, ref.dpi);
-	ref.scaled = size;
+	size = DPIManagerV2::scale(static_cast<int>(ref._size), dpi, ref._dpi);
+	ref._scaled = size;
 }
 
 int DockingManager::getDockedContSize(int iCont)

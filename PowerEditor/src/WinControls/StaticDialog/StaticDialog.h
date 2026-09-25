@@ -109,11 +109,9 @@ protected:
 	INT_PTR myCreateDialogBoxIndirectParam(int dialogID, bool isRTL, WORD fontSize = 8);
 };
 
-// Per-monitor DPI awareness (opt-in): the layout of dialogs (the positions and sizes of their controls, the fonts), saved
-// for a DPI to be applied again for another DPI the way the dialog manager lays out a dialog template: fonts of the same
-// point size, positions and sizes in the dialog units of the dialog font. Applying it is absolute: the result doesn't
-// depend on what the dialog manager may have rescaled already (a child dialog of a window which isn't a dialog, e.g. a
-// dialog docked in the main window or in a rebar, only receives WM_DPICHANGED_AFTERPARENT).
+// Layout of dialogs (positions, sizes and fonts of their controls) saved for a DPI, applied for another DPI as the dialog
+// manager lays out a template: same point sizes, dialog units of the dialog font. For the dialogs which only receive
+// WM_DPICHANGED_AFTERPARENT (docked in the main window or in a rebar), with the per-monitor DPI awareness.
 class DialogDpiLayout final
 {
 public:
@@ -122,17 +120,11 @@ public:
 	DialogDpiLayout& operator=(const DialogDpiLayout&) = delete;
 	~DialogDpiLayout();
 
-	// saves the client size of hDlg, the positions and sizes of its direct children (in its client coordinates) and their
-	// fonts, for dpi. Several dialogs (e.g. a dialog and its child dialogs) can be saved, for the same DPI.
+	// client size of hDlg, rectangles (client coordinates) and fonts of its children; its child dialogs can be saved too
 	void save(HWND hDlg, UINT dpi);
 
 	bool isSaved() const {
 		return _dpi != 0;
-	}
-
-	// DPI of the saved layout
-	UINT getDpi() const {
-		return _dpi;
 	}
 
 	// moves and resizes the saved windows, and sets them their font, for dpi

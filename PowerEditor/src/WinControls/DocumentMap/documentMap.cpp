@@ -185,8 +185,7 @@ void DocumentMap::wrapMap(const ScintillaEditView *editView)
 		// compute doc map width: dzw/ezw = 1/zoomRatio
 		double docMapWidth = editZoneWidth / zr;
 
-		// per-monitor DPI awareness (opt-in): a floating map can be on a monitor whose DPI isn't the DPI of the edit view,
-		// the texts of both are scaled for their DPI
+		// a floating map can have another DPI than the edit view, the texts of both are scaled for their DPI
 		if (DPIManagerV2::isPerMonitorV2Active())
 		{
 			const UINT mapDpi = DPIManagerV2::getDpiForWindow(_pMapView->getHSelf());
@@ -342,9 +341,8 @@ void DocumentMap::redraw(bool) const
 
 void DocumentMap::onDpiChanged([[maybe_unused]] UINT prevDpi)
 {
-	// Per-monitor DPI awareness (opt-in): the map view, a child of this dialog, receives WM_DPICHANGED_AFTERPARENT after it
-	// and scales its text for the new DPI: the wrapping of the map and the view zone are computed again afterwards, also after
-	// the relayout of a docked map (the main window has posted NPPM_INTERNAL_DPICHANGEDRELAYOUT before)
+	// the map view gets WM_DPICHANGED_AFTERPARENT after this dialog: the map is wrapped again afterwards,
+	// also after the relayout of a docked map (NPPM_INTERNAL_DPICHANGEDRELAYOUT has been posted before)
 	_displayWidth = -1; // wrapMap() is needed
 	::PostMessage(_hSelf, DOCUMENTMAP_DPICHANGED, 0, 0);
 }

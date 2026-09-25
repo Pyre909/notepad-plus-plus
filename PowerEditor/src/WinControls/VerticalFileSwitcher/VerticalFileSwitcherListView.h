@@ -79,17 +79,12 @@ public:
 		redraw(true);
 	}
 
-	// Per-monitor DPI awareness (opt-in): the list view's default font (the icon title font) for the DPI;
-	// the heights of the header, the groups and the rows follow it
-	void setFontForDpi(UINT dpi);
-
-	// Per-monitor DPI awareness (opt-in): the DPI of the panel has changed: the font and the file state icons (hImaLst,
-	// for the new DPI; nullptr keeps the current ones) for the new DPI. The column widths are set by resizeColumns().
+	// the font and the file state icons (nullptr: kept) for dpi, the column widths are set by resizeColumns()
 	void rescaleForDpi(UINT dpi, HIMAGELIST hImaLst);
 
 protected:
 	HIMAGELIST _hImaLst = nullptr;
-	HFONT _hFontDpi = nullptr; // per-monitor DPI awareness (opt-in): the font set by setFontForDpi()
+	HFONT _hFontDpi = nullptr; // font for the DPI of the panel (per-monitor DPI awareness)
 
 	int _currentIndex = 0;
 

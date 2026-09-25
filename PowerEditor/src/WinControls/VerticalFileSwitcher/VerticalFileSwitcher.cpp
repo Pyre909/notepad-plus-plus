@@ -22,6 +22,7 @@
 #include "resource.h"
 #include "localization.h"
 #include "ImageListSet.h"
+#include "DocTabView.h"
 
 #include <commctrl.h>
 
@@ -39,11 +40,6 @@ using namespace std;
 #define CLMNPATH_ID    2
 #define SEP_POS        3
 #define LVGROUPS_ID    4
-
-// the file state icon sets of the tab bar (DocTabView), in the order of the tab icon set indexes: 0 standard, 1 alternate, 2 dark mode
-static constexpr int fileStateIconIDs[] = { IDI_SAVED_ICON, IDI_UNSAVED_ICON, IDI_READONLY_ICON, IDI_READONLYSYS_ICON, IDI_MONITORING_ICON };
-static constexpr int fileStateIconIDs_alt[] = { IDI_SAVED_ALT_ICON, IDI_UNSAVED_ALT_ICON, IDI_READONLY_ALT_ICON, IDI_READONLYSYS_ALT_ICON, IDI_MONITORING_ICON };
-static constexpr int fileStateIconIDs_darkMode[] = { IDI_SAVED_DM_ICON, IDI_UNSAVED_DM_ICON, IDI_READONLY_DM_ICON, IDI_READONLYSYS_DM_ICON, IDI_MONITORING_DM_ICON };
 
 COLORREF VerticalFileSwitcher::_bgColor = 0xFFFFFF;
 
@@ -296,8 +292,7 @@ intptr_t CALLBACK VerticalFileSwitcher::run_dlgProc(UINT message, WPARAM wParam,
 
 			_fileListView.init(_hInst, _hSelf, _hImaLst);
 
-			// per-monitor DPI awareness (opt-in): the panel is created on a monitor whose DPI isn't the system DPI
-			// (the list view's default font can be for the system DPI)
+			// the default font of the list view is for the system DPI
 			if (DPIManagerV2::isPerMonitorV2Active() && (_dpiManager.getDpi() != DPIManagerV2::getDpiForSystem()))
 			{
 				_fileListView.rescaleForDpi(_dpiManager.getDpi(), getFileStateIconsForDpi(_dpiManager.getDpi()));
@@ -481,9 +476,7 @@ intptr_t CALLBACK VerticalFileSwitcher::run_dlgProc(UINT message, WPARAM wParam,
 					hdi.cchTextMax = MAX_PATH;
 					Header_GetItem(hwndHD, test->iItem, &hdi);
 
-					// storing column width data
-					// (they are scaled from 96 DPI when used: with the per-monitor DPI awareness, the width is stored for 96 DPI,
-					// as the DPI of the panel can change)
+					// storing column width data (for 96 DPI with the per-monitor DPI awareness: the DPI of the panel can change)
 					const int width = DPIManagerV2::isPerMonitorV2Active() ? DPIManagerV2::unscale(hdi.cxy, _hSelf) : hdi.cxy;
 					if (hdi.pszText == pNativeSpeaker->getAttrNameStr(L"Ext.", FS_ROOTNODE, FS_CLMNEXT))
 						nppParams.getNppGUI()._fileSwitcherExtWidth = width;
@@ -723,19 +716,11 @@ void VerticalFileSwitcher::updateHeaderArrow()
 	}
 }
 
-// Per-monitor DPI awareness (opt-in): the panel may be docked in a container of another DPI than the one it was created for
-// (no DPI change notification then), or be resized by its container before it gets WM_DPICHANGED_AFTERPARENT
-void VerticalFileSwitcher::checkDpiChange()
+void VerticalFileSwitcher::updateFileStateIconsForDpi()
 {
-	if (DPIManagerV2::isPerMonitorV2Active())
-	{
-		const UINT prevDpi = _dpiManager.getDpi();
-		setDpi();
-		if (_dpiManager.getDpi() != prevDpi)
-		{
-			onDpiChanged(prevDpi);
-		}
-	}
+	// a docked panel gets the DPI of the main window with WM_DPICHANGED_AFTERPARENT
+	if ((_hSelf != nullptr) && _isFloating)
+		onDpiChanged(_dpiManager.getDpi());
 }
 
 void VerticalFileSwitcher::onDpiChanged(UINT /*prevDpi*/)
@@ -755,8 +740,7 @@ void VerticalFileSwitcher::onDpiChanged(UINT /*prevDpi*/)
 	_fileListView.resizeColumns(rc.right - rc.left);
 }
 
-// The file state icons for the DPI: those of the tab bar (as when the panel is created) if they have the size for this DPI,
-// otherwise (e.g. a floating panel on a monitor whose DPI isn't the one of the main window) own icons of the same set
+// the tab bar's file state icons if they have the size for dpi, otherwise own icons of the same set
 HIMAGELIST VerticalFileSwitcher::getFileStateIconsForDpi(UINT dpi)
 {
 	const int iconSize = DPIManagerV2::scale(g_TabIconSize, dpi);
@@ -773,31 +757,21 @@ HIMAGELIST VerticalFileSwitcher::getFileStateIconsForDpi(UINT dpi)
 		return _hImaLstDpi;
 	}
 
-	// the icon set of the tab bar's icons given by Notepad_plus::launchDocumentListPanel(), else the same choice as it
-	const bool isDarkMode = NppDarkMode::isEnabled();
-	int tabIconSet = (_tabIconSet != -1) ? _tabIconSet : NppDarkMode::getTabIconSet(isDarkMode);
-	if (tabIconSet == -1)
+	const int* iconIDs = docTabIconIDs;
+	int nbIcons = static_cast<int>(std::size(docTabIconIDs));
+	if (_tabIconSet == 1)
 	{
-		const int tabBarStatus = NppParameters::getInstance().getNppGUI()._tabStatus;
-		tabIconSet = ((tabBarStatus & TAB_ALTICONS) == TAB_ALTICONS) ? 1 : (isDarkMode ? 2 : 0);
+		iconIDs = docTabIconIDs_alt;
+		nbIcons = static_cast<int>(std::size(docTabIconIDs_alt));
+	}
+	else if (_tabIconSet == 2)
+	{
+		iconIDs = docTabIconIDs_darkMode;
+		nbIcons = static_cast<int>(std::size(docTabIconIDs_darkMode));
 	}
 
-	const int* iconIDs = fileStateIconIDs;
-	int nbIcons = static_cast<int>(std::size(fileStateIconIDs));
-	if (tabIconSet == 1)
-	{
-		iconIDs = fileStateIconIDs_alt;
-		nbIcons = static_cast<int>(std::size(fileStateIconIDs_alt));
-	}
-	else if (tabIconSet == 2)
-	{
-		iconIDs = fileStateIconIDs_darkMode;
-		nbIcons = static_cast<int>(std::size(fileStateIconIDs_darkMode));
-	}
-
-	try
-	{
-		IconList iconList; // doesn't own its image list
+	try {
+		IconList iconList{}; // doesn't own its image list
 		iconList.create(iconSize, _hInst, iconIDs, nbIcons);
 		_hImaLstDpi = iconList.getHandle();
 		return _hImaLstDpi;

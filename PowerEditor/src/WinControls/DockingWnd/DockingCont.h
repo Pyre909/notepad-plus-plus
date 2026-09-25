@@ -138,10 +138,6 @@ public:
 
 	void destroyFonts();
 
-	// sends WM_DPICHANGED_AFTERPARENT to a window and its descendants
-	static void notifyDpiChangedAfterParent(HWND hWnd);
-	static BOOL CALLBACK notifyDpiChangedAfterParentProc(HWND hWnd, LPARAM lParam);
-
 protected:
 
 	// Subclassing caption
@@ -182,7 +178,7 @@ protected:
 	// caption and close button sizes for the DPI of _dpiManager
 	void setDpiDynamicalSizes();
 
-	// x in pixels of the system DPI (legacy sizes), for the DPI of the container with the per-monitor DPI awareness
+	// legacy size in pixels of the system DPI, for the container's DPI
 	int scaleFromSystemDpi(int x) const {
 		return DPIManagerV2::isPerMonitorV2Active() ? DPIManagerV2::scaleFromSystemDpi(x, _dpiManager.getDpi()) : x;
 	}
@@ -197,7 +193,6 @@ private:
 
 	// horizontal font for caption and tab
 	HFONT _hFont = nullptr;
-	bool _isTabFontSet = false; // _hFont has been set to the tab control (after a DPI change)
 	HFONT _hFontCaption = nullptr;
 
 	// caption params

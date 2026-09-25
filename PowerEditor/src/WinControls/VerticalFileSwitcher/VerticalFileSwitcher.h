@@ -33,7 +33,7 @@ class VerticalFileSwitcher : public DockingDlgInterface {
 public:
 	VerticalFileSwitcher() : DockingDlgInterface(IDD_DOCLIST) {}
 
-	void init(HINSTANCE hInst, HWND hPere, HIMAGELIST hImaLst, int tabIconSet = -1) {
+	void init(HINSTANCE hInst, HWND hPere, HIMAGELIST hImaLst, int tabIconSet) {
 		DockingDlgInterface::init(hInst, hPere);
 		_hImaLst = hImaLst;
 		_tabIconSet = tabIconSet;
@@ -132,12 +132,8 @@ public:
 		_fileListView.setForegroundColor(fgColour);
 	}
 
-	// Per-monitor DPI awareness (opt-in): the tab bar's icons, shared with the panel, have been resized for the DPI of the
-	// main window, the panel takes the file state icons of its own DPI (the tab bar's ones or its own ones)
-	void updateFileStateIconsForDpi() {
-		if (_hSelf != nullptr)
-			onDpiChanged(_dpiManager.getDpi());
-	}
+	// the tab bar's icons shared with the panel have been resized for the DPI of the main window
+	void updateFileStateIconsForDpi();
 
 protected:
 	HMENU _hGlobalMenu = NULL;
@@ -145,9 +141,7 @@ protected:
 	void initPopupMenus();
 	void popupMenuCmd(int cmdID);
 
-	// Per-monitor DPI awareness (opt-in)
 	void onDpiChanged(UINT prevDpi) override;
-	void checkDpiChange();
 	HIMAGELIST getFileStateIconsForDpi(UINT dpi);
 
 private:
@@ -157,7 +151,7 @@ private:
 	VerticalFileSwitcherListView _fileListView;
 	HIMAGELIST _hImaLst = nullptr; // file state icons of the tab bar (for the DPI of the main window)
 	HIMAGELIST _hImaLstDpi = nullptr; // own file state icons, for a DPI of the panel which isn't the one of the tab bar's icons
-	int _tabIconSet = -1; // icon set of _hImaLst (0 standard, 1 alternate, 2 dark mode), -1 if unknown
+	int _tabIconSet = 0; // icon set of _hImaLst (0 standard, 1 alternate, 2 dark mode)
 
 	static COLORREF _bgColor;
 	static LRESULT listViewNotifyCustomDraw(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

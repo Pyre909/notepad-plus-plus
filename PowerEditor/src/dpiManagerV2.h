@@ -51,19 +51,15 @@ public:
 		return getSystemMetricsForDpi(nIndex, _dpi);
 	}
 
-	// for a window of the GUI thread: with the (opt-in) per-monitor DPI awareness, the metric for the DPI of hWnd,
-	// otherwise exactly ::GetSystemMetrics() (unchanged behaviour, also where GetSystemMetricsForDpi() isn't available)
+	// the metric for the DPI of hWnd with the per-monitor DPI awareness, ::GetSystemMetrics() otherwise
 	static int getSystemMetricsForWindow(int nIndex, HWND hWnd);
 
 	[[nodiscard]] static bool isValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT value);
 	// includes check for `DPI_AWARENESS_CONTEXT dpiContext` via `isValidDpiAwarenessContext`
 	static DPI_AWARENESS_CONTEXT setThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT dpiContext);
 
-	// Opt-in per-monitor v2 DPI awareness: makes the calling (GUI) thread per-monitor v2 DPI aware for the rest of the session.
-	// Must be called before any window is created. Returns false (the thread stays system DPI aware) if it isn't supported
-	// (before Windows 10 1703) or has failed.
+	// opt-in per-monitor v2 DPI awareness of the GUI thread, set before any window is created (Windows 10 1703+)
 	static bool enablePerMonitorV2ForThread();
-	// true if enablePerMonitorV2ForThread() has succeeded, windows can then receive WM_DPICHANGED
 	[[nodiscard]] static bool isPerMonitorV2Active();
 
 	static bool adjustWindowRectExForDpi(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi);
@@ -121,14 +117,12 @@ public:
 		return scale(x, USER_DEFAULT_SCREEN_DPI, getDpiForWindow(hWnd));
 	}
 
-	// for the legacy sizes defined in pixels of the system DPI (not scaled from 96 dpi):
-	// identity for the system DPI, which is always the DPI of the windows without per-monitor DPI awareness
+	// for the legacy sizes in pixels of the system DPI (not scaled from 96 DPI)
 	static int scaleFromSystemDpi(int x, UINT dpi) {
 		return scale(x, dpi, getDpiForSystem());
 	}
 
-	// same for a window of the GUI thread: with the (opt-in) per-monitor DPI awareness, scaleFromSystemDpi() for the DPI
-	// of hWnd, otherwise x unchanged (also for the dialogs made per-monitor DPI aware without it, e.g. Preferences)
+	// x unchanged without the per-monitor DPI awareness (even in a per-monitor DPI aware dialog)
 	static int scaleFromSystemDpiForWindow(int x, HWND hWnd) {
 		return isPerMonitorV2Active() ? scaleFromSystemDpi(x, getDpiForWindow(hWnd)) : x;
 	}
@@ -160,6 +154,11 @@ public:
 	LOGFONT getDefaultGUIFontForDpi(FontType type = FontType::message) const {
 		return getDefaultGUIFontForDpi(_dpi, type);
 	}
+
+	// default font of the list view, tree view and toolbar controls
+	static LOGFONT getIconTitleFontForDpi(UINT dpi);
+	// sets a font created from lf to hWnd, then replaces hFont (the previous one, deleted) with it
+	static void replaceWindowFont(HWND hWnd, const LOGFONT& lf, HFONT& hFont);
 
 	static void loadIcon(HINSTANCE hinst, const wchar_t* pszName, int cx, int cy, HICON* phico, UINT fuLoad = LR_DEFAULTCOLOR);
 

@@ -70,13 +70,13 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			_hToolbarMenu = CreateWindowEx(0,TOOLBARCLASSNAME,NULL, style,
 								   0,0,0,0,_hSelf, nullptr, _hInst, nullptr);
 
-			// with the per-monitor DPI awareness, the panel can be on a monitor whose DPI isn't the one of the toolbar's default font
+			// the default font of the toolbar is for the system DPI
 			if (DPIManagerV2::isPerMonitorV2Active())
 			{
 				const UINT dpi = DPIManagerV2::getDpiForWindow(_hSelf);
 				if (dpi != DPIManagerV2::getDpiForSystem())
 				{
-					setToolbarFontForDpi(dpi);
+					DPIManagerV2::replaceWindowFont(_hToolbarMenu, DPIManagerV2::getIconTitleFontForDpi(dpi), _hToolbarFontDpi);
 				}
 			}
 
@@ -169,7 +169,7 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 
 			::MoveWindow(_hToolbarMenu, 0, 0, width, toolbarMenuRect.bottom, TRUE);
 
-			// gap of 2 px at the system DPI (per-monitor DPI awareness: scaled for the DPI of the panel)
+			// gap in pixels of the system DPI
 			const int gap = DPIManagerV2::scaleFromSystemDpi(2, _dpiManager.getDpi());
 
 			HWND hwnd = _treeView.getHSelf();
@@ -240,29 +240,12 @@ std::vector<int> ProjectPanel::getTreeImageIds()
 	);
 }
 
-void ProjectPanel::setToolbarFontForDpi(UINT dpi)
-{
-	// the default font of the toolbar is for the system DPI
-	LOGFONT lf{ TreeView::getControlFontForDpi(dpi) };
-	HFONT hFont = ::CreateFontIndirect(&lf);
-	if (hFont == nullptr)
-		return;
-
-	::SendMessage(_hToolbarMenu, WM_SETFONT, reinterpret_cast<WPARAM>(hFont), TRUE);
-
-	if (_hToolbarFontDpi != nullptr)
-	{
-		::DeleteObject(_hToolbarFontDpi);
-	}
-	_hToolbarFontDpi = hFont;
-}
-
 void ProjectPanel::onDpiChanged(UINT prevDpi)
 {
 	const UINT dpi = _dpiManager.getDpi();
 
 	// toolbar: text buttons, sized for their font
-	setToolbarFontForDpi(dpi);
+	DPIManagerV2::replaceWindowFont(_hToolbarMenu, DPIManagerV2::getIconTitleFontForDpi(dpi), _hToolbarFontDpi);
 	::SendMessage(_hToolbarMenu, TB_AUTOSIZE, 0, 0);
 
 	// tree: font, item height, images, indent

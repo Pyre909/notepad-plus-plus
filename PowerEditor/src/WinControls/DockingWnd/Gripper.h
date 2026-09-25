@@ -96,13 +96,9 @@ protected :
 		_isRTL ? rc->right = rc->left - rc->right : rc->right -= rc->left;
 		rc->bottom -= rc->top;
 	}
-	// x in pixels of the system DPI (legacy sizes), for the DPI of hWnd with the per-monitor DPI awareness
-	static int scaleFromSystemDpi(int x, HWND hWnd) {
-		return DPIManagerV2::scaleFromSystemDpiForWindow(x, hWnd);
-	}
 	void DoCalcGripperRect(RECT* rc, RECT rcCorr, POINT pt) {
 		if ((rc->left + rc->right) < pt.x)
-			rc->left = pt.x - scaleFromSystemDpi(20, _hParent);
+			rc->left = pt.x - DPIManagerV2::scaleFromSystemDpiForWindow(20, _hParent);
 		if ((rc->top + rc->bottom) < pt.y)
 			rc->top  += rcCorr.bottom - rc->bottom;
 	}
