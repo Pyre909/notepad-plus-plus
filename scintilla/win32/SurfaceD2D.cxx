@@ -179,8 +179,6 @@ constexpr DWRITE_MEASURING_MODE DWriteMapMeasuringMode(FontQuality extraFontFlag
 	}
 }
 
-namespace {
-
 // N++: the DirectWrite family, weight, stretch and style of a GDI font family name that DirectWrite doesn't know.
 // GDI (and so the font lists built with EnumFontFamiliesEx) names a family per weight or stretch beyond regular and
 // bold, e.g. "Fira Code Light" for the Light weight of the typographic family "Fira Code", which is the only family
@@ -281,7 +279,7 @@ std::optional<GdiFamilyMatch> FindGdiFamilyName(const std::wstring &faceName) {
 	if (exists) {
 		// A DirectWrite family name (the usual case), used as is unless all its upright fonts are much lighter or
 		// heavier than regular, or DirectWrite fake-bolds it for the regular weight: its weights are then relative to
-		// its font closest to regular, as for GDI families (see GdiFontWeight). E.g. the family of a static font of a
+		// its font closest to regular, as for GDI families (see GdiLogFont). E.g. the family of a static font of a
 		// weight whose name DirectWrite doesn't parse as one ("X Hairline"), which DirectWrite fake-bolds for the
 		// regular weight, or of a semibold font only, whose bold would be drawn as is.
 		ComPtr<IDWriteFontFamily> family;
@@ -309,6 +307,11 @@ std::optional<GdiFamilyMatch> FindGdiFamilyName(const std::wstring &faceName) {
 			return {};
 		}
 		return regular;
+	}
+
+	// A name GDI doesn't know (a font not installed) is the Win32 family name of no font
+	if (!GdiFamilyExists(faceName.c_str())) {
+		return {};
 	}
 
 	// The fonts whose Win32 family name it is: in the family named by the start of the name first
@@ -384,15 +387,12 @@ std::optional<GdiFamilyMatch> MatchGdiFamilyName(const std::wstring &faceName) n
 	}
 }
 
-}
-
 struct FontDirectWrite : public FontWin {
 	ComPtr<IDWriteTextFormat> pTextFormat;
 	FontQuality extraFontFlag = FontQuality::QualityDefault;
 	CharacterSet characterSet = CharacterSet::Ansi;
 	DWRITE_MEASURING_MODE measuringMode = DWRITE_MEASURING_MODE_NATURAL;	// N++: used for every layout of this font
 	FLOAT emSize = 1.0f;	// N++: in DIPs
-	bool tinyText = false;	// N++: measured on whole pixels and drawn hinted (see fontQualityTinyTextMask)
 	std::wstring gdiFaceName;	// N++: GDI family name matched to a DirectWrite family (see MatchGdiFamilyName), for HFont()
 	LONG gdiWeight = FW_NORMAL;	// N++: weight requested with gdiFaceName
 	BYTE gdiItalic = FALSE;	// N++: italic requested with gdiFaceName
@@ -408,16 +408,6 @@ struct FontDirectWrite : public FontWin {
 		const std::wstring wsFace = WStringFromUTF8(fp.faceName);
 		const std::wstring wsLocale = WStringFromUTF8(fp.localeName);
 		FLOAT fHeight = static_cast<FLOAT>(fp.size);
-		// N++: tiny text of the adaptive rendering mode is measured on whole pixels like GDI: every glyph is then
-		// drawn at the same pixel phase (as it is hinted on whole pixels). Below its minimum size no glyph can be
-		// formed on the pixel grid (lowercase letters of 2 pixels): it stays smooth.
-		const int tinyTextPixels = (static_cast<int>(fp.extraFontFlag) & fontQualityTinyTextMask) >> fontQualityTinyTextShift;
-		const int tinyTextMinPixels = (static_cast<int>(fp.extraFontFlag) & fontQualityTinyTextMinMask) >> fontQualityTinyTextMinShift;
-		if ((measuringMode == DWRITE_MEASURING_MODE_NATURAL) && (fHeight >= static_cast<FLOAT>(tinyTextMinPixels)) &&
-			(fHeight <= static_cast<FLOAT>(tinyTextPixels))) {
-			measuringMode = DWRITE_MEASURING_MODE_GDI_CLASSIC;
-			tinyText = true;
-		}
 		if (measuringMode != DWRITE_MEASURING_MODE_NATURAL) {
 			// N++: whole pixel em size like GDI's integer font height (13 px, not 13.33 px, for 10 points at 96 DPI)
 			fHeight = std::max(1.0f, std::round(fHeight));
@@ -478,13 +468,13 @@ struct FontDirectWrite : public FontWin {
 		}
 	}
 	// Allow copy constructor. Has to explicitly copy each field since can't use =default as deleted in Font.
-	FontDirectWrite(const FontDirectWrite &other) noexcept {
+	// N++: not noexcept as gdiFaceName is copied
+	FontDirectWrite(const FontDirectWrite &other) {
 		pTextFormat = other.pTextFormat;
 		extraFontFlag = other.extraFontFlag;
 		characterSet = other.characterSet;
 		measuringMode = other.measuringMode;	// N++
 		emSize = other.emSize;	// N++
-		tinyText = other.tinyText;	// N++
 		gdiFaceName = other.gdiFaceName;	// N++
 		gdiWeight = other.gdiWeight;	// N++
 		gdiItalic = other.gdiItalic;	// N++
@@ -504,7 +494,7 @@ struct FontDirectWrite : public FontWin {
 			gdiFaceName.copy(lf.lfFaceName, LF_FACESIZE - 1);
 			lf.lfWeight = gdiWeight;
 			lf.lfItalic = gdiItalic;
-			lf.lfHeight = -static_cast<int>(pTextFormat->GetFontSize());
+			lf.lfHeight = -static_cast<LONG>(emSize);
 			GdiLogFont(lf);
 			return ::CreateFontIndirectW(&lf);
 		}
@@ -604,7 +594,7 @@ class SurfaceD2D : public Surface, public ISetRenderingParams {
 	std::shared_ptr<RenderingParams> renderingParams;
 
 	void Clear() noexcept;
-	void SetFontQuality(FontQuality extraFontFlag, int variant=0);	// N++: variant
+	void SetFontQuality(FontQuality extraFontFlag, int variant);	// N++: variant
 	HRESULT GetBitmap(ID2D1Bitmap **ppBitmap);
 	void SetDeviceScaleFactor(const ID2D1RenderTarget *const pD2D1RenderTarget) noexcept;
 
@@ -783,20 +773,14 @@ void SurfaceD2D::D2DPenColourAlpha(ColourRGBA fore) noexcept {
 	}
 }
 
-namespace {
-
 // N++: the variant, or the nearest existing variant, else 0 for the base parameters
 int ExistingRenderingVariant(const WriteRenderingParams (&variants)[renderingVariants], int variant) noexcept {
-	// tiny text without its parameters is drawn as small text
-	const int asSmall = (variant & renderingVariantTiny) ? ((variant & ~renderingVariantTiny) | renderingVariantSmall) : variant;
-	for (const int v : { variant, asSmall, variant & renderingVariantLight, asSmall & renderingVariantSmall }) {
+	for (const int v : { variant, variant & renderingVariantLight, variant & renderingVariantSmall }) {
 		if (v && variants[v]) {
 			return v;
 		}
 	}
 	return 0;
-}
-
 }
 
 void SurfaceD2D::SetFontQuality(FontQuality extraFontFlag, int variant) {
@@ -811,7 +795,7 @@ void SurfaceD2D::SetFontQuality(FontQuality extraFontFlag, int variant) {
 	} else {
 		variant = ExistingRenderingVariant(clearType ? renderingParams->customVariants : renderingParams->defaultVariants, variant);
 	}
-	if (fontQuality != extraFontFlag || renderingVariant != variant) {	// N++: variant
+	if ((fontQuality != extraFontFlag) || (renderingVariant != variant)) {	// N++: variant
 		fontQuality = extraFontFlag;
 		renderingVariant = variant;	// N++
 		if (clearType) {
@@ -1625,8 +1609,7 @@ void SurfaceD2D::DrawTextCommon(PRectangle rc, const Font *font_, XYPOSITION yba
 		constexpr FLOAT smallTextMaxPixels = 20.0f;
 		const FLOAT intensity = 0.25f * penColour.r + 0.5f * penColour.g + 0.25f * penColour.b;
 		const int variant = ((intensity >= lightTextMinIntensity) ? renderingVariantLight : 0) |
-			(pfm->tinyText ? renderingVariantTiny :
-			(pfm->emSize * static_cast<FLOAT>(deviceScaleFactor) <= smallTextMaxPixels) ? renderingVariantSmall : 0);
+			((pfm->emSize * static_cast<FLOAT>(deviceScaleFactor) <= smallTextMaxPixels) ? renderingVariantSmall : 0);
 		SetFontQuality(pfm->extraFontFlag, variant);
 		if (fuOptions & ETO_CLIPPED) {
 			const D2D1_RECT_F rcClip = RectangleFromPRectangle(rc);

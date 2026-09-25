@@ -474,7 +474,7 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 	}
 	else
 	{
-		// allow IDC_COMBO_SC_TECHNOLOGY_CHOICE to be set in Preferences > MISC. again
+		// allow IDC_COMBO_SC_TECHNOLOGY_CHOICE to be set in Preferences > Editing 1 again
 		if (nppGui._writeTechnologyEngine == directWriteTechnologyUnavailable)
 			nppGui._writeTechnologyEngine = defaultTechnology;
 	}
@@ -514,7 +514,7 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 	attachDefaultDoc();
 }
 
-// Font quality matching the Windows "Smooth edges of screen fonts" & ClearType settings
+// DirectWrite font quality matching the Windows "Smooth edges of screen fonts" & ClearType settings
 static int getSystemFontQuality()
 {
 	BOOL isFontSmoothingOn = FALSE;
@@ -528,7 +528,9 @@ static int getSystemFontQuality()
 	if (!::SystemParametersInfo(SPI_GETFONTSMOOTHINGTYPE, 0, &fontSmoothingType, 0))
 		return SC_EFF_QUALITY_DEFAULT;
 
-	return (fontSmoothingType == FE_FONTSMOOTHINGCLEARTYPE) ? SC_EFF_QUALITY_LCD_OPTIMIZED : SC_EFF_QUALITY_ANTIALIASED;
+	// DirectWrite's default quality draws ClearType with the monitor's parameters, as Notepad++ always did
+	// (SC_EFF_QUALITY_LCD_OPTIMIZED would use the ClearType Tuner gamma of GDI: the "ClearType" setting)
+	return (fontSmoothingType == FE_FONTSMOOTHINGCLEARTYPE) ? SC_EFF_QUALITY_DEFAULT : SC_EFF_QUALITY_ANTIALIASED;
 }
 
 void ScintillaEditView::applyTextRenderingSettings() const
@@ -572,7 +574,7 @@ void ScintillaEditView::applyTextRenderingSettings() const
 			renderingMode = SC_RENDERINGMODE_NATURALSYMMETRIC;
 			break;
 
-		case textRenderingModeGdiCompatible:
+		case textRenderingModeGdiClassic:
 			renderingMode = SC_RENDERINGMODE_GDICLASSIC;
 			break;
 
@@ -592,49 +594,34 @@ void ScintillaEditView::applyTextRenderingSettings() const
 	// light text (on dark themes) gets heavier with a higher gamma, which would make dark text lighter:
 	// so light text gets its own gamma, never lower than the monitor's one (0) even with the Windows setting,
 	// as the ClearType gamma of Windows (1.2-1.4) makes light text thinner than the monitor's one (1.8-2.2)
-	int enhancedContrast = SC_FONTRENDERING_DEFAULT;          // in hundredths, for ClearType
-	int grayscaleEnhancedContrast = SC_FONTRENDERING_DEFAULT; // in hundredths, for grayscale antialiasing
-	int lightTextGamma = 0;                                   // in thousandths, 0: monitor's gamma
-	switch (svp._textContrast)
+	struct TextContrastParams
 	{
-		case textContrastMedium:
-			enhancedContrast = 100;
-			grayscaleEnhancedContrast = 150;
-			lightTextGamma = 2000;
-			break;
-
-		case textContrastHigh:
-			enhancedContrast = 200;
-			grayscaleEnhancedContrast = 250;
-			lightTextGamma = 2200;
-			break;
-
-		case textContrastVeryHigh:
-			enhancedContrast = 300;
-			grayscaleEnhancedContrast = 350;
-			lightTextGamma = 2200; // the highest gamma DirectWrite's text blending uses
-			break;
-
-		default: // textContrastWindows
-			break;
-	}
+		int _enhancedContrast = SC_FONTRENDERING_DEFAULT;          // in hundredths, for ClearType
+		int _grayscaleEnhancedContrast = SC_FONTRENDERING_DEFAULT; // in hundredths, for grayscale antialiasing
+		int _lightTextGamma = 0;                                   // in thousandths, 0: monitor's gamma
+	};
+	static constexpr TextContrastParams textContrastParams[]{ // indexed by textContrast
+		{},                 // textContrastWindows
+		{ 100, 150, 2000 }, // textContrastMedium
+		{ 200, 250, 2200 }, // textContrastHigh
+		{ 300, 350, 2200 }  // textContrastVeryHigh (2.2: the highest gamma DirectWrite's text blending uses)
+	};
+	const TextContrastParams& contrast = textContrastParams[svp._textContrast];
 
 	// ClearType level in percent: 50% reduces the color fringes while keeping ClearType horizontal resolution
-	const int clearTypeLevel = (svp._textAntialiasing == textAntialiasingClearTypeLessColor) ? 50 : SC_FONTRENDERING_DEFAULT;
+	static constexpr int clearTypeLessColorLevel = 50;
+	const int clearTypeLevel = (svp._textAntialiasing == textAntialiasingClearTypeLessColor) ? clearTypeLessColorLevel : SC_FONTRENDERING_DEFAULT;
 
-	// the advanced overrides of config.xml (-1: not set) take precedence over the values derived from the settings
-	auto overriddenBy = [](int value, int overrideValue) -> int { return (overrideValue >= 0) ? overrideValue : value; };
+	// the advanced overrides of config.xml (SC_FONTRENDERING_DEFAULT: not set) take precedence over the values derived from the settings
+	auto overriddenBy = [](int value, int overrideValue) -> int { return (overrideValue != SC_FONTRENDERING_DEFAULT) ? overrideValue : value; };
 
 	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_GAMMA, overriddenBy(SC_FONTRENDERING_DEFAULT, svp._fontGamma));
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_ENHANCEDCONTRAST, overriddenBy(enhancedContrast, svp._fontEnhancedContrast));
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_GRAYSCALEENHANCEDCONTRAST, overriddenBy(grayscaleEnhancedContrast, svp._fontGrayscaleEnhancedContrast));
+	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_ENHANCEDCONTRAST, overriddenBy(contrast._enhancedContrast, svp._fontEnhancedContrast));
+	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_GRAYSCALEENHANCEDCONTRAST, overriddenBy(contrast._grayscaleEnhancedContrast, svp._fontGrayscaleEnhancedContrast));
 	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_CLEARTYPELEVEL, overriddenBy(clearTypeLevel, svp._fontClearTypeLevel));
 	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_PIXELGEOMETRY, overriddenBy(SC_FONTRENDERING_DEFAULT, svp._fontPixelGeometry));
 	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_RENDERINGMODE, renderingMode);
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_LIGHTTEXTGAMMA, overriddenBy(lightTextGamma, svp._fontLightTextGamma));
-	// the adaptive mode's tiny text drawn hinted on whole pixels, except in overviews of documents
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_TINYTEXTPIXELS, _isOverview ? 0 : overriddenBy(SC_FONTRENDERING_DEFAULT, svp._fontTinyTextPixels));
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_TINYTEXTMINPIXELS, overriddenBy(SC_FONTRENDERING_DEFAULT, svp._fontTinyTextMinPixels));
+	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_LIGHTTEXTGAMMA, overriddenBy(contrast._lightTextGamma, svp._fontLightTextGamma));
 }
 
 void ScintillaEditView::applyTextRenderingSettingsToAll()

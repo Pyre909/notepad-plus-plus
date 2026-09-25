@@ -1776,7 +1776,7 @@ void EditingSubDlg::initTextRenderingParam()
 	}
 
 	// the items order has to match the textAntialiasing, textRenderingMode & textContrast enums
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTANTIALIASING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Follow Windows setting"));
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTANTIALIASING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Follow Windows"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTANTIALIASING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"ClearType"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTANTIALIASING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"ClearType (less color fringing)"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTANTIALIASING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Grayscale"));
@@ -1786,11 +1786,11 @@ void EditingSubDlg::initTextRenderingParam()
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Automatic"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Natural (sharper small text)"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Symmetric (smoother)"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"GDI-compatible (pixel-aligned)"));
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"GDI classic (pixel-aligned)"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Adaptive (Natural for small text)"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_SETCURSEL, svp._textRenderingMode, 0);
 
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Windows setting"));
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Follow Windows"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Medium"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"High"));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Very high"));
@@ -1809,7 +1809,7 @@ void EditingSubDlg::initTextRenderingParam()
 	_tipTextAntialiasing = createToolTip(IDC_COMBO_TEXTANTIALIASING, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
 
 	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textRenderingMode-tip",
-		L"Natural avoids the vertical blur of small text. GDI-compatible snaps the glyphs to whole pixels like classic GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text.");
+		L"Natural avoids the vertical blur of small text. GDI classic snaps the glyphs to whole pixels like GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text.");
 	_tipTextRenderingMode = createToolTip(IDC_COMBO_TEXTRENDERINGMODE, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
 
 	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textContrast-tip",
@@ -2156,18 +2156,20 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 								return TRUE;
 							}
 
-							if (LOWORD(wParam) == IDC_COMBO_TEXTANTIALIASING || LOWORD(wParam) == IDC_COMBO_TEXTRENDERINGMODE || LOWORD(wParam) == IDC_COMBO_TEXTCONTRAST)
+							const int ctrlId = LOWORD(wParam);
+							if (ctrlId == IDC_COMBO_TEXTANTIALIASING || ctrlId == IDC_COMBO_TEXTRENDERINGMODE || ctrlId == IDC_COMBO_TEXTCONTRAST)
 							{
-								const auto selIndex = ::SendDlgItemMessage(_hSelf, LOWORD(wParam), CB_GETCURSEL, 0, 0);
-
-								if (LOWORD(wParam) == IDC_COMBO_TEXTANTIALIASING && selIndex >= textAntialiasingFollowWindows && selIndex <= textAntialiasingNone)
-									svp._textAntialiasing = static_cast<textAntialiasing>(selIndex);
-								else if (LOWORD(wParam) == IDC_COMBO_TEXTRENDERINGMODE && selIndex >= textRenderingModeAutomatic && selIndex <= textRenderingModeAdaptive)
-									svp._textRenderingMode = static_cast<textRenderingMode>(selIndex);
-								else if (LOWORD(wParam) == IDC_COMBO_TEXTCONTRAST && selIndex >= textContrastWindows && selIndex <= textContrastVeryHigh)
-									svp._textContrast = static_cast<textContrast>(selIndex);
-								else
+								// the items of each combo box are the values of its enum
+								const int selIndex = static_cast<int>(::SendDlgItemMessage(_hSelf, ctrlId, CB_GETCURSEL, 0, 0));
+								if (selIndex == CB_ERR)
 									return TRUE;
+
+								if (ctrlId == IDC_COMBO_TEXTANTIALIASING)
+									svp._textAntialiasing = static_cast<textAntialiasing>(selIndex);
+								else if (ctrlId == IDC_COMBO_TEXTRENDERINGMODE)
+									svp._textRenderingMode = static_cast<textRenderingMode>(selIndex);
+								else
+									svp._textContrast = static_cast<textContrast>(selIndex);
 
 								ScintillaEditView::applyTextRenderingSettingsToAll();
 								return TRUE;

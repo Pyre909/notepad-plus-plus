@@ -238,13 +238,13 @@ enum textAntialiasing
 	textAntialiasingNone
 };
 
-// the order has to match the Preferences > Editing 1 "Rendering mode" combo box items
+// the order has to match the Preferences > Editing 1 "DirectWrite mode" combo box items
 enum textRenderingMode
 {
 	textRenderingModeAutomatic,
 	textRenderingModeNatural,
 	textRenderingModeSymmetric,
-	textRenderingModeGdiCompatible,
+	textRenderingModeGdiClassic,
 	textRenderingModeAdaptive
 };
 
