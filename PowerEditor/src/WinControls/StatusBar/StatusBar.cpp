@@ -251,8 +251,18 @@ static LRESULT CALLBACK StatusBarSubclass(HWND hWnd, UINT uMsg, WPARAM wParam, L
 		{
 			pStatusBarInfo->closeTheme();
 			LOGFONT lf{ DPIManagerV2::getDefaultGUIFontForDpi(::GetParent(hWnd), DPIManagerV2::FontType::status) };
-			pStatusBarInfo->setFont(::CreateFontIndirect(&lf));
-			
+			HFONT hFont = ::CreateFontIndirect(&lf);
+
+			// the control computes its height with its font (the parent relayouts it after the DPI change),
+			// once it has it, it gets the new one before the previous one is deleted
+			const bool isControlFont = (pStatusBarInfo->_hFont != nullptr) &&
+				(reinterpret_cast<HFONT>(::DefSubclassProc(hWnd, WM_GETFONT, 0, 0)) == pStatusBarInfo->_hFont);
+			if ((uMsg != WM_THEMECHANGED) || isControlFont)
+			{
+				::DefSubclassProc(hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(hFont), FALSE);
+			}
+			pStatusBarInfo->setFont(hFont);
+
 			if (uMsg != WM_THEMECHANGED)
 			{
 				return 0;

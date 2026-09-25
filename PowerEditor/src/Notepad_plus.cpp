@@ -55,6 +55,9 @@ enum tb_stat {tb_saved, tb_unsaved, tb_ro, tb_monitored};
 
 static constexpr int IDI_SEPARATOR_ICON = -1;
 
+static constexpr int colourMenuItemIconSize = 16; // in pixels of the system DPI
+static constexpr int minFloatingPanelWidthRatio = 6; // minimal width of a floating panel, in caption heights
+
 static constexpr ToolBarButtonUnit toolBarIcons[]{
     {IDM_FILE_NEW,                     IDI_NEW_ICON,               IDI_NEW_ICON,                  IDI_NEW_ICON2,              IDI_NEW_ICON2,                 IDI_NEW_ICON_DM,               IDI_NEW_ICON_DM,                  IDI_NEW_ICON_DM2,              IDI_NEW_ICON_DM2,                 IDR_FILENEW},
     {IDM_FILE_OPEN,                    IDI_OPEN_ICON,              IDI_OPEN_ICON,                 IDI_OPEN_ICON2,             IDI_OPEN_ICON2,                IDI_OPEN_ICON_DM,              IDI_OPEN_ICON_DM,                 IDI_OPEN_ICON_DM2,             IDI_OPEN_ICON_DM2,                IDR_FILEOPEN},
@@ -202,6 +205,9 @@ Notepad_plus::~Notepad_plus()
 	delete _pDocMap;
 	delete _pFuncList;
 	delete _pFileBrowser;
+
+	for (const auto& colourBitmap : _mainMenuColourBitmaps)
+		::DeleteObject(colourBitmap.second);
 }
 
 
@@ -822,10 +828,7 @@ LRESULT Notepad_plus::init(HWND hwnd)
 	DockingManagerData& dmd = nppGUI._dockingData;
 
 	// preset minimal panel dimensions according to the current DPI
-	dmd._minDockedPanelVisibility = DPIManagerV2::scale(nppGUI._dockingData._minDockedPanelVisibility, dpi);
-	dmd._minFloatingPanelSize.cy = nppGUI._dockingData._minDockedPanelVisibility;
-	dmd._minFloatingPanelSize.cx = std::max(static_cast<int>(nppGUI._dockingData._minFloatingPanelSize.cy * 6),
-		DPIManagerV2::getSystemMetricsForDpi(SM_CXMINTRACK, dpi));
+	setMinPanelSizesForDpi(dpi);
 
 	_dockingManager.setDockedContSize(CONT_LEFT, nppGUI._dockingData._leftWidth);
 	_dockingManager.setDockedContSize(CONT_RIGHT, nppGUI._dockingData._rightWidth);
@@ -885,6 +888,8 @@ LRESULT Notepad_plus::init(HWND hwnd)
 	activateBuffer(_subEditView.getCurrentBufferID(), SUB_VIEW);
 
 	_mainEditView.grabFocus();
+
+	_currentDpi = dpi; // from now on, WM_DPICHANGED can rescale the GUI elements created above
 
 	return TRUE;
 }
@@ -2775,17 +2780,21 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 	NppParameters& nppParam = NppParameters::getInstance();
 	StyleArray& styleArray = nppParam.getMiscStylerArray();
 
+	// with the per-monitor DPI awareness, set again at each DPI change: cached, as the context menus share them
+	const bool isBitmapCached = DPIManagerV2::isPerMonitorV2Active();
+
 	for (size_t j = 0; j < sizeof(bitmapOnStyleMenuItemsInfo) / sizeof(bitmapOnStyleMenuItemsInfo[0]); ++j)
 	{
 		const Style * pStyle = styleArray.findByID(bitmapOnStyleMenuItemsInfo[j].styleIndic);
 		if (pStyle)
 		{
-			HBITMAP hNewBitmap = generateSolidColourMenuItemIcon(pStyle->_bgColor);
+			HBITMAP hNewBitmap = isBitmapCached ? getMainMenuColourBitmap(pStyle->_bgColor) : generateSolidColourMenuItemIcon(pStyle->_bgColor);
 			if (hNewBitmap)
 			{
 				if (!::SetMenuItemBitmaps(_mainMenuHandle, bitmapOnStyleMenuItemsInfo[j].firstOfThisColorMenuId, MF_BYCOMMAND, hNewBitmap, hNewBitmap))
 				{
-					::DeleteObject(hNewBitmap);
+					if (!isBitmapCached)
+						::DeleteObject(hNewBitmap);
 				}
 				else
 				{
@@ -2802,13 +2811,27 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 	for (int i = 0; i < TAB_COLORS_COUNT; ++i)
 	{
 		COLORREF colour = nppParam.getIndividualTabColor(i, NppDarkMode::isEnabled(), true);
-		HBITMAP hBitmap = generateSolidColourMenuItemIcon(colour);
+		HBITMAP hBitmap = isBitmapCached ? getMainMenuColourBitmap(colour) : generateSolidColourMenuItemIcon(colour);
 		if (hBitmap)
 		{
-			if (!::SetMenuItemBitmaps(_mainMenuHandle, IDM_VIEW_TAB_COLOUR_1 + i, MF_BYCOMMAND, hBitmap, hBitmap))
+			if (!::SetMenuItemBitmaps(_mainMenuHandle, IDM_VIEW_TAB_COLOUR_1 + i, MF_BYCOMMAND, hBitmap, hBitmap) && !isBitmapCached)
 				::DeleteObject(hBitmap);
 		}
 	}
+}
+
+HBITMAP Notepad_plus::getMainMenuColourBitmap(COLORREF colour)
+{
+	const int bitmapXYsize = DPIManagerV2::scaleFromSystemDpiForWindow(colourMenuItemIconSize, _pPublicInterface->getHSelf());
+	const auto key = std::make_pair(bitmapXYsize, colour);
+
+	if (const auto it = _mainMenuColourBitmaps.find(key); it != _mainMenuColourBitmaps.end())
+		return it->second;
+
+	HBITMAP hBitmap = generateSolidColourMenuItemIcon(colour);
+	if (hBitmap)
+		_mainMenuColourBitmaps[key] = hBitmap;
+	return hBitmap;
 }
 
 // doCheck searches for the menu item matching the provided id across the main menu and all of its submenus,
@@ -7506,7 +7529,7 @@ void Notepad_plus::launchDocumentListPanel(bool changeFromBtnCmd)
 		HIMAGELIST hImgLst = _mainDocTab.getImgLst(tabIconSet);
 
 
-		_pDocumentListPanel->init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), hImgLst);
+		_pDocumentListPanel->init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), hImgLst, tabIconSet);
 		NativeLangSpeaker *pNativeSpeaker = nppParams.getNativeLangSpeaker();
 		bool isRTL = pNativeSpeaker->isRTL();
 		DockedWidgetData	data{};
@@ -9177,7 +9200,8 @@ HBITMAP Notepad_plus::generateSolidColourMenuItemIcon(COLORREF colour)
 	if (!hDC)
 		return nullptr;
 
-	static constexpr int bitmapXYsize = 16;
+	const int bitmapXYsize = DPIManagerV2::scaleFromSystemDpiForWindow(colourMenuItemIconSize, _pPublicInterface->getHSelf());
+	const int borderSize = DPIManagerV2::scaleFromSystemDpiForWindow(1, _pPublicInterface->getHSelf());
 	HBITMAP hNewBitmap = ::CreateCompatibleBitmap(hDC, bitmapXYsize, bitmapXYsize);
 	if (hNewBitmap)
 	{
@@ -9202,8 +9226,8 @@ HBITMAP Notepad_plus::generateSolidColourMenuItemIcon(COLORREF colour)
 			}
 
 			// overpaint a slightly smaller colored square
-			rc.left = rc.top = 1;
-			rc.right = rc.bottom = bitmapXYsize - 1;
+			rc.left = rc.top = borderSize;
+			rc.right = rc.bottom = bitmapXYsize - borderSize;
 			hBrush = ::CreateSolidBrush(colour);
 			if (hBrush)
 			{
@@ -9222,6 +9246,15 @@ HBITMAP Notepad_plus::generateSolidColourMenuItemIcon(COLORREF colour)
 	::ReleaseDC(nullptr, hDC);
 
 	return hNewBitmap;
+}
+
+void Notepad_plus::setMinPanelSizesForDpi(UINT dpi)
+{
+	DockingManagerData& dmd = NppParameters::getInstance().getNppGUI()._dockingData;
+	dmd._minDockedPanelVisibility = DPIManagerV2::scale(HIGH_CAPTION, dpi);
+	dmd._minFloatingPanelSize.cy = dmd._minDockedPanelVisibility;
+	dmd._minFloatingPanelSize.cx = std::max(static_cast<int>(dmd._minFloatingPanelSize.cy * minFloatingPanelWidthRatio),
+		DPIManagerV2::getSystemMetricsForDpi(SM_CXMINTRACK, dpi));
 }
 
 void Notepad_plus::clearChangesHistory(int iView)

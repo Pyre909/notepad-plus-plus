@@ -108,6 +108,13 @@ void SplitterContainer::reSizeTo(RECT & rc)
 }
 
 
+void SplitterContainer::setSplitterSize(int splitterSize)
+{
+	_splitterSize = splitterSize;
+	_splitter.setSplitterSize(splitterSize);
+}
+
+
 void SplitterContainer::display(bool toShow) const
 {
 	Window::display(toShow);

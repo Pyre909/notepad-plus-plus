@@ -1402,6 +1402,7 @@ Translation note:
 					<Item id="6360" name="Mute all sounds"/>
 					<Item id="6361" name="Enable Save All confirm dialog"/>
 					<Item id="6366" name="Allow loading symlinks in Folder as Workspace panel"/>
+					<Item id="6367" name="Per-monitor DPI awareness (experimental, restart required)"/>
 				</MISC>
 			</Preference>
 			<MultiMacro title="Run a Macro Multiple Times">

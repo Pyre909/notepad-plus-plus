@@ -45,6 +45,8 @@
 #include "md5Dlgs.h"
 #include "menuCmdID.h"
 #include <vector>
+#include <map>
+#include <utility>
 #include <iso646.h>
 #include <chrono>
 #include <atomic>
@@ -412,6 +414,10 @@ private:
 
 	bool _isNppSessionSavedAtExit = false; // guard flag, it prevents emptying of the Notepad++ session.xml in case of multiple WM_ENDSESSION or WM_CLOSE messages
 
+	// Per-monitor DPI awareness (WM_DPICHANGED)
+	UINT _currentDpi = 0; // DPI of the main window (set by init), the previous DPI when WM_DPICHANGED is received
+	bool _isStartupPlacement = false; // the startup placement keeps the saved size of the window & the docked panels even if the DPI changes
+
 	ScintillaCtrls _scintillaCtrls4Plugins;
 
 	std::vector<std::pair<int, int> > _hideLinesMarks;
@@ -671,6 +677,11 @@ private:
 	void updateCommandShortcuts();
 
 	HBITMAP generateSolidColourMenuItemIcon(COLORREF colour);
+
+	// per-monitor DPI awareness: colour samples of the main menu items by (size, colour), shared with the context menus
+	std::map<std::pair<int, COLORREF>, HBITMAP> _mainMenuColourBitmaps;
+	HBITMAP getMainMenuColourBitmap(COLORREF colour);
+	void setMinPanelSizesForDpi(UINT dpi);
 
 	void clearChangesHistory(int iView);
 	void changedHistoryGoTo(int idGoTo);

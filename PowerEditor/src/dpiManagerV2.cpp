@@ -100,6 +100,8 @@ static fnIsValidDpiAwarenessContext _fnIsValidDpiAwarenessContext = DummyIsValid
 static fnSetThreadDpiAwarenessContext _fnSetThreadDpiAwarenessContext = DummySetThreadDpiAwarenessContext;
 static fnAdjustWindowRectExForDpi _fnAdjustWindowRectExForDpi = DummyAdjustWindowRectExForDpi;
 
+static bool _isPerMonitorV2Active = false;
+
 void DPIManagerV2::initDpiAPI()
 {
 	if (NppDarkMode::isWindows10())
@@ -124,6 +126,15 @@ int DPIManagerV2::getSystemMetricsForDpi(int nIndex, UINT dpi)
 	return _fnGetSystemMetricsForDpi(nIndex, dpi);
 }
 
+int DPIManagerV2::getSystemMetricsForWindow(int nIndex, HWND hWnd)
+{
+	if (_isPerMonitorV2Active) // Windows 10 1703+: GetSystemMetricsForDpi() is available
+	{
+		return _fnGetSystemMetricsForDpi(nIndex, DPIManagerV2::getDpiForWindow(hWnd));
+	}
+	return ::GetSystemMetrics(nIndex);
+}
+
 bool DPIManagerV2::isValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT value)
 {
 	return _fnIsValidDpiAwarenessContext(value) == TRUE;
@@ -136,6 +147,20 @@ DPI_AWARENESS_CONTEXT DPIManagerV2::setThreadDpiAwarenessContext(DPI_AWARENESS_C
 		return _fnSetThreadDpiAwarenessContext(dpiContext);
 	}
 	return nullptr;
+}
+
+bool DPIManagerV2::enablePerMonitorV2ForThread()
+{
+	if (DPIManagerV2::setThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) != nullptr)
+	{
+		_isPerMonitorV2Active = true;
+	}
+	return _isPerMonitorV2Active;
+}
+
+bool DPIManagerV2::isPerMonitorV2Active()
+{
+	return _isPerMonitorV2Active;
 }
 
 bool DPIManagerV2::adjustWindowRectExForDpi(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi)
@@ -222,6 +247,32 @@ LOGFONT DPIManagerV2::getDefaultGUIFontForDpi(UINT dpi, FontType type)
 	}
 
 	return lf;
+}
+
+LOGFONT DPIManagerV2::getIconTitleFontForDpi(UINT dpi)
+{
+	LOGFONT lf{};
+	if (_fnSystemParametersInfoForDpi(SPI_GETICONTITLELOGFONT, sizeof(LOGFONT), &lf, 0, dpi) == TRUE)
+	{
+		return lf;
+	}
+	return getDefaultGUIFontForDpi(dpi); // should not happen, fallback
+}
+
+void DPIManagerV2::replaceWindowFont(HWND hWnd, const LOGFONT& lf, HFONT& hFont)
+{
+	HFONT hNewFont = ::CreateFontIndirect(&lf);
+	if (hNewFont == nullptr)
+	{
+		return;
+	}
+
+	::SendMessage(hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(hNewFont), TRUE);
+	if (hFont != nullptr)
+	{
+		::DeleteObject(hFont);
+	}
+	hFont = hNewFont;
 }
 
 void DPIManagerV2::loadIcon(HINSTANCE hinst, const wchar_t* pszName, int cx, int cy, HICON* phico, UINT fuLoad)

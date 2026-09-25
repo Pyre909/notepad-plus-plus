@@ -377,6 +377,9 @@ private :
     int _yScrollPos = 0;
     int _prevHightVal = 0;
 
+	// per-monitor DPI awareness: layout of the dialog and of its tabs for the DPI it was created with
+	DialogDpiLayout _dpiLayout;
+
 	using Window::init;
 
     void getActualPosSize() {
@@ -386,6 +389,7 @@ private :
     }
     void restorePosSize(){ reSizeTo(_dlgPos); }
     void enableLangAndControlsBy(size_t index);
+	void updateDockedDpi();
 protected :
     void setKeywords2List(int) override {}
     void updateDlg() override;

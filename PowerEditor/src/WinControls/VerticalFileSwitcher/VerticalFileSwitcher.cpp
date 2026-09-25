@@ -21,8 +21,13 @@
 #include "Parameters.h"
 #include "resource.h"
 #include "localization.h"
+#include "ImageListSet.h"
+#include "DocTabView.h"
 
 #include <commctrl.h>
+
+#include <iterator>
+#include <stdexcept>
 
 #include "NppConstants.h"
 
@@ -283,7 +288,16 @@ intptr_t CALLBACK VerticalFileSwitcher::run_dlgProc(UINT message, WPARAM wParam,
 		{
 			VerticalFileSwitcher::initPopupMenus();
 
+			StaticDialog::setDpi();
+
 			_fileListView.init(_hInst, _hSelf, _hImaLst);
+
+			// the default font of the list view is for the system DPI
+			if (DPIManagerV2::isPerMonitorV2Active() && (_dpiManager.getDpi() != DPIManagerV2::getDpiForSystem()))
+			{
+				_fileListView.rescaleForDpi(_dpiManager.getDpi(), getFileStateIconsForDpi(_dpiManager.getDpi()));
+			}
+
 			_fileListView.initList();
 			_fileListView.display();
 
@@ -462,11 +476,12 @@ intptr_t CALLBACK VerticalFileSwitcher::run_dlgProc(UINT message, WPARAM wParam,
 					hdi.cchTextMax = MAX_PATH;
 					Header_GetItem(hwndHD, test->iItem, &hdi);
 
-					// storing column width data
+					// storing column width data (for 96 DPI with the per-monitor DPI awareness: the DPI of the panel can change)
+					const int width = DPIManagerV2::isPerMonitorV2Active() ? DPIManagerV2::unscale(hdi.cxy, _hSelf) : hdi.cxy;
 					if (hdi.pszText == pNativeSpeaker->getAttrNameStr(L"Ext.", FS_ROOTNODE, FS_CLMNEXT))
-						nppParams.getNppGUI()._fileSwitcherExtWidth = hdi.cxy;
+						nppParams.getNppGUI()._fileSwitcherExtWidth = width;
 					else if (hdi.pszText == pNativeSpeaker->getAttrNameStr(L"Path", FS_ROOTNODE, FS_CLMNPATH))
-						nppParams.getNppGUI()._fileSwitcherPathWidth = hdi.cxy;
+						nppParams.getNppGUI()._fileSwitcherPathWidth = width;
 
 					return TRUE;
 				}
@@ -502,6 +517,8 @@ intptr_t CALLBACK VerticalFileSwitcher::run_dlgProc(UINT message, WPARAM wParam,
 
         case WM_SIZE:
         {
+			checkDpiChange();
+
 			int width = LOWORD(lParam);
             int height = HIWORD(lParam);
 			::MoveWindow(_fileListView.getHSelf(), 0, 0, width, height, TRUE);
@@ -531,6 +548,12 @@ intptr_t CALLBACK VerticalFileSwitcher::run_dlgProc(UINT message, WPARAM wParam,
         {
 			_fileListView.destroy();
 			::DestroyMenu(_hGlobalMenu);
+
+			if (_hImaLstDpi != nullptr)
+			{
+				::ImageList_Destroy(_hImaLstDpi);
+				_hImaLstDpi = nullptr;
+			}
             break;
         }
 
@@ -690,5 +713,71 @@ void VerticalFileSwitcher::updateHeaderArrow()
 	{
 		lvc.fmt = lvc.fmt & (~HDF_SORTUP) & (~HDF_SORTDOWN);
 		SendMessage(hListView, LVM_SETCOLUMN, _lastSortingColumn, reinterpret_cast<LPARAM>(&lvc));
+	}
+}
+
+void VerticalFileSwitcher::updateFileStateIconsForDpi()
+{
+	// a docked panel gets the DPI of the main window with WM_DPICHANGED_AFTERPARENT
+	if ((_hSelf != nullptr) && _isFloating)
+		onDpiChanged(_dpiManager.getDpi());
+}
+
+void VerticalFileSwitcher::onDpiChanged(UINT /*prevDpi*/)
+{
+	const UINT dpi = _dpiManager.getDpi();
+
+	HIMAGELIST hImaLstOld = _hImaLstDpi;
+	_fileListView.rescaleForDpi(dpi, getFileStateIconsForDpi(dpi));
+	if ((hImaLstOld != nullptr) && (hImaLstOld != _hImaLstDpi))
+	{
+		::ImageList_Destroy(hImaLstOld); // no longer used by the list
+	}
+
+	// the column widths are stored for 96 DPI (the relayout of the panel will do it again with its new size)
+	RECT rc{};
+	getClientRect(rc);
+	_fileListView.resizeColumns(rc.right - rc.left);
+}
+
+// the tab bar's file state icons if they have the size for dpi, otherwise own icons of the same set
+HIMAGELIST VerticalFileSwitcher::getFileStateIconsForDpi(UINT dpi)
+{
+	const int iconSize = DPIManagerV2::scale(g_TabIconSize, dpi);
+
+	int cx = 0;
+	int cy = 0;
+	if ((_hImaLst != nullptr) && (::ImageList_GetIconSize(_hImaLst, &cx, &cy) == TRUE) && (cx == iconSize))
+	{
+		return _hImaLst;
+	}
+
+	if (_hImaLstDpi != nullptr && (::ImageList_GetIconSize(_hImaLstDpi, &cx, &cy) == TRUE) && (cx == iconSize))
+	{
+		return _hImaLstDpi;
+	}
+
+	const int* iconIDs = docTabIconIDs;
+	int nbIcons = static_cast<int>(std::size(docTabIconIDs));
+	if (_tabIconSet == 1)
+	{
+		iconIDs = docTabIconIDs_alt;
+		nbIcons = static_cast<int>(std::size(docTabIconIDs_alt));
+	}
+	else if (_tabIconSet == 2)
+	{
+		iconIDs = docTabIconIDs_darkMode;
+		nbIcons = static_cast<int>(std::size(docTabIconIDs_darkMode));
+	}
+
+	try {
+		IconList iconList{}; // doesn't own its image list
+		iconList.create(iconSize, _hInst, iconIDs, nbIcons);
+		_hImaLstDpi = iconList.getHandle();
+		return _hImaLstDpi;
+	}
+	catch (const std::runtime_error&)
+	{
+		return nullptr; // keeps the current icons
 	}
 }

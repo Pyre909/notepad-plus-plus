@@ -585,10 +585,14 @@ private :
 
 	std::vector<MatchPosition> _matches;
 
+	// per-monitor DPI awareness: layout of the dialog (in the rebar of the main window) for the DPI it was created with
+	DialogDpiLayout _dpiLayout;
+
 	using Window::init;
 
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	void markSelectedTextInc(bool enable, FindOption *opt = NULL);
+	void rescaleForDpi();
 };
 
 

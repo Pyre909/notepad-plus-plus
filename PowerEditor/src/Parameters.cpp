@@ -6968,7 +6968,8 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		}
 		// <GUIConfig name="MISC" fileSwitcherWithoutExtColumn="no" fileSwitcherExtWidth="50" fileSwitcherWithoutPathColumn="no" fileSwitcherPathWidth="50"
 		// fileSwitcherNoGroups="no" backSlashIsEscapeCharacterForSql="yes" writeTechnologyEngine="1" isFolderDroppedOpenFiles="no" docPeekOnTab="no"
-		// docPeekOnMap="no" sortFunctionList="no" saveDlgExtFilterToAllTypes="no" muteSounds="no" enableFoldCmdToggable="no" hideMenuRightShortcuts="no"  networkPathWarningMethod=0/>
+		// docPeekOnMap="no" sortFunctionList="no" saveDlgExtFilterToAllTypes="no" muteSounds="no" enableFoldCmdToggable="no" hideMenuRightShortcuts="no"  networkPathWarningMethod=0
+		// isFawSymlinkAllowed="no" perMonitorDpiAwareness="no" />
 		else if (std::strcmp(nm, "MISC") == 0)
 		{
 			_nppGUI._fileSwitcherWithoutExtColumn = getBoolAttribute(childNode, "fileSwitcherWithoutExtColumn");
@@ -7000,6 +7001,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			// the value of _networkPathAlwaysAction will be overrided if the value exists in serverWhiteList
 
 			_nppGUI._isFawSymlinkAllowed = getBoolAttribute(childNode, "isFawSymlinkAllowed", _nppGUI._isFawSymlinkAllowed);
+			_nppGUI._perMonitorDpiAwareness = getBoolAttribute(childNode, "perMonitorDpiAwareness", _nppGUI._perMonitorDpiAwareness);
 		}
 		// <GUIConfig name="DarkMode" enable="no" colorTone="0" customColorTop="2105376" customColorMenuHotTrack="4539717" customColorActive="3684408"
 		// customColorMain="2105376" customColorError="176" customColorText="14737632" customColorDarkText="12632256" customColorDisabledText="8421504"
@@ -7407,19 +7409,10 @@ void NppParameters::feedDockingManager(const NppXml::Element& element)
 			int w = NppXml::intAttribute(childNode, "width", FWI_PANEL_WH_DEFAULT);
 			int h = NppXml::intAttribute(childNode, "height", FWI_PANEL_WH_DEFAULT);
 
-			if (!isWindowVisibleOnAnyMonitor(RECT{ x,y,w,h }))
-			{
-				// reset to adjusted factory defaults
-				// (and the panel will automatically be on the current primary monitor due to the x,y == 0,0)
-				x = 0;
-				y = 0;
-				w = _nppGUI._dockingData._minFloatingPanelSize.cx;
-				h = _nppGUI._dockingData._minFloatingPanelSize.cy + FWI_PANEL_WH_DEFAULT;
-			}
-
 			_nppGUI._dockingData._floatingWindowInfo.emplace_back(cont, x, y, w, h);
 		}
 	}
+	validateFloatingWindowsPositions();
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(element, "PluginDlg");
 		childNode;
@@ -7447,6 +7440,24 @@ void NppParameters::feedDockingManager(const NppXml::Element& element)
 		{
 			const int activeTab = NppXml::intAttribute(childNode, "activeTab", 0);
 			_nppGUI._dockingData._containerTabInfo.emplace_back(cont, activeTab);
+		}
+	}
+}
+
+// in the coordinates of the current DPI awareness: at load (system DPI aware), again after a switch to the per-monitor one
+void NppParameters::validateFloatingWindowsPositions()
+{
+	for (FloatingWindowInfo& fwi : _nppGUI._dockingData._floatingWindowInfo)
+	{
+		if (isWindowVisibleOnAnyMonitor(fwi._posFromConfig))
+		{
+			fwi._pos = fwi._posFromConfig;
+		}
+		else
+		{
+			// reset to adjusted factory defaults
+			// (and the panel will automatically be on the current primary monitor due to the x,y == 0,0)
+			fwi._pos = RECT{ 0, 0, _nppGUI._dockingData._minFloatingPanelSize.cx, _nppGUI._dockingData._minFloatingPanelSize.cy + FWI_PANEL_WH_DEFAULT };
 		}
 	}
 }
@@ -8098,7 +8109,8 @@ void NppParameters::createXmlTreeFromGUIParams()
 
 	// <GUIConfig name="MISC" fileSwitcherWithoutExtColumn="no" fileSwitcherExtWidth="50" fileSwitcherWithoutPathColumn="no" fileSwitcherPathWidth="50"
 	// fileSwitcherNoGroups="no" backSlashIsEscapeCharacterForSql="yes" writeTechnologyEngine="1" isFolderDroppedOpenFiles="no" docPeekOnTab="no"
-	// docPeekOnMap="no" sortFunctionList="no" saveDlgExtFilterToAllTypes="no" muteSounds="no" enableFoldCmdToggable="no" hideMenuRightShortcuts="no" />
+	// docPeekOnMap="no" sortFunctionList="no" saveDlgExtFilterToAllTypes="no" muteSounds="no" enableFoldCmdToggable="no" hideMenuRightShortcuts="no"
+	// isFawSymlinkAllowed="no" perMonitorDpiAwareness="no" />
 	{
 		NppXml::Element GUIConfigElement = NppXml::createChildElement(newGUIRoot, "GUIConfig");
 		NppXml::setAttribute(GUIConfigElement, "name", "MISC");
@@ -8119,6 +8131,7 @@ void NppParameters::createXmlTreeFromGUIParams()
 		setBoolAttribute(GUIConfigElement, "enableFoldCmdToggable", _nppGUI._enableFoldCmdToggable);
 		setBoolAttribute(GUIConfigElement, "hideMenuRightShortcuts", _nppGUI._hideMenuRightShortcuts);
 		setBoolAttribute(GUIConfigElement, "isFawSymlinkAllowed", _nppGUI._isFawSymlinkAllowed);
+		setBoolAttribute(GUIConfigElement, "perMonitorDpiAwareness", _nppGUI._perMonitorDpiAwareness);
 	}
 
 	// <GUIConfig name="Searching" monospacedFontFindDlg="no" fillFindFieldWithSelected="yes" fillFindFieldSelectCaret="yes"

@@ -135,6 +135,12 @@ void DockingManager::init(HINSTANCE hInst, HWND hWnd, Window ** ppWin)
 
 	setClientWnd(ppWin);
 
+	// the window can be created on a monitor whose DPI isn't the system DPI
+	if (DPIManagerV2::isPerMonitorV2Active())
+	{
+		rescaleForDpi(DPIManagerV2::getDpiForWindow(_hParent), 0);
+	}
+
 	// create docking container
 	for (int iCont = 0; iCont < DOCKCONT_MAX; ++iCont)
 	{
@@ -309,7 +315,7 @@ LRESULT DockingManager::runProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 							nppGUI._dockingData._minDockedPanelVisibility = currentPanelHeight;
 							nppGUI._dockingData._minFloatingPanelSize.cy = currentPanelHeight;
 							nppGUI._dockingData._minFloatingPanelSize.cx = std::max(static_cast<int>(nppGUI._dockingData._minFloatingPanelSize.cy * 6),
-								::GetSystemMetrics(SM_CXMINTRACK));
+								DPIManagerV2::getSystemMetricsForWindow(SM_CXMINTRACK, _hParent));
 						}
 					}
 
@@ -321,7 +327,7 @@ LRESULT DockingManager::runProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 							{
 								_dockData.rcRegion[iCont].bottom = nppGUI._dockingData._minDockedPanelVisibility;
 							}
-							if ((_rcWork.bottom < (-SPLITTER_WIDTH)) && (offset < 0))
+							if ((_rcWork.bottom < (-_splitterWidth)) && (offset < 0))
 							{
 								_dockData.rcRegion[iCont].bottom += offset;
 							}
@@ -332,7 +338,7 @@ LRESULT DockingManager::runProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 							{
 								_dockData.rcRegion[iCont].bottom   = nppGUI._dockingData._minDockedPanelVisibility;
 							}
-							if ((_rcWork.bottom < (-SPLITTER_WIDTH)) && (offset > 0))
+							if ((_rcWork.bottom < (-_splitterWidth)) && (offset > 0))
 							{
 								_dockData.rcRegion[iCont].bottom -= offset;
 							}
@@ -343,7 +349,7 @@ LRESULT DockingManager::runProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 							{
 								_dockData.rcRegion[iCont].right = nppGUI._dockingData._minDockedPanelVisibility;
 							}
-							if ((_rcWork.right < SPLITTER_WIDTH) && (offset < 0))
+							if ((_rcWork.right < _splitterWidth) && (offset < 0))
 							{
 								_dockData.rcRegion[iCont].right += offset;
 							}
@@ -354,7 +360,7 @@ LRESULT DockingManager::runProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 							{
 								_dockData.rcRegion[iCont].right = nppGUI._dockingData._minDockedPanelVisibility;
 							}
-							if ((_rcWork.right < SPLITTER_WIDTH) && (offset > 0))
+							if ((_rcWork.right < _splitterWidth) && (offset > 0))
 							{
 								_dockData.rcRegion[iCont].right -= offset;
 							}
@@ -421,14 +427,14 @@ void DockingManager::reSizeTo(RECT & rc)
 
 	if (_vContainer[CONT_TOP]->isVisible())
 	{
-		_rcWork.top		+= _dockData.rcRegion[CONT_TOP].bottom + SPLITTER_WIDTH;
-		_rcWork.bottom	-= _dockData.rcRegion[CONT_TOP].bottom + SPLITTER_WIDTH;
+		_rcWork.top		+= _dockData.rcRegion[CONT_TOP].bottom + _splitterWidth;
+		_rcWork.bottom	-= _dockData.rcRegion[CONT_TOP].bottom + _splitterWidth;
 
 		// set size of splitter
 		RECT rcSplitter = {_dockData.rcRegion[CONT_TOP].left  ,
 					  _dockData.rcRegion[CONT_TOP].top + _dockData.rcRegion[CONT_TOP].bottom,
 					  _dockData.rcRegion[CONT_TOP].right ,
-					  SPLITTER_WIDTH};
+					  _splitterWidth};
 		_vSplitter[CONT_TOP]->reSizeTo(rcSplitter);
 	}
 
@@ -444,25 +450,25 @@ void DockingManager::reSizeTo(RECT & rc)
 
 	if (_vContainer[CONT_BOTTOM]->isVisible())
 	{
-		_rcWork.bottom	-= _dockData.rcRegion[CONT_BOTTOM].bottom + SPLITTER_WIDTH;
+		_rcWork.bottom	-= _dockData.rcRegion[CONT_BOTTOM].bottom + _splitterWidth;
 
 		// correct the visibility of bottom container when height is NULL
 		if (_rcWork.bottom < rc.top)
 		{
-			rcBottom.top     = _rcWork.top + rc.top + SPLITTER_WIDTH;
+			rcBottom.top     = _rcWork.top + rc.top + _splitterWidth;
 			rcBottom.bottom += _rcWork.bottom - rc.top;
 			_rcWork.bottom = rc.top;
 		}
-		if ((rcBottom.bottom + SPLITTER_WIDTH) < 0)
+		if ((rcBottom.bottom + _splitterWidth) < 0)
 		{
 			_rcWork.bottom = rc.bottom - _dockData.rcRegion[CONT_TOP].bottom;
 		}
 
 		// set size of splitter
 		RECT rcSplitter = {rcBottom.left,
-					  rcBottom.top - SPLITTER_WIDTH,
+					  rcBottom.top - _splitterWidth,
 					  rcBottom.right,
-					  SPLITTER_WIDTH};
+					  _splitterWidth};
 		_vSplitter[CONT_BOTTOM]->reSizeTo(rcSplitter);
 	}
 
@@ -475,13 +481,13 @@ void DockingManager::reSizeTo(RECT & rc)
 
 	if (_vContainer[CONT_LEFT]->isVisible())
 	{
-		_rcWork.left		+= _dockData.rcRegion[CONT_LEFT].right + SPLITTER_WIDTH;
-		_rcWork.right	-= _dockData.rcRegion[CONT_LEFT].right + SPLITTER_WIDTH;
+		_rcWork.left		+= _dockData.rcRegion[CONT_LEFT].right + _splitterWidth;
+		_rcWork.right	-= _dockData.rcRegion[CONT_LEFT].right + _splitterWidth;
 
 		// set size of splitter
 		RECT rcSplitter = {_dockData.rcRegion[CONT_LEFT].right,
 					  _dockData.rcRegion[CONT_LEFT].top,
-					  SPLITTER_WIDTH,
+					  _splitterWidth,
 					  _dockData.rcRegion[CONT_LEFT].bottom};
 		_vSplitter[CONT_LEFT]->reSizeTo(rcSplitter);
 	}
@@ -497,20 +503,20 @@ void DockingManager::reSizeTo(RECT & rc)
 	_vSplitter[CONT_RIGHT]->display(false);
 	if (_vContainer[CONT_RIGHT]->isVisible())
 	{
-		_rcWork.right	-= _dockData.rcRegion[CONT_RIGHT].right + SPLITTER_WIDTH;
+		_rcWork.right	-= _dockData.rcRegion[CONT_RIGHT].right + _splitterWidth;
 
 		// correct the visibility of right container when width is NULL
-		if (_rcWork.right < 15)
+		if (_rcWork.right < _minWorkWidth)
 		{
-			rcRight.left    = _rcWork.left + 15 + SPLITTER_WIDTH;
-			rcRight.right  += _rcWork.right - 15;
-			_rcWork.right	= 15;
+			rcRight.left    = _rcWork.left + _minWorkWidth + _splitterWidth;
+			rcRight.right  += _rcWork.right - _minWorkWidth;
+			_rcWork.right	= _minWorkWidth;
 		}
 
 		// set size of splitter
-		RECT rcSplitter = {rcRight.left - SPLITTER_WIDTH,
+		RECT rcSplitter = {rcRight.left - _splitterWidth,
 					  rcRight.top,
-					  SPLITTER_WIDTH,
+					  _splitterWidth,
 					  rcRight.bottom};
 		_vSplitter[CONT_RIGHT]->reSizeTo(rcSplitter);
 	}
@@ -655,7 +661,7 @@ void DockingManager::createDockableDlg(DockedWidgetData data, int iCont, bool is
 				// initialize and map container id
 				pCont->init(_hInst, _hSelf);
 				pCont->doDialog(false, true);
-				pCont->reSizeToWH(data.rcFloat);
+				pCont->setFloatingRect(data.rcFloat);
 				_iContMap[data.iPrevCont] = static_cast<int32_t>(_vContainer.size()) - 1;
 			}
 			data.iPrevCont = _iContMap[data.iPrevCont];
@@ -743,6 +749,33 @@ void DockingManager::setDockedContSize(int iCont, int iSize)
 	else
 		return;
 	resize();
+}
+
+void DockingManager::rescaleForDpi(UINT dpi, UINT prevDpi)
+{
+	_splitterWidth = DPIManagerV2::scaleFromSystemDpi(SPLITTER_WIDTH, dpi);
+	_minWorkWidth = DPIManagerV2::scaleFromSystemDpi(WORK_MIN_WIDTH, dpi);
+
+	if ((prevDpi != 0) && (prevDpi != dpi))
+	{
+		rescaleDockedSize(CONT_LEFT, _dockData.rcRegion[CONT_LEFT].right, dpi, prevDpi);
+		rescaleDockedSize(CONT_RIGHT, _dockData.rcRegion[CONT_RIGHT].right, dpi, prevDpi);
+		rescaleDockedSize(CONT_TOP, _dockData.rcRegion[CONT_TOP].bottom, dpi, prevDpi);
+		rescaleDockedSize(CONT_BOTTOM, _dockData.rcRegion[CONT_BOTTOM].bottom, dpi, prevDpi);
+	}
+}
+
+void DockingManager::rescaleDockedSize(int iCont, LONG& size, UINT dpi, UINT prevDpi)
+{
+	DpiSizeRef& ref = _dockedSizeRef[iCont];
+	if ((ref._dpi == 0) || (size != ref._scaled))
+	{
+		// first DPI change, or the size has changed since the last one (user, layout): it's the new reference
+		ref._size = size;
+		ref._dpi = prevDpi;
+	}
+	size = DPIManagerV2::scale(static_cast<int>(ref._size), dpi, ref._dpi);
+	ref._scaled = size;
 }
 
 int DockingManager::getDockedContSize(int iCont)

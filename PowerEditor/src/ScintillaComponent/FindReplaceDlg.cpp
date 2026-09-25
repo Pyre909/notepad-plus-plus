@@ -6328,6 +6328,10 @@ void FindIncrementDlg::init(HINSTANCE hInst, HWND hPere, FindReplaceDlg *pFRDlg,
 	_pFRDlg = pFRDlg;
 	create(IDD_INCREMENT_FIND, isRTL);
 	_isRTL = isRTL;
+
+	// layout of the dialog for its DPI, to follow the DPI changes of the main window
+	if (DPIManagerV2::isPerMonitorV2Active())
+		_dpiLayout.save(_hSelf, _dpiManager.getDpi());
 }
 
 void FindIncrementDlg::destroy()
@@ -6406,6 +6410,21 @@ intptr_t CALLBACK FindIncrementDlg::run_dlgProc(UINT message, WPARAM wParam, LPA
 		case NPPM_INTERNAL_REFRESHDARKMODE:
 		{
 			NppDarkMode::autoThemeChildControls(getHSelf());
+			return TRUE;
+		}
+
+		case WM_DPICHANGED_AFTERPARENT:
+		{
+			// the DPI of the main window has changed
+			const UINT prevDpi = _dpiManager.getDpi();
+			setDpi();
+			if (!_dpiLayout.isSaved())
+				break;
+
+			if (_dpiManager.getDpi() != prevDpi)
+			{
+				rescaleForDpi();
+			}
 			return TRUE;
 		}
 
@@ -6689,6 +6708,26 @@ void FindIncrementDlg::addToRebar(ReBar * rebar)
 	_pRebar->setGrayBackground(_rbBand.wID);
 }
 
+void FindIncrementDlg::rescaleForDpi()
+{
+	// the controls and their font
+	_dpiLayout.apply(_dpiManager.getDpi());
+
+	// the height of the rebar band is the height of the dialog (RBN_HEIGHTCHANGE relayouts the main window)
+	if (_pRebar)
+	{
+		const SIZE szDlg = _dpiLayout.getClientSize(_hSelf);
+		_rbBand.cyMinChild = _rbBand.cyMaxChild = static_cast<UINT>(szDlg.cy);
+		_rbBand.cxIdeal = _rbBand.cx = static_cast<UINT>(szDlg.cx);
+
+		REBARBANDINFO rbBand = _rbBand;
+		rbBand.fMask = RBBIM_CHILDSIZE | RBBIM_SIZE; // not RBBIM_STYLE: the band is shown or hidden
+		_pRebar->reNew(_rbBand.wID, &rbBand);
+	}
+
+	::RedrawWindow(_hSelf, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+}
+
 const wchar_t Progress::cClassName[] = L"NppProgressClass";
 const wchar_t Progress::cDefaultHeader[] = L"Operation progress...";
 const int Progress::cBackgroundColor = COLOR_3DFACE;
@@ -6835,6 +6874,10 @@ DWORD WINAPI Progress::threadFunc(LPVOID data)
 
 int Progress::thread()
 {
+	// the window is scaled for the DPI of the caller window: like the GUI thread, otherwise it would be scaled twice
+	if (DPIManagerV2::isPerMonitorV2Active())
+		DPIManagerV2::setThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
 	BOOL r = createProgressWindow();
 	::SetEvent(_hActiveState);
 	if (r)

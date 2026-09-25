@@ -89,6 +89,7 @@ struct Position
 	intptr_t _xOffset = 0;
 	intptr_t _selMode = 0;
 	intptr_t _scrollWidth = 1;
+	UINT _scrollDpi = 0; // DPI of _scrollWidth & _xOffset (0: the one of the view)
 	intptr_t _offset = 0;
 	intptr_t _wrapCount = 0;
 };
@@ -263,6 +264,7 @@ struct FloatingWindowInfo
 {
 	int _cont = 0;
 	RECT _pos = { 0, 0, FWI_PANEL_WH_DEFAULT, FWI_PANEL_WH_DEFAULT };
+	RECT _posFromConfig = _pos; // _pos as read from config.xml, before its validation (to validate it again after a DPI awareness change)
 
 	explicit FloatingWindowInfo(int cont, int x, int y, int w, int h) noexcept
 		: _cont(cont), _pos{ x, y, w, h }
@@ -793,6 +795,7 @@ struct NppGUI final
 	bool _muteSounds = false;
 	bool _enableFoldCmdToggable = false;
 	bool _hideMenuRightShortcuts = false;
+	bool _perMonitorDpiAwareness = false; // experimental opt-in per-monitor v2 DPI awareness, applied at startup
 	writeTechnologyEngine _writeTechnologyEngine = directWriteTechnology;
 	bool _isWordCharDefault = true;
 	std::string _customWordChars;
@@ -1409,6 +1412,7 @@ public:
 	bool reloadLang();
 	bool reloadStylers(const wchar_t *stylePath = nullptr);
 	void destroyInstance();
+	void validateFloatingWindowsPositions(); // validates the floating panels positions of config.xml again (after a DPI awareness change)
 	std::wstring getSettingsFolder() const;
 
 	bool _isTaskListRBUTTONUP_Active = false;

@@ -1295,7 +1295,7 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 						{
 							tipTmp += L"\r";
 							tipTmp += tabCreatedTime;
-							SendMessage(lpttt->hdr.hwndFrom, TTM_SETMAXTIPWIDTH, 0, 200);
+							SendMessage(lpttt->hdr.hwndFrom, TTM_SETMAXTIPWIDTH, 0, DPIManagerV2::scaleFromSystemDpiForWindow(200, hWin));
 						}
 					}
 					else

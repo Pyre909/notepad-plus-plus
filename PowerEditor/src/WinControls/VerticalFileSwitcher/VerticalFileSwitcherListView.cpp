@@ -89,7 +89,13 @@ void VerticalFileSwitcherListView::destroy()
 	}
 	::DestroyWindow(_hSelf);
 	_hSelf = NULL;
-} 
+
+	if (_hFontDpi != nullptr)
+	{
+		::DeleteObject(_hFontDpi);
+		_hFontDpi = nullptr;
+	}
+}
 
 void VerticalFileSwitcherListView::initList()
 {
@@ -468,10 +474,24 @@ void VerticalFileSwitcherListView::resizeColumns(int totalWidth)
 	const auto style = ::GetWindowLongPtr(_hSelf, GWL_STYLE);
 	if ((style & WS_VSCROLL) == WS_VSCROLL)
 	{
-		totalColWidthDynExceptName += ::GetSystemMetrics(SM_CXVSCROLL);
+		totalColWidthDynExceptName += DPIManagerV2::getSystemMetricsForWindow(SM_CXVSCROLL, _hParent);
 	}
 
 	ListView_SetColumnWidth(_hSelf, 0, totalWidth - totalColWidthDynExceptName);
+}
+
+void VerticalFileSwitcherListView::rescaleForDpi(UINT dpi, HIMAGELIST hImaLst)
+{
+	// the list view sizes its header, its groups and its rows with its font
+	DPIManagerV2::replaceWindowFont(_hSelf, DPIManagerV2::getIconTitleFontForDpi(dpi), _hFontDpi);
+
+	if (hImaLst != nullptr)
+	{
+		_hImaLst = hImaLst;
+		ListView_SetImageList(_hSelf, _hImaLst, LVSIL_SMALL); // the height of the rows follows the icons
+	}
+
+	redraw(true);
 }
 
 std::vector<BufferViewInfo> VerticalFileSwitcherListView::getSelectedFiles(bool reverse) const

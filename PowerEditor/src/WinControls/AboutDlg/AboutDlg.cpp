@@ -732,24 +732,43 @@ void CmdLineArgsDlg::doDialog()
 
 	::SetDlgItemText(_hSelf, IDC_COMMANDLINEARGS_EDIT, COMMAND_ARG_HELP);
 
+	setEditFont();
+
+	moveForDpiChange();
+	goToCenter(SWP_SHOWWINDOW | SWP_NOSIZE);
+}
+
+void CmdLineArgsDlg::setEditFont()
+{
 	// Create DPI-aware monospace font
-	NONCLIENTMETRICS ncm{};
-	ncm.cbSize = sizeof(NONCLIENTMETRICS);
-	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
+	LONG fontHeight = 0;
+	if (_dpiManager.getDpi() == DPIManagerV2::getDpiForSystem())
+	{
+		NONCLIENTMETRICS ncm{};
+		ncm.cbSize = sizeof(NONCLIENTMETRICS);
+		SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
+		fontHeight = ncm.lfMessageFont.lfHeight;
+	}
+	else // another DPI (per-monitor DPI awareness)
+	{
+		fontHeight = _dpiManager.getDefaultGUIFontForDpi().lfHeight;
+	}
 
 	// Use the system font height but change to monospace
-	hCmdLineEditFont = CreateFont(
-		ncm.lfMessageFont.lfHeight,  // DPI-aware height from system
+	HFONT hNewFont = CreateFont(
+		fontHeight,  // DPI-aware height from system
 		0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
 		DEFAULT_QUALITY, FIXED_PITCH | FF_MODERN,
 		L"Lucida Console");
 
-	if (hCmdLineEditFont)
-		SendDlgItemMessage(_hSelf, IDC_COMMANDLINEARGS_EDIT, WM_SETFONT, (WPARAM)hCmdLineEditFont, TRUE);
-
-	moveForDpiChange();
-	goToCenter(SWP_SHOWWINDOW | SWP_NOSIZE);
+	if (hNewFont)
+	{
+		SendDlgItemMessage(_hSelf, IDC_COMMANDLINEARGS_EDIT, WM_SETFONT, reinterpret_cast<WPARAM>(hNewFont), TRUE);
+		if (hCmdLineEditFont)
+			DeleteObject(hCmdLineEditFont);
+		hCmdLineEditFont = hNewFont;
+	}
 }
 
 intptr_t CALLBACK CmdLineArgsDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
@@ -786,6 +805,7 @@ intptr_t CALLBACK CmdLineArgsDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 		case WM_DPICHANGED:
 		{
 			_dpiManager.setDpiWP(wParam);
+			setEditFont();
 			setPositionDpi(lParam);
 			getWindowRect(_rc);
 

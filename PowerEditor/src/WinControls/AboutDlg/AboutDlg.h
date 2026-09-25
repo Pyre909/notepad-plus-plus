@@ -103,6 +103,9 @@ public:
 protected:
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 
+	// monospace font of the arguments edit, for the DPI of the dialog
+	void setEditFont();
+
 	HFONT hCmdLineEditFont = nullptr;
 };
 
