@@ -16,8 +16,10 @@
 #include <climits>
 
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <vector>
+#include <initializer_list>
 #include <map>
 #include <optional>
 #include <algorithm>
@@ -56,7 +58,7 @@
 using namespace Scintilla;
 using namespace Scintilla::Internal;
 
-// All file hidden in unnamed namespace except for FontGDI_Allocate and SurfaceGDI_Allocate
+// All file hidden in unnamed namespace except for FontGDI_Allocate and SurfaceGDI_Allocate (and N++ GDI font functions)
 namespace {
 
 constexpr Supports SupportsGDI[] = {
@@ -91,6 +93,71 @@ void SetLogFont(LOGFONTW &lf, const char *faceName, CharacterSet characterSet, X
 	UTF16FromUTF8(faceName, lf.lfFaceName, LF_FACESIZE);
 }
 
+// N++: the fonts of a GDI family, by their weight as GDI knows them
+struct GdiFamilyMember {
+	LONG weight;
+	bool italic;
+};
+
+int CALLBACK FamilyMembersProc(const LOGFONTW *plf, const TEXTMETRICW *, DWORD, LPARAM lParam) {
+	try {
+		std::vector<GdiFamilyMember> &members = *reinterpret_cast<std::vector<GdiFamilyMember> *>(lParam);
+		if (plf->lfWeight > 0) {
+			members.push_back({ plf->lfWeight, plf->lfItalic != 0 });
+		}
+		return TRUE;
+	} catch (...) {
+		return FALSE;	// no exception may unwind through GDI
+	}
+}
+
+// The fonts of a GDI family, kept for the session as font lists and so the family names used are known at startup
+const std::vector<GdiFamilyMember> &FamilyMembers(const wchar_t *faceName) {
+	static const std::vector<GdiFamilyMember> none;
+	static std::mutex familiesMutex;
+	static std::map<std::wstring, std::vector<GdiFamilyMember>, std::less<>> families;
+	// lfFaceName has no terminator when SetLogFont converted a name of LF_FACESIZE characters
+	const std::wstring_view face(faceName, ::wcsnlen(faceName, LF_FACESIZE));
+	if (face.empty() || (face.length() >= LF_FACESIZE)) {
+		return none;
+	}
+	std::lock_guard<std::mutex> guard(familiesMutex);
+	auto it = families.find(face);
+	if (it == families.end()) {
+		LOGFONTW lf{};
+		face.copy(lf.lfFaceName, LF_FACESIZE - 1);
+		lf.lfCharSet = DEFAULT_CHARSET;
+		std::vector<GdiFamilyMember> members;
+		if (HDC hdc = ::CreateCompatibleDC({})) {
+			::EnumFontFamiliesExW(hdc, &lf, FamilyMembersProc, reinterpret_cast<LPARAM>(&members), 0);
+			::DeleteDC(hdc);
+		}
+		it = families.emplace(face, std::move(members)).first;
+	}
+	return it->second;	// never erased: stays valid
+}
+
+// The weight of the font of a family closest to a weight, of the italic or upright ones as asked, else of all
+// (0 if none); ties are the lighter weight
+LONG ClosestWeight(const std::vector<GdiFamilyMember> &members, LONG weight, bool italic) noexcept {
+	LONG closest = 0;
+	for (const bool anyStyle : { false, true }) {
+		for (const GdiFamilyMember &member : members) {
+			if (anyStyle || (member.italic == italic)) {
+				const LONG distance = std::abs(member.weight - weight);
+				const LONG closestDistance = std::abs(closest - weight);
+				if ((closest == 0) || (distance < closestDistance) || ((distance == closestDistance) && (member.weight < closest))) {
+					closest = member.weight;
+				}
+			}
+		}
+		if (closest) {
+			break;
+		}
+	}
+	return closest;
+}
+
 struct FontGDI : public FontWin {
 	HFONT hfont = {};
 	CharacterSet characterSet = CharacterSet::Ansi;
@@ -100,6 +167,7 @@ struct FontGDI : public FontWin {
 	explicit FontGDI(const FontParameters &fp) : characterSet(fp.characterSet) {
 		LOGFONTW lf;
 		SetLogFont(lf, fp.faceName, fp.characterSet, fp.size, fp.weight, fp.italic, fp.extraFontFlag);
+		GdiLogFont(lf);	// N++
 		hfont = ::CreateFontIndirectW(&lf);
 	}
 	// Deleted so FontGDI objects can not be copied.
@@ -885,6 +953,56 @@ std::shared_ptr<Font> FontGDI_Allocate(const FontParameters &fp) {
 
 std::unique_ptr<Surface> SurfaceGDI_Allocate() {
 	return std::make_unique<SurfaceGDI>();
+}
+
+// N++: whether GDI knows a family name
+bool GdiFamilyExists(const wchar_t *faceName) noexcept {
+	try {
+		return !FamilyMembers(faceName).empty();
+	} catch (...) {
+		return false;
+	}
+}
+
+// N++: the weight GDI knows the font of a family closest to a weight by, which may differ from DirectWrite's
+// (a static hairline font: 100 for GDI, 1 for DirectWrite), so that GDI selects it without emboldening it
+LONG GdiMemberWeight(const wchar_t *faceName, LONG weight, bool italic) noexcept {
+	try {
+		const LONG closest = ClosestWeight(FamilyMembers(faceName), weight, italic);
+		return closest ? closest : weight;
+	} catch (...) {
+		return weight;
+	}
+}
+
+// N++: the GDI font of a LOGFONT of a GDI family (a name of the font lists) and weight, as DirectWrite draws it.
+// The weights of a family are relative to its regular weight: GDI family names of a weight ("MonoLisaCode ExtraLight",
+// "Cascadia Code SemiBold") are drawn with the font DirectWrite draws, the GDI family and weight of the font of their
+// typographic family relative to theirs (bold of SemiBold: the Bold or Black font). Else, and without DirectWrite, the
+// weight asked of the family is relative to its regular weight: GDI emboldens a font by simulation only when the
+// weight asked is much heavier than its weight (and not a variable font's semibold or heavier), so the regular weight
+// asked for the family of a light weight draws it as a fake bold, and bold of a heavy one draws it as is. Bold is
+// never asked lighter than bold: some GDI implementations (Wine) embolden only for a heavy weight asked.
+// A family of regular weight with a heavier font (its bold) keeps GDI's own weights.
+void GdiLogFont(LOGFONTW &lf) noexcept {
+	try {
+		// the weight of the family's regular font: its upright font of weight closest to normal
+		const std::vector<GdiFamilyMember> &members = FamilyMembers(lf.lfFaceName);
+		const LONG regular = ClosestWeight(members, FW_NORMAL, false);
+		const LONG weight = (lf.lfWeight == FW_DONTCARE) ? FW_NORMAL : std::clamp(lf.lfWeight, 1L, 1000L);	// the sum below can't overflow
+		const bool heavierFont = std::any_of(members.begin(), members.end(),
+			[regular](const GdiFamilyMember &member) noexcept { return member.weight > regular; });
+		if ((regular <= 0) || ((regular == FW_NORMAL) && ((weight <= FW_NORMAL) || heavierFont))) {
+			return;	// the usual case, a family of regular weight with its bold: GDI's own weights
+		}
+		if (DirectWriteGdiLogFont(lf)) {
+			return;
+		}
+		const LONG relative = regular + weight - FW_NORMAL;
+		lf.lfWeight = std::clamp((weight > FW_NORMAL) ? std::max(relative, weight) : relative, 1L, 1000L);
+	} catch (...) {
+		// the font asked
+	}
 }
 
 }

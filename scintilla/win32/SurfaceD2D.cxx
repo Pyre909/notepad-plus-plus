@@ -164,10 +164,224 @@ constexpr D2D1_TEXT_ANTIALIAS_MODE DWriteMapFontQuality(FontQuality extraFontFla
 	}
 }
 
+// N++: the DirectWrite family, weight, stretch and style of a GDI font family name that DirectWrite doesn't know.
+// GDI (and so the font lists built with EnumFontFamiliesEx) names a family per weight or stretch beyond regular and
+// bold, e.g. "Fira Code Light" for the Light weight of the typographic family "Fira Code", which is the only family
+// name DirectWrite knows: CreateTextFormat with the GDI name draws with a fallback font instead.
+struct GdiFamilyMatch {
+	std::wstring family;
+	DWRITE_FONT_WEIGHT weight = DWRITE_FONT_WEIGHT_NORMAL;
+	DWRITE_FONT_STRETCH stretch = DWRITE_FONT_STRETCH_NORMAL;
+	DWRITE_FONT_STYLE style = DWRITE_FONT_STYLE_NORMAL;
+};
+
+// The first string (the en-us one if any) of localized strings
+std::wstring LocalizedString(IDWriteLocalizedStrings *strings) {
+	UINT32 index = 0;
+	BOOL exists = FALSE;
+	if (FAILED(strings->FindLocaleName(L"en-us", &index, &exists)) || !exists) {
+		index = 0;
+	}
+	UINT32 length = 0;
+	if (FAILED(strings->GetStringLength(index, &length))) {
+		return {};
+	}
+	std::wstring value(length + 1, L'\0');
+	if (FAILED(strings->GetString(index, value.data(), length + 1))) {
+		return {};
+	}
+	value.resize(length);
+	return value;
+}
+
+// Whether a font has a string, or one GDI truncates to it: GDI family names are at most 31 characters
+// ("Bahnschrift SemiBold SemiConden" for "Bahnschrift SemiBold SemiCondensed")
+bool HasInformationalString(IDWriteFont *font, DWRITE_INFORMATIONAL_STRING_ID id, const std::wstring &value) {
+	ComPtr<IDWriteLocalizedStrings> strings;
+	BOOL exists = FALSE;
+	if (FAILED(font->GetInformationalStrings(id, strings.GetAddressOf(), &exists)) || !exists || !strings) {
+		return false;
+	}
+	const bool truncated = value.length() == (LF_FACESIZE - 1);
+	for (UINT32 i = 0; i < strings->GetCount(); ++i) {
+		UINT32 length = 0;
+		if (SUCCEEDED(strings->GetStringLength(i, &length)) && ((length == value.length()) || (truncated && (length > value.length())))) {
+			std::wstring s(length + 1, L'\0');
+			if (SUCCEEDED(strings->GetString(i, s.data(), length + 1)) &&
+				(::_wcsnicmp(s.c_str(), value.c_str(), value.length()) == 0)) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+GdiFamilyMatch MatchOfFont(IDWriteFont *font) {
+	GdiFamilyMatch match;
+	ComPtr<IDWriteFontFamily> family;
+	ComPtr<IDWriteLocalizedStrings> familyNames;
+	if (SUCCEEDED(font->GetFontFamily(family.GetAddressOf())) && SUCCEEDED(family->GetFamilyNames(familyNames.GetAddressOf()))) {
+		match.family = LocalizedString(familyNames.Get());
+	}
+	match.weight = font->GetWeight();
+	match.stretch = font->GetStretch();
+	match.style = font->GetStyle();
+	return match;
+}
+
+// The fonts of a family whose Win32 family name (name ID 1) is faceName: its regular member, else its lightest upright one.
+// Simulated fonts (DirectWrite's bold / oblique variants) are ignored.
+void MatchFamilyFonts(IDWriteFontFamily *family, const std::wstring &faceName, std::optional<GdiFamilyMatch> &best, bool &bestIsRegular) {
+	for (UINT32 iFont = 0; iFont < family->GetFontCount(); ++iFont) {
+		ComPtr<IDWriteFont> font;
+		if (FAILED(family->GetFont(iFont, font.GetAddressOf())) || (font->GetSimulations() != DWRITE_FONT_SIMULATIONS_NONE) ||
+			!HasInformationalString(font.Get(), DWRITE_INFORMATIONAL_STRING_WIN32_FAMILY_NAMES, faceName)) {
+			continue;
+		}
+		const bool isRegular = HasInformationalString(font.Get(), DWRITE_INFORMATIONAL_STRING_WIN32_SUBFAMILY_NAMES, L"Regular");
+		const bool isUpright = font->GetStyle() == DWRITE_FONT_STYLE_NORMAL;
+		if (!best || (isRegular && !bestIsRegular) ||
+			(!bestIsRegular && isUpright && ((best->style != DWRITE_FONT_STYLE_NORMAL) || (font->GetWeight() < best->weight)))) {
+			GdiFamilyMatch match = MatchOfFont(font.Get());
+			if (!match.family.empty()) {
+				best = std::move(match);
+				bestIsRegular = isRegular;
+			}
+		}
+	}
+}
+
+std::optional<GdiFamilyMatch> FindGdiFamilyName(const std::wstring &faceName) {
+	ComPtr<IDWriteFontCollection> collection;
+	if (FAILED(pIDWriteFactory->GetSystemFontCollection(collection.GetAddressOf(), FALSE))) {
+		return {};
+	}
+	UINT32 index = 0;
+	BOOL exists = FALSE;
+	if (FAILED(collection->FindFamilyName(faceName.c_str(), &index, &exists))) {
+		return {};
+	}
+	if (exists) {
+		// A DirectWrite family name (the usual case), used as is unless all its upright fonts are much lighter or
+		// heavier than regular, or DirectWrite fake-bolds it for the regular weight: its weights are then relative to
+		// its font closest to regular, as for GDI families (see GdiLogFont). E.g. the family of a static font of a
+		// weight whose name DirectWrite doesn't parse as one ("X Hairline"), which DirectWrite fake-bolds for the
+		// regular weight, or of a semibold font only, whose bold would be drawn as is.
+		ComPtr<IDWriteFontFamily> family;
+		ComPtr<IDWriteFont> font;
+		if (FAILED(collection->GetFontFamily(index, family.GetAddressOf())) ||
+			FAILED(family->GetFirstMatchingFont(DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL, font.GetAddressOf()))) {
+			return {};
+		}
+		const bool fakeBold = (font->GetSimulations() & DWRITE_FONT_SIMULATIONS_BOLD) != 0;
+		std::optional<GdiFamilyMatch> regular;
+		for (UINT32 iFont = 0; iFont < family->GetFontCount(); ++iFont) {
+			ComPtr<IDWriteFont> member;
+			if (SUCCEEDED(family->GetFont(iFont, member.GetAddressOf())) &&
+				(member->GetSimulations() == DWRITE_FONT_SIMULATIONS_NONE) && (member->GetStyle() == DWRITE_FONT_STYLE_NORMAL)) {
+				const int weight = member->GetWeight();
+				const int distance = std::abs(weight - DWRITE_FONT_WEIGHT_NORMAL);
+				const int regularDistance = regular ? std::abs(static_cast<int>(regular->weight) - DWRITE_FONT_WEIGHT_NORMAL) : 0;
+				if (!regular || (distance < regularDistance) || ((distance == regularDistance) && (weight < static_cast<int>(regular->weight)))) {
+					regular = GdiFamilyMatch{ faceName, member->GetWeight(), member->GetStretch(), DWRITE_FONT_STYLE_NORMAL };
+				}
+			}
+		}
+		constexpr int relativeDistance = 200;	// a family of regular weight within this of normal is used as is
+		if (regular && !fakeBold && (std::abs(static_cast<int>(regular->weight) - DWRITE_FONT_WEIGHT_NORMAL) < relativeDistance)) {
+			return {};
+		}
+		return regular;
+	}
+
+	// A name GDI doesn't know (a font not installed) is the Win32 family name of no font
+	if (!GdiFamilyExists(faceName.c_str())) {
+		return {};
+	}
+
+	// The fonts whose Win32 family name it is: in the family named by the start of the name first
+	// ("MonoLisaCode" for "MonoLisaCode ExtraLight"), else in all the families.
+	// Named instances of variable fonts are fonts of their family there too.
+	std::optional<GdiFamilyMatch> best;
+	bool bestIsRegular = false;
+	for (size_t pos = faceName.rfind(L' '); (pos != std::wstring::npos) && (pos > 0); pos = faceName.rfind(L' ', pos - 1)) {
+		const std::wstring prefix = faceName.substr(0, pos);
+		ComPtr<IDWriteFontFamily> family;
+		if (SUCCEEDED(collection->FindFamilyName(prefix.c_str(), &index, &exists)) && exists &&
+			SUCCEEDED(collection->GetFontFamily(index, family.GetAddressOf()))) {
+			MatchFamilyFonts(family.Get(), faceName, best, bestIsRegular);
+			if (best) {
+				return best;
+			}
+		}
+	}
+	for (UINT32 iFamily = 0; (iFamily < collection->GetFontFamilyCount()) && !bestIsRegular; ++iFamily) {
+		ComPtr<IDWriteFontFamily> family;
+		if (SUCCEEDED(collection->GetFontFamily(iFamily, family.GetAddressOf()))) {
+			MatchFamilyFonts(family.Get(), faceName, best, bestIsRegular);
+		}
+	}
+	if (best) {
+		return best;
+	}
+
+	// Else the GDI font mapping of DirectWrite, unless it's a simulation: it emboldens the fonts of a GDI family much
+	// lighter than the regular weight asked (e.g. "MonoLisaCode ExtraLight" as a simulated bold of weight 700)
+	ComPtr<IDWriteGdiInterop> gdiInterop;
+	if (SUCCEEDED(pIDWriteFactory->GetGdiInterop(gdiInterop.GetAddressOf()))) {
+		LOGFONTW lf{};
+		faceName.copy(lf.lfFaceName, LF_FACESIZE - 1);
+		lf.lfWeight = FW_NORMAL;
+		lf.lfCharSet = DEFAULT_CHARSET;
+		ComPtr<IDWriteFont> font;
+		if (SUCCEEDED(gdiInterop->CreateFontFromLOGFONT(&lf, font.GetAddressOf())) &&
+			(font->GetSimulations() == DWRITE_FONT_SIMULATIONS_NONE)) {
+			GdiFamilyMatch match = MatchOfFont(font.Get());
+			if (!match.family.empty()) {
+				return match;
+			}
+		}
+	}
+	return {};
+}
+
+// The weight of the typographic family drawing a weight of a GDI family name, relative to the name's weight
+// (at most extra black: heavier weights are refused by some DirectWrite implementations, drawing nothing;
+// the weight asked is first limited to the GDI range so the sum can't overflow)
+DWRITE_FONT_WEIGHT RelativeWeight(const GdiFamilyMatch &match, int weight) noexcept {
+	constexpr int maxGdiWeight = 1000;
+	return static_cast<DWRITE_FONT_WEIGHT>(std::clamp(static_cast<int>(match.weight) + std::clamp(weight, 1, maxGdiWeight) -
+		static_cast<int>(FontWeight::Normal), 1, static_cast<int>(DWRITE_FONT_WEIGHT_EXTRA_BLACK)));
+}
+
+std::optional<GdiFamilyMatch> MatchGdiFamilyName(const std::wstring &faceName) noexcept {
+	if (faceName.empty() || faceName.length() >= LF_FACESIZE) {
+		return {};
+	}
+	try {
+		// Font lists and so the family names used are known at startup: the matches are kept for the session
+		static std::mutex matchesMutex;
+		static std::map<std::wstring, std::optional<GdiFamilyMatch>> matches;
+		std::lock_guard<std::mutex> guard(matchesMutex);
+		if (const auto it = matches.find(faceName); it != matches.end()) {
+			return it->second;
+		}
+		std::optional<GdiFamilyMatch> match = FindGdiFamilyName(faceName);
+		matches[faceName] = match;
+		return match;
+	} catch (...) {
+		return {};
+	}
+}
+
 struct FontDirectWrite : public FontWin {
 	ComPtr<IDWriteTextFormat> pTextFormat;
 	FontQuality extraFontFlag = FontQuality::QualityDefault;
 	CharacterSet characterSet = CharacterSet::Ansi;
+	FLOAT emSize = 1.0f;	// N++: in DIPs
+	std::wstring gdiFaceName;	// N++: GDI family name matched to a DirectWrite family (see MatchGdiFamilyName), for HFont()
+	LONG gdiWeight = FW_NORMAL;	// N++: weight requested with gdiFaceName
+	BYTE gdiItalic = FALSE;	// N++: italic requested with gdiFaceName
 	static constexpr FLOAT minimalAscent = 2.0f;
 	FLOAT yAscent = minimalAscent;
 	FLOAT yDescent = 1.0f;
@@ -179,18 +393,37 @@ struct FontDirectWrite : public FontWin {
 		const std::wstring wsFace = WStringFromUTF8(fp.faceName);
 		const std::wstring wsLocale = WStringFromUTF8(fp.localeName);
 		const FLOAT fHeight = static_cast<FLOAT>(fp.size);
-		const DWRITE_FONT_STYLE style = fp.italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL;
-		HRESULT hr = pIDWriteFactory->CreateTextFormat(wsFace.c_str(), nullptr,
-			static_cast<DWRITE_FONT_WEIGHT>(fp.weight),
+		emSize = fHeight;	// N++
+		DWRITE_FONT_STYLE style = fp.italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL;
+		// N++: a GDI family name of a weight or stretch ("Fira Code Light") is drawn with its DirectWrite family
+		// ("Fira Code") at its weight, the requested weight being relative to it as GDI emboldens it for bold
+		std::wstring wsFamily = wsFace;
+		int weight = static_cast<int>(fp.weight);
+		DWRITE_FONT_STRETCH stretch = static_cast<DWRITE_FONT_STRETCH>(fp.stretch);
+		if (const std::optional<GdiFamilyMatch> match = MatchGdiFamilyName(wsFace)) {
+			gdiFaceName = wsFace;
+			gdiWeight = weight;
+			gdiItalic = fp.italic;
+			wsFamily = match->family;
+			weight = RelativeWeight(*match, weight);
+			if (fp.stretch == FontStretch::Normal) {
+				stretch = match->stretch;
+			}
+			if (!fp.italic) {
+				style = match->style;
+			}
+		}
+		HRESULT hr = pIDWriteFactory->CreateTextFormat(wsFamily.c_str(), nullptr,
+			static_cast<DWRITE_FONT_WEIGHT>(weight),
 			style,
-			static_cast<DWRITE_FONT_STRETCH>(fp.stretch),
+			stretch,
 				fHeight, wsLocale.c_str(), pTextFormat.GetAddressOf());
 		if (hr == E_INVALIDARG) {
 			// Possibly a bad locale name like "/" so try "en-us".
-			hr = pIDWriteFactory->CreateTextFormat(wsFace.c_str(), nullptr,
-				static_cast<DWRITE_FONT_WEIGHT>(fp.weight),
+			hr = pIDWriteFactory->CreateTextFormat(wsFamily.c_str(), nullptr,
+				static_cast<DWRITE_FONT_WEIGHT>(weight),
 				style,
-				static_cast<DWRITE_FONT_STRETCH>(fp.stretch),
+				stretch,
 				fHeight, L"en-us", pTextFormat.ReleaseAndGetAddressOf());
 		}
 		if (SUCCEEDED(hr)) {
@@ -216,10 +449,15 @@ struct FontDirectWrite : public FontWin {
 		}
 	}
 	// Allow copy constructor. Has to explicitly copy each field since can't use =default as deleted in Font.
-	FontDirectWrite(const FontDirectWrite &other) noexcept {
+	// N++: not noexcept as gdiFaceName is copied
+	FontDirectWrite(const FontDirectWrite &other) {
 		pTextFormat = other.pTextFormat;
 		extraFontFlag = other.extraFontFlag;
 		characterSet = other.characterSet;
+		emSize = other.emSize;	// N++
+		gdiFaceName = other.gdiFaceName;	// N++
+		gdiWeight = other.gdiWeight;	// N++
+		gdiItalic = other.gdiItalic;	// N++
 		yAscent = other.yAscent;
 		yDescent = other.yDescent;
 		yInternalLeading = other.yInternalLeading;
@@ -231,6 +469,18 @@ struct FontDirectWrite : public FontWin {
 	~FontDirectWrite() noexcept override = default;
 	[[nodiscard]] HFONT HFont() const noexcept override {
 		LOGFONTW lf = {};
+		if (!gdiFaceName.empty()) {
+			// N++: GDI knows the font by its GDI family name
+			gdiFaceName.copy(lf.lfFaceName, LF_FACESIZE - 1);
+			lf.lfWeight = gdiWeight;
+			lf.lfItalic = gdiItalic;
+			lf.lfHeight = -static_cast<LONG>(emSize);
+			GdiLogFont(lf);
+			return ::CreateFontIndirectW(&lf);
+		}
+		if (!pTextFormat) {
+			return {};	// N++: the font couldn't be created (a weight or stretch refused by DirectWrite)
+		}
 		const HRESULT hr = pTextFormat->GetFontFamilyName(lf.lfFaceName, LF_FACESIZE);
 		if (!SUCCEEDED(hr)) {
 			return {};
@@ -1724,6 +1974,60 @@ TextLayout LayoutCreate(std::wstring_view wsv, IDWriteTextFormat *pTextFormat, F
 }
 
 #endif
+
+// N++: the LOGFONT of the font DirectWrite draws a GDI family name (a name of the font lists) of a weight with (see
+// FontDirectWrite): its Win32 family name and weight, so that GDI draws the same font, e.g. bold of "Cascadia Code
+// SemiBold" with "Cascadia Code" Bold, as GDI doesn't embolden a variable font's semibold instance.
+bool DirectWriteGdiLogFont([[maybe_unused]] LOGFONTW &lf) noexcept {
+#if defined(USE_D2D)
+	try {
+		if (!LoadD2D()) {
+			return false;
+		}
+		const std::optional<GdiFamilyMatch> match = MatchGdiFamilyName(std::wstring(lf.lfFaceName, ::wcsnlen(lf.lfFaceName, LF_FACESIZE)));
+		ComPtr<IDWriteFontCollection> collection;
+		if (!match || FAILED(pIDWriteFactory->GetSystemFontCollection(collection.GetAddressOf(), FALSE))) {
+			return false;
+		}
+		UINT32 index = 0;
+		BOOL exists = FALSE;
+		ComPtr<IDWriteFontFamily> family;
+		ComPtr<IDWriteFont> font;
+		const int weight = (lf.lfWeight == FW_DONTCARE) ? FW_NORMAL : lf.lfWeight;
+		const DWRITE_FONT_STYLE style = lf.lfItalic ? DWRITE_FONT_STYLE_ITALIC : match->style;
+		if (FAILED(collection->FindFamilyName(match->family.c_str(), &index, &exists)) || !exists ||
+			FAILED(collection->GetFontFamily(index, family.GetAddressOf())) ||
+			FAILED(family->GetFirstMatchingFont(RelativeWeight(*match, weight), match->stretch, style, font.GetAddressOf()))) {
+			return false;
+		}
+		if ((weight > FW_NORMAL) && (font->GetSimulations() == DWRITE_FONT_SIMULATIONS_NONE) && (font->GetWeight() <= match->weight)) {
+			return false;	// no heavier font for bold: GDI emboldens the name's font (see GdiLogFont)
+		}
+		ComPtr<IDWriteLocalizedStrings> names;
+		exists = FALSE;
+		if (FAILED(font->GetInformationalStrings(DWRITE_INFORMATIONAL_STRING_WIN32_FAMILY_NAMES, names.GetAddressOf(), &exists)) ||
+			!exists || !names) {
+			return false;
+		}
+		const std::wstring name = LocalizedString(names.Get());
+		if (name.empty()) {
+			return false;
+		}
+		std::fill(std::begin(lf.lfFaceName), std::end(lf.lfFaceName), L'\0');
+		name.copy(lf.lfFaceName, LF_FACESIZE - 1);	// truncated as GDI does
+		lf.lfItalic = font->GetStyle() != DWRITE_FONT_STYLE_NORMAL;
+		if (font->GetSimulations() & DWRITE_FONT_SIMULATIONS_BOLD) {
+			lf.lfWeight = font->GetWeight();	// of its simulation: GDI emboldens it too
+		} else {
+			lf.lfWeight = GdiMemberWeight(lf.lfFaceName, font->GetWeight(), lf.lfItalic != 0);
+		}
+		return true;
+	} catch (...) {
+		// no DirectWrite font
+	}
+#endif
+	return false;
+}
 
 std::shared_ptr<Font> Font::Allocate(const FontParameters &fp) {
 #if defined(USE_D2D)
