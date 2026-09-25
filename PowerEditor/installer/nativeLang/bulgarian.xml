@@ -980,7 +980,7 @@ $STR_REPLACE$
 						<Element name="DirectWrite (рисуване в GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="режим на изобразяване"/>
+					<Item id="6363" name="Режим на изобразяване:"/>
 				</Scintillas>
 				<!-- Редактиране 2 -->
 				<Scintillas2 title="Редактиране 2">

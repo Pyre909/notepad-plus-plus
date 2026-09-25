@@ -1083,7 +1083,7 @@ Additionnal information about Corsican localization:
 						<Element name="DirectWrite (disegnà nant’à GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="modu di restituzione"/>
+					<Item id="6363" name="Modu di restituzione :"/>
 				</Scintillas>
 
 				<Scintillas2 title="Mudificazione 2">
