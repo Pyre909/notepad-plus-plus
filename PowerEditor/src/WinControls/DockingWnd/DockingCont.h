@@ -96,6 +96,9 @@ public:
 
 	void doDialog(bool willBeShown = true, bool isFloating = false);
 
+	// places the floating container at its saved rectangle, whose size is kept (see WM_DPICHANGED)
+	void setFloatingRect(RECT& rcFloat);
+
 	bool isFloating() {
 		return _isFloating;
 	}
@@ -194,6 +197,8 @@ private:
 	// horizontal font for caption and tab
 	HFONT _hFont = nullptr;
 	HFONT _hFontCaption = nullptr;
+
+	bool _isFloatingRectPlacement = false;
 
 	// caption params
 	BOOL _isTopCaption = CAPTION_TOP;

@@ -126,6 +126,15 @@ void DockingCont::doDialog(bool willBeShown, bool isFloating)
 	display(willBeShown);
 }
 
+void DockingCont::setFloatingRect(RECT& rcFloat)
+{
+	// With the per-monitor DPI awareness, the rectangle is saved in the pixels of its monitor:
+	// a move to a monitor of another DPI sends WM_DPICHANGED, whose suggested size must not be applied
+	_isFloatingRectPlacement = true;
+	reSizeToWH(rcFloat);
+	_isFloatingRectPlacement = false;
+}
+
 
 DockedWidgetData* DockingCont::createDockedWidget(const DockedWidgetData& data)
 {
@@ -140,7 +149,7 @@ DockedWidgetData* DockingCont::createDockedWidget(const DockedWidgetData& data)
 	// restore position if plugin is in floating state
 	if ((_isFloating) && (::SendMessage(_hContTab, TCM_GETITEMCOUNT, 0, 0) == 0))
 	{
-		reSizeToWH(pTbData->rcFloat);
+		setFloatingRect(pTbData->rcFloat);
 	}
 
 	// set attached child window
@@ -1335,6 +1344,10 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			{
 				// a floating container: the main window reloads the tab icons for the new DPI
 				::PostMessage(::GetParent(_hParent), NPPM_INTERNAL_DPICHANGEDRELAYOUT, 0, 0);
+			}
+
+			if ((Message == WM_DPICHANGED) && !_isFloatingRectPlacement)
+			{
 				_dpiManager.setPositionDpi(lParam, _hSelf);
 			}
 			else
