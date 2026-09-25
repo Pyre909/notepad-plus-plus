@@ -514,6 +514,25 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 	attachDefaultDoc();
 }
 
+// DirectWrite font quality matching the Windows "Smooth edges of screen fonts" & ClearType settings
+static int getSystemFontQuality()
+{
+	BOOL isFontSmoothingOn = FALSE;
+	if (!::SystemParametersInfo(SPI_GETFONTSMOOTHING, 0, &isFontSmoothingOn, 0))
+		return SC_EFF_QUALITY_DEFAULT;
+
+	if (!isFontSmoothingOn)
+		return SC_EFF_QUALITY_NON_ANTIALIASED;
+
+	UINT fontSmoothingType = 0;
+	if (!::SystemParametersInfo(SPI_GETFONTSMOOTHINGTYPE, 0, &fontSmoothingType, 0))
+		return SC_EFF_QUALITY_DEFAULT;
+
+	// DirectWrite's default quality draws ClearType with the monitor's parameters, as Notepad++ always did
+	// (SC_EFF_QUALITY_LCD_OPTIMIZED would use the ClearType Tuner gamma of GDI: the "ClearType" setting)
+	return (fontSmoothingType == FE_FONTSMOOTHINGCLEARTYPE) ? SC_EFF_QUALITY_DEFAULT : SC_EFF_QUALITY_ANTIALIASED;
+}
+
 void ScintillaEditView::applyTextRenderingSettings() const
 {
 	const ScintillaViewParams& svp = NppParameters::getInstance().getSVP();
@@ -534,9 +553,10 @@ void ScintillaEditView::applyTextRenderingSettings() const
 			fontQuality = SC_EFF_QUALITY_NON_ANTIALIASED;
 			break;
 
-		default: // textAntialiasingFollowWindows: the default quality, as Notepad++ always did
-			// (GDI follows the Windows font smoothing, DirectWrite uses the monitor's ClearType parameters)
-			break;
+		default: // textAntialiasingFollowWindows
+			// GDI's default quality already follows the Windows font smoothing, DirectWrite's default antialiasing
+			// ignores it (smoothing off or Standard), so DirectWrite gets the Windows setting explicitly
+			fontQuality = (execute(SCI_GETTECHNOLOGY) == SC_TECHNOLOGY_DEFAULT) ? SC_EFF_QUALITY_DEFAULT : getSystemFontQuality();
 	}
 	execute(SCI_SETFONTQUALITY, fontQuality);
 
