@@ -1051,7 +1051,7 @@ Translation note:
 						<Element name="DirectWrite (debuxar a GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="modo de representación"/>
+					<Item id="6363" name="Modo de representación:"/>
 				</Scintillas>
 
 				<Scintillas2 title="Edición 2">

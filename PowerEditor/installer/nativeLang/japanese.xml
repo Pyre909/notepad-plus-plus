@@ -1056,7 +1056,7 @@ Translation note:
 						<Element name="DirectWrite (GDI DCに描画)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="描画モード"/>
+					<Item id="6363" name="描画モード:"/>
 				</Scintillas>
 
 				<Scintillas2 title="編集画面 2">

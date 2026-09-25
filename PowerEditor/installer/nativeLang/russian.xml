@@ -1109,7 +1109,7 @@ Updated to :
 						<Element name="DirectWrite (отобр. GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="режим визуализации"/>
+					<Item id="6363" name="Режим визуализации:"/>
 				</Scintillas>
 				<Scintillas2 title="Правка 2">
 					<Item id="6521" name="Мультиредактирование"/>

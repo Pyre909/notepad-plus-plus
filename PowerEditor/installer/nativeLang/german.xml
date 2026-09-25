@@ -1060,7 +1060,7 @@ Translation note:
 						<Element name="DirectWrite (zeichnen in GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="Darstellungsmodus"/>
+					<Item id="6363" name="Darstellungsmodus:"/>
 				</Scintillas>
 
 				<Scintillas2 title="Bearbeiten 2">

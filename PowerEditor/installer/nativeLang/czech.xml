@@ -1087,7 +1087,7 @@
 						<Element name="DirectWrite (vykreslovat do GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="vykreslovací režim"/>
+					<Item id="6363" name="Vykreslovací režim:"/>
 				</Scintillas>
 				<Scintillas2 title="Editace 2">
 					<Item id="6247" name="EOL - konce řádků (CRLF)"/><!-- Don't translate "(CRLF)" -->

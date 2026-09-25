@@ -1056,7 +1056,7 @@ Translation note:
 						<Element name="DirectWrite (draw to GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="modalità rendering"/>
+					<Item id="6363" name="Modalità rendering:"/>
 				</Scintillas>
 
 				<Scintillas2 title="Modifica 2">

@@ -1036,7 +1036,7 @@ Translation note:
 						<Element name="DirectWrite (vẽ vào GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="chế độ kết xuất"/>
+					<Item id="6363" name="Chế độ kết xuất:"/>
 				</Scintillas>
 
 				<Scintillas2 title="Chỉnh sửa 2">

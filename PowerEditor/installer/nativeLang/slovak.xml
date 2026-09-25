@@ -1048,7 +1048,7 @@
 						<Element name="DirectWrite (vykresliť do GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="režim vykresľovania"/>
+					<Item id="6363" name="Režim vykresľovania:"/>
 				</Scintillas>
 
 				<Scintillas2 title="Úprava 2">

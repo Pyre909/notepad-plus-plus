@@ -1051,7 +1051,7 @@
 						<Element name="DirectWrite (GDI DC-be rajzolva)"/>
 						<Element name="DirectWrite (DirectX 11-gyel)"/>
 					</ComboBox>
-					<Item id="6363" name="renderelési mód"/>
+					<Item id="6363" name="Renderelési mód:"/>
 				</Scintillas>
 
 				<Scintillas2 title="További szerkesztés">

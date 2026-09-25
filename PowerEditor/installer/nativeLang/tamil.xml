@@ -1048,7 +1048,7 @@ Translation note:
 						<Element name="DirectWrite (draw க்கு GDI DC)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="rendering mode"/>
+					<Item id="6363" name="Rendering mode:"/>
 				</Scintillas>
 
 				<Scintillas2 title="Editing 2">

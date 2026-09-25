@@ -1127,7 +1127,7 @@
 						<Element name="DirectWrite（繪製到 GDI DC）"/><!-- #new v8.7.8 -->
 						<Element name="DirectWrite (DirectX 11)"/><!-- #new v8.7.9 -->
 					</ComboBox>
-					<Item id="6363" name="渲染模式"/><!-- #new v8.7.8 -->
+					<Item id="6363" name="渲染模式："/><!-- #new v8.7.8 -->
 				</Scintillas>
 
 				<Scintillas2 title="編輯（二）"><!-- #new v8.6.5 -->

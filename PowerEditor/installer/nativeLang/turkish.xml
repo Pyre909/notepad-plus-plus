@@ -1056,7 +1056,7 @@
 						<Element name="DirectWrite (GDI DC Üzerine Çiz)"/>
 						<Element name="DirectWrite (DirectX 11)"/>
 					</ComboBox>
-					<Item id="6363" name="Görselleştirme Modu"/>
+					<Item id="6363" name="Görselleştirme Modu:"/>
 				</Scintillas>
 
 				<Scintillas2 title="Düzenleme 2">
