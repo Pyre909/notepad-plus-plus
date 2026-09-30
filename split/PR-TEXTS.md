@@ -9,9 +9,10 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 2 | `text-rendering_20260925` | `a485acc` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 open** |
 | 3 | `text-rendering-translations_20260925` | `1aa8b0e` | 29 xml | – | Label capitalisation (stacked on 2) | no (`[xml]`) |
 | 4 | `per-monitor-dpi_20260925` | `8a0ff70` | 63 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
-| 5 | `font-weight-names_20260925` | `47341a4` | 4 (Scintilla) | +13 KB | Weight family names under DirectWrite | **go to Scintilla instead** (bug tracker, SCINTILLA-UPSTREAM.md) |
+| 5 | `directwrite-font-names_20260930` | `6e8579e` | 6 (Notepad++ only) | see CI | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | yes (issue text below). Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
+| 6 | `live-rendering-switch_20260930` | `bb32194` + `08cc23b` (on 2) | 4 | small | Rendering mode applied at once, no restart | follow-up of 2 (#18414): open after 2 is merged; `bb32194` could go into 2 now |
 
-Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All five branches pass CI on every job.
+Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). Branches 1–4 pass CI on every job. 5 and 6 are local only for now (not pushed); their code passes CI as part of the combined branch.
 
 **How the split was checked.** Each branch was built and tested on its own (results in each
 PR's Testing section). Recombined, the branches give the combined branch back byte for byte,
@@ -20,13 +21,19 @@ except where two PRs touch the same lines (see Conflicts): nothing was lost or d
 **Order.** 1 was opened and closed without merging. Open 2 now, linked to its issue #18414:
 CONTRIBUTING.md needs the issue `Accepted` before the PR is *merged*, not before it is opened. Then open 3 right after 2 is merged (3 contains 2's commit until then). Open 4
 after a maintainer agrees on the approach: upstream already has DPI work in progress, so link
-or comment on their existing per-monitor DPI issue first. 5 changes only Scintilla code: submit it
-to Scintilla's bug tracker instead (scintilla-upstream/SCINTILLA-UPSTREAM.md, patch ready); open it here only if Scintilla declines.
+or comment on their existing per-monitor DPI issue first. 5 was first offered to Scintilla (bug #2519), but Scintilla's
+maintainer has twice declined font-name mapping in Scintilla (bugs #2080, #2356: "leave implementation choice to the
+application"), so it is now a Notepad++-only change: open its issue, then its PR. 6 builds on 2's code: open it after 2
+is merged. Its first commit (`bb32194`, the RTL message pointing to Editing 1 instead of MISC) fixes a message that 2
+itself makes stale, so it can be pushed to 2 as a new commit now.
 The general parts of 2's Scintilla patch go to Scintilla too (same file).
 
 **Conflicts between the PRs.** The PRs merge in any order, except:
-- 2 and 5 change the same DirectWrite font constructor in `scintilla/win32/SurfaceD2D.cxx`;
-- 2 and 4 both change the MISC page layout in `preference.rc`.
+- 2 and 4 both change the MISC page layout in `preference.rc`;
+- 5 and 6 work together only with one more line: after a live switch, the styles must be set again, because 5's font
+  parameters depend on the technology. Whichever of 5 and 6 lands second adds, in the Rendering mode handler of
+  `preferenceDlg.cpp`, `::SendMessage(::GetParent(_hParent), WM_UPDATESCINTILLAS, FALSE, 0);` when the technology
+  changed (combined branch commit `6317b19`).
 
 Whichever lands second needs a quick rebase. The combined branch
 `claude/awesome-darwin-bsud9v` shows the resolved result.
@@ -39,7 +46,7 @@ so run each branch's CI exe on real Windows before opening its PR. The exe is th
 **Screenshot for PR 2.** Its body says "screenshot attached": take one of Preferences > Editing 1
 on Windows. The Wine test setup greys out the Rendering mode box, so its captures aren't usable.
 
-**`fix #NNNNN`.** Replace it with the issue number. Done for 1 (#18412, PR closed without merging) and 2 (#18414, PR #18418 open); 4 and 5 still need their issues.
+**`fix #NNNNN`.** Replace it with the issue number. Done for 1 (#18412, PR closed without merging) and 2 (#18414, PR #18418 open); 4 and 5 still need their issues. 6 uses #18414.
 
 **AI.** The template asks to say when AI was used. The texts below say so.
 
@@ -240,42 +247,57 @@ fix #NNNNN
 
 ---
 
-## 5. Font weight names under DirectWrite (only if Scintilla declines the fix)
+## 5. Fonts of a weight ("Fira Code Light") under DirectWrite, done by Notepad++
+
+Branch `directwrite-font-names_20260930`, commit `6e8579e` on master `37f76d4`, 6 files (+491 −18): the new
+`ScintillaComponent/FontFamilyNames.cpp/.h` (listed in CMakeLists.txt and notepadPlus.vcxproj; the GCC makefile finds
+it by itself) and `ScintillaEditView::setSpecialStyle`. No Scintilla change.
+
+Why not Scintilla: its maintainer declined this twice (bug #2080 in 2019, bug #2356 with merge request 36 in 2022:
+"encodes a particular policy for font naming", "the application can adjust these parameters itself using
+IDWriteGdiInterop"). Scintilla bug #2519 (our ticket) points there; this branch is that application-side fix.
 
 ### Issue — title
-`[Feature request] Font list names of a weight ("Fira Code Light", "Cascadia Code SemiBold") draw with a fallback font under DirectWrite`
+`DirectWrite draws fonts of a weight such as "Fira Code Light" or "Cascadia Code SemiBold" with a fallback font`
 
 ### Issue — Description of the Issue
-The font list shows GDI family names, which include a weight or stretch when a family has
-more than regular and bold: "Fira Code Light", "Cascadia Code SemiBold", "Bahnschrift SemiBold
-SemiConden" (truncated to 31 characters). DirectWrite knows only the typographic family
-("Fira Code"), so with DirectWrite rendering these names draw with a fallback font. With GDI,
-bold of a light family is a fake bold of its light font.
+The font lists in the Style Configurator show GDI family names. When a family has more weights or widths than
+regular and bold, GDI names each of them as its own family: "Fira Code Light", "Cascadia Code SemiBold",
+"Bahnschrift SemiBold SemiConden" (truncated to 31 characters). DirectWrite only knows the family "Fira Code" with
+a Light weight, so with a DirectWrite rendering mode, text in these fonts is drawn with a fallback font.
+
+Steps: install Fira Code (or use Bahnschrift Light, part of Windows 10/11), pick it as the font of the Default Style
+in Settings > Style Configurator, and choose a DirectWrite rendering mode. The text is drawn in another font. With GDI,
+it is drawn correctly, but bold of a light font is a fake bold of the light font.
 
 ### Issue — Describe the solution you'd like
-Draw such names with their real font under DirectWrite. Make weights relative to the family's
-regular weight, so bold of "X Light" is X's next heavier font. GDI should use the same font as
-DirectWrite.
+Notepad++ gives Scintilla the font as DirectWrite knows it: the family name with its weight, width and style
+(SCI_STYLESETWEIGHT / SCI_STYLESETSTRETCH exist for this). Bold is relative to the font's own weight, as GDI does
+it. Scintilla's maintainer leaves this to the application (Scintilla bugs #2080, #2356).
 
 ### PR — title
-`Draw font list names of a weight with their font under DirectWrite`
+`Draw the fonts of a weight such as "Fira Code Light" with DirectWrite`
 
 ### PR — body
 ```
-GDI names a family per weight or stretch beyond regular and bold ("Fira Code Light", "Cascadia Code SemiBold", "Bahnschrift SemiBold SemiConden"); the font lists offer these names, but DirectWrite only knows the typographic family and draws them with a fallback font.
+The font lists show GDI family names, which name a weight or width when a family has more than regular and bold ("Fira Code Light", "Cascadia Code SemiBold", "Bahnschrift SemiBold SemiConden"). DirectWrite only knows the family ("Fira Code"), so with a DirectWrite rendering mode these fonts were drawn with a fallback font.
 
-Scintilla (Win32 only, N++ patch marked "N++"; 4 files):
-- DirectWrite: a name DirectWrite doesn't know is matched to the font whose Win32 family name it is, and drawn with its family at that font's weight, stretch and style; bold is relative to it, as GDI does.
-- GDI: a family's weights are relative to its regular weight (bold of a light family is its bold, not a fake bold), and GDI uses the same font as DirectWrite when available (autocompletion list, IME composition font).
-- Matches are cached for the session; names of 32+ characters and unknown names are left as they are.
-- Also fixes a crash when a plugin sets a weight DirectWrite refuses and the autocompletion list opens (null text format in FontDirectWrite::HFont).
+Notepad++ now sets each style with the font parameters of the rendering technology in use (new FontFamilyNames.cpp, called by ScintillaEditView::setSpecialStyle):
+- DirectWrite: the font's DirectWrite family, weight, width and style (SCI_STYLESETWEIGHT, SCI_STYLESETSTRETCH). Bold is relative to the font's weight, as GDI emboldens it: bold of "Fira Code Light" is "Fira Code" SemiBold.
+- GDI: the GDI family name with the weight GDI knows its font by. Bold uses the same font as DirectWrite when the family has one (bold of "Fira Code Light" is "Fira Code SemiBold" instead of a fake bold).
+- The usual fonts ("Consolas", "Courier New") are unchanged: same Scintilla calls as before.
+- DirectWrite is loaded when first needed (no new link dependency). Results are cached per font name for the session. Raster fonts are left as they are.
+- Styles without their own font name or font style use the ones SCI_STYLECLEARALL gave them (new clearAllStyles), so their bold and italic are relative to the right font.
 
-Testing (this branch alone, MinGW-w64 GCC 13 x64 build run under Wine 9):
-- A font checker draws each font list name with this build's Scintilla, as Notepad++ does, and compares it with the font Windows maps the name to. It used static test fonts (including 31-character truncated names, duplicate names, a legacy family, and heavy-only and semibold-only families) and variable Fira Code. Result: 35 names, 0 failures under DirectWrite and GDI, regular and bold. The 7 warnings are bold of families with no heavier font, where GDI keeps the same font.
-- Odd names from themes (empty, 31/32 characters, no terminator, surrogate pairs, raster and "@" fonts) and extreme weights: no crash (run on the combined branch, same code); every copy into the 32-character LOGFONT name is bounded (reviewed).
-- Clang with MSVC-like warnings on the added lines, with and without DISABLE_D2D: no warnings.
-- GitHub Actions (this repository's CI_build workflow, on the fork): all 13 jobs pass. That covers the MSVC x64/Win32/ARM64 Release and Debug builds, the CMake build, the MinGW and Clang builds, XML validation, and the Function List and URL detection tests. MSVC x64 exe +13 KB.
-- Not tested: a real Windows font collection.
+This is done in Notepad++ rather than Scintilla: Scintilla's maintainer leaves font naming to the application (Scintilla bugs #2080, #2356).
+
+Testing (MinGW-w64 GCC 13 x64 build, run under Wine 9):
+- Font check: every font-list name, regular, bold and italic, drawn by unmodified Scintilla 5.6.6 with the parameters this code gives, compared with the font Windows maps the name to. Test fonts: static families (31-character truncated names, duplicate weights, a legacy family, heavy-only and semibold-only families) and Fira Code. 35 names: 0 failures with DirectWrite and GDI (before: 51 failures). The 7 warnings are bold of families with no heavier font.
+- In Notepad++, with "Fira Code Light" as the Default Style font: the styles read back "Fira Code" weight 300 (bold 600) with DirectWrite, and "Fira Code Light" weight 300 (bold "Fira Code SemiBold") with GDI. DirectWrite was tested with a build whose Wine check (ScintillaEditView::init) was disabled; that change is not in this PR.
+- Default theme: screenshots of the main window and a docked panel at 96 and 144 DPI are pixel-identical to master.
+- No new warnings with the repository's GCC flags (-Wpedantic -Wall -Wextra -Wconversion).
+- GitHub Actions (CI_build on the fork): <result>
+- Not tested: a real Windows font collection. Please try Bahnschrift Light or Cascadia Code SemiBold with DirectWrite.
 
 AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
 
@@ -284,12 +306,51 @@ AI disclosure: this change was written with the help of an AI assistant (Claude)
 fix #NNNNN
 ```
 
-### Or offer it to Scintilla
-The change is Scintilla-only, so it could live in Scintilla itself and reach Notepad++ with the
-next Scintilla update. `font-weight-names-scintilla.patch` is the same change with paths
-relative to Scintilla's root. For Scintilla it would drop the "N++" markers and follow Neil
-Hodgson's review. Scintilla's feature requests are at
-https://sourceforge.net/p/scintilla/feature-requests/.
+Fill `<result>` from the branch's CI run once it is pushed. Before opening, check on Windows with the branch's CI exe:
+Default Style font "Bahnschrift Light", Rendering mode DirectWrite: the text must be drawn in Bahnschrift Light,
+and bold keywords in Bahnschrift SemiBold (they were a fallback font before).
+
+---
+
+## 6. Rendering mode applied at once, without restarting (follow-up of 2)
+
+Branch `live-rendering-switch_20260930`, two commits on 2 (`a485acc`):
+- `bb32194` "Point the RTL vs DirectWrite message to Editing 1": 2 moves the Rendering mode box from MISC to
+  Editing 1, so the existing message "Please disable DirectWrite mode in MISC. section" becomes wrong with 2 alone.
+  It belongs in 2: push it to `text-rendering_20260925` as a new commit (CONTRIBUTING rule 10: no force-push).
+- `08cc23b` "Apply the rendering mode at once, without restarting": the feature. Open it after 2 is merged, or
+  add it to 2 if the reviewer prefers (it is 4 files, +61 −6).
+
+### PR — title
+`Apply the rendering mode at once, without restarting`
+
+### PR — body
+```
+Follow-up of #18418. Choosing a rendering mode in Preferences > Editing 1 now switches the Notepad++ edit views at once (main and second view, search results, document map), instead of after a restart.
+- Views whose technology a plugin changed itself are left as they are: only the views using the technology of the setting follow it.
+- The "Follow Windows" antialiasing is applied again, as it depends on the technology.
+- DirectWrite can't draw right-to-left text: choosing DirectWrite while a view shows RTL text is refused with a message, and the box shows the rendering mode in use again.
+- The tooltip and the RTL message no longer ask to restart.
+
+Testing (MinGW-w64 GCC 13 x64 build under Wine 9; test build with the Wine check of ScintillaEditView::init disabled so that DirectWrite can be chosen, not part of this PR): a probe drives the Rendering mode box and reads each view's technology and font quality. 9/9 checks pass:
+- GDI → DirectWrite → DirectWrite (draw to GDI DC) → GDI switch every view, with the matching antialiasing;
+- a view a plugin set to another technology is left alone;
+- with RTL text, DirectWrite is refused with the message and the box shows GDI again; after LTR, DirectWrite applies;
+- config.xml saves the chosen mode.
+nppshot and screenshot comparisons at 96 and 144 DPI: unchanged.
+
+AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
+
+- [x] I have read contributing guidelines
+
+fix #18414
+```
+
+With 5 merged too, add the restyle line (see Conflicts above), so that fonts such as "Fira Code Light" follow the
+switch. Tested on the combined branch: DirectWrite → GDI → DirectWrite gives "Fira Code" 300/600, then
+"Fira Code Light" 300 / "Fira Code SemiBold", then "Fira Code" 300/600 again.
+
+Translations: other languages' tooltip and RTL message still mention the restart until translators update them.
 
 ---
 
@@ -309,7 +370,8 @@ mailing list. Code must build as C++17 and follow https://www.scintilla.org/SciC
 
 | Change | Effect | Where it goes |
 |---|---|---|
-| GDI weight family names ("Fira Code Light") under DirectWrite, real bold under GDI (PR 5, not opened) | Bug fix for every Win32 app that takes names from font lists | **Scintilla Bug Tracker, now**: patch ready and tested (below). If accepted, N++ PR 5 is not needed at all |
+| GDI weight family names ("Fira Code Light") under DirectWrite, real bold under GDI | Filed as Scintilla bug #2519; the maintainer declined this twice before (#2080, #2356) | **Withdrawn from Scintilla**: now Notepad++ PR 5, no Scintilla change (see section 2 below) |
+| Crash: `FontDirectWrite::HFont` with no text format (a weight DirectWrite refuses, then the autocompletion list) | Bug in every Win32 app using DirectWrite | **Scintilla Bug Tracker** (section 4 below, 3-line patch). Kept in the combined branch meanwhile |
 | DirectWrite rendering-parameter overrides: gamma, enhanced contrast, grayscale enhanced contrast, ClearType level, pixel geometry, rendering mode (PR 2) | New Win32 API, useful to any app (SciTE could expose it as properties) | **Feature Request, patch ready and tested** (section 3) |
 | GDI-compatible measuring for the GDI rendering modes (PR 2) | Correctness part of the above: caret and selection match the drawn glyphs | Same proposal |
 | Autocompletion list drawn with the editor's parameters once they are customised (PR 2) | Consistency part of the above | Same proposal |
@@ -335,7 +397,19 @@ Until then the patch stays here, marked N++. Scintilla 5.6.7 (released 2026-09-2
 
 ---
 
-## 2. Scintilla Bug Tracker: GDI weight family names
+## 2. Scintilla Bug Tracker: GDI weight family names (filed as #2519, now withdrawn)
+
+zufuliu answered on #2519 with the earlier tickets (#2080, #2356, feature request #1452), where the maintainer declined
+this mapping in Scintilla. The mapping now lives in Notepad++ (PR 5), so the patch below is withdrawn. Reply
+suggested for #2519 (if not posted yet):
+
+```
+Thanks, and sorry for the duplicate: SourceForge's search didn't work for me, so I missed #2080 and #2356. Following Neil's earlier answers, I've withdrawn the patch and moved the mapping into the application (Notepad++), using SCI_STYLESETWEIGHT and SCI_STYLESETSTRETCH with IDWriteGdiInterop, as suggested in #2356. This ticket can be closed.
+
+Would a short note under SCI_STYLESETFONT in ScintillaDoc.html be welcome, saying that DirectWrite takes family names ("Fira Code" with SCI_STYLESETWEIGHT 300) where GDI takes typeface names ("Fira Code Light")? Also, a small typo in the SCI_STYLESETSTRETCH paragraph: "The weight is a number between 1 and 9" should say stretch.
+```
+
+The original ticket text follows for reference.
 
 Before posting, search for an existing report (I couldn't search from here, SourceForge refused):
 https://sourceforge.net/p/scintilla/bugs/search/?q=DirectWrite+font+name and
@@ -387,6 +461,9 @@ Windows check done: "Bahnschrift Light" with DirectWrite draws its Light weight 
 
 New ticket: https://sourceforge.net/p/scintilla/feature-requests/new/ (search first:
 https://sourceforge.net/p/scintilla/feature-requests/search/?q=DirectWrite+rendering)
+
+(Filed.) With the weight-names patch withdrawn, only the first variant matters; if both were attached, a comment can
+say the second one is no longer needed.
 
 Attach one of:
 - `scintilla-5.6.7-directwrite-rendering-parameters.diff`: applies to pristine 5.6.7 on its own.
@@ -454,3 +531,25 @@ Notepad++ picks the API up with its next Scintilla update. Then a small follow-u
 switch 5101/5102 to the official messages and SC_FONTRENDERING_DEFAULT to SC_FONT_RENDERING_DEFAULT,
 and drop the local patch except the two Notepad++-only options (or propose those too). config.xml
 values stay as they are, since the units are the same.
+
+---
+
+## 4. Scintilla Bug Tracker: crash in FontDirectWrite::HFont when the font has no text format
+
+New ticket: https://sourceforge.net/p/scintilla/bugs/new/ (search first:
+https://sourceforge.net/p/scintilla/bugs/search/?q=HFont). Attach `scintilla-5.6.7-directwrite-hfont-null-text-format.diff`
+(3 lines, applies to 5.6.7 with `git apply` / `patch -p1`, builds as C++17 with -Wpedantic -Wall -Wextra).
+
+### Title
+`[Win32] Crash in FontDirectWrite::HFont when DirectWrite refused the font (e.g. SCI_STYLESETWEIGHT 1000), on showing autocompletion`
+
+### Description
+```
+With a DirectWrite technology, FontDirectWrite leaves pTextFormat null when CreateTextFormat fails, for example for a weight outside 1..999 set with SCI_STYLESETWEIGHT (Scintilla doesn't validate it). The drawing code checks pTextFormat, but FontDirectWrite::HFont() doesn't, so showing an autocompletion list then crashes: ListBoxX::SetFont calls HFont(), which calls pTextFormat->GetFontFamilyName on a null pointer.
+
+Steps (5.6.6 and 5.6.7): SCI_SETTECHNOLOGY(SC_TECHNOLOGY_DIRECTWRITE), SCI_STYLESETWEIGHT(STYLE_DEFAULT, 1000), SCI_STYLECLEARALL, SCI_AUTOCSHOW(0, "alpha beta gamma") -> access violation reading address 0 in FontDirectWrite::HFont (called by ListBoxX::SetFont). Reproduced under Wine 9 with a MinGW-w64 build; weight 400 works.
+
+The attached patch returns no HFONT when there's no text format, as HFont() already does when GetFontFamilyName fails. Alternatively SCI_STYLESETWEIGHT could clamp the weight to 1..999, but SCI_STYLESETSTRETCH doesn't validate its value either (not tried), and any other failure of CreateTextFormat would leave pTextFormat null the same way.
+
+This was found and prepared with the help of an AI assistant (Claude), then reviewed and tested.
+```

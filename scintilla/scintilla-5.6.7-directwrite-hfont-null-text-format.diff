@@ -1,0 +1,12 @@
+--- a/win32/SurfaceD2D.cxx
++++ b/win32/SurfaceD2D.cxx
+@@ -230,6 +230,9 @@
+ 	FontDirectWrite &operator=(FontDirectWrite &&) = delete;
+ 	~FontDirectWrite() noexcept override = default;
+ 	[[nodiscard]] HFONT HFont() const noexcept override {
++		if (!pTextFormat) {
++			return {};	// Creation failed: a weight or stretch that DirectWrite refuses
++		}
+ 		LOGFONTW lf = {};
+ 		const HRESULT hr = pTextFormat->GetFontFamilyName(lf.lfFaceName, LF_FACESIZE);
+ 		if (!SUCCEEDED(hr)) {

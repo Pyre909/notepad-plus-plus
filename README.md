@@ -28,12 +28,12 @@ Fonts folder, for the static-font weight tests.
 
 | Path | What |
 |---|---|
-| `scintilla/` | The Scintilla submissions: `SCINTILLA-UPSTREAM.md` (ticket texts and plan), the three patches against Scintilla 5.6.7, `setup-trees.sh` (downloads 5.6.7, checks its SHA-256, builds pristine and patched trees), `test.sh` (font-weight test and scitest against one tree) |
+| `scintilla/` | The Scintilla submissions: `SCINTILLA-UPSTREAM.md` (ticket texts, plan and status), the patches against Scintilla 5.6.7 (the weight-names one is withdrawn; `…-hfont-null-text-format.diff` is the crash fix, reproduced by `hfontcrash.cpp`), `setup-trees.sh` (downloads 5.6.7, checks its SHA-256, builds pristine and patched trees), `test.sh` (font-weight test and scitest against one tree) |
 | `harness/` | Scintilla and Notepad++ checks under Wine + Xvfb: `scitest` (Scintilla test program), `nppshot.sh` (Preferences > Editing 1 checks, 41 checks), `build_scilib.sh`, `link_npp.sh`. See `harness/README.md` |
 | `harness-dpi/` | Screen captures at 96/144 DPI (`dpirun.sh`, `src/dpidrive.cpp`), pixel comparison (`cmp.sh`), per-monitor DPI on/off runs (`split.sh`) |
-| `split/` | Splitting the combined branch into single-commit PR branches (`spec.py`, `sub.py`, `hunks.py`, `mk.py`), the PR kit `PR-TEXTS.md`, and targeted checks: `sizecheck` (font size list), `smoothcheck` (#17461, Windows font smoothing, with a helper plugin `smoothplugin.cpp`), `bmpstat.py`, `retest-*.sh` |
+| `split/` | Splitting the combined branch into single-commit PR branches (`spec.py`, `sub.py`, `hunks.py`, `mk.py`), the PR kit `PR-TEXTS.md`, and targeted checks: `sizecheck` (font size list), `smoothcheck` (#17461, Windows font smoothing, with a helper plugin `smoothplugin.cpp`), `techswitch` (Rendering mode applied without restart, 9 checks), `stylefont` (font parameters of the styles for a "Fira Code Light" theme, optionally across a live switch), `bmpstat.py`, `retest-*.sh` |
 | `fonttest/` | GDI weight family names ("Fira Code Light") under GDI and DirectWrite: width and ink |
-| `statictest/` | Static test fonts of many weights and a GDI weight check |
+| `statictest/` | Static test fonts of many weights, a GDI weight check, and `fontcheck` (each font-list name drawn as Notepad++ draws it vs. the font Windows maps it to; `run.sh`, `build.sh`). `fontcheck-app.cpp` is the same check with Notepad++'s `FontFamilyNames.cpp` mapping in front of unmodified Scintilla (build with `-DAPP_MAPPING -I<worktree>/PowerEditor/src/ScintillaComponent` plus that .cpp); `mapprobe.cpp` prints the mapping per name |
 | `xbuild.sh`, `gen-libs-version.sh` | MinGW-w64 cross build of a Notepad++ checkout or worktree |
 
 ## Common runs
@@ -66,3 +66,6 @@ rebuild with `make -C win32 CXX=x86_64-w64-mingw32-g++ ...` (see `setup-trees.sh
 - SourceForge refuses automated tracker searches (403); search by hand before filing.
 - In a newly created Wine prefix, the first runs can capture a window before DirectWrite repaints:
   fonttest then shows the previous row's ink, and scitest `stale_capture` warnings. Run once more.
+  The same happened once to `fontcheck` (one name with the previous draw's ink); two reruns were identical.
+- Font-name mapping in Notepad++ was validated by comparing `fontcheck-app` (mapping + unmodified
+  Scintilla) with `fontcheck` built on the old Scintilla patch, run in the same prefix: identical reports.
