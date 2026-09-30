@@ -1801,7 +1801,7 @@ void EditingSubDlg::initTextRenderingParam()
 	NativeLangSpeaker* pNativeSpeaker = nppParam.getNativeLangSpeaker();
 
 	wstring tip2Show = pNativeSpeaker->getLocalizedStrFromID("scintillaRenderingTechnology-tip",
-		L"May improve rendering of special characters or resolve some graphics issues, restart Notepad++ to apply the changes.");
+		L"May improve rendering of special characters or resolve some graphics issues.");
 	_tipScintillaRenderingTechnology = createToolTip(IDC_COMBO_SC_TECHNOLOGY_CHOICE, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
 
 	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textAntialiasing-tip",
@@ -2150,8 +2150,13 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 
 							if (LOWORD(wParam) == IDC_COMBO_SC_TECHNOLOGY_CHOICE)
 							{
-								nppGUI._writeTechnologyEngine = static_cast<writeTechnologyEngine>(::SendDlgItemMessage(_hSelf,
-									IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_GETCURSEL, 0, 0));
+								const int selIndex = static_cast<int>(::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_GETCURSEL, 0, 0));
+								if (selIndex == CB_ERR)
+									return TRUE;
+
+								// applied at once, refused (the current rendering mode is shown again) for right-to-left text with DirectWrite
+								if (!ScintillaEditView::setTechnologyToAll(static_cast<writeTechnologyEngine>(selIndex), _hSelf))
+									::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_SETCURSEL, nppGUI._writeTechnologyEngine, 0);
 								enableDirectWriteTextRendering();
 								return TRUE;
 							}
