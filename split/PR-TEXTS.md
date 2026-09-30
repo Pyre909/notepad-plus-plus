@@ -6,7 +6,7 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | # | Branch | Commit | Files | Exe size (MSVC x64) | What | Needs an approved issue |
 |---|---|---|---|---|---|---|
 | 1 | `font-size-1pt_20260925` | `faaeb59` | 2 | +0 | Font sizes 1–4 pt in the size lists | #18412; **PR closed, not accepted** |
-| 2 | `text-rendering_20260925` | `a485acc` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 open** |
+| 2 | `text-rendering_20260925` | `a485acc` + `bb32194` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 open** |
 | 3 | `text-rendering-translations_20260925` | `1aa8b0e` | 29 xml | – | Label capitalisation (stacked on 2) | no (`[xml]`) |
 | 4 | `per-monitor-dpi_20260925` | `8a0ff70` | 63 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
 | 5 | `directwrite-font-names_20260930` | `6e8579e` | 6 (Notepad++ only) | +16 KB | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | yes (issue text below). Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
@@ -317,7 +317,7 @@ and bold keywords in Bahnschrift SemiBold (they were a fallback font before).
 Branch `live-rendering-switch_20260930` (pushed, CI 13/13 jobs), two commits on 2 (`a485acc`):
 - `bb32194` "Point the RTL vs DirectWrite message to Editing 1": 2 moves the Rendering mode box from MISC to
   Editing 1, so the existing message "Please disable DirectWrite mode in MISC. section" becomes wrong with 2 alone.
-  It belongs in 2: push it to `text-rendering_20260925` as a new commit (CONTRIBUTING rule 10: no force-push).
+  It belongs in 2: **pushed to `text-rendering_20260925` on 2026-09-30** as a new commit (fast-forward, no force-push).
 - `08cc23b` "Apply the rendering mode at once, without restarting": the feature. Open it after 2 is merged, or
   add it to 2 if the reviewer prefers (it is 4 files, +61 −6).
 
@@ -326,16 +326,14 @@ branches are pushed. When #18418 is merged, rebase this branch onto master and o
 
 ```sh
 git fetch upstream master
-# if bb32194 went into #18418:
+# bb32194 went into #18418, so only 08cc23b is replayed:
 git rebase --onto upstream/master bb32194 live-rendering-switch_20260930
-# otherwise (keeps bb32194 in this PR):
-git rebase --onto upstream/master a485acc live-rendering-switch_20260930
 ```
 
 If #18418 is merged as one squashed commit, the rebase replays only this PR's commits; rebuild and rerun
 `techswitch.sh` before pushing (a rebased branch with no PR open yet can be force-pushed).
 
-Comment for #18418, if bb32194 is pushed there (optional, helps the reviewer):
+Comment for #18418 now that bb32194 is pushed there (optional, helps the reviewer):
 ```
 I pushed a small commit: the message shown when RTL is asked with DirectWrite still pointed to the MISC. section, where the rendering mode no longer is. It now names the GDI rendering mode in Editing 1.
 
