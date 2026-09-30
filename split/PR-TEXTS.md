@@ -333,7 +333,7 @@ git rebase --onto upstream/master bb32194 live-rendering-switch_20260930
 If #18418 is merged as one squashed commit, the rebase replays only this PR's commits; rebuild and rerun
 `techswitch.sh` before pushing (a rebased branch with no PR open yet can be force-pushed).
 
-Comment for #18418 now that bb32194 is pushed there (optional, helps the reviewer):
+Comment for #18418 about bb32194 and the follow-up: **posted 2026-09-30** (a more casual rewording of this draft, which also gave the Scintilla status: feature request #1592, and the font-name fix going to Notepad++ instead):
 ```
 I pushed a small commit: the message shown when RTL is asked with DirectWrite still pointed to the MISC. section, where the rendering mode no longer is. It now names the GDI rendering mode in Editing 1.
 
