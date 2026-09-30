@@ -645,6 +645,52 @@ void ScintillaEditView::applyTextRenderingSettingsToAll()
 		_liveViews[i]->applyTextRenderingSettings();
 }
 
+bool ScintillaEditView::setTechnologyToAll(writeTechnologyEngine technology, HWND hMsgParent)
+{
+	NppParameters& nppParams = NppParameters::getInstance();
+	NppGUI& nppGui = nppParams.getNppGUI();
+	const writeTechnologyEngine previous = nppGui._writeTechnologyEngine;
+	if ((technology == previous) || (technology < defaultTechnology) || (technology >= directWriteTechnologyUnavailable) ||
+		(previous >= directWriteTechnologyUnavailable))
+		return technology == previous;
+
+	// the views using the technology of the setting follow it, those a plugin switched itself are left as they are
+	auto isFollowing = [previous](const ScintillaEditView* pView) -> bool {
+		return pView->execute(SCI_GETTECHNOLOGY) == static_cast<LRESULT>(previous);
+	};
+
+	// DirectWrite can't draw right-to-left text (see changeTextDirection)
+	if (technology > defaultTechnology)
+	{
+		for (size_t i = 0; i < _liveViews.size(); ++i)
+		{
+			if (isFollowing(_liveViews[i]) && _liveViews[i]->isTextDirectionRTL())
+			{
+				nppParams.getNativeLangSpeaker()->messageBox("DirectWriteVsRTL",
+					hMsgParent,
+					L"DirectWrite cannot display right-to-left text. Please switch the text direction to left-to-right first (Edit > Text Direction LTR).",
+					L"Cannot use DirectWrite",
+					MB_OK | MB_APPLMODAL);
+				return false;
+			}
+		}
+	}
+
+	nppGui._writeTechnologyEngine = technology;
+
+	// index based loop: the list must not be invalidated if it's modified meanwhile
+	for (size_t i = 0; i < _liveViews.size(); ++i)
+	{
+		ScintillaEditView* pView = _liveViews[i];
+		if (isFollowing(pView))
+		{
+			pView->execute(SCI_SETTECHNOLOGY, technology);
+			pView->applyTextRenderingSettings(); // the "Follow Windows" antialiasing depends on the technology
+		}
+	}
+	return true;
+}
+
 void ScintillaEditView::sendMessageToAll(UINT Msg, WPARAM wParam, LPARAM lParam)
 {
 	// index based loop: the list must not be invalidated if it's modified meanwhile
@@ -4673,7 +4719,7 @@ void ScintillaEditView::changeTextDirection(bool isRTL)
 		{
 			(nppParamInst.getNativeLangSpeaker())->messageBox("RTLvsDirectWrite",
 				getHSelf(),
-				L"RTL is not compatible with Direct Write mode. Please choose the GDI rendering mode in Editing 1 section of Preferences dialog, and restart Notepad++.",
+				L"RTL is not compatible with Direct Write mode. Please choose the GDI rendering mode in Editing 1 section of Preferences dialog.",
 				L"Cannot run RTL",
 				MB_OK | MB_APPLMODAL);
 
