@@ -1,7 +1,7 @@
 // hfontcrash: with DirectWrite, a style weight DirectWrite refuses leaves FontDirectWrite without a text format;
 // showing an autocompletion list then crashes in FontDirectWrite::HFont (called by ListBoxX::SetFont).
 //
-// Usage: hfontcrash [weight]      default 1000: crashes; 400: works
+// Usage: hfontcrash [weight]      default 1000: crashes; 400: works (under Wine 9: weights below 0 or above 950 crash)
 //
 // Build with MinGW-w64 against the static library built by win32/makefile:
 //   g++ -std=c++17 -I<scintilla>/include hfontcrash.cpp <scintilla>/bin/libscintilla.a -static -mconsole
@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
 
 	sci(SCI_SETTECHNOLOGY, SC_TECHNOLOGY_DIRECTWRITE);
 	sci(SCI_SETTEXT, 0, reinterpret_cast<sptr_t>("abc"));
-	sci(SCI_STYLESETWEIGHT, STYLE_DEFAULT, weight);	// DirectWrite accepts 1..999
+	sci(SCI_STYLESETWEIGHT, STYLE_DEFAULT, weight);	// Windows documents 1..999 as valid; Wine 9 accepts 0..950
 	sci(SCI_STYLECLEARALL);
 	pump(300);
 	printf("weight %d set, technology %d\n", weight, static_cast<int>(sci(SCI_GETTECHNOLOGY)));

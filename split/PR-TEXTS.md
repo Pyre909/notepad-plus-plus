@@ -565,11 +565,11 @@ optionally `hfontcrash.cpp` (the reproduction program).
 
 ### Description
 ```
-With a DirectWrite technology, FontDirectWrite leaves pTextFormat null when CreateTextFormat fails, for example for a weight outside 1..999 set with SCI_STYLESETWEIGHT (Scintilla doesn't validate it). The drawing code checks pTextFormat, but FontDirectWrite::HFont() doesn't, so showing an autocompletion list then crashes: ListBoxX::SetFont calls HFont(), which calls pTextFormat->GetFontFamilyName on a null pointer.
+With a DirectWrite technology, FontDirectWrite leaves pTextFormat null when CreateTextFormat fails, for example for a weight DirectWrite refuses, set with SCI_STYLESETWEIGHT (Scintilla doesn't validate it; Windows documents 1..999 as the valid weights). The drawing code checks pTextFormat, but FontDirectWrite::HFont() doesn't, so showing an autocompletion list then crashes: ListBoxX::SetFont calls HFont(), which calls pTextFormat->GetFontFamilyName on a null pointer.
 
-Steps: SCI_SETTECHNOLOGY(SC_TECHNOLOGY_DIRECTWRITE), SCI_STYLESETWEIGHT(STYLE_DEFAULT, 1000), SCI_STYLECLEARALL, SCI_AUTOCSHOW(0, "alpha beta gamma") -> access violation reading address 0 in FontDirectWrite::HFont (called by ListBoxX::SetFont). Reproduced with MinGW-w64 builds of 5.6.6 and 5.6.7 under Wine 9; weight 400 works. With the attached patch applied to 5.6.7, the same steps don't crash.
+Steps: SCI_SETTECHNOLOGY(SC_TECHNOLOGY_DIRECTWRITE), SCI_STYLESETWEIGHT(STYLE_DEFAULT, 1000), SCI_STYLECLEARALL, SCI_AUTOCSHOW(0, "alpha beta gamma") -> access violation reading address 0 in FontDirectWrite::HFont (called by ListBoxX::SetFont). Reproduced with MinGW-w64 builds of 5.6.6 and 5.6.7 under Wine 9, whose DirectWrite accepts weights 0..950: negative weights and weights above 950 crash (tried -100, -1, 951, 999, 1000, 5000), 0..950 work. With the attached patch applied to 5.6.7, none of them crash.
 
-The attached patch returns no HFONT when there's no text format, as HFont() already does when GetFontFamilyName fails. Alternatively SCI_STYLESETWEIGHT could clamp the weight to 1..999, but SCI_STYLESETSTRETCH doesn't validate its value either (not tried), and any other failure of CreateTextFormat would leave pTextFormat null the same way.
+The attached patch returns no HFONT when there's no text format, as HFont() already does when GetFontFamilyName fails. Alternatively SCI_STYLESETWEIGHT could clamp the weight, but SCI_STYLESETSTRETCH doesn't validate its value either (not tried), and any other failure of CreateTextFormat would leave pTextFormat null the same way.
 
 The attached hfontcrash.cpp reproduces it: "hfontcrash 1000" crashes, "hfontcrash 400" works (build line in its header).
 
