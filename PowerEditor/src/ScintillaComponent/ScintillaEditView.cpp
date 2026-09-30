@@ -46,6 +46,7 @@
 
 #include "Buffer.h"
 #include "Common.h"
+#include "FontFamilyNames.h"
 #include "NppConstants.h"
 #include "NppDarkMode.h"
 #include "Parameters.h"
@@ -992,7 +993,7 @@ LRESULT CALLBACK ScintillaEditView::ScintillaProc(
 	return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 
-#define DEFAULT_FONT_NAME "Courier New"
+#define DEFAULT_FONT_NAME L"Courier New"
 
 void ScintillaEditView::setSpecialStyle(const Style& styleToSet) const
 {
@@ -1003,25 +1004,40 @@ void ScintillaEditView::setSpecialStyle(const Style& styleToSet) const
     if ( styleToSet._colorStyle & COLORSTYLE_BACKGROUND )
 	    execute(SCI_STYLESETBACK, styleID, styleToSet._bgColor);
 
-    if (!styleToSet._fontName.empty())
+	std::wstring fontName = styleToSet._fontName;
+	if (!fontName.empty() && !NppParameters::getInstance().isInFontList(fontName))
+		fontName = DEFAULT_FONT_NAME;
+	int fontStyle = styleToSet._fontStyle;
+	if (styleID == STYLE_DEFAULT)
 	{
-		if (!NppParameters::getInstance().isInFontList(styleToSet._fontName))
+		if (!fontName.empty())
+			_defaultStyleFontName = fontName;
+		if (fontStyle != STYLE_NOT_USED)
+			_defaultStyleFontStyle = fontStyle;
+	}
+
+	if (!fontName.empty() || (fontStyle != STYLE_NOT_USED))
+	{
+		// The font lists name the fonts by their GDI family name, which DirectWrite may know by another name, weight and
+		// stretch ("Fira Code Light" is "Fira Code" Light): the style is set with the font parameters of the rendering
+		// technology in use, from its font name and font style, else from the ones it has (see clearAllStyles)
+		const bool isDefaultStyle = styleID == STYLE_DEFAULT;
+		const std::wstring& currentFontName = isDefaultStyle ? _defaultStyleFontName : _clearedStyleFontName;
+		const int currentFontStyle = isDefaultStyle ? _defaultStyleFontStyle : _clearedStyleFontStyle;
+		const int effectiveFontStyle = (fontStyle != STYLE_NOT_USED) ? fontStyle : ((currentFontStyle != STYLE_NOT_USED) ? currentFontStyle : 0);
+		const ScintillaFont font = getScintillaFont(fontName.empty() ? currentFontName : fontName, (effectiveFontStyle & FONTSTYLE_BOLD) != 0,
+			(effectiveFontStyle & FONTSTYLE_ITALIC) != 0, static_cast<int>(execute(SCI_GETTECHNOLOGY)));
+		if (!font._name.empty())
 		{
-			execute(SCI_STYLESETFONT, styleID, reinterpret_cast<LPARAM>(DEFAULT_FONT_NAME));
-		}
-		else
-		{
-			std::string fontNameA = wstring2string(styleToSet._fontName, CP_UTF8);
+			std::string fontNameA = wstring2string(font._name, CP_UTF8);
 			execute(SCI_STYLESETFONT, styleID, reinterpret_cast<LPARAM>(fontNameA.c_str()));
 		}
+		execute(SCI_STYLESETWEIGHT, styleID, font._weight);
+		execute(SCI_STYLESETSTRETCH, styleID, font._stretch);
+		execute(SCI_STYLESETITALIC, styleID, font._isItalic);
+		if (fontStyle != STYLE_NOT_USED)
+			execute(SCI_STYLESETUNDERLINE, styleID, fontStyle & FONTSTYLE_UNDERLINE);
 	}
-	int fontStyle = styleToSet._fontStyle;
-    if (fontStyle != STYLE_NOT_USED)
-    {
-        execute(SCI_STYLESETBOLD,		styleID, fontStyle & FONTSTYLE_BOLD);
-        execute(SCI_STYLESETITALIC,		styleID, fontStyle & FONTSTYLE_ITALIC);
-        execute(SCI_STYLESETUNDERLINE,	styleID, fontStyle & FONTSTYLE_UNDERLINE);
-    }
 
 	if (styleToSet._fontSize > 0)
 		execute(SCI_STYLESETSIZE, styleID, styleToSet._fontSize);
@@ -1099,6 +1115,14 @@ void ScintillaEditView::setStyle(Style styleToSet) const
 		}
 	}
 	setSpecialStyle(styleToSet);
+}
+
+void ScintillaEditView::clearAllStyles()
+{
+	execute(SCI_STYLECLEARALL);
+	// the font of the styles without their own font name or font style (see setSpecialStyle)
+	_clearedStyleFontName = _defaultStyleFontName;
+	_clearedStyleFontStyle = _defaultStyleFontStyle;
 }
 
 
@@ -1891,7 +1915,7 @@ void ScintillaEditView::defineDocType(LangType typeDoc)
 		setStyle(*pStyleDefault);
 	}
 
-	execute(SCI_STYLECLEARALL);
+	clearAllStyles();
 
 	Style defaultIndicatorStyle;
 	const Style * pStyle;
@@ -2054,7 +2078,7 @@ void ScintillaEditView::defineDocType(LangType typeDoc)
 				}
 			}
 			setSpecialStyle(nfoStyle);
-			execute(SCI_STYLECLEARALL);
+			clearAllStyles();
 
 			Buffer* buf = MainFileManager.getBufferByID(_currentBufferID);
 

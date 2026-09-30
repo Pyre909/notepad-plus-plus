@@ -109,6 +109,7 @@ SET(src_files
 			./EncodingMapper.cpp
 			./WinControls/FindCharsInRange/FindCharsInRange.cpp
 			./ScintillaComponent/FindReplaceDlg.cpp
+			./ScintillaComponent/FontFamilyNames.cpp
 			./ScintillaComponent/FunctionCallTip.cpp
 			./WinControls/FunctionList/functionListPanel.cpp
 			./WinControls/FunctionList/functionParser.cpp
@@ -262,6 +263,7 @@ SET(include_files
 			./MISC/FileNameStringSplitter.h
 			./WinControls/FindCharsInRange/FindCharsInRange.h
 			./ScintillaComponent/FindReplaceDlg.h
+			./ScintillaComponent/FontFamilyNames.h
 			./ScintillaComponent/FunctionCallTip.h
 			./WinControls/FunctionList/functionListPanel.h
 			./WinControls/FunctionList/functionListPanel_rc.h

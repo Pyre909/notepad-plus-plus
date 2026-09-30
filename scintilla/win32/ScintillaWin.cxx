@@ -103,7 +103,6 @@ using Microsoft::WRL::ComPtr;
 
 #include "WinTypes.h"
 #include "PlatWin.h"
-#include "SurfaceGDI.h"
 #if defined(USE_D2D)
 #include "SurfaceD2D.h"
 #endif
@@ -432,7 +431,6 @@ public:
 		if (vs.styles[style].fontName) {
 			const char *fontName = vs.styles[style].fontName;
 			UTF16FromUTF8(std::string_view(fontName), lf.lfFaceName, LF_FACESIZE);
-			GdiLogFont(lf);	// N++: the font the text of this family name and weight is drawn with
 		}
 
 		::ImmSetCompositionFontW(hIMC, &lf);
