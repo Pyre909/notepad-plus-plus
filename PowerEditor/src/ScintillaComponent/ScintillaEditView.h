@@ -723,6 +723,12 @@ protected:
 	static std::string _defaultCharList;
 	bool _isMultiPasteActive = false;
 
+	// the font name and font style of STYLE_DEFAULT set by setSpecialStyle, and the ones clearAllStyles gave the other styles
+	mutable std::wstring _defaultStyleFontName;
+	mutable int _defaultStyleFontStyle = STYLE_NOT_USED;
+	std::wstring _clearedStyleFontName;
+	int _clearedStyleFontStyle = STYLE_NOT_USED;
+
 //Lexers and Styling
 	void restyleBuffer();
 	static const char* concatToBuildKeywordList(std::string& kwl, LangType langType, int keywordIndex);
@@ -733,6 +739,7 @@ protected:
 	void makeStyle(LangType langType, const char** keywordArray = nullptr) const;
 	void setStyle(Style styleToSet) const; //NOT by reference (style edited)
 	void setSpecialStyle(const Style& styleToSet) const; //by reference
+	void clearAllStyles(); // SCI_STYLECLEARALL: the styles get the ones of STYLE_DEFAULT
 	void setSpecialIndicator(const Style& styleToSet) const {
 		execute(SCI_INDICSETFORE, styleToSet._styleID, styleToSet._bgColor);
 	}
