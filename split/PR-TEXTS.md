@@ -571,5 +571,7 @@ Steps: SCI_SETTECHNOLOGY(SC_TECHNOLOGY_DIRECTWRITE), SCI_STYLESETWEIGHT(STYLE_DE
 
 The attached patch returns no HFONT when there's no text format, as HFont() already does when GetFontFamilyName fails. Alternatively SCI_STYLESETWEIGHT could clamp the weight to 1..999, but SCI_STYLESETSTRETCH doesn't validate its value either (not tried), and any other failure of CreateTextFormat would leave pTextFormat null the same way.
 
+The attached hfontcrash.cpp reproduces it: "hfontcrash 1000" crashes, "hfontcrash 400" works (build line in its header).
+
 This was found and prepared with the help of an AI assistant (Claude), then reviewed and tested.
 ```
