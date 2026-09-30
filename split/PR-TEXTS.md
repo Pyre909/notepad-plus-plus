@@ -321,6 +321,27 @@ Branch `live-rendering-switch_20260930`, two commits on 2 (`a485acc`):
 - `08cc23b` "Apply the rendering mode at once, without restarting": the feature. Open it after 2 is merged, or
   add it to 2 if the reviewer prefers (it is 4 files, +61 −6).
 
+**Decision (2026-09-30): a follow-up PR, opened after #18418 is merged**, so #18418 stays as reviewed. Both
+branches are pushed. When #18418 is merged, rebase this branch onto master and open the PR:
+
+```sh
+git fetch upstream master
+# if bb32194 went into #18418:
+git rebase --onto upstream/master bb32194 live-rendering-switch_20260930
+# otherwise (keeps bb32194 in this PR):
+git rebase --onto upstream/master a485acc live-rendering-switch_20260930
+```
+
+If #18418 is merged as one squashed commit, the rebase replays only this PR's commits; rebuild and rerun
+`techswitch.sh` before pushing (a rebased branch with no PR open yet can be force-pushed).
+
+Comment for #18418, if bb32194 is pushed there (optional, helps the reviewer):
+```
+I pushed a small commit: the message shown when RTL is asked with DirectWrite still pointed to the MISC. section, where the rendering mode no longer is. It now names the GDI rendering mode in Editing 1.
+
+A follow-up is ready on my fork (branch live-rendering-switch_20260930): the rendering mode applies at once, without restarting. I'll open it once this PR is merged, to keep this one as reviewed.
+```
+
 ### PR — title
 `Apply the rendering mode at once, without restarting`
 
@@ -536,9 +557,10 @@ values stay as they are, since the units are the same.
 
 ## 4. Scintilla Bug Tracker: crash in FontDirectWrite::HFont when the font has no text format
 
-New ticket: https://sourceforge.net/p/scintilla/bugs/new/ (search first:
-https://sourceforge.net/p/scintilla/bugs/search/?q=HFont). Attach `scintilla-5.6.7-directwrite-hfont-null-text-format.diff`
-(3 lines, applies to 5.6.7 with `git apply` / `patch -p1`, builds as C++17 with -Wpedantic -Wall -Wextra).
+New ticket: https://sourceforge.net/p/scintilla/bugs/new/. No existing report: the tracker's REST search for "HFont"
+finds only #2519, #2080 and #817 (2026-09-30). Attach `scintilla-5.6.7-directwrite-hfont-null-text-format.diff`
+(3 lines, applies to 5.6.7 with `git apply` / `patch -p1`, builds as C++17 with -Wpedantic -Wall -Wextra), and
+optionally `hfontcrash.cpp` (the reproduction program).
 
 ### Title
 `[Win32] Crash in FontDirectWrite::HFont when DirectWrite refused the font (e.g. SCI_STYLESETWEIGHT 1000), on showing autocompletion`
@@ -547,7 +569,7 @@ https://sourceforge.net/p/scintilla/bugs/search/?q=HFont). Attach `scintilla-5.6
 ```
 With a DirectWrite technology, FontDirectWrite leaves pTextFormat null when CreateTextFormat fails, for example for a weight outside 1..999 set with SCI_STYLESETWEIGHT (Scintilla doesn't validate it). The drawing code checks pTextFormat, but FontDirectWrite::HFont() doesn't, so showing an autocompletion list then crashes: ListBoxX::SetFont calls HFont(), which calls pTextFormat->GetFontFamilyName on a null pointer.
 
-Steps (5.6.6 and 5.6.7): SCI_SETTECHNOLOGY(SC_TECHNOLOGY_DIRECTWRITE), SCI_STYLESETWEIGHT(STYLE_DEFAULT, 1000), SCI_STYLECLEARALL, SCI_AUTOCSHOW(0, "alpha beta gamma") -> access violation reading address 0 in FontDirectWrite::HFont (called by ListBoxX::SetFont). Reproduced under Wine 9 with a MinGW-w64 build; weight 400 works.
+Steps: SCI_SETTECHNOLOGY(SC_TECHNOLOGY_DIRECTWRITE), SCI_STYLESETWEIGHT(STYLE_DEFAULT, 1000), SCI_STYLECLEARALL, SCI_AUTOCSHOW(0, "alpha beta gamma") -> access violation reading address 0 in FontDirectWrite::HFont (called by ListBoxX::SetFont). Reproduced with MinGW-w64 builds of 5.6.6 and 5.6.7 under Wine 9; weight 400 works. With the attached patch applied to 5.6.7, the same steps don't crash.
 
 The attached patch returns no HFONT when there's no text format, as HFont() already does when GetFontFamilyName fails. Alternatively SCI_STYLESETWEIGHT could clamp the weight to 1..999, but SCI_STYLESETSTRETCH doesn't validate its value either (not tried), and any other failure of CreateTextFormat would leave pTextFormat null the same way.
 
