@@ -256,7 +256,7 @@ struct FontDirectWrite : public FontWin {
 	~FontDirectWrite() noexcept override = default;
 	[[nodiscard]] HFONT HFont() const noexcept override {
 		if (!pTextFormat) {
-			return {};	// no font: a weight or stretch DirectWrite refuses
+			return {};	// no font: a weight or stretch DirectWrite refuses (Scintilla bug #2520)
 		}
 		LOGFONTW lf = {};
 		const HRESULT hr = pTextFormat->GetFontFamilyName(lf.lfFaceName, LF_FACESIZE);
