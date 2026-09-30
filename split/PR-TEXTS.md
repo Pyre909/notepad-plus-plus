@@ -9,10 +9,10 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 2 | `text-rendering_20260925` | `a485acc` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 open** |
 | 3 | `text-rendering-translations_20260925` | `1aa8b0e` | 29 xml | – | Label capitalisation (stacked on 2) | no (`[xml]`) |
 | 4 | `per-monitor-dpi_20260925` | `8a0ff70` | 63 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
-| 5 | `directwrite-font-names_20260930` | `6e8579e` | 6 (Notepad++ only) | see CI | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | yes (issue text below). Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
+| 5 | `directwrite-font-names_20260930` | `6e8579e` | 6 (Notepad++ only) | +16 KB | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | yes (issue text below). Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
 | 6 | `live-rendering-switch_20260930` | `bb32194` + `08cc23b` (on 2) | 4 | small | Rendering mode applied at once, no restart | follow-up of 2 (#18414): open after 2 is merged; `bb32194` could go into 2 now |
 
-Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). Branches 1–4 pass CI on every job. 5 and 6 are local only for now (not pushed); their code passes CI as part of the combined branch.
+Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All branches pass CI on every job (5 and 6: 13/13 jobs, 2026-09-30). Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
 
 **How the split was checked.** Each branch was built and tested on its own (results in each
 PR's Testing section). Recombined, the branches give the combined branch back byte for byte,
@@ -296,7 +296,7 @@ Testing (MinGW-w64 GCC 13 x64 build, run under Wine 9):
 - In Notepad++, with "Fira Code Light" as the Default Style font: the styles read back "Fira Code" weight 300 (bold 600) with DirectWrite, and "Fira Code Light" weight 300 (bold "Fira Code SemiBold") with GDI. DirectWrite was tested with a build whose Wine check (ScintillaEditView::init) was disabled; that change is not in this PR.
 - Default theme: screenshots of the main window and a docked panel at 96 and 144 DPI are pixel-identical to master.
 - No new warnings with the repository's GCC flags (-Wpedantic -Wall -Wextra -Wconversion).
-- GitHub Actions (CI_build on the fork): <result>
+- GitHub Actions (this repository's CI_build workflow, on the fork): all 13 jobs pass: MSVC x64/Win32/ARM64 Release and Debug, the CMake build, the MinGW and Clang builds. MSVC x64 exe +16 KB.
 - Not tested: a real Windows font collection. Please try Bahnschrift Light or Cascadia Code SemiBold with DirectWrite.
 
 AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
@@ -306,7 +306,7 @@ AI disclosure: this change was written with the help of an AI assistant (Claude)
 fix #NNNNN
 ```
 
-Fill `<result>` from the branch's CI run once it is pushed. Before opening, check on Windows with the branch's CI exe:
+Before opening, check on Windows with the branch's CI exe (`Notepad++.MSVC.x64.Release` artifact of its run in the fork's Actions tab):
 Default Style font "Bahnschrift Light", Rendering mode DirectWrite: the text must be drawn in Bahnschrift Light,
 and bold keywords in Bahnschrift SemiBold (they were a fallback font before).
 
@@ -314,7 +314,7 @@ and bold keywords in Bahnschrift SemiBold (they were a fallback font before).
 
 ## 6. Rendering mode applied at once, without restarting (follow-up of 2)
 
-Branch `live-rendering-switch_20260930`, two commits on 2 (`a485acc`):
+Branch `live-rendering-switch_20260930` (pushed, CI 13/13 jobs), two commits on 2 (`a485acc`):
 - `bb32194` "Point the RTL vs DirectWrite message to Editing 1": 2 moves the Rendering mode box from MISC to
   Editing 1, so the existing message "Please disable DirectWrite mode in MISC. section" becomes wrong with 2 alone.
   It belongs in 2: push it to `text-rendering_20260925` as a new commit (CONTRIBUTING rule 10: no force-push).
