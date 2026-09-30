@@ -46,6 +46,7 @@
 #include "Parameters.h"
 #include "ScintillaEditView.h"
 #include "ToolBar.h"
+#include "WordStyleDlg.h"
 #include "dpiManagerV2.h"
 #include "localization.h"
 #include "menuCmdID.h"
@@ -2155,8 +2156,11 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 									return TRUE;
 
 								// applied at once, refused (the current rendering mode is shown again) for right-to-left text with DirectWrite
+								const writeTechnologyEngine previousTechnology = nppGUI._writeTechnologyEngine;
 								if (!ScintillaEditView::setTechnologyToAll(static_cast<writeTechnologyEngine>(selIndex), _hSelf))
 									::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_SETCURSEL, nppGUI._writeTechnologyEngine, 0);
+								else if (nppGUI._writeTechnologyEngine != previousTechnology)
+									::SendMessage(::GetParent(_hParent), WM_UPDATESCINTILLAS, FALSE, 0); // the style fonts depend on the technology (see ScintillaEditView::setSpecialStyle)
 								enableDirectWriteTextRendering();
 								return TRUE;
 							}
