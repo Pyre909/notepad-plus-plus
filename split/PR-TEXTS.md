@@ -390,7 +390,7 @@ mailing list. Code must build as C++17 and follow https://www.scintilla.org/SciC
 | Change | Effect | Where it goes |
 |---|---|---|
 | GDI weight family names ("Fira Code Light") under DirectWrite, real bold under GDI | Filed as Scintilla bug #2519; the maintainer declined this twice before (#2080, #2356) | **Withdrawn from Scintilla**: now Notepad++ PR 5, no Scintilla change (see section 2 below) |
-| Crash: `FontDirectWrite::HFont` with no text format (a weight DirectWrite refuses, then the autocompletion list) | Bug in every Win32 app using DirectWrite | **Scintilla Bug Tracker** (section 4 below, 3-line patch). Kept in the combined branch meanwhile |
+| Crash: `FontDirectWrite::HFont` with no text format (a weight DirectWrite refuses, then the autocompletion list) | Bug in every Win32 app using DirectWrite | **Filed as Scintilla bug #2520** (2026-09-30, section 4 below, 3-line patch). Kept in the combined branch until a Scintilla release has it |
 | DirectWrite rendering-parameter overrides: gamma, enhanced contrast, grayscale enhanced contrast, ClearType level, pixel geometry, rendering mode (PR 2) | New Win32 API, useful to any app (SciTE could expose it as properties) | **Feature Request, patch ready and tested** (section 3) |
 | GDI-compatible measuring for the GDI rendering modes (PR 2) | Correctness part of the above: caret and selection match the drawn glyphs | Same proposal |
 | Autocompletion list drawn with the editor's parameters once they are customised (PR 2) | Consistency part of the above | Same proposal |
@@ -554,6 +554,9 @@ values stay as they are, since the units are the same.
 ---
 
 ## 4. Scintilla Bug Tracker: crash in FontDirectWrite::HFont when the font has no text format
+
+**Filed: https://sourceforge.net/p/scintilla/bugs/2520/** (2026-09-30), with the patch and `hfontcrash.cpp` attached.
+When a Scintilla release includes the fix, drop the guard from the combined branch at the next Scintilla update.
 
 New ticket: https://sourceforge.net/p/scintilla/bugs/new/. No existing report: the tracker's REST search for "HFont"
 finds only #2519, #2080 and #817 (2026-09-30). Attach `scintilla-5.6.7-directwrite-hfont-null-text-format.diff`

@@ -5,8 +5,8 @@
   declined this mapping in Scintilla. The mapping now lives in Notepad++ (PR kit, section 5, branch
   `directwrite-font-names_20260930`), with the same results in the font check (35 names, identical report).
 - Feature request (DirectWrite rendering parameters): filed, waiting. Only the standalone patch variant matters now.
-- New bug to file: crash in `FontDirectWrite::HFont` with no text format (PR kit appendix section 4, patch
-  `scintilla-5.6.7-directwrite-hfont-null-text-format.diff`). It was part of the withdrawn patch.
+- Bug #2520 (filed 2026-09-30): crash in `FontDirectWrite::HFont` with no text format (PR kit appendix section 4,
+  patch `scintilla-5.6.7-directwrite-hfont-null-text-format.diff`). It was part of the withdrawn patch.
 
 The reviewer on #18418 is right: every Scintilla change Notepad++ carries has to be re-applied by hand
 at each Scintilla upgrade. Notepad++ already does this for its own patches (about 200 changed lines
@@ -23,7 +23,7 @@ mailing list. Code must build as C++17 and follow https://www.scintilla.org/SciC
 | Change | Effect | Where it goes |
 |---|---|---|
 | GDI weight family names ("Fira Code Light") under DirectWrite, real bold under GDI | Filed as Scintilla bug #2519; the maintainer declined this twice before (#2080, #2356) | **Withdrawn from Scintilla**: now Notepad++ PR 5, no Scintilla change |
-| Crash: `FontDirectWrite::HFont` with no text format (a weight DirectWrite refuses, then the autocompletion list) | Bug in every Win32 app using DirectWrite | **Scintilla Bug Tracker** (3-line patch, PR kit appendix section 4) |
+| Crash: `FontDirectWrite::HFont` with no text format (a weight DirectWrite refuses, then the autocompletion list) | Bug in every Win32 app using DirectWrite | **Filed as Scintilla bug #2520** (3-line patch, PR kit appendix section 4) |
 | DirectWrite rendering-parameter overrides: gamma, enhanced contrast, grayscale enhanced contrast, ClearType level, pixel geometry, rendering mode (PR 2) | New Win32 API, useful to any app (SciTE could expose it as properties) | **Feature Request, patch ready and tested** (section 3) |
 | GDI-compatible measuring for the GDI rendering modes (PR 2) | Correctness part of the above: caret and selection match the drawn glyphs | Same proposal |
 | Autocompletion list drawn with the editor's parameters once they are customised (PR 2) | Consistency part of the above | Same proposal |
