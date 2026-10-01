@@ -9,7 +9,7 @@ build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` 
 | Branch | Head | What |
 |---|---|---|
 | `master` | `37f76d4` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
-| `pyre` | `eb53308` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
+| `pyre` | `74c1518` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
 | `claude/awesome-darwin-bsud9v` | `357fec9` | The combined development branch: all the features (pyre is built on it) |
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418 (open): Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (`[xml]` PR after #18418 is merged) |
@@ -56,8 +56,9 @@ build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` 
   NppShell binary of the ARM64 one is ARM64) with our exe.
 - Releases: run 1 (`ea151ae`, x64 only) and run 2 (`aee7bbf`, x64 + ARM64) passed on 2026-10-01; draft
   `pyre-8.9.8.1-aee7bbf`. Pyre909's ARM64 installer from it installs and works on their Windows 11 ARM64 VM
-  (Parallels on an Apple Silicon Mac): About shows "(ARM 64-bit, Pyre909 build)" and the Explorer menu works.
-  Left to check: Plugins Admin, auto-update off (no "Update Notepad++" in the ? menu), uninstall. The x64-only draft `pyre-8.9.8.1-ea151ae` is superseded.
+  (Parallels on an Apple Silicon Mac): About shows "(ARM 64-bit, Pyre909 build)", the Explorer menu and Plugins
+  Admin work, auto-update is off (no "Update Notepad++" in the ? menu). Uninstall not checked (it would remove the
+  working install). The x64-only draft `pyre-8.9.8.1-ea151ae` is superseded.
 
 ## Next
 
