@@ -1,0 +1,2 @@
+#!/bin/sh
+x86_64-w64-mingw32-g++ -std=c++20 -O2 -Wall -DUNICODE -D_UNICODE -DNOMINMAX -D_WIN32_WINNT=0x0A00 -municode -I/home/user/notepad-plus-plus/scintilla/include /tmp/claude-0/-home-user-notepad-plus-plus/a7777ee2-9a03-5e58-a0f7-c6d7e0ee6ba1/scratchpad/statictest/smallcheck.cpp /home/user/notepad-plus-plus/PowerEditor/gcc/bin.gcc.x86_64.build/libscintilla.a -static -static-libgcc -static-libstdc++ -mconsole -lgdi32 -luser32 -limm32 -lmsimg32 -lole32 -loleaut32 -luuid -lcomctl32 -luxtheme -lshcore -ldwmapi -ldwrite -lwindowscodecs -o "$1"
