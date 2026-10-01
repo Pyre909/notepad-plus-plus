@@ -56,8 +56,13 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
   `msbuild PowerEditor\visual.net\notepadPlus.sln /m /p:configuration=Release /p:platform=x64`
   gives `PowerEditor\bin64\Notepad++.exe`; `/p:platform=ARM64` gives `PowerEditor\binarm64\Notepad++.exe` (native on
   the VM; needs Visual Studio's MSVC ARM64 build tools component, which the setup script may not have added).
-- To run a dev build without touching the installed Notepad++: `Notepad++.exe -multiInst -nosession
-  -settingsDir=<empty folder>`, or a copy of the exe in a folder with `doLocalConf.xml`.
+- To run a build without touching the real settings (PowerShell; the folder must exist, else Notepad++ says
+  "Invalid directory" and uses the normal settings):
+  `Start-Process "C:\Program Files\Notepad++\notepad++.exe" -ArgumentList '-multiInst', '-nosession', '-settingsDir=C:\npp-test'`
+  (a dev build: `PowerEditor\bin64\Notepad++.exe` or `binarm64`), or a copy of the exe in a folder with
+  `doLocalConf.xml`. Quote the path (it has a space). From Git Bash, which Claude Code uses for shell commands
+  on Windows, don't start the exe directly: the command waits until Notepad++ closes, and an unquoted
+  `C:\npp-test` loses its backslash. Use `powershell -Command "Start-Process ..."` instead.
 - CI (`.github/workflows/CI_build.yml`) runs on every push: 13 jobs (MSVC x64/Win32/ARM64 Release and Debug,
   CMake, MinGW, Clang). MSVC catches things GCC doesn't; check it after pushing.
 
