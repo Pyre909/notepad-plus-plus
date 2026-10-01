@@ -28,6 +28,10 @@
 
 using namespace std;
 
+// Pyre909 build: an unofficial build of Notepad++ (https://github.com/Pyre909/notepad-plus-plus, branch pyre),
+// named next to the bitness in the About box and the debug info
+#define PYRE_BUILD_TAG L", Pyre909 build"
+
 #ifdef _MSC_VER
 #pragma warning(disable : 4996) // for GetVersion()
 #endif
@@ -121,7 +125,9 @@ intptr_t CALLBACK AboutDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lPar
 
 			NppParameters& nppParam = NppParameters::getInstance();
 			LPCTSTR bitness = nppParam.archType() == IMAGE_FILE_MACHINE_I386 ? L"(32-bit)" : nppParam.archType() == IMAGE_FILE_MACHINE_AMD64 ? L"(64-bit)" : L"(ARM 64-bit)";
-			::SetDlgItemText(_hSelf, IDC_VERSION_BIT, bitness);
+			wstring bitnessText = bitness;
+			bitnessText.insert(bitnessText.length() - 1, PYRE_BUILD_TAG); // (64-bit, Pyre909 build)
+			::SetDlgItemText(_hSelf, IDC_VERSION_BIT, bitnessText.c_str());
 
 			::SendMessage(compileDateHandle, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(buildTime.c_str()));
 			::EnableWindow(compileDateHandle, FALSE);
@@ -252,6 +258,7 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			// Notepad++ version
 			_debugInfoStr = NOTEPAD_PLUS_VERSION;
 			_debugInfoStr += nppParam.archType() == IMAGE_FILE_MACHINE_I386 ? L"   (32-bit)" : nppParam.archType() == IMAGE_FILE_MACHINE_AMD64 ? L"   (64-bit)" : L"   (ARM 64-bit)";
+			_debugInfoStr.insert(_debugInfoStr.length() - 1, PYRE_BUILD_TAG);
 			_debugInfoStr += L"\r\n";
 
 			// Build time
