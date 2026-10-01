@@ -5,7 +5,8 @@
 # doLocalConf.xml keeps the settings in the folder.
 #
 # Usage: package.ps1 -Exe <notepad++.exe> -OutDir <dir> [-Commit <sha>] [-OfficialZip <npp.x.y.z.portable.x64.zip>]
-# Writes <OutDir>/<name>.zip, <name>.zip.sha256 and notes.md, and name / version / short to $GITHUB_OUTPUT if set.
+# Writes <OutDir>/<name>.zip, <name>.zip.sha256, notes.md and official-tag.txt (the official release used), and
+# name / version / short to $GITHUB_OUTPUT if set.
 
 param(
 	[Parameter(Mandatory)] [string] $Exe,
@@ -80,6 +81,7 @@ foreach ($required in 'plugins/Config/nppPluginList.dll', 'updater/GUP.exe') {
 	if (-not (Test-Path (Join-Path $official $required))) { throw "the official portable zip has no $required" }
 }
 Copy-Item (Join-Path $official 'plugins'), (Join-Path $official 'updater') $pkg -Recurse
+Set-Content -Path (Join-Path $OutDir 'official-tag.txt') -Value $officialFrom -NoNewline # for installer.ps1
 
 # about this build
 $repo = if ($env:GITHUB_REPOSITORY) { "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY" } else { 'https://github.com/Pyre909/notepad-plus-plus' }
