@@ -1,0 +1,55 @@
+name: Pyre909 release
+
+# Private builds of the pyre branch: an x64 portable zip in a DRAFT release, which only people with push access
+# to this repository can see. Run it from the Actions tab (Run workflow, with pyre as the default branch) or push
+# a tag named pyre-*. Publishing the draft makes it public.
+
+on:
+  push:
+    tags: ['pyre-*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v6
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v3
+
+    - name: MSBuild of n++ exe (x64 Release)
+      working-directory: PowerEditor\visual.net\
+      run: msbuild notepadPlus.sln /m /p:configuration="Release" /p:platform="x64"
+
+    - name: Package the portable zip
+      id: package
+      shell: pwsh
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: .github\pyre\package.ps1 -Exe PowerEditor\bin64\Notepad++.exe -OutDir out -Commit ${{ github.sha }}
+
+    - name: Create the draft release
+      shell: pwsh
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        $name = '${{ steps.package.outputs.name }}'
+        $version = '${{ steps.package.outputs.version }}'
+        $short = '${{ steps.package.outputs.short }}'
+        $releaseArgs = @('--repo', '${{ github.repository }}', '--draft', '--title', "Notepad++ $version (Pyre909 build $short)", '--notes-file', 'out\notes.md')
+        if ('${{ github.ref_type }}' -eq 'tag') {
+          $tag = '${{ github.ref_name }}'
+        }
+        else {
+          $tag = "pyre-$version-$short"
+          $releaseArgs += @('--target', '${{ github.sha }}')
+        }
+        gh release create $tag "out\$name.zip" "out\$name.zip.sha256" @releaseArgs
+        if ($LastExitCode -ne 0) { exit $LastExitCode }
