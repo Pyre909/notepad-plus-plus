@@ -12,8 +12,13 @@ branch, read it with `git show origin/pyre:CLAUDE.md`.
   font changes, released privately as the "Pyre909 build". `PYRE-BUILD.md` describes it for users.
 - Features that look worthwhile to upstream go there as separate pull requests, one per feature, each a single
   commit on upstream `master`.
-- Earlier work was done in a cloud Claude Code session on Linux, testing under Wine. A local Windows session
-  can do what that one couldn't (see "What still needs real Windows").
+- Earlier work was done in a cloud Claude Code session on Linux, testing under Wine. Since 2026-10-01 it
+  continues on Pyre909's Windows VM, which can do what Wine couldn't (see "What still needs real Windows").
+  **Where the work stands: the "Handoff" section of `STATUS.md`** (tooling branch, see "Where the rest is").
+- That cloud conversation can be resumed here with `claude --teleport` (same claude.ai account, in the clone,
+  clean working tree, no other Claude session running in it). Teleport checks out the cloud session's branch,
+  `claude/awesome-darwin-bsud9v`: run `git switch pyre` afterwards. The cloud session's scratchpad files
+  (`/tmp/claude-0/...`) don't come along; everything worth keeping is on the branches.
 
 ## Branches and their rules
 
@@ -21,7 +26,7 @@ branch, read it with `git show origin/pyre:CLAUDE.md`.
 |---|---|
 | `master` | Exact mirror of upstream. Only updated with GitHub's **Sync fork**. Never commit here. |
 | `pyre` | The product. Merge `master` into it to take new upstream versions. New features land here. |
-| `claude/awesome-darwin-bsud9v` | The combined development branch `pyre` was built on (`357fec9`); no longer needed for new work. |
+| `claude/awesome-darwin-bsud9v` | The cloud session's branch: the combined development branch `pyre` was built on (`357fec9`); no longer needed for new work (`claude --teleport` checks it out: switch back to `pyre`). |
 | `text-rendering_20260925` | **Open upstream PR #18418.** New commits only: no amend, rebase or force-push (upstream CONTRIBUTING rule 10). Push only with Pyre909's OK. |
 | `text-rendering-translations_20260925`, `live-rendering-switch_20260930` | Follow-ups of #18418: open them after #18418 is merged, after rebasing onto `master` (commands in the PR kit). |
 | `directwrite-font-names_20260930`, `per-monitor-dpi_20260925` | Ready PR candidates (font names: issue + PR texts ready; DPI: discuss with maintainers first). |
@@ -111,18 +116,22 @@ and can't run 32-bit NSIS installers):
    Admin works, auto-update is off: the ? menu has no "Update Notepad++" or "Set Updater Proxy..."). Not checked:
    uninstall removing `disableNppAutoUpdate.xml` (it would remove Pyre909's working install; check it when going
    back to official Notepad++).
-2. DirectWrite in Notepad++: each Text Rendering choice changes the text at once; the rendering mode switches
-   GDI <-> DirectWrite without restart, fonts following.
+2. DirectWrite in Notepad++: the rendering mode switches GDI <-> DirectWrite without restart, the text redraws
+   at once (**pass**, 2026-10-01, ARM64 install on the VM). Still to check: the font stays the same after the
+   switch (no fallback font), and with DirectWrite each Antialiasing choice and DirectWrite mode changes the text
+   at once.
 3. Fonts: Default Style "Bahnschrift Light" with DirectWrite draws Light, bold keywords SemiBold;
    "Cascadia Code SemiBold" bold draws Bold (needed before opening the font-name PR).
 4. Per-monitor DPI with monitors at different scales.
 
 ## Where the rest is
 
-On branch `scintilla-upstream_20260930` (`git fetch origin scintilla-upstream_20260930`, then
-`git show origin/scintilla-upstream_20260930:STATUS.md`, or check it out in a separate worktree):
+On branch `scintilla-upstream_20260930`. On the VM, the setup script checked it out in
+`%USERPROFILE%\src\npp.worktrees\scintilla-upstream_20260930` (`git pull` there first); elsewhere,
+`git fetch origin scintilla-upstream_20260930`, then `git show origin/scintilla-upstream_20260930:STATUS.md`.
 
-- `STATUS.md`: branches, upstream PRs and Scintilla tickets, next steps.
+- `STATUS.md`: **the handoff (where the test round stands, what's next)**, branches, upstream PRs and Scintilla
+  tickets.
 - `split/PR-TEXTS.md`: every issue / PR / ticket text, rebase commands, testing notes.
 - `scintilla/SCINTILLA-UPSTREAM.md`: the Scintilla tickets and their outcome.
 - `README.md`: the Linux/Wine test tools (`harness/`, `harness-dpi/`, `statictest/`, `fork/`, ...).
