@@ -1,7 +1,7 @@
 name: Pyre909 release
 
-# Private builds of the pyre branch: an x64 installer and portable zip in a DRAFT release, which only people with
-# push access to this repository can see. Run it from the Actions tab (Run workflow, with pyre as the default
+# Private builds of the pyre branch: x64 and ARM64 installers and portable zips in a DRAFT release, which only people
+# with push access to this repository can see. Run it from the Actions tab (Run workflow, with pyre as the default
 # branch) or push a tag named pyre-*. Publishing the draft makes it public.
 
 on:
@@ -28,15 +28,20 @@ jobs:
       working-directory: PowerEditor\visual.net\
       run: msbuild notepadPlus.sln /m /p:configuration="Release" /p:platform="x64"
 
-    - name: Package the portable zip
+    - name: MSBuild of n++ exe (ARM64 Release)
+      working-directory: PowerEditor\visual.net\
+      run: msbuild notepadPlus.sln /m /p:configuration="Release" /p:platform="ARM64"
+
+    - name: Package the portable zips
       id: package
       shell: pwsh
       env:
         GH_TOKEN: ${{ github.token }}
-      run: .github\pyre\package.ps1 -Exe PowerEditor\bin64\Notepad++.exe -OutDir out -Commit ${{ github.sha }}
+      run: |
+        .github\pyre\package.ps1 -Arch x64 -Exe PowerEditor\bin64\Notepad++.exe -OutDir out -Commit ${{ github.sha }}
+        .github\pyre\package.ps1 -Arch arm64 -Exe PowerEditor\binarm64\Notepad++.exe -OutDir out -Commit ${{ github.sha }}
 
-    - name: Build the installer
-      id: installer
+    - name: Build the installers
       shell: pwsh
       run: |
         $makensis = (Get-Command makensis -ErrorAction SilentlyContinue).Source
@@ -47,17 +52,19 @@ jobs:
         }
         $sevenZip = (Get-Command 7z -ErrorAction SilentlyContinue).Source
         if (-not $sevenZip) { $sevenZip = "$env:ProgramFiles\7-Zip\7z.exe" }
-        .github\pyre\installer.ps1 -Exe PowerEditor\bin64\Notepad++.exe -OutDir out -Commit ${{ github.sha }} -MakeNsis $makensis -SevenZip $sevenZip
+        .github\pyre\installer.ps1 -Arch x64 -Exe PowerEditor\bin64\Notepad++.exe -OutDir out -Commit ${{ github.sha }} -MakeNsis $makensis -SevenZip $sevenZip
+        .github\pyre\installer.ps1 -Arch arm64 -Exe PowerEditor\binarm64\Notepad++.exe -OutDir out -Commit ${{ github.sha }} -MakeNsis $makensis -SevenZip $sevenZip
 
     - name: Create the draft release
       shell: pwsh
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        $name = '${{ steps.package.outputs.name }}'
-        $installer = '${{ steps.installer.outputs.installer }}'
         $version = '${{ steps.package.outputs.version }}'
         $short = '${{ steps.package.outputs.short }}'
+        # installer and portable zip, each with its .sha256, for x64 and ARM64
+        $files = @(Get-ChildItem out -File -Filter "npp.$version.pyre-$short.*" | Sort-Object Name | ForEach-Object FullName)
+        if ($files.Count -ne 8) { throw "expected 8 release files, found $($files.Count): $($files -join ', ')" }
         $releaseArgs = @('--repo', '${{ github.repository }}', '--draft', '--title', "Notepad++ $version (Pyre909 build $short)", '--notes-file', 'out\notes.md')
         if ('${{ github.ref_type }}' -eq 'tag') {
           $tag = '${{ github.ref_name }}'
@@ -66,5 +73,5 @@ jobs:
           $tag = "pyre-$version-$short"
           $releaseArgs += @('--target', '${{ github.sha }}')
         }
-        gh release create $tag "out\$installer.exe" "out\$installer.exe.sha256" "out\$name.zip" "out\$name.zip.sha256" @releaseArgs
+        gh release create $tag @files @releaseArgs
         if ($LastExitCode -ne 0) { exit $LastExitCode }

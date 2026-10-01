@@ -47,10 +47,15 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
   remote `upstream` = official), sets `core.autocrlf false` (the sources mix CRLF and LF: don't convert), and
   adds worktrees for the PR and tooling branches in `<clone>.worktrees\<branch>`. Work on a PR branch in its
   worktree, not by switching branches in the clone.
+- Pyre909's test machine is a **Windows 11 ARM64 VM in Parallels** on an Apple Silicon Mac. x64 builds run
+  there under emulation (DirectWrite is the same system code, so rendering tests hold), but an x64 Explorer menu
+  doesn't load in the ARM64 Explorer: test that with the ARM64 installer. macOS can rescale the VM window, so judge
+  rendering from screenshots taken inside Windows, not from what Pyre909 sees on the Mac screen.
 - Visual Studio 2022 (toolset v143) or 2026 (v145) with "Desktop development with C++".
 - `PowerEditor\visual.net\notepadPlus.sln`; from a Developer PowerShell:
   `msbuild PowerEditor\visual.net\notepadPlus.sln /m /p:configuration=Release /p:platform=x64`
-  gives `PowerEditor\bin64\Notepad++.exe`.
+  gives `PowerEditor\bin64\Notepad++.exe`; `/p:platform=ARM64` gives `PowerEditor\binarm64\Notepad++.exe` (native on
+  the VM; needs Visual Studio's MSVC ARM64 build tools component, which the setup script may not have added).
 - To run a dev build without touching the installed Notepad++: `Notepad++.exe -multiInst -nosession
   -settingsDir=<empty folder>`, or a copy of the exe in a folder with `doLocalConf.xml`.
 - CI (`.github/workflows/CI_build.yml`) runs on every push: 13 jobs (MSVC x64/Win32/ARM64 Release and Debug,
@@ -84,20 +89,22 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
 
 ## Releases
 
-Actions > **Pyre909 release** > Run workflow (or push a tag `pyre-*`). It builds x64 with MSBuild, then a
-portable zip and an installer (official `nppSetup.nsi`), both with the official release's plugins, updater and
-Explorer context menu, and auto-update off (`disableNppAutoUpdate.xml`). The result is a **draft release**,
-private to people with push access. Locally: run `package.ps1` then `installer.ps1` (PowerShell 7; the installer
-also needs NSIS and 7-Zip).
+Actions > **Pyre909 release** > Run workflow (or push a tag `pyre-*`; or `gh workflow run pyre-release.yml --ref
+pyre`). It builds x64 and ARM64 with MSBuild, then for each a portable zip and an installer (official
+`nppSetup.nsi`), with the official release's plugins, updater and Explorer context menu of the same architecture,
+and auto-update off (`disableNppAutoUpdate.xml`). The result is a **draft release**, private to people with push
+access. Locally: run `package.ps1` then `installer.ps1`, each with `-Arch x64` or `-Arch arm64` and the same
+`-OutDir` (PowerShell 7; the installer also needs NSIS and 7-Zip).
 
 ## What still needs real Windows
 
 The cloud session couldn't test these (Wine forces GDI in Notepad++, can't capture DirectWrite or dialog text,
 and can't run 32-bit NSIS installers):
 
-1. The first release run (needs `pyre` as default branch), then the installer over an installed Notepad++:
-   About and Help > Debug Info say "(64-bit, Pyre909 build)", auto-update is off, Plugins Admin installs a
-   plugin, the Windows 11 Explorer "Edit with Notepad++" menu works, uninstall removes `disableNppAutoUpdate.xml`.
+1. The installer (the release workflow works since 2026-10-01; on the ARM64 VM, use the ARM64 one), over an
+   installed Notepad++: About and Help > Debug Info say "(ARM 64-bit, Pyre909 build)" (x64: "(64-bit, ...)"),
+   auto-update is off, Plugins Admin installs a plugin, the Windows 11 Explorer "Edit with Notepad++" menu works,
+   uninstall removes `disableNppAutoUpdate.xml`.
 2. DirectWrite in Notepad++: each Text Rendering choice changes the text at once; the rendering mode switches
    GDI <-> DirectWrite without restart, fonts following.
 3. Fonts: Default Style "Bahnschrift Light" with DirectWrite draws Light, bold keywords SemiBold;

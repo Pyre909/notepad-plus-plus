@@ -25,16 +25,20 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 
 Builds are made by the **Pyre909 release** workflow (Actions tab > Pyre909 release > Run workflow, with `pyre`
 as the fork's default branch; or push a tag named `pyre-*`). It creates a **draft release**, visible only to
-people with push access to the fork, with:
+people with push access to the fork, with, for x64 and for ARM64 (Windows on ARM, including Windows in Parallels
+on an Apple Silicon Mac):
 
-- `npp.<version>.pyre-<commit>.Installer.x64.exe`: installs like official Notepad++, in the same folder and with
-  the same settings (it replaces an official installation). It is unsigned, so Windows SmartScreen asks first:
-  More info > Run anyway.
-- `npp.<version>.pyre-<commit>.portable.x64.zip`: unzip anywhere; settings stay in that folder.
+- `npp.<version>.pyre-<commit>.Installer.<x64|arm64>.exe`: installs like official Notepad++, in the same folder
+  and with the same settings (it replaces an official installation). It is unsigned, so Windows SmartScreen asks
+  first: More info > Run anyway.
+- `npp.<version>.pyre-<commit>.portable.<x64|arm64>.zip`: unzip anywhere; settings stay in that folder.
 - A `.sha256` file for each.
 
-The plugins, the updater and the Explorer context menu come from the official release of the same version.
-Auto-update is off in both (`disableNppAutoUpdate.xml`), so the official updater can't replace this build;
+On Windows on ARM, take the ARM64 files: the x64 ones run there too (emulated), but the Explorer context menu
+of an x64 installation doesn't load in the ARM64 Explorer.
+
+The plugins, the updater and the Explorer context menu come from the official release of the same version and
+architecture. Auto-update is off in all of them (`disableNppAutoUpdate.xml`), so the official updater can't replace this build;
 Plugins Admin still works. To go back to official Notepad++, uninstall this build first (its uninstaller removes
 `disableNppAutoUpdate.xml`), or delete that file from the Notepad++ folder after installing the official one.
 

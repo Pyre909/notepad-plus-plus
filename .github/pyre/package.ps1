@@ -1,16 +1,19 @@
-# Packages the Pyre909 build of Notepad++ as an x64 portable zip, in the layout of the official portable zip
+# Packages the Pyre909 build of Notepad++ as an x64 or ARM64 portable zip, in the layout of the official portable zip
 # (see PowerEditor/installer/packageAll.bat): the files of this repository and the built notepad++.exe, plus the
-# plugins and updater of the official portable zip of the same version (else of the latest release), which
-# Plugins Admin needs. disableNppAutoUpdate.xml keeps the updater from replacing this build with an official one,
-# doLocalConf.xml keeps the settings in the folder.
+# plugins and updater of the official portable zip of the same version and architecture (else of the latest
+# release), which Plugins Admin needs. disableNppAutoUpdate.xml keeps the updater from replacing this build with an
+# official one, doLocalConf.xml keeps the settings in the folder.
 #
-# Usage: package.ps1 -Exe <notepad++.exe> -OutDir <dir> [-Commit <sha>] [-OfficialZip <npp.x.y.z.portable.x64.zip>]
-# Writes <OutDir>/<name>.zip, <name>.zip.sha256, notes.md and official-tag.txt (the official release used), and
-# name / version / short to $GITHUB_OUTPUT if set.
+# Usage: package.ps1 -Exe <notepad++.exe> -OutDir <dir> [-Arch x64|arm64] [-Commit <sha>]
+#                    [-OfficialZip <npp.x.y.z.portable.<arch>.zip>]
+# Writes <OutDir>/<name>.zip and <name>.zip.sha256, official-tag.<arch>.txt (the official release used), a line in
+# <OutDir>/notes.md (the release notes, started if missing), and version / short to $GITHUB_OUTPUT if set.
+# Both architectures can be packaged in the same <OutDir>.
 
 param(
 	[Parameter(Mandatory)] [string] $Exe,
 	[Parameter(Mandatory)] [string] $OutDir,
+	[ValidateSet('x64', 'arm64')] [string] $Arch = 'x64',
 	[string] $Commit = '',
 	[string] $OfficialZip = ''
 )
@@ -27,7 +30,8 @@ $resource = Get-Content (Join-Path $src 'resource.h') -Raw
 $version = [regex]::Match($resource, 'VERSION_PRODUCT_VALUE L"([0-9.]+)').Groups[1].Value
 if (-not $version) { throw 'VERSION_PRODUCT_VALUE not found in resource.h' }
 $short = if ($Commit) { $Commit.Substring(0, [Math]::Min(7, $Commit.Length)) } else { 'local' }
-$name = "npp.$version.pyre-$short.portable.x64"
+$name = "npp.$version.pyre-$short.portable.$Arch"
+$archName = if ($Arch -eq 'arm64') { 'ARM64' } else { 'x64' }
 
 New-Item -ItemType Directory -Force $OutDir | Out-Null
 $OutDir = (Resolve-Path $OutDir).Path
@@ -60,34 +64,34 @@ $headers = @{}
 if ($env:GH_TOKEN) { $headers['Authorization'] = "Bearer $env:GH_TOKEN" }
 $officialFrom = "v$version"
 if (-not $OfficialZip) {
-	$OfficialZip = Join-Path $OutDir 'official.portable.x64.zip'
+	$OfficialZip = Join-Path $OutDir "official.portable.$Arch.zip"
 	$releases = 'https://github.com/notepad-plus-plus/notepad-plus-plus/releases'
 	try {
-		Invoke-WebRequest "$releases/download/v$version/npp.$version.portable.x64.zip" -OutFile $OfficialZip
+		Invoke-WebRequest "$releases/download/v$version/npp.$version.portable.$Arch.zip" -OutFile $OfficialZip
 	}
 	catch {
 		# a version not released yet: the latest release
 		$latest = Invoke-RestMethod 'https://api.github.com/repos/notepad-plus-plus/notepad-plus-plus/releases/latest' -Headers $headers
-		$asset = $latest.assets | Where-Object name -Match '^npp\.[0-9.]+\.portable\.x64\.zip$' | Select-Object -First 1
-		if (-not $asset) { throw "no x64 portable zip in the latest release $($latest.tag_name)" }
+		$asset = $latest.assets | Where-Object name -Match "^npp\.[0-9.]+\.portable\.$Arch\.zip$" | Select-Object -First 1
+		if (-not $asset) { throw "no $Arch portable zip in the latest release $($latest.tag_name)" }
 		Invoke-WebRequest $asset.browser_download_url -OutFile $OfficialZip
 		$officialFrom = $latest.tag_name
 	}
 }
-$official = Join-Path $OutDir 'official'
+$official = Join-Path $OutDir "official.$Arch"
 if (Test-Path $official) { Remove-Item -Recurse -Force $official }
 Expand-Archive $OfficialZip -DestinationPath $official
 foreach ($required in 'plugins/Config/nppPluginList.dll', 'updater/GUP.exe') {
 	if (-not (Test-Path (Join-Path $official $required))) { throw "the official portable zip has no $required" }
 }
 Copy-Item (Join-Path $official 'plugins'), (Join-Path $official 'updater') $pkg -Recurse
-Set-Content -Path (Join-Path $OutDir 'official-tag.txt') -Value $officialFrom -NoNewline # for installer.ps1
+Set-Content -Path (Join-Path $OutDir "official-tag.$Arch.txt") -Value $officialFrom -NoNewline # for installer.ps1
 
 # about this build
 $repo = if ($env:GITHUB_REPOSITORY) { "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY" } else { 'https://github.com/Pyre909/notepad-plus-plus' }
 $commitLink = if ($Commit) { "$repo/commit/$Commit" } else { '(local build)' }
 @"
-Notepad++ $version, Pyre909 build: an unofficial build of Notepad++.
+Notepad++ $version, Pyre909 build ($archName): an unofficial build of Notepad++.
 Source: $commitLink (branch pyre of $repo)
 Plugins and updater: from the official Notepad++ $officialFrom portable zip.
 
@@ -97,13 +101,18 @@ Plugins Admin still works. To update, unzip a newer build over this folder: your
 (config.xml, stylers.xml, shortcuts.xml, session.xml...) aren't in the zip and are kept.
 "@ | Set-Content -Path (Join-Path $pkg 'PYRE-BUILD.txt') -Encoding utf8
 
-@"
-Notepad++ $version, Pyre909 build (x64, portable).
+# the release notes: a header, then a line per file (installer.ps1 adds its own)
+$notes = Join-Path $OutDir 'notes.md'
+if (-not (Test-Path $notes)) {
+	@"
+Notepad++ $version, Pyre909 build: an unofficial build of the pyre branch. Source: $commitLink
 
-- Source: $commitLink
-- Plugins and updater from the official Notepad++ $officialFrom portable zip
-- Auto-update off; settings kept in the folder (see PYRE-BUILD.txt in the zip)
-"@ | Set-Content -Path (Join-Path $OutDir 'notes.md') -Encoding utf8
+ARM64 is for Windows on ARM, including Windows in Parallels on an Apple Silicon Mac. In all of these, auto-update is off (disableNppAutoUpdate.xml), so the official updater won't replace this build; Plugins Admin still works.
+
+"@ | Set-Content -Path $notes -Encoding utf8
+}
+$note = "- ``$name.zip``: $archName, portable: unzip anywhere, settings stay in its folder (PYRE-BUILD.txt). Plugins and updater from official Notepad++ $officialFrom."
+if (-not ((Get-Content $notes) -contains $note)) { Add-Content -Path $notes -Value $note -Encoding utf8 }
 
 $zip = Join-Path $OutDir "$name.zip"
 if (Test-Path $zip) { Remove-Item -Force $zip }
@@ -115,5 +124,5 @@ Get-ChildItem -Path $pkg -Recurse -File | ForEach-Object { '{0,10}  {1}' -f $_.L
 "$name.zip: $((Get-Item $zip).Length) bytes, sha256 $hash"
 
 if ($env:GITHUB_OUTPUT) {
-	"name=$name", "version=$version", "short=$short" | Add-Content -Path $env:GITHUB_OUTPUT
+	"version=$version", "short=$short" | Add-Content -Path $env:GITHUB_OUTPUT
 }
