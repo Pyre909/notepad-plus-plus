@@ -9,7 +9,7 @@ build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` 
 | Branch | Head | What |
 |---|---|---|
 | `master` | `37f76d4` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
-| `pyre` | `98673f7` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installer + portable zip). Meant to be the fork's default branch |
+| `pyre` | `ea151ae` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installer + portable zip). Meant to be the fork's default branch |
 | `claude/awesome-darwin-bsud9v` | `357fec9` | The combined development branch: all the features (pyre is built on it) |
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418 (open): Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (`[xml]` PR after #18418 is merged) |
@@ -58,7 +58,7 @@ build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` 
 
 1. Set the fork's default branch to `pyre` (Settings, General, Default branch). Then Actions, Pyre909 release,
    Run workflow, and check the draft release.
-2. On the Windows 11 VM: install the installer over Notepad++, check About / Debug Info, Plugins Admin, the
+2. On the Windows 11 VM (set it up with `.github/pyre/setup-vm.ps1` from `pyre`): install the installer over Notepad++, check About / Debug Info, Plugins Admin, the
    Explorer menu, and DirectWrite with "Bahnschrift Light" (Light text, SemiBold bold).
 3. Keep `pyre` current: Sync fork on `master`, then merge `master` into `pyre` (`PYRE-BUILD.md` on `pyre` describes
    the build, its releases and updating).
