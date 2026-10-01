@@ -375,6 +375,12 @@ Translations: other languages' tooltip and RTL message still mention the restart
 
 # Appendix: contributing the Scintilla changes upstream
 
+> **2026-09-30, Neil Hodgson on feature request #1592:** "I am not currently accepting LLM-generated contributions.
+> The presentation of this feature, with 100 new setting combinations, is overwhelming so will not be that helpful
+> for users." The Scintilla route is closed for code from this work while that policy stands: #1592 is declined,
+> and the patches on #2520 can only serve as illustration (the report and test results stand on their own).
+> 100 = 5 antialiasing x 5 rendering modes x 4 contrast levels: the same set of choices #18418 offers.
+
 The reviewer on #18418 is right: every Scintilla change Notepad++ carries has to be re-applied by hand
 at each Scintilla upgrade. Notepad++ already does this for its own patches (about 200 changed lines
 against pristine Scintilla 5.6.6 today, e.g. `SCFIND_CXX11REGEX`), and our PRs would multiply that by
