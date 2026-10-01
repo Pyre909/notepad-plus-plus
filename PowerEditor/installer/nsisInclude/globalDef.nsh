@@ -51,7 +51,7 @@
 
 ; ------------------------------------------------------------------------
 
-!define APPNAMEANDVERSION	"${APPNAME} v${APPVERSION}"
+!define APPNAMEANDVERSION	"${APPNAME} v${APPVERSION} (Pyre909 build)"
 !define CompanyName		"Don HO don.h@free.fr"
 !define Description		"Notepad++ : a free (GNU) source code editor"
 !define Version		"${nppVer_1}.${nppVer_2}.${nppVer_3}.${nppVer_4}"

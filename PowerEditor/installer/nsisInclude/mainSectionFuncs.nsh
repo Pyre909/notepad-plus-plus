@@ -92,6 +92,7 @@ Function copyCommonFiles
 	File "..\..\LICENSE"
 	File "..\bin\change.log"
 	File "..\bin\readme.txt"
+	File "xml4Config\disableNppAutoUpdate.xml" ; Pyre909 build: the official updater must not replace it
 	
 !ifdef ARCH64
 	File "..\bin64\notepad++.exe"

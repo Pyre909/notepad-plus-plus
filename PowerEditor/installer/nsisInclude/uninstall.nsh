@@ -267,6 +267,7 @@ Section Uninstall
 	Delete "$INSTDIR\userDefineLangs\markdown._preinstalled.udl.xml"
 	Delete "$INSTDIR\userDefineLangs\markdown._preinstalled_DM.udl.xml"
 	Delete "$INSTDIR\doLocalConf.xml"
+	Delete "$INSTDIR\disableNppAutoUpdate.xml" ; Pyre909 build
 	Delete "$INSTDIR\uninstall.ini"
 	
 	${If} $doLocalConf == "false"
