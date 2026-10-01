@@ -36,11 +36,13 @@ window: judge from the screenshots, not by eye.
 | Live switch: Text Rendering GDI <-> DirectWrite redraws the text at once, no restart | **pass** |
 | The font stays the same after the switch (no fallback font) | to confirm from the screenshots |
 | With DirectWrite, each Antialiasing choice and DirectWrite mode changes the text at once | to do |
-| Default Style "Bahnschrift Light": Light text, SemiBold bold keywords, about the same ink in GDI and DirectWrite | to do |
+| Default Style "Bahnschrift Light": Light text, SemiBold bold keywords, about the same ink in GDI and DirectWrite | **in progress**: tools in `vm/` (screenshot capture works with `PrintWindow`); settings folder `C:\npp-fonttest`; next: Pyre909 sets Bahnschrift Light + GDI, measure, then DirectWrite, measure |
 | "Cascadia Code SemiBold": bold keywords draw Bold | to do |
 | Baseline: the font tests with the official 8.9.8.1 ARM64 portable (expect DirectWrite to draw a fallback or wrong weight) | to do |
 | Per-monitor DPI (MISC. option, restart; then change Windows' scale while Notepad++ runs, or two displays) | to do |
 | Uninstall removes `disableNppAutoUpdate.xml` | skipped: it would remove the working install |
+
+Note: a fresh settings folder starts in DirectWrite (technology 1) in this build, not GDI.
 
 ### After the test round
 
