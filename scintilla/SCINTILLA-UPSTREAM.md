@@ -5,6 +5,8 @@
 > for users." The Scintilla route is closed for code from this work while that policy stands: #1592 is declined,
 > and the patches on #2520 can only serve as illustration (the report and test results stand on their own).
 > 100 = 5 antialiasing x 5 rendering modes x 4 contrast levels: the same set of choices #18418 offers.
+>
+> How Scintilla decides, from 792 of its tickets, and how ours compare: `MAINTAINER-SURVEY.md` (2026-10-01).
 
 **Status 2026-09-30.**
 - Bug #2519 (GDI weight family names): **withdrawn**. zufuliu pointed to #2080 and #2356, where the maintainer

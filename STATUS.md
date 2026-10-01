@@ -2,7 +2,8 @@
 
 Where the Notepad++ text rendering, DPI and font work stands: branches, upstream PRs and tickets, the Pyre909
 build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` (rules, build, code map). The PR kit with every issue/PR/ticket text is `split/PR-TEXTS.md`; the Scintilla side is
-`scintilla/SCINTILLA-UPSTREAM.md`; the tools are described in `README.md`.
+`scintilla/SCINTILLA-UPSTREAM.md`, and how Scintilla's maintainer decides (a survey of 792 tickets, compared with
+ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md`.
 
 ## Handoff: the work continues on the Windows VM (2026-10-01)
 
@@ -80,6 +81,11 @@ Note: a fresh settings folder starts in DirectWrite (technology 1) in this build
 - Next PRs from the fork only when a feature looks worthwhile to upstream.
 
 ## Scintilla (SourceForge)
+
+- **Survey (2026-10-01)**: `scintilla/MAINTAINER-SURVEY.md`. Our tickets were the only ones in 2017-2026 to
+  mention AI; #1592's patch was larger than 258 of 264 patches and its description 8x the median. What works there:
+  one small change, evidence on Windows reproducible in SciTE, few choices, DirectWrite-first, mailing list first
+  for new features. Next: a short closing reply on #1592 in Pyre909's own words; #2520's fix left to them.
 
 - The maintainer, on feature request #1592 (2026-09-30): "I am not currently accepting LLM-generated
   contributions." and the 100 setting combinations are "overwhelming". So no code from this work goes to Scintilla.
