@@ -4,13 +4,60 @@ Where the Notepad++ text rendering, DPI and font work stands: branches, upstream
 build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` (rules, build, code map). The PR kit with every issue/PR/ticket text is `split/PR-TEXTS.md`; the Scintilla side is
 `scintilla/SCINTILLA-UPSTREAM.md`; the tools are described in `README.md`.
 
+## Handoff: the work continues on the Windows VM (2026-10-01)
+
+The cloud session (claude.ai/code: Linux, testing under Wine) hands over to Claude Code on Pyre909's
+**Windows 11 ARM64 VM** (Parallels on an Apple Silicon Mac). Clone `%USERPROFILE%\src\npp` on `pyre` (remote
+`upstream` = official), worktrees in `%USERPROFILE%\src\npp.worktrees\<branch>`, set up by
+`.github/pyre/setup-vm.ps1`. `gh` should be signed in with the `workflow` scope and default to the fork
+(check: `gh auth status`; set: `gh repo set-default Pyre909/notepad-plus-plus`), so it never targets official
+Notepad++ by accident.
+
+- **Everything is pushed**: all branches in the table below, and this branch. The cloud session's scratchpad
+  (Wine prefixes, builds, screenshots, downloaded official releases) doesn't come along and isn't needed: its
+  tools are on this branch (`archive/`, `harness*/`, `fork/`, `scintilla/`).
+- **Resuming the cloud conversation itself**: in the clone, clean working tree, other Claude session closed:
+  `claude --teleport` (pick the session). It loads the conversation and checks out the cloud session's branch
+  `claude/awesome-darwin-bsud9v` (old): `git switch pyre` afterwards. Starting fresh with `claude` works too:
+  `CLAUDE.md` and this file carry the context.
+- Nothing is left running in the cloud: no PR watches, no scheduled check-ins.
+
+### The test round on the VM
+
+Build under test: the installed ARM64 release `pyre-8.9.8.1-aee7bbf`, started for tests with its own settings:
+`Start-Process "C:\Program Files\Notepad++\notepad++.exe" -ArgumentList '-multiInst', '-nosession', '-settingsDir=C:\npp-test'`
+(the folder must exist). Pyre909 clicks; Claude takes screenshots inside Windows (PowerShell) and measures, e.g.
+ink per line of a test file with keyword-only (bold) and identifier-only (regular) lines. macOS rescales the VM
+window: judge from the screenshots, not by eye.
+
+| Check | Result |
+|---|---|
+| Installer: installs over Notepad++, About "(ARM 64-bit, Pyre909 build)", Explorer "Edit with Notepad++", Plugins Admin, no "Update Notepad++" in the ? menu | **pass** |
+| Live switch: Text Rendering GDI <-> DirectWrite redraws the text at once, no restart | **pass** |
+| The font stays the same after the switch (no fallback font) | to confirm from the screenshots |
+| With DirectWrite, each Antialiasing choice and DirectWrite mode changes the text at once | to do |
+| Default Style "Bahnschrift Light": Light text, SemiBold bold keywords, about the same ink in GDI and DirectWrite | to do |
+| "Cascadia Code SemiBold": bold keywords draw Bold | to do |
+| Baseline: the font tests with the official 8.9.8.1 ARM64 portable (expect DirectWrite to draw a fallback or wrong weight) | to do |
+| Per-monitor DPI (MISC. option, restart; then change Windows' scale while Notepad++ runs, or two displays) | to do |
+| Uninstall removes `disableNppAutoUpdate.xml` | skipped: it would remove the working install |
+
+### After the test round
+
+1. Font test passes: in kit section 5 (`split/PR-TEXTS.md`), replace "Not tested: a real Windows font
+   collection" with the Windows results, keep the official/fork screenshots as before/after. Pyre909 opens the
+   issue, then the PR with `fix #<issue>` (AI disclosure stays). Drafts for Pyre909 to post: casual, their voice.
+2. Record each result in `CLAUDE.md` ("What still needs real Windows") on `pyre` and in the table above.
+3. Waiting on others: #18418 review (new commits only, no amend/force-push), Scintilla #2520 (keep the guard).
+   When #18418 is merged: rebase and open the live-switch PR (kit section 6) and the translations PR (section 3).
+
 ## Branches of Pyre909/notepad-plus-plus
 
 | Branch | Head | What |
 |---|---|---|
 | `master` | `37f76d4` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
-| `pyre` | `74c1518` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
-| `claude/awesome-darwin-bsud9v` | `357fec9` | The combined development branch: all the features (pyre is built on it) |
+| `pyre` | `d49c16a` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
+| `claude/awesome-darwin-bsud9v` | `357fec9` | The cloud session's branch: the combined development branch, all the features (pyre is built on it) |
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418 (open): Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (`[xml]` PR after #18418 is merged) |
 | `live-rendering-switch_20260930` | `08cc23b` | Follow-up of #18418: rendering mode applied without restart (PR after #18418 is merged) |
@@ -63,10 +110,7 @@ build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` 
 ## Next
 
 1. Done: `pyre` is the default branch and the release workflow works (x64 + ARM64).
-2. On the Windows 11 ARM64 VM (Parallels; set up with `.github/pyre/setup-vm.ps1`, Claude Code runs there): the
-   rest of `CLAUDE.md`'s "What still needs real Windows": the rendering and font tests (DirectWrite with
-   "Bahnschrift Light": Light text, SemiBold bold; the live switch), with screenshots taken inside Windows and the
-   official build as a baseline (they're the before/after for the font-name PR), and per-monitor DPI.
+2. The test round on the VM (see the handoff above).
 3. Keep `pyre` current: Sync fork on `master`, then merge `master` into `pyre` (`PYRE-BUILD.md` on `pyre` describes
    the build, its releases and updating).
 4. Optional: the slimmer #18418, the font-name issue/PR (kit section 5), the live switch PR after #18418.

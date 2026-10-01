@@ -357,6 +357,7 @@ Testing (MinGW-w64 GCC 13 x64 build under Wine 9; test build with the Wine check
 - with RTL text, DirectWrite is refused with the message and the box shows GDI again; after LTR, DirectWrite applies;
 - config.xml saves the chosen mode.
 nppshot and screenshot comparisons at 96 and 144 DPI: unchanged.
+On Windows 11 ARM64 (in a VM), with my fork's build, which includes this change: switching between GDI and DirectWrite redraws the text at once, without restarting.
 
 AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
 
