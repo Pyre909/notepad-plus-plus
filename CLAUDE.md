@@ -43,6 +43,10 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
 
 ## Building on Windows
 
+- New machine: `.github/pyre/setup-vm.ps1` installs the tools (winget), Claude Code, clones the fork (`pyre`,
+  remote `upstream` = official), sets `core.autocrlf false` (the sources mix CRLF and LF: don't convert), and
+  adds worktrees for the PR and tooling branches in `<clone>.worktrees\<branch>`. Work on a PR branch in its
+  worktree, not by switching branches in the clone.
 - Visual Studio 2022 (toolset v143) or 2026 (v145) with "Desktop development with C++".
 - `PowerEditor\visual.net\notepadPlus.sln`; from a Developer PowerShell:
   `msbuild PowerEditor\visual.net\notepadPlus.sln /m /p:configuration=Release /p:platform=x64`
