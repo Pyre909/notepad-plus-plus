@@ -86,13 +86,20 @@ if (-not $SkipInstall) {
 
 if (-not $SkipClaude) {
 	Write-Step 'Claude Code'
-	if (Get-Command claude -ErrorAction SilentlyContinue) {
+	$claudeBin = Join-Path $env:USERPROFILE '.local\bin'
+	if ((Get-Command claude -ErrorAction SilentlyContinue) -or (Test-Path (Join-Path $claudeBin 'claude.exe'))) {
 		Write-Host 'claude: already installed'
 	}
 	else {
 		Invoke-RestMethod https://claude.ai/install.ps1 | Invoke-Expression
-		Update-SessionPath
 	}
+	# the installer can leave its folder off the user PATH: new terminals wouldn't find claude
+	$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+	if ((Test-Path (Join-Path $claudeBin 'claude.exe')) -and (($userPath -split ';') -notcontains $claudeBin)) {
+		[Environment]::SetEnvironmentVariable('Path', ((@($userPath, $claudeBin) | Where-Object { $_ }) -join ';'), 'User')
+		Write-Host "claude: added $claudeBin to your PATH"
+	}
+	Update-SessionPath
 }
 
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
