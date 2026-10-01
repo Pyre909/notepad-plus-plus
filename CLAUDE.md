@@ -101,10 +101,11 @@ access. Locally: run `package.ps1` then `installer.ps1`, each with `-Arch x64` o
 The cloud session couldn't test these (Wine forces GDI in Notepad++, can't capture DirectWrite or dialog text,
 and can't run 32-bit NSIS installers):
 
-1. The installer: **mostly done** (2026-10-01, ARM64 installer of release `pyre-8.9.8.1-aee7bbf` on the VM: it
-   installs, About says "(ARM 64-bit, Pyre909 build)", the Windows 11 Explorer "Edit with Notepad++" menu works).
-   Still to check: Plugins Admin installs a plugin; auto-update is off (the ? menu has no "Update Notepad++" or
-   "Set Updater Proxy..."); uninstall removes `disableNppAutoUpdate.xml`.
+1. The installer: **done** (2026-10-01, ARM64 installer of release `pyre-8.9.8.1-aee7bbf` on the VM: it installs,
+   About says "(ARM 64-bit, Pyre909 build)", the Windows 11 Explorer "Edit with Notepad++" menu works, Plugins
+   Admin works, auto-update is off: the ? menu has no "Update Notepad++" or "Set Updater Proxy..."). Not checked:
+   uninstall removing `disableNppAutoUpdate.xml` (it would remove Pyre909's working install; check it when going
+   back to official Notepad++).
 2. DirectWrite in Notepad++: each Text Rendering choice changes the text at once; the rendering mode switches
    GDI <-> DirectWrite without restart, fonts following.
 3. Fonts: Default Style "Bahnschrift Light" with DirectWrite draws Light, bold keywords SemiBold;
