@@ -1,7 +1,7 @@
 # Status (2026-10-01)
 
 Where the Notepad++ text rendering, DPI and font work stands: branches, upstream PRs and tickets, the Pyre909
-build, and what's next. The PR kit with every issue/PR/ticket text is `split/PR-TEXTS.md`; the Scintilla side is
+build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` (rules, build, code map). The PR kit with every issue/PR/ticket text is `split/PR-TEXTS.md`; the Scintilla side is
 `scintilla/SCINTILLA-UPSTREAM.md`; the tools are described in `README.md`.
 
 ## Branches of Pyre909/notepad-plus-plus
@@ -9,7 +9,7 @@ build, and what's next. The PR kit with every issue/PR/ticket text is `split/PR-
 | Branch | Head | What |
 |---|---|---|
 | `master` | `37f76d4` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
-| `pyre` | `9ea17f9` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installer + portable zip). Meant to be the fork's default branch |
+| `pyre` | `98673f7` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installer + portable zip). Meant to be the fork's default branch |
 | `claude/awesome-darwin-bsud9v` | `357fec9` | The combined development branch: all the features (pyre is built on it) |
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418 (open): Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (`[xml]` PR after #18418 is merged) |
