@@ -1,0 +1,28 @@
+--- a/win32/SurfaceD2D.cxx
++++ b/win32/SurfaceD2D.cxx
+@@ -187,10 +187,13 @@
+ 				fHeight, wsLocale.c_str(), pTextFormat.GetAddressOf());
+ 		if (hr == E_INVALIDARG) {
+ 			// Possibly a bad locale name like "/" so try "en-us".
++			// Possibly a weight or stretch outside DirectWrite's ranges so clamp them.
++			constexpr int maxWeight = 999;	// DWRITE_FONT_WEIGHT values are 1..999
+ 			hr = pIDWriteFactory->CreateTextFormat(wsFace.c_str(), nullptr,
+-				static_cast<DWRITE_FONT_WEIGHT>(fp.weight),
++				static_cast<DWRITE_FONT_WEIGHT>(std::clamp(static_cast<int>(fp.weight), 1, maxWeight)),
+ 				style,
+-				static_cast<DWRITE_FONT_STRETCH>(fp.stretch),
++				static_cast<DWRITE_FONT_STRETCH>(std::clamp(static_cast<int>(fp.stretch),
++					static_cast<int>(DWRITE_FONT_STRETCH_ULTRA_CONDENSED), static_cast<int>(DWRITE_FONT_STRETCH_ULTRA_EXPANDED))),
+ 				fHeight, L"en-us", pTextFormat.ReleaseAndGetAddressOf());
+ 		}
+ 		if (SUCCEEDED(hr)) {
+@@ -230,6 +233,9 @@
+ 	FontDirectWrite &operator=(FontDirectWrite &&) = delete;
+ 	~FontDirectWrite() noexcept override = default;
+ 	[[nodiscard]] HFONT HFont() const noexcept override {
++		if (!pTextFormat) {
++			return {};	// CreateTextFormat failed
++		}
+ 		LOGFONTW lf = {};
+ 		const HRESULT hr = pTextFormat->GetFontFamilyName(lf.lfFaceName, LF_FACESIZE);
+ 		if (!SUCCEEDED(hr)) {

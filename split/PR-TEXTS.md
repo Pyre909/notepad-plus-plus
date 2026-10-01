@@ -558,6 +558,12 @@ values stay as they are, since the units are the same.
 **Filed: https://sourceforge.net/p/scintilla/bugs/2520/** (2026-09-30), with the patch and `hfontcrash.cpp` attached.
 When a Scintilla release includes the fix, drop the guard from the combined branch at the next Scintilla update.
 
+**2026-10-01, zufuliu:** weight ranges differ between platforms (GDI, D2D 1..999, Pango, Qt, wx, CSS); suggested
+clamping weight and stretch in the `E_INVALIDARG` retry of the FontDirectWrite constructor instead. Tested under Wine
+(`hfprobe.cpp`): clamping draws text for negative weights and bad stretches (0, 10, -1, which crashed too), but Wine
+refuses weights above 950 even clamped to 999, so it still crashes there; clamp + guard never crashes. Reply proposes
+both, with `scintilla-5.6.7-directwrite-font-clamp-and-hfont-guard.diff`.
+
 New ticket: https://sourceforge.net/p/scintilla/bugs/new/. No existing report: the tracker's REST search for "HFont"
 finds only #2519, #2080 and #817 (2026-09-30). Attach `scintilla-5.6.7-directwrite-hfont-null-text-format.diff`
 (3 lines, applies to 5.6.7 with `git apply` / `patch -p1`, builds as C++17 with -Wpedantic -Wall -Wextra), and
