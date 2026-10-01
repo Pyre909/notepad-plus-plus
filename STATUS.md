@@ -9,7 +9,7 @@ build, and what's next. The PR kit with every issue/PR/ticket text is `split/PR-
 | Branch | Head | What |
 |---|---|---|
 | `master` | `37f76d4` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
-| `pyre` | `f090896` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installer + portable zip). Meant to be the fork's default branch |
+| `pyre` | `9ea17f9` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installer + portable zip). Meant to be the fork's default branch |
 | `claude/awesome-darwin-bsud9v` | `357fec9` | The combined development branch: all the features (pyre is built on it) |
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418 (open): Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (`[xml]` PR after #18418 is merged) |
@@ -19,7 +19,7 @@ build, and what's next. The PR kit with every issue/PR/ticket text is `split/PR-
 | `font-size-1pt_20260925` | `faaeb59` | Font sizes 1-4 pt: PR #18412 closed upstream (not wanted); kept in the fork |
 | `font-weight-names_20260925` | `47341a4` | Superseded: the Scintilla version of the font-name fix |
 | `scintilla-upstream_20260930` | | This branch: tools, kits, notes (no Notepad++ history) |
-| `archive/*` | | Early work-in-progress snapshots, superseded (kept so nothing is lost) |
+| `archive/wip-text-rendering-ui_20260925`, `archive/wip-per-monitor-dpi-review_20260925` | | Early work-in-progress snapshots, superseded (kept so nothing is lost) |
 
 ## Upstream Notepad++
 
@@ -60,5 +60,6 @@ build, and what's next. The PR kit with every issue/PR/ticket text is `split/PR-
    Run workflow, and check the draft release.
 2. On the Windows 11 VM: install the installer over Notepad++, check About / Debug Info, Plugins Admin, the
    Explorer menu, and DirectWrite with "Bahnschrift Light" (Light text, SemiBold bold).
-3. Keep `pyre` current: Sync fork on `master`, then merge `master` into `pyre` (see `PYRE-BUILD.md` on `pyre`).
+3. Keep `pyre` current: Sync fork on `master`, then merge `master` into `pyre` (`PYRE-BUILD.md` on `pyre` describes
+   the build, its releases and updating).
 4. Optional: the slimmer #18418, the font-name issue/PR (kit section 5), the live switch PR after #18418.
