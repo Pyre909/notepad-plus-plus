@@ -122,3 +122,32 @@ Note: a fresh settings folder starts in DirectWrite (technology 1) in this build
 3. Keep `pyre` current: Sync fork on `master`, then merge `master` into `pyre` (`PYRE-BUILD.md` on `pyre` describes
    the build, its releases and updating).
 4. Optional: the slimmer #18418, the font-name issue/PR (kit section 5), the live switch PR after #18418.
+
+## Parked: how the fork's code is laid out (2026-10-02)
+
+Question: put all the fork's changes in one separate file? No: one module per feature behind a small interface,
+with one-line hooks in the official files (`FontFamilyNames.cpp` is the model). One file would still need the
+hooks everywhere, would tie unrelated features together, and nothing in it could go upstream on its own.
+
+Merge risk of `pyre` against official `master`, measured over 818 official commits (2025-04 to 2026-09); risk =
+change blocks in the file x official commits to that file:
+
+| Part | Files | Changed lines | Blocks | Risk |
+|---|---|---|---|---|
+| Notepad++ code | 68 | 2,973 (438 in new files) | 323 | 7,229 |
+| Translations | 31 | 561 | 99 | 2,197 |
+| Scintilla | 6 | 449 | 57 | 280 |
+| Installer | 4 | 8 | 5 | 15 |
+
+Top files: `Parameters.cpp` (12 blocks x 113 commits), `ScintillaEditView.cpp` (23 x 47), `Notepad_plus.cpp`
+(15 x 64), `preferenceDlg.cpp` (12 x 45), `english.xml` (7 x 59). Scintilla is low risk (`ScintillaWin.cxx`: 8
+official commits in 18 months).
+
+When it's picked up, in order of payoff: (1) get features merged upstream, then `pyre` takes the official
+version (don't restructure features whose PRs are open); (2) the fork-only rendering settings (DirectWrite mode,
+contrast) into one module, e.g. `ScintillaComponent/TextRendering.cpp/.h` (settings, config.xml read/write, apply),
+leaving one call each in `Parameters.cpp`, `ScintillaEditView.cpp`, `preferenceDlg.cpp`; the `.rc` layout and
+`english.xml` strings stay where they are; (3) drop the 29 translation edits from `pyre` (cosmetic, second-largest
+risk) or keep them only until the translations PR is merged; (4) shrink the Scintilla patch after the VM
+measurement before moving it; (5) habits: merge `master` into `pyre` often, `git config rerere.enabled true`,
+mark every hook `// Pyre909 build`, keep `CLAUDE.md`'s code table as the index. Step 2 needs a Windows build (VM).
