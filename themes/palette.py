@@ -12,7 +12,7 @@ SPEC = {
         'text': (90, 0.010, 255),           # (Lc, chroma, hue)
         'comment': (64, 0.025, 250),        # cool grey: set apart by lightness, not hue
         'keyword':  (330, 0.13, 75, 65),    # pink-magenta (bold where the lexer bolds it)
-        'type':     (200, 0.12, 75, 65),    # cyan
+        'type':     (200, 0.12, 71, 65),    # cyan, capped: with H-K it would look almost as light as text
         'string':   (145, 0.13, 75, 65),    # green
         'number':   (55, 0.12, 75, 62),     # orange
         'function': (95, 0.12, 78, 65),     # yellow
@@ -109,14 +109,15 @@ MARKS = ['smart', 'find', 'incremental', 'tagmatch', 'tagattr', 'mark1', 'mark2'
 
 def report(mode, p):
     out = [f'## {mode}: background #{p["bg"]}', '',
-           '| Role | Colour | OKLCH L C h | APCA Lc | WCAG | on current line | on selection | worst on a find/mark highlight |',
-           '|---|---|---|---|---|---|---|---|']
+           '| Role | Colour | OKLCH L C h | Lc at 32 | Lc at 70 | WCAG | on current line | on selection | worst on a find/mark highlight |',
+           '|---|---|---|---|---|---|---|---|---|']
     for r in TEXT_ROLES:
         L, C, h = oklch(p[r])
-        worst = min(abs(apca(p[r], blend(p[m], p['bg'], ALPHA))) for m in MARKS)
-        out.append(f'| {r} | #{p[r]} | {L:.3f} {C:.3f} {h:.0f} | {apca(p[r], p["bg"]):.1f} | {wcag(p[r], p["bg"]):.1f}:1 '
-                   f'| {apca(p[r], p["line_bg"]):.1f} | {apca(p[r], p["sel_bg"]):.1f} | {worst:.1f} |')
-    out += ['', 'Other: ' + ', '.join(f'{k} #{p[k]} (Lc {apca(p[k], p["margin_bg"] if k == "linenum" else p["bg"]):.0f})'
+        worst = min(lc(p[r], blend(p[m], p['bg'], ALPHA)) for m in MARKS)
+        out.append(f'| {r} | #{p[r]} | {L:.3f} {C:.3f} {h:.0f} | {abs(apca(p[r], p["bg"])):.1f} '
+                   f'| {abs(apca(p[r], p["bg"], AGE70_WEIGHTS)):.1f} | {wcag(p[r], p["bg"]):.1f}:1 '
+                   f'| {lc(p[r], p["line_bg"]):.1f} | {lc(p[r], p["sel_bg"]):.1f} | {worst:.1f} |')
+    out += ['', 'Other: ' + ', '.join(f'{k} #{p[k]} (Lc {lc(p[k], p["margin_bg"] if k == "linenum" else p["bg"]):.0f})'
                                        for k in ['linenum', 'guide', 'whitespace', 'caret', 'brace'])]
     # colour-vision deficiency: distance of each syntax colour from plain text, and the closest pair
     out += ['', '| Vision | min ΔE_OK syntax vs text | closest syntax pair (ΔE_OK) |', '|---|---|---|']
@@ -128,6 +129,7 @@ def report(mode, p):
     kb = {kind: de_ok(simulate(p['keyword'], kind), simulate(p['string'], kind)) for kind in ['normal', 'protan', 'deutan', 'tritan']}
     out.append('')
     out.append('keyword vs string ΔE_OK: ' + ', '.join(f'{k} {v:.3f}' for k, v in kb.items()))
+    out += ['', 'Contrast columns after Lc at 70 are for the worse-off of the two readers (32 and 70).']
     return '\n'.join(out)
 
 if __name__ == '__main__':

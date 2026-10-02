@@ -30,14 +30,16 @@ change **Global Styles > Default Style** after selecting the theme.
 |---|---|---|---|
 | Background | `#FBFAF7` | `#191C20` | Off-white and dark grey, not white and black: less glare and smear |
 | Text | `#272B2F`, Lc 98 | `#E2E6ED`, Lc 90 | Text sits on the reading-speed plateau, with margin |
-| Keywords (bold) | magenta `#871D77`, Lc 85 | pink `#FEAFF7`, Lc 73 | |
-| Types | blue `#0155A8`, Lc 82 | cyan `#52E0E7`, Lc 75 | |
-| Strings | green `#10641D`, Lc 82 | green `#91DF94`, Lc 75 | |
-| Numbers | rust `#963509`, Lc 82 | orange `#FFAD75`, Lc 67 | |
-| Functions, classes | ochre `#7B5C02`, Lc 78 | yellow `#EBD271`, Lc 78 | |
-| Preprocessor, macros, variables | violet `#6343A4`, Lc 82 | periwinkle `#ABBAFF`, Lc 66 | |
-| Errors (tinted background) | red `#A31B22`, Lc 82 | red `#FF9B94`, Lc 62 | |
-| Comments | grey `#687582`, Lc 70 | grey `#AFBCCB`, Lc 64 | Quieter than code, but still text you can read |
+| Keywords (bold) | magenta `#841A75`, Lc 85 | pink `#FEAFF7`, Lc 73 | |
+| Types | blue `#0155A8`, Lc 82 | cyan `#4FDEE5`, Lc 71 | |
+| Strings | green `#10641D`, Lc 82 | green `#92E095`, Lc 75 | |
+| Numbers | rust `#912F00`, Lc 82 | orange `#FFAD75`, Lc 67 | |
+| Functions, classes | ochre `#7A5B00`, Lc 77 | yellow `#EBD271`, Lc 78 | |
+| Preprocessor, macros, variables | violet `#6343A4`, Lc 82 | periwinkle `#ABBAFF`, Lc 64 | |
+| Errors (tinted background) | red `#9B0E1B`, Lc 82 | red `#FF9B94`, Lc 62 | |
+| Comments | grey `#687582`, Lc 70 | grey `#B0BDCC`, Lc 64 | Quieter than code, but still text you can read |
+
+Every Lc here is for the worse-off of two readers, aged 32 and 70 (point 8 below).
 
 Lc is APCA lightness contrast (Somers), a perceptual contrast measure that models light-on-dark text better than
 the WCAG 2 ratio. It was proposed for WCAG 3 but removed from the drafts in 2023; WCAG 3's contrast method is still
@@ -87,10 +89,28 @@ The decisions, with the evidence for each:
 7. **No "eye-friendly" tint.** A Cochrane review found no evidence that filtering blue light reduces eye strain
    (Singh et al. 2023). The backgrounds are near-neutral. Screen brightness matched to the room matters more than
    the background's hue.
+8. **Older eyes.** The lens of the eye yellows with age and absorbs more short-wavelength light (Pokorny, Smith &
+   Lutze 1987; the age model of CIE 170-1:2006).
+   - Applied to an LED display's primaries, the blue primary gives about 40% less luminance at 70 than at 32 (55%
+     less at 80). Measured CCFL and CRT primaries change less. White stays white because the eye adapts to it.
+   - The colour solver meets every contrast target for both a 32-year-old and a 70-year-old reader, using the lower
+     of the two. That moved a few blue-heavy and red-heavy colours by 1 to 3 Lc.
+   - Older eyes also lose contrast sensitivity and scatter more light. No colour choice fully offsets that; a
+     larger font and more room light do more.
+   - `vision-report.md` lists every colour for readers aged 32, 70 and 80.
+9. **Saturated colours look lighter than their luminance (Helmholtz-Kohlrausch effect).** This was checked with
+   the CAM16 extension of Hellwig, Stolitzka & Fairchild (2022).
+   - In the dark theme, cyan looked almost as light as the plain text: 2.8 J apart. That wore away the lightness
+     step that sets types apart from plain identifiers. Cyan is now capped at Lc 71 (it was 75), so every syntax
+     colour stays at least 5 J darker than the text.
+   - The effect was measured on large colour patches. Thin text strokes are read through lightness contrast, so the
+     effect is used only for that separation check, not to set contrast.
+   - In the light theme the effect makes coloured tokens look lighter, which only adds to their separation from the
+     near-black text. Nothing changes there.
 
 Highlights were checked as Notepad++ draws them: smart highlighting, search marks and Mark Styles 1-5 are
 rounded boxes under the text at alpha 100/255. On every one of them, plain text stays at Lc 76 or above in the dark
-theme and Lc 80 or above in the light theme. Selection and the current-line background were checked the same way.
+theme and Lc 79 or above in the light theme. Selection and the current-line background were checked the same way.
 
 ## Font size
 
@@ -111,12 +131,14 @@ Ctrl + mouse wheel zooms if a fixed size isn't wanted.
 | File | What |
 |---|---|
 | `Lucid Light.xml`, `Lucid Dark.xml` | The themes |
-| `colormath.py` | sRGB, OKLab/OKLCH, APCA-W3 0.0.98G-4g, WCAG 2, colour-blindness simulation (checked against APCA's published values) |
+| `colormath.py` | sRGB, OKLab/OKLCH, APCA-W3 0.0.98G-4g (with the luminance weights of a 32- and a 70-year-old), WCAG 2, colour-blindness simulation (checked against APCA's published values) |
 | `palette.py` | The two palettes as contrast and chroma targets; `python3 palette.py` prints `palette-report.md` |
 | `gen_theme.py` | Writes both themes from `stylers.model.xml`: each style gets a role from its name, or from its colour in the model when the name says nothing; layout and comments are kept |
 | `check.py` | Same lexers, styles and IDs as the model; contrast of every style |
 | `palette-report.md` | Contrast on background, current line, selection and highlights; colour-blindness distances |
 | `roles.tsv` | The role chosen for each of the 1,774 styles, and how it was chosen |
+| `vision/agelens.py` | Luminance weights of the display primaries by age: CIE 2006 lens model on Stockman & Sharpe cone fundamentals; the age-dependent lens density table `asano_cie2006_docul.dat` is CIE 170-1's, as tabulated in luxpy |
+| `vision/report.py`, `vision-report.md` | Every colour for readers aged 32, 70 and 80, and its CAM16 lightness with and without the Helmholtz-Kohlrausch effect. Needs `pip install colour-science`; the themes themselves don't |
 
 Regenerate after a Notepad++ update adds lexers:
 
@@ -130,8 +152,11 @@ python3 check.py <repo>/PowerEditor/src/stylers.model.xml "Lucid Light.xml" "Luc
 - Birch J (2012). Worldwide prevalence of red-green color deficiency. *J Opt Soc Am A* 29(3):313-320.
 - Buchner A, Baumgartner N (2007). Text-background polarity affects performance irrespective of ambient
   illumination and colour contrast. *Ergonomics* 50(7):1036-1063.
+- CIE 170-1:2006. Fundamental chromaticity diagram with physiological axes, Part 1.
 - Hannebauer C, Hesenius M, Gruhn V (2018). Does syntax highlighting help programming novices? *Empirical
   Software Engineering* 23:2795-2828.
+- Hellwig L, Stolitzka D, Fairchild MD (2022). Extending CIECAM02 and CAM16 for the Helmholtz-Kohlrausch
+  effect. *J Opt Soc Am A* 39(6).
 - Legge GE, Bigelow CA (2011). Does print size matter for reading? A review of findings from vision science and
   typography. *J Vision* 11(5):8.
 - Legge GE, Parish DH, Luebker A, Wurm LH (1990). Psychophysics of reading XI: comparing color contrast and
@@ -147,9 +172,12 @@ python3 check.py <repo>/PowerEditor/src/stylers.model.xml "Lucid Light.xml" "Luc
   older adults. *Ergonomics* 56(7):1116-1124.
 - Piepenbrock C, Mayr S, Buchner A (2014). Smaller pupil size and better proofreading performance with positive
   than with negative polarity displays. *Ergonomics* 57(11):1670-1677.
+- Pokorny J, Smith VC, Lutze M (1987). Aging of the human lens. *Applied Optics* 26(8):1437-1440.
 - Sarkar A (2015). The impact of syntax colouring on program comprehension. *PPIG 2015*.
 - Singh S, Keller PR, Busija L, et al. (2023). Blue-light filtering spectacles for improving visual performance,
   sleep, and macular health in adults. *Cochrane Database Syst Rev* 8:CD013244.
 - Somers A. APCA, the Accessible Perceptual Contrast Algorithm (APCA-W3 0.0.98G-4g).
+- Stockman A, Sharpe LT (2000). The spectral sensitivities of the middle- and long-wavelength-sensitive cones
+  derived from measurements in observers of known genotype. *Vision Research* 40(13):1711-1737.
 - Tinker MA (1963). *Legibility of Print*. Iowa State University Press.
 - Whittaker SG, Lovie-Kitchin J (1993). Visual requirements for reading. *Optom Vis Sci* 70(1):54-65.

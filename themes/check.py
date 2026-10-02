@@ -1,6 +1,6 @@
 """Checks the generated themes: same lexers/styles/IDs as the model, and the contrast of every style."""
 import sys, xml.etree.ElementTree as ET, collections
-from colormath import apca
+from colormath import lc
 model = ET.parse(sys.argv[1]).getroot()
 def key(root):
     return [(lx.get('name'), w.get('name'), w.get('styleID'), w.get('keywordClass')) for lx in root.find('LexerStyles') for w in lx] + \
@@ -12,7 +12,7 @@ for t in sys.argv[2:]:
         for w in lx:
             fg, bg = w.get('fgColor'), w.get('bgColor')
             if fg and bg:
-                rows.append((round(abs(apca(fg, bg)), 1), lx.get('name'), w.get('name'), fg, bg))
+                rows.append((round(lc(fg, bg), 1), lx.get('name'), w.get('name'), fg, bg))
     rows.sort()
     main = [r for r in rows if r[1] != 'escseq']
     print(f'{t}: same lexers, styles and IDs as the model: {key(root) == key(model)}; {len(rows)} styles; '

@@ -127,7 +127,9 @@ Note: a fresh settings folder starts in DirectWrite (technology 1) in this build
 
 `themes/`: Lucid Light and Lucid Dark, a pair of Notepad++ themes whose colours are solved for contrast targets
 (text Lc 98 / 90, comments Lc 70 / 64, every syntax colour at the highest contrast where its hue still shows),
-checked for colour blindness, and generated for all 93 lexers of `stylers.model.xml`. Rendered and checked in the
+checked for colour blindness, and generated for all 93 lexers of `stylers.model.xml`. Rebuilt the same day so
+every target also holds for a 70-year-old reader (CIE 2006 lens model) and the dark theme's cyan keeps a
+perceived-lightness gap to the text (Helmholtz-Kohlrausch, Hellwig 2022): `themes/vision-report.md`. Rendered and checked in the
 Pyre909 build under Wine (C++, Python, HTML, diff; dark mode switches the theme). Not yet seen on real Windows
 (ClearType/DirectWrite and Consolas). Install steps and the evidence are in `themes/README.md`. Shipping them in the
 Pyre909 build (portable zip and installer) would need `package.ps1`/`installer.ps1` to add them: not done.

@@ -70,13 +70,19 @@ def wcag(fg, bg):
     return (max(a, b) + 0.05) / (min(a, b) + 0.05)
 
 # APCA-W3 0.0.98G-4g (Somers): Lc, positive = dark text on light, negative = light text on dark
-def _apca_y(h):
+SRGB_WEIGHTS = (0.2126729, 0.7151522, 0.0721750)
+# The same for a 70-year-old: the lens of the eye absorbs more short-wavelength light with age, so the blue
+# primary adds less to luminance. CIE 170-1:2006 lens model on a white-LED LCD's primaries, renormalised so the
+# display white stays white; computed by vision/agelens.py (about 40% less weight on blue than at 32).
+AGE70_WEIGHTS = (0.2534, 0.7024, 0.0443)
+
+def _apca_y(h, k=SRGB_WEIGHTS):
     r, g, b = hex_to_rgb(h)
-    y = 0.2126729 * r ** 2.4 + 0.7151522 * g ** 2.4 + 0.0721750 * b ** 2.4
+    y = k[0] * r ** 2.4 + k[1] * g ** 2.4 + k[2] * b ** 2.4
     return y if y > 0.022 else y + (0.022 - y) ** 1.414
 
-def apca(fg, bg):
-    yt, yb = _apca_y(fg), _apca_y(bg)
+def apca(fg, bg, k=SRGB_WEIGHTS):
+    yt, yb = _apca_y(fg, k), _apca_y(bg, k)
     if abs(yb - yt) < 0.0005:
         return 0.0
     if yb > yt:
@@ -84,6 +90,10 @@ def apca(fg, bg):
         return 0.0 if s < 0.1 else (s - 0.027) * 100
     s = (yb ** 0.65 - yt ** 0.62) * 1.14
     return 0.0 if s > -0.1 else (s + 0.027) * 100
+
+def lc(fg, bg):
+    """Contrast for the worse-off of two readers, aged 32 (standard) and 70: |Lc|."""
+    return min(abs(apca(fg, bg)), abs(apca(fg, bg, AGE70_WEIGHTS)))
 
 # Colour-vision deficiency, Machado, Oliveira & Fernandes 2009, severity 1.0, applied to linear RGB
 CVD = {
@@ -106,13 +116,13 @@ def blend(fg, bg, alpha):
     return rgb_to_hex(tuple(alpha * x + (1 - alpha) * y for x, y in zip(f, b)))
 
 def solve_L(target_lc, bg, C, h, lo=0.0, hi=1.0):
-    """OKLab lightness giving APCA |Lc| = target against bg, for a hue and chroma."""
+    """OKLab lightness giving |Lc| = target against bg for both readers (see lc), for a hue and chroma."""
     dark_bg = _apca_y(bg) < 0.18
     for _ in range(50):
         mid = (lo + hi) / 2
-        lc = abs(apca(oklch_to_hex(mid, C, h), bg))
+        contrast = lc(oklch_to_hex(mid, C, h), bg)
         # on a dark background contrast grows with L; on a light one it shrinks
-        if (lc < target_lc) == dark_bg:
+        if (contrast < target_lc) == dark_bg:
             lo = mid
         else:
             hi = mid

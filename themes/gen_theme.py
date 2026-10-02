@@ -5,7 +5,7 @@ name, or, when the name says nothing, from the hue of its colour in the model. T
 comments are kept: only fgColor, bgColor and fontStyle change, so the themes have every lexer and style the model
 has. Usage: python3 gen_theme.py <stylers.model.xml> <DarkModeDefault.xml> <output folder>"""
 import os, re, sys
-from colormath import oklch, apca, wcag
+from colormath import oklch, lc, wcag
 from palette import build, blend, ALPHA
 
 OVERRIDES = {
@@ -113,7 +113,7 @@ def escseq_style(name, p, mode):
         bgc = p['margin_bg'] if dark_end else blend(p['text'], p['bg'], 0.22)
     else:
         bgc = blend(p[ANSI_BG[bg]], p['bg'], ALPHA)
-    if abs(apca(fgc, bgc)) < 60 or wcag(fgc, bgc) < 4.5:  # e.g. WHITE on BLACK in the light theme
+    if lc(fgc, bgc) < 60 or wcag(fgc, bgc) < 4.5:  # e.g. WHITE on BLACK in the light theme
         fgc = p['text']
     return fgc, bgc, bold
 
@@ -206,11 +206,12 @@ TITLE = {'dark': 'Lucid Dark', 'light': 'Lucid Light'}
 
 def header(mode, p):
     other = 'Lucid Light' if mode == 'dark' else 'Lucid Dark'
-    lcs = [abs(apca(p[r], p['bg'])) for r in ('keyword', 'type', 'string', 'number', 'function', 'special', 'error')]
+    lcs = [lc(p[r], p['bg']) for r in ('keyword', 'type', 'string', 'number', 'function', 'special', 'error')]
     return f'''<!--
 {TITLE[mode]}: a Notepad++ theme for legible code; "{other}" is its other half.
-Colours are solved for perceptual contrast (APCA Lc) against the background #{p["bg"]}, not picked by eye:
-text #{p["text"]} Lc {abs(apca(p["text"], p["bg"])):.0f}; comments Lc {abs(apca(p["comment"], p["bg"])):.0f}; each syntax colour gets the highest contrast at which
+Colours are solved for perceptual contrast (APCA Lc) against the background #{p["bg"]}, not picked by eye, for
+readers aged 32 and 70 (the lens yellows with age):
+text #{p["text"]} Lc {lc(p["text"], p["bg"]):.0f}; comments Lc {lc(p["comment"], p["bg"]):.0f}; each syntax colour gets the highest contrast at which
 its hue still shows in thin strokes (Lc {min(lcs):.0f}-{max(lcs):.0f}). Checked for colour blindness (protan, deutan, tritan).
 Generated from stylers.model.xml: regenerate rather than edit by hand, to keep the measured contrast.
 License: GPL2
