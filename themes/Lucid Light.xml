@@ -599,7 +599,7 @@ License: GPL2
             <WordsStyle name="YELLOW on WHITE"     styleID="85" fgColor="7B5C02" bgColor="F3F2EF" fontName="" fontStyle="0" fontSize="" />
             <WordsStyle name="BLUE on WHITE"       styleID="86" fgColor="0155A8" bgColor="F3F2EF" fontName="" fontStyle="0" fontSize="" />
             <WordsStyle name="MAGENTA on WHITE"    styleID="87" fgColor="871D77" bgColor="F3F2EF" fontName="" fontStyle="0" fontSize="" />
-            <WordsStyle name="CYAN on WHITE"       styleID="88" fgColor="027C7C" bgColor="F3F2EF" fontName="" fontStyle="0" fontSize="" />
+            <WordsStyle name="CYAN on WHITE"       styleID="88" fgColor="272B2F" bgColor="F3F2EF" fontName="" fontStyle="0" fontSize="" />
             <WordsStyle name="WHITE on WHITE"      styleID="89" fgColor="272B2F" bgColor="F3F2EF" fontName="" fontStyle="0" fontSize="" />
             <WordsStyle name="BOLD DEFAULT on DEFAULT"  styleID="090" fgColor="272B2F" bgColor="FBFAF7" fontName="" fontStyle="1" fontSize="" colorStyle="0" />
             <WordsStyle name="BOLD BLACK on DEFAULT"    styleID="091" fgColor="272B2F" bgColor="FBFAF7" fontName="" fontStyle="1" fontSize="" colorStyle="1" />
@@ -680,7 +680,7 @@ License: GPL2
             <WordsStyle name="BOLD YELLOW on WHITE"     styleID="166" fgColor="7B5C02" bgColor="F3F2EF" fontName="" fontStyle="1" fontSize="" />
             <WordsStyle name="BOLD BLUE on WHITE"       styleID="167" fgColor="0155A8" bgColor="F3F2EF" fontName="" fontStyle="1" fontSize="" />
             <WordsStyle name="BOLD MAGENTA on WHITE"    styleID="168" fgColor="871D77" bgColor="F3F2EF" fontName="" fontStyle="1" fontSize="" />
-            <WordsStyle name="BOLD CYAN on WHITE"       styleID="169" fgColor="027C7C" bgColor="F3F2EF" fontName="" fontStyle="1" fontSize="" />
+            <WordsStyle name="BOLD CYAN on WHITE"       styleID="169" fgColor="272B2F" bgColor="F3F2EF" fontName="" fontStyle="1" fontSize="" />
             <WordsStyle name="BOLD WHITE on WHITE"      styleID="170" fgColor="272B2F" bgColor="F3F2EF" fontName="" fontStyle="1" fontSize="" />
             <WordsStyle name="Sequence Identifier"      styleID="171" fgColor="687582" bgColor="FBFAF7" fontName="" fontStyle="0" fontSize="" />
             <WordsStyle name="Sequence Unknown"         styleID="172" fgColor="687582" bgColor="FBFAF7" fontName="" fontStyle="0" fontSize="" />

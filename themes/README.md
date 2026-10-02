@@ -39,11 +39,13 @@ change **Global Styles > Default Style** after selecting the theme.
 | Errors (tinted background) | red `#A31B22`, Lc 82 | red `#FF9B94`, Lc 62 | |
 | Comments | grey `#687582`, Lc 70 | grey `#AFBCCB`, Lc 64 | Quieter than code, but still text you can read |
 
-Lc is APCA lightness contrast, the perceptual contrast measure in the WCAG 3 drafts. Its guidance is Lc 90 for body
-text, Lc 75 at least for body text, and Lc 60 at least for other text people read. In WCAG 2 terms, every syntax
-colour in the dark theme is at least 8.4:1, above the AAA level of 7:1. In the light theme every syntax colour is at
-least 6:1, above the AA level of 4.5:1. Every style in both files is at least Lc 60 against its own background
-(`check.py`). Most are much higher.
+Lc is APCA lightness contrast (Somers), a perceptual contrast measure that models light-on-dark text better than
+the WCAG 2 ratio. It was proposed for WCAG 3 but removed from the drafts in 2023; WCAG 3's contrast method is still
+undecided (2026), and APCA's validation is debated. So the WCAG 2 ratios are given too: every style in both themes
+meets AA (4.5:1). Only the light theme's line numbers are lower (3.1:1), on purpose, as secondary information.
+Every syntax colour in the dark theme is at least 8.4:1, above the AAA level of 7:1; in the light theme at least
+6:1. APCA's guidance is Lc 90 for body text, Lc 75 at least for body text, and Lc 60 at least for other text people
+read. Every style in both files is at least Lc 60 against its own background (`check.py`); most are much higher.
 
 The decisions, with the evidence for each:
 

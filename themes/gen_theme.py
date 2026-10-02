@@ -5,7 +5,7 @@ name, or, when the name says nothing, from the hue of its colour in the model. T
 comments are kept: only fgColor, bgColor and fontStyle change, so the themes have every lexer and style the model
 has. Usage: python3 gen_theme.py <stylers.model.xml> <DarkModeDefault.xml> <output folder>"""
 import os, re, sys
-from colormath import oklch, apca
+from colormath import oklch, apca, wcag
 from palette import build, blend, ALPHA
 
 OVERRIDES = {
@@ -113,7 +113,7 @@ def escseq_style(name, p, mode):
         bgc = p['margin_bg'] if dark_end else blend(p['text'], p['bg'], 0.22)
     else:
         bgc = blend(p[ANSI_BG[bg]], p['bg'], ALPHA)
-    if abs(apca(fgc, bgc)) < 60:  # e.g. WHITE on BLACK in the light theme: keep it readable
+    if abs(apca(fgc, bgc)) < 60 or wcag(fgc, bgc) < 4.5:  # e.g. WHITE on BLACK in the light theme
         fgc = p['text']
     return fgc, bgc, bold
 
