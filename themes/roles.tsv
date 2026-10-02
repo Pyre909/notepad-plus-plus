@@ -1,0 +1,1775 @@
+lexer	style	model colour	role	decided by
+actionscript	DEFAULT	000000	text	name
+actionscript	FUNCTION	95004A	function	name
+actionscript	PREPROCESSOR	804000	special	name
+actionscript	INSTRUCTION WORD	0000FF	keyword	name
+actionscript	TYPE WORD	8000FF	type	name
+actionscript	NUMBER	FF8000	number	name
+actionscript	STRING	808080	string	name
+actionscript	CHARACTER	808080	string	name
+actionscript	OPERATOR	000080	text	name
+actionscript	VERBATIM	808080	string	name
+actionscript	REGEX	000000	string	name
+actionscript	COMMENT	008000	comment	name
+actionscript	COMMENT LINE	008000	comment	name
+actionscript	COMMENT DOC	008080	comment	name
+actionscript	COMMENT LINE DOC	008080	comment	name
+actionscript	COMMENT DOC KEYWORD	008080	comment-bold	name
+actionscript	COMMENT DOC KEYWORD ERROR	008080	comment	name
+actionscript	PREPROCESSOR COMMENT	008000	comment	name
+actionscript	PREPROCESSOR COMMENT DOC	008080	comment	name
+actionscript	USER KEYWORDS 1	0000FF	keyword	name
+actionscript	USER KEYWORDS 2	0000FF	keyword	name
+actionscript	USER KEYWORDS 3	0000FF	keyword	name
+actionscript	USER KEYWORDS 4	0000FF	keyword	name
+actionscript	USER KEYWORDS 5	0000FF	keyword	name
+actionscript	USER KEYWORDS 6	0000FF	keyword	name
+actionscript	USER KEYWORDS 7	0000FF	keyword	name
+actionscript	USER KEYWORDS 8	0000FF	keyword	name
+ada	DEFAULT	000000	text	name
+ada	INSTRUCTION WORD	0000FF	keyword	name
+ada	IDENTIFIER	000000	text	name
+ada	NUMBER	FF8000	number	name
+ada	DELIMITER	FF8080	text	name
+ada	CHARACTER	808080	string	name
+ada	STRING	808080	string	name
+ada	LABEL	804000	special	name
+ada	COMMENT LINE	008000	comment	name
+ada	ILLEGAL	FF0000	error	name
+asn1	DEFAULT	000000	text	name
+asn1	COMMENT	007F00	comment	name
+asn1	IDENTIFIERS	000000	text	name
+asn1	DOUBLE QUOTED STRING	7F007F	string	name
+asn1	NUMERIC OID DEFINITION	007F7F	number	name
+asn1	NON OID NUMBERS	7F0000	number	name
+asn1	KEYWORDS	00007F	keyword	name
+asn1	ATTRIBUTES	F07800	type	name
+asn1	DESCRIPTORS	00007F	type	name
+asn1	TYPES	00007F	type	name
+asn1	OPERATORS	222222	text	name
+asp	DEFAULT	8000FF	text	name
+asp	COMMENT LINE	008000	comment	name
+asp	NUMBER	FF0000	number	name
+asp	WORD	000080	keyword	name
+asp	STRING	808080	string	name
+asp	IDENTIFIER	000000	text	name
+asp	ASP SYMBOL	000000	text	colour
+asp	SCRIPT TYPE	000000	type	name
+asp	USER KEYWORDS 1	333380	keyword	name
+asp	USER KEYWORDS 2	333380	keyword	name
+asp	USER KEYWORDS 3	333380	keyword	name
+asp	USER KEYWORDS 4	333380	keyword	name
+asp	USER KEYWORDS 5	333380	keyword	name
+asp	USER KEYWORDS 6	333380	keyword	name
+asp	USER KEYWORDS 7	333380	keyword	name
+asp	USER KEYWORDS 8	333380	keyword	name
+asm	DEFAULT	000000	text	name
+asm	COMMENT	008000	comment	name
+asm	NUMBER	FF8000	number	name
+asm	STRING	808080	string	name
+asm	OPERATOR	000080	text	name
+asm	IDENTIFIER	000000	text	name
+asm	CPU INSTRUCTION	0000FF	keyword	name
+asm	MATH INSTRUCTION	0080C0	keyword	name
+asm	REGISTER	8080FF	special	name
+asm	DIRECTIVE	0080FF	special	name
+asm	DIRECTIVE OPERAND	000080	special	name
+asm	COMMENT BLOCK	008000	comment	name
+asm	CHARACTER	808000	string	name
+asm	EXT INSTRUCTION	804000	keyword	name
+autoit	DEFAULT	000000	text	name
+autoit	COMMENT LINE	008000	comment	name
+autoit	COMMENT	008000	comment	name
+autoit	NUMBER	FF8000	number	name
+autoit	FUNCTION	8000FF	function	name
+autoit	INSTRUCTION WORD	0000FF	keyword	name
+autoit	MACRO	8000FF	special	name
+autoit	STRING	808080	string	name
+autoit	OPERATOR	000080	text	name
+autoit	VARIABLE	FF0080	special	name
+autoit	SENT	8080C0	keyword	colour
+autoit	PREPROCESSOR	804000	special	name
+autoit	SPECIAL	000000	special	name
+autoit	EXPAND	000000	text	colour
+autoit	COMOBJ	000000	text	colour
+avs	DEFAULT	000000	text	name
+avs	WHITE SPACE	000000	text	name
+avs	COMMENT: /* */	007F00	comment	name
+avs	COMMENT: [* *]	007F00	comment	name
+avs	LINE COMMENT: #	007F00	comment	name
+avs	NUMBER	007F7F	number	name
+avs	OPERATORS	000000	text	name
+avs	IDENTIFIERS	000000	text	name
+avs	DOUBLE QUOTED STRING	7F007F	string	name
+avs	STRING WITH THREE DOUBLE QUOTES	7F007F	string	name
+avs	KEYWORD	00007F	keyword	name
+avs	FILTER	00007F	keyword	colour
+avs	PLUGIN	0080C0	function	name
+avs	FUNCTION	007F7F	function	name
+avs	CLIP PROPERTIES	00007F	type	name
+avs	USER DEFINED	8000FF	type	colour
+baanc	DEFAULT	000000	text	name
+baanc	COMMENT	808040	comment	name
+baanc	COMMENT DOC	004000	comment	name
+baanc	NUMBER	FF0000	number	name
+baanc	KEYWORDS	008080	keyword	name
+baanc	STRING	FF0080	string	name
+baanc	PREPROCESSOR	0000A0	special	name
+baanc	OPERATOR	800040	text	name
+baanc	IDENTIFIER	000000	text	name
+baanc	STRING EOL NC	000000	error	name
+baanc	FUNCTIONS	0000FF	function	name
+baanc	FUNCTIONS ABRIDGED	0000FF	function	name
+baanc	SUB SECTIONS	FF4500	keyword	name
+baanc	MAIN SECTIONS	800080	keyword	name
+baanc	PREDEFINED VARIABLE	800040	special	name
+baanc	PREDEFINED ATTRIBUTES	FF0080	special	name
+baanc	ENUM DOMAINS	000080	type	name
+baanc	USER DEFINED	800040	keyword	name
+baanc	TABLE DEFINITIONS	9932CC	function	name
+baanc	TABLE SQL	8A2BE2	keyword	name
+baanc	DLL FUNCTIONS	000080	function	name
+baanc	DOMAIN DEFINITIONS	B8860B	function	name
+baanc	FUNCTION DEFINITIONS	B22222	function	name
+baanc	OBJECT DEFINITIONS	8080FF	function	name
+baanc	PREPROC DEFINITIONS	556B2F	special	name
+bash	DEFAULT	000000	text	name
+bash	ERROR	000000	error	name
+bash	INSTRUCTION WORD	0000FF	keyword	name
+bash	NUMBER	FF0000	number	name
+bash	STRING	808080	string	name
+bash	CHARACTER	808080	string	name
+bash	OPERATOR	804000	text	name
+bash	IDENTIFIER	000000	text	name
+bash	SCALAR	FF8040	special	name
+bash	COMMENT LINE	008000	comment	name
+bash	PARAM	008080	special	name
+bash	BACKTICKS	804040	string	name
+bash	HERE DELIM	000000	string	name
+bash	HERE Q	FF0000	string	name
+bash	USER KEYWORDS 1	000000	keyword	name
+bash	USER KEYWORDS 2	000000	keyword	name
+bash	USER KEYWORDS 3	000000	keyword	name
+bash	USER KEYWORDS 4	000000	keyword	name
+bash	USER SCALAR 1	FF8040	special	name
+bash	USER SCALAR 2	FF8040	special	name
+bash	USER SCALAR 3	FF8040	special	name
+bash	USER SCALAR 4	FF8040	special	name
+batch	DEFAULT	000000	text	name
+batch	COMMENT	008000	comment	name
+batch	KEYWORDS	0000FF	keyword	name
+batch	LABEL	FF0000	special	name
+batch	HIDE SYMBOL	FF00FF	special	name
+batch	COMMAND	0080FF	keyword	name
+batch	VARIABLE	FF8000	special	name
+batch	OPERATOR	FF0000	text	name
+batch	AFTER LABEL	008000	special	name
+blitzbasic	DEFAULT	000000	text	name
+blitzbasic	COMMENT	007F00	comment	name
+blitzbasic	NUMBER	007F7F	number	name
+blitzbasic	KEYWORD1	00007F	keyword	name
+blitzbasic	STRING	7F007F	string	name
+blitzbasic	OPERATOR	000000	text	name
+blitzbasic	IDENTIFIER	000000	text	name
+blitzbasic	KEYWORD2	00007F	type	name
+blitzbasic	KEYWORD3	00007F	function	name
+blitzbasic	KEYWORD4	00007F	function	name
+blitzbasic	LABEL	7F7F00	special	name
+blitzbasic	ERROR	000000	error	name
+blitzbasic	HEXNUMBER	007F7F	number	name
+blitzbasic	BINNUMBER	007F7F	number	name
+c	PREPROCESSOR	804000	special	name
+c	DEFAULT	000000	text	name
+c	INSTRUCTION WORD	0000FF	keyword	name
+c	TYPE WORD	8000FF	type	name
+c	NUMBER	FF8000	number	name
+c	STRING	808080	string	name
+c	CHARACTER	808080	string	name
+c	OPERATOR	000080	text	name
+c	VERBATIM	000000	string	name
+c	REGEX	000000	string	name
+c	COMMENT	008000	comment	name
+c	COMMENT LINE	008000	comment	name
+c	COMMENT DOC	008080	comment	name
+c	COMMENT LINE DOC	008080	comment	name
+c	COMMENT DOC KEYWORD	008080	comment-bold	name
+c	COMMENT DOC KEYWORD ERROR	008080	comment	name
+c	PREPROCESSOR COMMENT	008000	comment	name
+c	PREPROCESSOR COMMENT DOC	008080	comment	name
+c	USER KEYWORDS 1	0000FF	keyword	name
+c	USER KEYWORDS 2	0000FF	keyword	name
+c	USER KEYWORDS 3	0000FF	keyword	name
+c	USER KEYWORDS 4	0000FF	keyword	name
+c	USER KEYWORDS 5	0000FF	keyword	name
+c	USER KEYWORDS 6	0000FF	keyword	name
+c	USER KEYWORDS 7	0000FF	keyword	name
+c	USER KEYWORDS 8	0000FF	keyword	name
+cpp	PREPROCESSOR	804000	special	name
+cpp	DEFAULT	000000	text	name
+cpp	INSTRUCTION WORD	0000FF	keyword	name
+cpp	TYPE WORD	8000FF	type	name
+cpp	NUMBER	FF8000	number	name
+cpp	STRING	808080	string	name
+cpp	STRINGRAW	808080	string	name
+cpp	CHARACTER	808080	string	name
+cpp	OPERATOR	000080	text	name
+cpp	VERBATIM	000000	string	name
+cpp	REGEX	000000	string	name
+cpp	COMMENT	008000	comment	name
+cpp	COMMENT LINE	008000	comment	name
+cpp	COMMENT DOC	008080	comment	name
+cpp	COMMENT LINE DOC	008080	comment	name
+cpp	COMMENT DOC KEYWORD	008080	comment-bold	name
+cpp	COMMENT DOC KEYWORD ERROR	008080	comment	name
+cpp	PREPROCESSOR COMMENT	008000	comment	name
+cpp	PREPROCESSOR COMMENT DOC	008080	comment	name
+cpp	USER KEYWORDS 1	0000FF	keyword	name
+cpp	USER KEYWORDS 2	0000FF	keyword	name
+cpp	USER KEYWORDS 3	0000FF	keyword	name
+cpp	USER KEYWORDS 4	0000FF	keyword	name
+cpp	USER KEYWORDS 5	0000FF	keyword	name
+cpp	USER KEYWORDS 6	0000FF	keyword	name
+cpp	USER KEYWORDS 7	0000FF	keyword	name
+cpp	USER KEYWORDS 8	0000FF	keyword	name
+cs	PREPROCESSOR	804000	special	name
+cs	DEFAULT	000000	text	name
+cs	INSTRUCTION WORD	0000FF	keyword	name
+cs	TYPE WORD	8000FF	type	name
+cs	NUMBER	FF8000	number	name
+cs	STRING	808080	string	name
+cs	CHARACTER	808080	string	name
+cs	OPERATOR	000080	text	name
+cs	VERBATIM	000000	string	name
+cs	REGEX	000000	string	name
+cs	COMMENT	008000	comment	name
+cs	COMMENT LINE	008000	comment	name
+cs	COMMENT DOC	008080	comment	name
+cs	COMMENT LINE DOC	008080	comment	name
+cs	COMMENT DOC KEYWORD	008080	comment-bold	name
+cs	COMMENT DOC KEYWORD ERROR	008080	comment	name
+cs	PREPROCESSOR COMMENT	008000	comment	name
+cs	PREPROCESSOR COMMENT DOC	008080	comment	name
+cs	USER KEYWORDS 1	0000FF	keyword	name
+cs	USER KEYWORDS 2	0000FF	keyword	name
+cs	USER KEYWORDS 3	0000FF	keyword	name
+cs	USER KEYWORDS 4	0000FF	keyword	name
+cs	USER KEYWORDS 5	0000FF	keyword	name
+cs	USER KEYWORDS 6	0000FF	keyword	name
+cs	USER KEYWORDS 7	0000FF	keyword	name
+cs	USER KEYWORDS 8	0000FF	keyword	name
+caml	DEFAULT	000000	text	name
+caml	IDENTIFIER	000000	text	name
+caml	TAGNAME	000000	text	name
+caml	INSTRUCTION WORD	0000FF	keyword	name
+caml	BUILIN FUNC &amp; TYPE	8000FF	function	name
+caml	TYPE	8000FF	type	name
+caml	LINENUM	000000	text	colour
+caml	OPERATOR	000080	text	name
+caml	NUMBER	FF8000	number	name
+caml	CHARACTER	808080	string	name
+caml	STRING	808080	string	name
+caml	COMMENT	008000	comment	name
+caml	COMMENT LINE	008000	comment	name
+caml	COMMENT DOC	008080	comment	name
+caml	COMMENT LINE DOC	008080	comment	name
+cmake	DEFAULT	000000	text	name
+cmake	COMMENT	008000	comment	name
+cmake	STRING D	808080	string	name
+cmake	STRING L	808080	string	name
+cmake	STRING R	808080	string	name
+cmake	COMMAND	0000FF	keyword	name
+cmake	PARAMETER	8000FF	special	name
+cmake	VARIABLE	FF8040	special	name
+cmake	USER DEFINED	000080	function	name
+cmake	WHILEDEF	0080FF	keyword	name
+cmake	FOREACHDEF	008080	keyword	name
+cmake	IFDEF	8000FF	keyword	name
+cmake	MACRODEF	FF0000	keyword	name
+cmake	STRING VARIABLE	808080	special	name
+cmake	NUMBER	804040	number	name
+cobol	PREPROCESSOR	804000	special	name
+cobol	DEFAULT	000000	text	name
+cobol	DECLARATION	8000FF	type	colour
+cobol	INSTRUCTION WORD	0000FF	keyword	name
+cobol	KEYWORD	0080FF	keyword	name
+cobol	NUMBER	FF8000	number	name
+cobol	STRING	808080	string	name
+cobol	CHARACTER	808080	string	name
+cobol	OPERATOR	000080	text	name
+cobol	COMMENT	008000	comment	name
+cobol	COMMENT LINE	008000	comment	name
+cobol	COMMENT DOC	008080	comment	name
+cobol	COMMENT LINE DOC	008080	comment	name
+cobol	COMMENT DOC KEYWORD	008080	comment-bold	name
+cobol	COMMENT DOC KEYWORD ERROR	008080	comment	name
+csound	DEFAULT	000000	text	name
+csound	COMMENT	669999	comment	name
+csound	NUMBER	339933	number	name
+csound	OPERATOR	000000	text	name
+csound	INSTR	000000	text	colour
+csound	IDENTIFIER	000000	text	name
+csound	OPCODE	0000FF	keyword	name
+csound	HEADER STATEMENT	CC2200	keyword	name
+csound	USER KEYWORDS	000000	keyword	name
+csound	COMMENT BLOCK	000000	comment	name
+csound	PARAMETER	660099	special	name
+csound	A-RATE VARIABLE	660099	special	name
+csound	K-RATE VARIABLE	660099	special	name
+csound	I-RATE VARIABLE	660099	special	name
+csound	GLOBAL VARIABLE	660099	special	name
+csound	END OF LINE WHERE STRING IS NOT CLOSED	000000	error	name
+coffeescript	PREPROCESSOR	804000	special	name
+coffeescript	DEFAULT	000000	text	name
+coffeescript	INSTRUCTION WORD	0000FF	keyword	name
+coffeescript	TYPE WORD	8000FF	type	name
+coffeescript	NUMBER	FF8000	number	name
+coffeescript	STRING	808080	string	name
+coffeescript	CHARACTER	808080	string	name
+coffeescript	OPERATOR	000080	text	name
+coffeescript	VERBATIM	000000	string	name
+coffeescript	REGEX	000000	string	name
+coffeescript	COMMENT	008000	comment	name
+coffeescript	COMMENT LINE	008000	comment	name
+coffeescript	COMMENT DOC	008080	comment	name
+coffeescript	COMMENT LINE DOC	008080	comment	name
+coffeescript	COMMENT DOC KEYWORD	008080	comment-bold	name
+coffeescript	COMMENT DOC KEYWORD ERROR	008080	comment	name
+coffeescript	PREDEFINED CONSTANT	800000	special	name
+coffeescript	COMMENT BLOCK	008080	comment	name
+coffeescript	VERBOSE REGEX	000000	string	name
+coffeescript	VERBOSE REGEX COMMENT	008080	comment	name
+css	DEFAULT	000000	text	name
+css	TAG	0000FF	keyword	name
+css	CLASS	FF0000	type	name
+css	PSEUDOCLASS	FF8000	special	name
+css	UNKNOWN PSEUDOCLASS	000000	special	name
+css	OPERATOR	000000	text	name
+css	IDENTIFIER	8080C0	text	name
+css	UNKNOWN IDENTIFIER	000000	text	colour
+css	VALUE	000000	string	name
+css	COMMENT	008000	comment	name
+css	ID	0080FF	type	name
+css	IMPORTANT	FF0000	special	name
+css	DIRECTIVE	0080FF	special	name
+css	DOUBLE STRING	808080	string	name
+css	SINGLE STRING	808080	string	name
+css	ATTRIBUTE	800000	type	name
+css	PSEUDOELEMENT	FF8000	special	name
+css	LEGACY PSEUDOELEMENT	FF8000	special	name
+css	MEDIA	0080FF	special	name
+css	VARIABLE	DD9900	special	name
+d	DEFAULT	000000	text	name
+d	IDENTIFIER	000000	text	name
+d	INSTRUCTION WORD	0000FF	keyword	name
+d	KEYWORD1	000000	keyword	name
+d	KEYWORD2	000000	type	name
+d	KEYWORD3	000000	function	name
+d	KEYWORD4	000000	function	name
+d	KEYWORD5	000000	function	name
+d	KEYWORD6	000000	function	name
+d	NUMBER	FF8000	number	name
+d	STRING	808080	string	name
+d	CHARACTER	808080	string	name
+d	OPERATOR	000080	text	name
+d	COMMENT	008000	comment	name
+d	COMMENT LINE	008000	comment	name
+d	COMMENT DOC	008080	comment	name
+d	COMMENT NESTED	008080	comment	name
+d	COMMENT LINE DOC	008080	comment	name
+d	COMMENT DOC KEYWORD	008080	comment-bold	name
+d	COMMENT DOC KEYWORD ERROR	008080	comment	name
+d	STRING B	808080	string	name
+d	STRING R	808080	string	name
+diff	DEFAULT	000000	text	name
+diff	COMMENT	008000	comment	name
+diff	COMMAND	0000FF	keyword	name
+diff	HEADER	8000FF	special	name
+diff	POSITION	FF8000	type	name
+diff	DELETED	808040	deleted	name
+diff	ADDED	0080FF	added	name
+erlang	DEFAULT STYLE	000000	text	name
+erlang	DEFAULT COMMENT	d00000	comment	name
+erlang	FUNCTION COMMENT	3f5fbf	comment	name
+erlang	MODULE COMMENT	3f5fbf	comment	name
+erlang	DOCUMENTATION HELPER IN COMMENT	3f5fbf	comment-bold	name
+erlang	DOCUMENTATION MACRO IN COMMENT	3f5fbf	comment-bold	name
+erlang	VARIABLE	7f0000	special	name
+erlang	NUMBER	007f00	number	name
+erlang	STRING	ff901e	string	name
+erlang	CHARACTER	007f00	string	name
+erlang	MACRO	7f007f	special	name
+erlang	MACRO QUOTED	7f007f	string	name
+erlang	RECORD	7f7f00	special	name
+erlang	RECORD QUOTED	7f7f00	string	name
+erlang	ATOM	7f7f00	special	name
+erlang	ATOM QUOTED	7f7f00	string	name
+erlang	NODE NAME	007f7f	function	name
+erlang	NODE NAME QUOTED	007f7f	string	name
+erlang	RESERVED WORDS	00007f	keyword	name
+erlang	BUILT-IN FUNCTIONS	0000ff	function	name
+erlang	FUNCTION NAME	00007f	function	name
+erlang	MODULE NAME	00cccc	type	name
+erlang	MODULE ATTRIBUTES	007f7f	type	name
+erlang	PREPROCESSOR	007f7f	special	name
+erlang	OPERATORS	000000	text	name
+erlang	UNKNOWN: ERROR	000000	error	name
+errorlist	DEFAULT STYLE	000000	text	name
+errorlist	PYTHON Error	FF0000	error-fg	name
+errorlist	GCC Error	FF0000	error-fg	name
+errorlist	MS Error	FF0000	error-fg	name
+errorlist	CMD Error	FF0000	error-fg	name
+errorlist	BORLAND Error	FF0000	error-fg	name
+errorlist	PERL Error	FF0000	error-fg	name
+errorlist	NET Error	FF0000	error-fg	name
+errorlist	LUA Error	FF0000	error-fg	name
+errorlist	CTAG Error	FF0000	error-fg	name
+errorlist	DIFF Changed	FF0080	string	name
+errorlist	DIFF Addition	13A10E	ansi-green	name
+errorlist	DIFF Deletion	CC0000	error-fg	name
+errorlist	DIFF Message	3A96DD	keyword	name
+errorlist	PHP Error	FF0000	error-fg	name
+errorlist	ELF Error	FF0000	error-fg	name
+errorlist	IFC Error	FF0000	error-fg	name
+errorlist	IFORT Error	FF0000	error-fg	name
+errorlist	ABSF Error	FF0000	error-fg	name
+errorlist	TIDY Error	FF0000	error-fg	name
+errorlist	JAVA Stack Error	FF0000	error-fg	name
+errorlist	VALUE Error	FF0000	error-fg	name
+errorlist	GCC Included-From Error	FF0000	error-fg	name
+errorlist	Escape Sequence	C0C0C0	comment	name
+errorlist	Unknown Escape Sequence	FFFF78	special	name
+errorlist	GCC Excerpt Error	FF0000	error-fg	name
+errorlist	BASH Error	FF0000	error-fg	name
+errorlist	ANSI COLOR BLACK	000000	text	name
+errorlist	ANSI COLOR RED	CD0000	ansi-red	name
+errorlist	ANSI COLOR GREEN	00CD00	ansi-green	name
+errorlist	ANSI COLOR BROWN	AA5500	ansi-yellow	name
+errorlist	ANSI COLOR BLUE	0000FF	ansi-blue	name
+errorlist	ANSI COLOR MAGENTA	CD00CD	ansi-magenta	name
+errorlist	ANSI COLOR CYAN	008888	ansi-cyan	name
+errorlist	ANSI COLOR GRAY	E5E5E5	comment	name
+errorlist	ANSI COLOR DARK GRAY	7F7F7F	comment	name
+errorlist	ANSI COLOR BRIGHT RED	FF0000	ansi-red	name
+errorlist	ANSI COLOR BRIGHT GREEN	00FC00	ansi-green	name
+errorlist	ANSI COLOR YELLOW	CCCC00	ansi-yellow	name
+errorlist	ANSI COLOR BRIGHT BLUE	3B78FF	ansi-blue	name
+errorlist	ANSI COLOR BRIGHT MAGENTA	FF00FF	ansi-magenta	name
+errorlist	ANSI COLOR BRIGHT CYAN	00CDCD	ansi-cyan	name
+errorlist	ANSI COLOR WHITE	FFFFFF	text	name
+escseq	DEFAULT on DEFAULT	000000	escseq	name
+escseq	BLACK on DEFAULT	000000	escseq	name
+escseq	RED on DEFAULT	CD0000	escseq	name
+escseq	GREEN on DEFAULT	00CD00	escseq	name
+escseq	YELLOW on DEFAULT	AA5500	escseq	name
+escseq	BLUE on DEFAULT	0000FF	escseq	name
+escseq	MAGENTA on DEFAULT	CD00CD	escseq	name
+escseq	CYAN on DEFAULT	008888	escseq	name
+escseq	WHITE on DEFAULT	E5E5E5	escseq	name
+escseq	DEFAULT on BLACK	000000	escseq	name
+escseq	BLACK on BLACK	000000	escseq	name
+escseq	RED on BLACK	CD0000	escseq	name
+escseq	GREEN on BLACK	00CD00	escseq	name
+escseq	YELLOW on BLACK	AA5500	escseq	name
+escseq	BLUE on BLACK	0000FF	escseq	name
+escseq	MAGENTA on BLACK	CD00CD	escseq	name
+escseq	CYAN on BLACK	008888	escseq	name
+escseq	WHITE on BLACK	E5E5E5	escseq	name
+escseq	DEFAULT on RED	000000	escseq	name
+escseq	BLACK on RED	000000	escseq	name
+escseq	RED on RED	CD0000	escseq	name
+escseq	GREEN on RED	00CD00	escseq	name
+escseq	YELLOW on RED	AA5500	escseq	name
+escseq	BLUE on RED	0000FF	escseq	name
+escseq	MAGENTA on RED	CD00CD	escseq	name
+escseq	CYAN on RED	008888	escseq	name
+escseq	WHITE on RED	E5E5E5	escseq	name
+escseq	DEFAULT on GREEN	000000	escseq	name
+escseq	BLACK on GREEN	000000	escseq	name
+escseq	RED on GREEN	CD0000	escseq	name
+escseq	GREEN on GREEN	00CD00	escseq	name
+escseq	YELLOW on GREEN	AA5500	escseq	name
+escseq	BLUE on GREEN	0000FF	escseq	name
+escseq	MAGENTA on GREEN	CD00CD	escseq	name
+escseq	CYAN on GREEN	008888	escseq	name
+escseq	WHITE on GREEN	E5E5E5	escseq	name
+escseq	DEFAULT on YELLOW	000000	escseq	name
+escseq	BLACK on YELLOW	000000	escseq	name
+escseq	RED on YELLOW	CD0000	escseq	name
+escseq	GREEN on YELLOW	00CD00	escseq	name
+escseq	YELLOW on YELLOW	AA5500	escseq	name
+escseq	BLUE on YELLOW	0000FF	escseq	name
+escseq	MAGENTA on YELLOW	CD00CD	escseq	name
+escseq	CYAN on YELLOW	008888	escseq	name
+escseq	WHITE on YELLOW	E5E5E5	escseq	name
+escseq	DEFAULT on BLUE	000000	escseq	name
+escseq	BLACK on BLUE	000000	escseq	name
+escseq	RED on BLUE	CD0000	escseq	name
+escseq	GREEN on BLUE	00CD00	escseq	name
+escseq	YELLOW on BLUE	AA5500	escseq	name
+escseq	BLUE on BLUE	0000FF	escseq	name
+escseq	MAGENTA on BLUE	CD00CD	escseq	name
+escseq	CYAN on BLUE	008888	escseq	name
+escseq	WHITE on BLUE	E5E5E5	escseq	name
+escseq	DEFAULT on MAGENTA	000000	escseq	name
+escseq	BLACK on MAGENTA	000000	escseq	name
+escseq	RED on MAGENTA	CD0000	escseq	name
+escseq	GREEN on MAGENTA	00CD00	escseq	name
+escseq	YELLOW on MAGENTA	AA5500	escseq	name
+escseq	BLUE on MAGENTA	0000FF	escseq	name
+escseq	MAGENTA on MAGENTA	CD00CD	escseq	name
+escseq	CYAN on MAGENTA	008888	escseq	name
+escseq	WHITE on MAGENTA	E5E5E5	escseq	name
+escseq	DEFAULT on CYAN	000000	escseq	name
+escseq	BLACK on CYAN	000000	escseq	name
+escseq	RED on CYAN	CD0000	escseq	name
+escseq	GREEN on CYAN	00CD00	escseq	name
+escseq	YELLOW on CYAN	AA5500	escseq	name
+escseq	BLUE on CYAN	0000FF	escseq	name
+escseq	MAGENTA on CYAN	CD00CD	escseq	name
+escseq	CYAN on CYAN	008888	escseq	name
+escseq	WHITE on CYAN	E5E5E5	escseq	name
+escseq	DEFAULT on WHITE	000000	escseq	name
+escseq	BLACK on WHITE	000000	escseq	name
+escseq	RED on WHITE	CD0000	escseq	name
+escseq	GREEN on WHITE	00CD00	escseq	name
+escseq	YELLOW on WHITE	AA5500	escseq	name
+escseq	BLUE on WHITE	0000FF	escseq	name
+escseq	MAGENTA on WHITE	CD00CD	escseq	name
+escseq	CYAN on WHITE	008888	escseq	name
+escseq	WHITE on WHITE	E5E5E5	escseq	name
+escseq	BOLD DEFAULT on DEFAULT	000000	escseq	name
+escseq	BOLD BLACK on DEFAULT	000000	escseq	name
+escseq	BOLD RED on DEFAULT	CD0000	escseq	name
+escseq	BOLD GREEN on DEFAULT	00CD00	escseq	name
+escseq	BOLD YELLOW on DEFAULT	AA5500	escseq	name
+escseq	BOLD BLUE on DEFAULT	0000FF	escseq	name
+escseq	BOLD MAGENTA on DEFAULT	CD00CD	escseq	name
+escseq	BOLD CYAN on DEFAULT	008888	escseq	name
+escseq	BOLD WHITE on DEFAULT	E5E5E5	escseq	name
+escseq	BOLD DEFAULT on BLACK	000000	escseq	name
+escseq	BOLD BLACK on BLACK	000000	escseq	name
+escseq	BOLD RED on BLACK	CD0000	escseq	name
+escseq	BOLD GREEN on BLACK	00CD00	escseq	name
+escseq	BOLD YELLOW on BLACK	AA5500	escseq	name
+escseq	BOLD BLUE on BLACK	0000FF	escseq	name
+escseq	BOLD MAGENTA on BLACK	CD00CD	escseq	name
+escseq	BOLD CYAN on BLACK	008888	escseq	name
+escseq	BOLD WHITE on BLACK	E5E5E5	escseq	name
+escseq	BOLD DEFAULT on RED	000000	escseq	name
+escseq	BOLD BLACK on RED	000000	escseq	name
+escseq	BOLD RED on RED	CD0000	escseq	name
+escseq	BOLD GREEN on RED	00CD00	escseq	name
+escseq	BOLD YELLOW on RED	AA5500	escseq	name
+escseq	BOLD BLUE on RED	0000FF	escseq	name
+escseq	BOLD MAGENTA on RED	CD00CD	escseq	name
+escseq	BOLD CYAN on RED	008888	escseq	name
+escseq	BOLD WHITE on RED	E5E5E5	escseq	name
+escseq	BOLD DEFAULT on GREEN	000000	escseq	name
+escseq	BOLD BLACK on GREEN	000000	escseq	name
+escseq	BOLD RED on GREEN	CD0000	escseq	name
+escseq	BOLD GREEN on GREEN	00CD00	escseq	name
+escseq	BOLD YELLOW on GREEN	AA5500	escseq	name
+escseq	BOLD BLUE on GREEN	0000FF	escseq	name
+escseq	BOLD MAGENTA on GREEN	CD00CD	escseq	name
+escseq	BOLD CYAN on GREEN	008888	escseq	name
+escseq	BOLD WHITE on GREEN	E5E5E5	escseq	name
+escseq	BOLD DEFAULT on YELLOW	000000	escseq	name
+escseq	BOLD BLACK on YELLOW	000000	escseq	name
+escseq	BOLD RED on YELLOW	CD0000	escseq	name
+escseq	BOLD GREEN on YELLOW	00CD00	escseq	name
+escseq	BOLD YELLOW on YELLOW	AA5500	escseq	name
+escseq	BOLD BLUE on YELLOW	0000FF	escseq	name
+escseq	BOLD MAGENTA on YELLOW	CD00CD	escseq	name
+escseq	BOLD CYAN on YELLOW	008888	escseq	name
+escseq	BOLD WHITE on YELLOW	E5E5E5	escseq	name
+escseq	BOLD DEFAULT on BLUE	000000	escseq	name
+escseq	BOLD BLACK on BLUE	000000	escseq	name
+escseq	BOLD RED on BLUE	CD0000	escseq	name
+escseq	BOLD GREEN on BLUE	00CD00	escseq	name
+escseq	BOLD YELLOW on BLUE	AA5500	escseq	name
+escseq	BOLD BLUE on BLUE	0000FF	escseq	name
+escseq	BOLD MAGENTA on BLUE	CD00CD	escseq	name
+escseq	BOLD CYAN on BLUE	008888	escseq	name
+escseq	BOLD WHITE on BLUE	E5E5E5	escseq	name
+escseq	BOLD DEFAULT on MAGENTA	000000	escseq	name
+escseq	BOLD BLACK on MAGENTA	000000	escseq	name
+escseq	BOLD RED on MAGENTA	CD0000	escseq	name
+escseq	BOLD GREEN on MAGENTA	00CD00	escseq	name
+escseq	BOLD YELLOW on MAGENTA	AA5500	escseq	name
+escseq	BOLD BLUE on MAGENTA	0000FF	escseq	name
+escseq	BOLD MAGENTA on MAGENTA	CD00CD	escseq	name
+escseq	BOLD CYAN on MAGENTA	008888	escseq	name
+escseq	BOLD WHITE on MAGENTA	E5E5E5	escseq	name
+escseq	BOLD DEFAULT on CYAN	000000	escseq	name
+escseq	BOLD BLACK on CYAN	000000	escseq	name
+escseq	BOLD RED on CYAN	CD0000	escseq	name
+escseq	BOLD GREEN on CYAN	00CD00	escseq	name
+escseq	BOLD YELLOW on CYAN	AA5500	escseq	name
+escseq	BOLD BLUE on CYAN	0000FF	escseq	name
+escseq	BOLD MAGENTA on CYAN	CD00CD	escseq	name
+escseq	BOLD CYAN on CYAN	008888	escseq	name
+escseq	BOLD WHITE on CYAN	E5E5E5	escseq	name
+escseq	BOLD DEFAULT on WHITE	000000	escseq	name
+escseq	BOLD BLACK on WHITE	000000	escseq	name
+escseq	BOLD RED on WHITE	CD0000	escseq	name
+escseq	BOLD GREEN on WHITE	00CD00	escseq	name
+escseq	BOLD YELLOW on WHITE	AA5500	escseq	name
+escseq	BOLD BLUE on WHITE	0000FF	escseq	name
+escseq	BOLD MAGENTA on WHITE	CD00CD	escseq	name
+escseq	BOLD CYAN on WHITE	008888	escseq	name
+escseq	BOLD WHITE on WHITE	E5E5E5	escseq	name
+escseq	Sequence Identifier	C0C0C0	escseq	name
+escseq	Sequence Unknown	FFFF78	escseq	name
+escript	DEFAULT	000000	text	name
+escript	COMMENT	007F00	comment	name
+escript	LINE COMMENT	007F00	comment	name
+escript	DOC COMMENT	3F703F	comment	name
+escript	NUMBER	007F7F	number	name
+escript	KEYWORD	FF4000	keyword	name
+escript	DOUBLE QUOTED STRING	FF8000	string	name
+escript	OPERATORS	FF0000	text	name
+escript	IDENTIFIERS	000000	text	name
+escript	BRACES	0000FF	keyword	colour
+escript	KEYWORDS2	B00040	type	name
+escript	KEYWORDS3	B00040	function	name
+forth	WHITESPACE	000000	text	name
+forth	COMMENT	009933	comment	name
+forth	ML COMMENT	007F00	comment	name
+forth	IDENTIFIER	000000	text	name
+forth	CONTROL	00007F	keyword	name
+forth	KEYWORDS	000000	keyword	name
+forth	DEFWORDS	FF0000	keyword	name
+forth	PREWORD1	CC3300	keyword	name
+forth	PREWORD2	996633	type	name
+forth	NUMBER	007F7F	number	name
+forth	DOUBLE QUOTED STRING	CC3300	string	name
+forth	LOCALE	0000CC	keyword	colour
+fortran	DEFAULT	000000	text	name
+fortran	COMMENT	008000	comment	name
+fortran	NUMBER	FF8000	number	name
+fortran	STRING	808080	string	name
+fortran	STRING2	808080	string	name
+fortran	OPERATOR	000080	text	name
+fortran	IDENTIFIER	000000	text	name
+fortran	INSTRUCTION WORD	0000FF	keyword	name
+fortran	FUNCTION1	8000FF	function	name
+fortran	FUNCTION2	0080C0	function	name
+fortran	PREPROCESSOR	800000	special	name
+fortran	OPERATOR2	808080	text	name
+fortran	LABEL	000000	special	name
+fortran	CONTINUATION	008000	comment	colour
+fortran77	DEFAULT	000000	text	name
+fortran77	COMMENT	008000	comment	name
+fortran77	NUMBER	FF8000	number	name
+fortran77	STRING	808080	string	name
+fortran77	STRING2	808080	string	name
+fortran77	OPERATOR	000080	text	name
+fortran77	IDENTIFIER	000000	text	name
+fortran77	INSTRUCTION WORD	0000FF	keyword	name
+fortran77	FUNCTION1	8000FF	function	name
+fortran77	FUNCTION2	0080C0	function	name
+fortran77	PREPROCESSOR	800000	special	name
+fortran77	OPERATOR2	808080	text	name
+fortran77	LABEL	000000	special	name
+fortran77	CONTINUATION	008000	comment	colour
+freebasic	DEFAULT	000000	text	name
+freebasic	COMMENT	007F00	comment	name
+freebasic	NUMBER	007F7F	number	name
+freebasic	KEYWORD1	00007F	keyword	name
+freebasic	STRING	7F007F	string	name
+freebasic	PREPROCESSOR	7F7F00	special	name
+freebasic	OPERATOR	000000	text	name
+freebasic	IDENTIFIER	000000	text	name
+freebasic	KEYWORD2	00007F	type	name
+freebasic	KEYWORD3	00007F	function	name
+freebasic	KEYWORD4	00007F	function	name
+freebasic	LABEL	7F7F00	special	name
+freebasic	ERROR	000000	error	name
+freebasic	HEXNUMBER	007F7F	number	name
+freebasic	BINNUMBER	007F7F	number	name
+gdscript	DEFAULT	000000	text	name
+gdscript	COMMENT LINE	008000	comment	name
+gdscript	NUMBER	FF0000	number	name
+gdscript	STRING	008040	string	name
+gdscript	CHARACTER	808080	string	name
+gdscript	WORD	0000FF	keyword	name
+gdscript	TRIPLE	FF8000	string	name
+gdscript	TRIPLE DOUBLE	FF8000	string	name
+gdscript	CLASS NAME	000000	function	name
+gdscript	FUNC NAME	0080FF	function	name
+gdscript	OPERATOR	000080	text	name
+gdscript	IDENTIFIER	000000	text	name
+gdscript	COMMENT BLOCK	008000	comment	name
+gdscript	STRING EOL	880088	error	name
+gdscript	WORD2	FF8000	type	name
+gdscript	ANNOTATION	808080	special	name
+gdscript	NODEPATH	004000	special	name
+gdscript	USER KEYWORDS 1	000000	keyword	name
+gdscript	USER KEYWORDS 2	000000	keyword	name
+gdscript	USER KEYWORDS 3	000000	keyword	name
+gdscript	USER KEYWORDS 4	000000	keyword	name
+gdscript	USER KEYWORDS 5	000000	keyword	name
+gdscript	USER KEYWORDS 6	000000	keyword	name
+gdscript	USER KEYWORDS 7	000000	keyword	name
+gdscript	USER KEYWORDS 8	000000	keyword	name
+go	PREPROCESSOR	804000	special	name
+go	DEFAULT	000000	text	name
+go	INSTRUCTION WORD	0000FF	keyword	name
+go	TYPE WORD	8000FF	type	name
+go	PREDECLARED IDENTIFIERS	800080	type	name
+go	NUMBER	FF8000	number	name
+go	STRING	808080	string	name
+go	STRING RAW	808080	string	name
+go	CHARACTER	808080	string	name
+go	OPERATOR	000080	text	name
+go	VERBATIM	000000	string	name
+go	REGEX	000000	string	name
+go	COMMENT	008000	comment	name
+go	COMMENT LINE	008000	comment	name
+go	COMMENT DOC	008080	comment	name
+go	COMMENT LINE DOC	008080	comment	name
+go	COMMENT DOC KEYWORD	008080	comment-bold	name
+go	COMMENT DOC KEYWORD ERROR	008080	comment	name
+go	PREPROCESSOR COMMENT	008000	comment	name
+go	PREPROCESSOR COMMENT DOC	008080	comment	name
+go	USER KEYWORDS 1	0000FF	keyword	name
+go	USER KEYWORDS 2	0000FF	keyword	name
+go	USER KEYWORDS 3	0000FF	keyword	name
+go	USER KEYWORDS 4	0000FF	keyword	name
+go	USER KEYWORDS 5	0000FF	keyword	name
+go	USER KEYWORDS 6	0000FF	keyword	name
+go	USER KEYWORDS 7	0000FF	keyword	name
+go	USER KEYWORDS 8	0000FF	keyword	name
+gui4cli	DEFAULT	000000	text	name
+gui4cli	COMMENT LINE	008000	comment	name
+gui4cli	COMMENT	008000	comment	name
+gui4cli	GLOBAL	0000FF	special	name
+gui4cli	EVENT	0000FF	keyword	colour
+gui4cli	ATTRIBUTE	8000FF	type	name
+gui4cli	CONTROL	8000FF	keyword	name
+gui4cli	COMMAND	8000FF	keyword	name
+gui4cli	STRING	808080	string	name
+gui4cli	OPERATOR	000080	text	name
+haskell	DEFAULT	000000	text	name
+haskell	IDENTIFIER	000000	text	name
+haskell	KEYWORD	0000FF	keyword	name
+haskell	NUMBER	800080	number	name
+haskell	STRING	CA6500	string	name
+haskell	CHARACTER	CA6500	string	name
+haskell	CLASS	000000	type	name
+haskell	MODULE	000000	type	name
+haskell	CAPITAL	000000	text	colour
+haskell	DATA	000000	text	colour
+haskell	IMPORT	000000	text	colour
+haskell	OPERATOR	000080	text	name
+haskell	INSTANCE	000000	text	colour
+haskell	COMMENT LINE	008000	comment	name
+haskell	COMMENT BLOCK	008000	comment	name
+haskell	COMMENT BLOCK2	008000	comment	name
+haskell	COMMENT BLOCK3	008000	comment	name
+hollywood	DEFAULT	000000	text	name
+hollywood	COMMENT	008000	comment	name
+hollywood	COMMENT BLOCK	008000	comment	name
+hollywood	NUMBER	939393	number	name
+hollywood	KEYWORD	0000FF	keyword	name
+hollywood	CORE API	0000FF	function	name
+hollywood	PLUGIN API	0000FF	function	name
+hollywood	PLUGIN METHOD	0000FF	function	name
+hollywood	STRING	939393	string	name
+hollywood	STRING BLOCK	939393	string	name
+hollywood	PREPROCESSOR	D98C00	special	name
+hollywood	OPERATOR	000000	text	name
+hollywood	IDENTIFIER	000000	text	name
+hollywood	CONSTANT	FF0000	number	name
+hollywood	HEXNUMBER	939393	number	name
+html	DEFAULT	000000	text	name
+html	COMMENT	008000	comment	name
+html	NUMBER	FF0000	number	name
+html	DOUBLE STRING	8000FF	string	name
+html	SINGLE STRING	8000FF	string	name
+html	TAG	0000FF	keyword	name
+html	TAG END	0000FF	keyword	name
+html	TAG UNKNOWN	000000	keyword	name
+html	ATTRIBUTE	FF0000	type	name
+html	ATTRIBUTE UNKNOWN	000000	type	name
+html	SGML DEFAULT	000000	special	name
+html	SGML COMMAND	0000DD	special	name
+html	SGML 1ST PARAM	0000DD	special	name
+html	SGML DOUBLESTRING	8000FF	string	name
+html	SGML SIMPLESTRING	8000FF	string	name
+html	SGML BLOCK DEFAULT	000000	special	name
+html	CDATA	FF8000	string	name
+html	VALUE	FF8000	string	name
+html	ENTITY	000000	number	name
+html	USER TAGS1	0000FF	keyword	name
+html	USER TAGS2	0000FF	keyword	name
+html	USER TAGS3	0000FF	keyword	name
+html	USER TAGS4	0000FF	keyword	name
+html	USER ATTRIBUTES1	FF0000	type	name
+html	USER ATTRIBUTES2	FF0000	type	name
+html	USER ATTRIBUTES3	FF0000	type	name
+html	USER ATTRIBUTES4	FF0000	type	name
+ihex	DEFAULT	000000	text	name
+ihex	RECSTART	7F0000	special	name
+ihex	RECTYPE	7F0000	type	name
+ihex	RECTYPE_UNKNOWN	7F0000	type	name
+ihex	BYTECOUNT	7F7F00	special	colour
+ihex	BYTECOUNT_WRONG	000000	error	name
+ihex	NOADDRESS	7F00FF	type	colour
+ihex	DATAADDRESS	007FFF	keyword	colour
+ihex	STARTADDRESS	007FFF	keyword	colour
+ihex	ADDRESSFIELD_UNKNOWN	000000	type	name
+ihex	EXTENDEDADDRESS	007FFF	keyword	colour
+ihex	DATA_ODD	000000	text	colour
+ihex	DATA_EVEN	000000	text	colour
+ihex	DATA_UNKNOWN	000000	text	colour
+ihex	DATA_EMPTY	000000	text	colour
+ihex	CHECKSUM	00BF00	comment	colour
+ihex	CHECKSUM_WRONG	000000	error	name
+ihex	GARBAGE	000000	error	name
+ini	DEFAULT	000000	text	name
+ini	COMMENT	008000	comment	name
+ini	SECTION	8000FF	keyword	name
+ini	ASSIGNMENT	FF0000	text	name
+ini	DEFVAL	FF0000	string	name
+ini	KEY	0000FF	type	name
+inno	DEFAULT	000000	text	name
+inno	COMMENT	008000	comment	name
+inno	KEYWORD	0000FF	keyword	name
+inno	PARAMETER	FF8000	special	name
+inno	SECTION	000080	keyword	name
+inno	PREPROCESSOR	800000	special	name
+inno	PREPROCESSOR INLINE	0000FF	special	name
+inno	COMMENT PASCAL	008080	comment	name
+inno	KEYWORD PASCAL	0080C0	keyword	name
+inno	KEYWORD USER	8080FF	keyword	name
+inno	STRING DOUBLE	808080	string	name
+inno	STRING SINGLE	808080	string	name
+inno	IDENTIFIER	000000	text	name
+java	DEFAULT	000000	text	name
+java	INSTRUCTION WORD	0000FF	keyword	name
+java	TYPE WORD	8000FF	type	name
+java	NUMBER	FF8000	number	name
+java	STRING	808080	string	name
+java	CHARACTER	808080	string	name
+java	OPERATOR	000080	text	name
+java	VERBATIM	000000	string	name
+java	REGEX	000000	string	name
+java	COMMENT	008000	comment	name
+java	COMMENT LINE	008000	comment	name
+java	COMMENT DOC	008080	comment	name
+java	COMMENT LINE DOC	008080	comment	name
+java	COMMENT DOC KEYWORD	008080	comment-bold	name
+java	COMMENT DOC KEYWORD ERROR	008080	comment	name
+java	USER KEYWORDS 1	0000FF	keyword	name
+java	USER KEYWORDS 2	0000FF	keyword	name
+java	USER KEYWORDS 3	0000FF	keyword	name
+java	USER KEYWORDS 4	0000FF	keyword	name
+java	USER KEYWORDS 5	0000FF	keyword	name
+java	USER KEYWORDS 6	0000FF	keyword	name
+java	USER KEYWORDS 7	0000FF	keyword	name
+java	USER KEYWORDS 8	0000FF	keyword	name
+javascript	DEFAULT	000000	text	name
+javascript	NUMBER	FF0000	number	name
+javascript	WORD	000000	keyword	name
+javascript	KEYWORD	000080	keyword	name
+javascript	DOUBLE STRING	808080	string	name
+javascript	SINGLE STRING	808080	string	name
+javascript	TEMPLATE LIT. (CLIENT)	808080	string	name
+javascript	TEMPLATE LIT. (SERVER)	808080	string	name
+javascript	SYMBOLS	000000	text	colour
+javascript	REGEX	8000FF	string	name
+javascript	COMMENT	008000	comment	name
+javascript	COMMENT LINE	008000	comment	name
+javascript	COMMENT DOC	008080	comment	name
+javascript	USER KEYWORDS 1	003333	keyword	name
+javascript	USER KEYWORDS 2	003333	keyword	name
+javascript	USER KEYWORDS 3	003333	keyword	name
+javascript	USER KEYWORDS 4	003333	keyword	name
+javascript	USER KEYWORDS 5	003333	keyword	name
+javascript	USER KEYWORDS 6	003333	keyword	name
+javascript	USER KEYWORDS 7	003333	keyword	name
+javascript	USER KEYWORDS 8	003333	keyword	name
+javascript.js	DEFAULT	000000	text	name
+javascript.js	INSTRUCTION WORD	0000FF	keyword	name
+javascript.js	TYPE WORD	8000FF	type	name
+javascript.js	WINDOW INSTRUCTION	804000	keyword	name
+javascript.js	NUMBER	FF8000	number	name
+javascript.js	STRING	808080	string	name
+javascript.js	STRING RAW	808080	string	name
+javascript.js	CHARACTER	808080	string	name
+javascript.js	OPERATOR	000080	text	name
+javascript.js	VERBATIM	000000	string	name
+javascript.js	REGEX	000000	string	name
+javascript.js	COMMENT	008000	comment	name
+javascript.js	COMMENT LINE	008000	comment	name
+javascript.js	COMMENT DOC	008080	comment	name
+javascript.js	COMMENT LINE DOC	008080	comment	name
+javascript.js	COMMENT DOC KEYWORD	008080	comment-bold	name
+javascript.js	COMMENT DOC KEYWORD ERROR	008080	comment	name
+javascript.js	USER KEYWORDS 1	0000FF	keyword	name
+javascript.js	USER KEYWORDS 2	0000FF	keyword	name
+javascript.js	USER KEYWORDS 3	0000FF	keyword	name
+javascript.js	USER KEYWORDS 4	0000FF	keyword	name
+javascript.js	USER KEYWORDS 5	0000FF	keyword	name
+javascript.js	USER KEYWORDS 6	0000FF	keyword	name
+javascript.js	USER KEYWORDS 7	0000FF	keyword	name
+javascript.js	USER KEYWORDS 8	0000FF	keyword	name
+json	DEFAULT	000000	text	name
+json	NUMBER	FF8000	number	name
+json	STRING	800000	string	name
+json	STRING EOL	808080	error	name
+json	PROPERTY NAME	8000FF	type	name
+json	ESCAPE SEQUENCE	0000FF	special	name
+json	LINE COMMENT	008000	comment	name
+json	BLOCK COMMENT	008000	comment	name
+json	OPERATOR	000000	text	name
+json	URI	0000FF	string	name
+json	COMPACT IRI	0000FF	string	name
+json	KEYWORD	18AF8A	keyword	name
+json	LD KEYWORD	FF0000	keyword	name
+json	ERROR	000000	error	name
+kix	DEFAULT	000000	text	name
+kix	COMMENT	008000	comment	name
+kix	STRING	808080	string	name
+kix	STRING2	808080	string	name
+kix	NUMBER	FF8000	number	name
+kix	VAR	000000	special	name
+kix	MACRO	8000FF	special	name
+kix	INSTRUCTION WORD	0000FF	keyword	name
+kix	FUNCTION	8000FF	function	name
+kix	OPERATOR	000080	text	name
+lisp	DEFAULT	000000	text	name
+lisp	COMMENT LINE	008000	comment	name
+lisp	NUMBER	FF8000	number	name
+lisp	FUNCTION WORD	0000FF	function	name
+lisp	FUNCTION WORD2	0000FF	function	name
+lisp	SYMBOL	000080	text	name
+lisp	STRING	808080	string	name
+lisp	IDENTIFIER	000000	text	name
+lisp	OPERATOR	0080C0	text	name
+lisp	SPECIAL	800000	special	name
+lisp	COMMENT	808080	comment	name
+latex	WHITE SPACE	000000	text	name
+latex	COMMAND	AA0000	keyword	name
+latex	TAG OPENING	880088	keyword	name
+latex	MATH INLINE	0000FF	keyword	colour
+latex	COMMENT	00AA00	comment	name
+latex	TAG CLOSING	880088	keyword	name
+latex	MATH BLOCK	0000AA	keyword	colour
+latex	COMMENT BLOCK	00AA00	comment	name
+latex	VERBATIM SEGMENT	666666	string	name
+latex	SHORT COMMAND	AA6600	keyword	name
+latex	SPECIAL CHAR	AAAA00	special	name
+latex	COMMAND OPTIONAL ARGUMENT	FF9900	keyword	name
+latex	SYNTAX ERROR	000000	error	name
+lua	DEFAULT	000000	text	name
+lua	COMMENT	008000	comment	name
+lua	COMMENT LINE	008000	comment	name
+lua	COMMENT DOC	008080	comment	name
+lua	LITERAL STRING	95004A	string	name
+lua	PREPROCESSOR	804000	special	name
+lua	INSTRUCTION WORD	0000FF	keyword	name
+lua	NUMBER	FF8000	number	name
+lua	STRING	808080	string	name
+lua	CHARACTER	808080	string	name
+lua	OPERATOR	000080	text	name
+lua	FUNC1	0080C0	function	name
+lua	FUNC2	8000FF	function	name
+lua	FUNC3	0000A0	function	name
+lua	USER KEYWORDS 1	0000A0	keyword	name
+lua	USER KEYWORDS 2	0000A0	keyword	name
+lua	USER KEYWORDS 3	0000A0	keyword	name
+lua	USER KEYWORDS 4	0000A0	keyword	name
+lua	IDENTIFIER	000000	text	name
+lua	LABEL	808000	special	name
+lua	USER KEYWORDS 5	000000	keyword	name
+lua	USER KEYWORDS 6	000000	keyword	name
+lua	USER KEYWORDS 7	000000	keyword	name
+lua	USER KEYWORDS 8	000000	keyword	name
+makefile	DEFAULT	000000	text	name
+makefile	COMMENT	008000	comment	name
+makefile	PREPROCESSOR	000080	special	name
+makefile	IDENTIFIER	0000FF	text	name
+makefile	OPERATOR	000000	text	name
+makefile	TARGET	FF0000	special	name
+makefile	IDEOL	000000	text	name
+matlab	DEFAULT	000000	text	name
+matlab	COMMENT	008000	comment	name
+matlab	COMMAND	8000FF	keyword	name
+matlab	NUMBER	FF8000	number	name
+matlab	INSTRUCTION WORD	0000FF	keyword	name
+matlab	STRING	808080	string	name
+matlab	OPERATOR	000080	text	name
+matlab	IDENTIFIER	000000	text	name
+matlab	DOUBLE QUOTE STRING	808080	string	name
+mssql	STATEMENT	0000D0	keyword	name
+mssql	DATA TYPE	FF0000	type	name
+mssql	SYSTEM TABLE	000000	keyword	name
+mssql	GLOBAL	FF0000	special	name
+mssql	FUNCTION	000000	function	name
+mssql	SYSTEM STORED PROC	FF0000	function	name
+mssql	COMMENT	008000	comment	name
+mssql	COMMENT LINE	008000	comment	name
+mssql	NUMBER	308080	number	name
+mssql	STRING	B000D0	string	name
+mssql	OPERATOR	B08000	text	name
+mssql	IDENTIFIER	5080E0	text	name
+mssql	VARIABLE	CC1166	special	name
+mssql	COL NAME	808080	text	name
+mssql	COL NAME IN []&apos;s	D08000	special	colour
+mmixal	DIVSION OF LEADING WHITESPACE IN LINE	000000	text	colour
+mmixal	COMMENT	007F00	comment	name
+mmixal	LABEL	000000	special	name
+mmixal	OPCODE	000000	keyword	name
+mmixal	DIVISION BETWEEN LABEL AND OPCODE	000000	special	name
+mmixal	VALID OPCODE	00007F	keyword	name
+mmixal	UNKNOWN OPCODE	000000	keyword	name
+mmixal	DIVISION BETWEEN OPCODE AND OPERANDS	000000	keyword	name
+mmixal	DIVISION OF OPERANDS	000000	text	colour
+mmixal	NUMBER	007F7F	number	name
+mmixal	REFERENCE (TO A LABEL)	000000	special	name
+mmixal	CHAR	7F007F	string	name
+mmixal	STRING	7F007F	string	name
+mmixal	REGISTER	7F007F	special	name
+mmixal	HEXADECIMAL NUMBER	7F0000	number	name
+mmixal	OPERATOR	000000	text	name
+mmixal	SYMBOL	FF7777	text	name
+mmixal	COMMENT OTHERWISE	007F00	comment	name
+nfo	DEFAULT	2E2E2E	text	name
+nsis	DEFAULT	000000	text	name
+nsis	COMMENT LINE	008000	comment	name
+nsis	STRING DOUBLE QUOTE	808080	string	name
+nsis	STRING LEFT QUOTE	000080	string	name
+nsis	STRING RIGHT QUOTE	000000	string	name
+nsis	FUNCTION	0000FF	function	name
+nsis	VARIABLE	FF8000	special	name
+nsis	LABEL	FF0000	special	name
+nsis	USER DEFINED	FDFFEC	keyword	name
+nsis	SECTION	0000FF	keyword	name
+nsis	SUBSECTION	000000	keyword	name
+nsis	IF DEFINE	808040	special	colour
+nsis	MACRO	800000	special	name
+nsis	STRING VAR	FF8000	special	name
+nsis	NUMBER	FF0000	number	name
+nsis	SECTION GROUP	0000FF	keyword	name
+nsis	PAGE EX	0000FF	keyword	colour
+nsis	FUNCTION DEFINITIONS	0000FF	function	name
+nsis	COMMENT	008000	comment	name
+nim	WHITE SPACE	808080	text	name
+nim	COMMENT	007F00	comment	name
+nim	NUMBER	007F7F	number	name
+nim	STRING	7F007F	string	name
+nim	SINGLE QUOTED STRING	7F007F	string	name
+nim	KEYWORD	00007F	keyword	name
+nim	TRIPLE QUOTES	7F0000	string	name
+nim	TRIPLE DOUBLE QUOTES	7F0000	string	name
+nim	CLASS NAME DEFINITION	0000FF	function	name
+nim	FUNCTION OR METHOD NAME DEFINITION	007F7F	function	name
+nim	OPERATORS	000000	text	name
+nim	IDENTIFIERS	000000	text	name
+nim	COMMENT-BLOCKS	7F7F7F	comment	name
+nim	END OF LINE WHERE STRING IS NOT CLOSED	000000	error	name
+nim	HIGHLIGHTED IDENTIFIERS	407090	keyword	colour
+nim	DECORATORS	805000	special	name
+nncrontab	WHITE SPACE	000000	text	name
+nncrontab	COMMENT	007F00	comment	name
+nncrontab	TASK START/END	FFFF00	special	colour
+nncrontab	SECTION KEYWORDS	00007F	keyword	name
+nncrontab	KEYWORDS	000000	keyword	name
+nncrontab	MODIFICATORS	00007F	keyword	colour
+nncrontab	ASTERISK	000000	text	colour
+nncrontab	NUMBER	007F7F	number	name
+nncrontab	DOUBLE QUOTED STRING	7F007F	string	name
+nncrontab	ENVIRONMENT VARIABLE	000000	special	name
+nncrontab	IDENTIFIER	000000	text	name
+oscript	DEFAULT TEXT STYLE	000000	text	colour
+oscript	SINGLE-LINE COMMENT	007F00	comment	name
+oscript	MULTI-LINE COMMENT	007F00	comment	name
+oscript	#IFDEF DOC AND #ENDIF	3F703F	comment	colour
+oscript	PREPROCESSOR DIRECTIVE	7F7F00	special	name
+oscript	NUMBER	007F7F	number	name
+oscript	STRING SINGLE QUOTES	7F007F	string	name
+oscript	STRING DOUBLE QUOTES	7F007F	string	name
+oscript	CONSTANT LITERAL	FF7F3F	string	name
+oscript	IDENTIFIER	000000	text	name
+oscript	SERVER-GLOBAL VARIABLE (PREFIXED BY $)	7F007F	special	name
+oscript	LANGUAGE NATIVE KEYWORD OR RESERVED WORD	00007F	keyword	name
+oscript	OPERATOR; EITHER SYMBOLIC OR LITERAL	000000	text	name
+oscript	LABEL TO JUMP TO WITH THE GOTO STATEMENT	FF00FF	special	name
+oscript	TYPE	00007F	type	name
+oscript	FUNCTION	0000FF	function	name
+oscript	STATIC BUILT-IN OBJECT	007F7F	function	name
+oscript	OBJECT PROPERTY	000000	type	name
+oscript	OBJECT METHOD	000000	function	name
+objc	DIRECTIVE	A001D6	special	name
+objc	DEFAULT	000000	text	name
+objc	QUALIFIER	95004A	keyword	name
+objc	PREPROCESSOR	804000	special	name
+objc	INSTRUCTION WORD	0000FF	keyword	name
+objc	TYPE WORD	8000FF	type	name
+objc	NUMBER	FF8000	number	name
+objc	STRING	808080	string	name
+objc	CHARACTER	808080	string	name
+objc	OPERATOR	000080	text	name
+objc	VERBATIM	808080	string	name
+objc	REGEX	000000	string	name
+objc	COMMENT	008000	comment	name
+objc	COMMENT LINE	008000	comment	name
+objc	COMMENT DOC	008080	comment	name
+objc	COMMENT LINE DOC	008080	comment	name
+objc	COMMENT DOC KEYWORD	008080	comment-bold	name
+objc	COMMENT DOC KEYWORD ERROR	008080	comment	name
+pascal	DEFAULT	808080	text	name
+pascal	IDENTIFIER	000000	text	name
+pascal	COMMENT	008000	comment	name
+pascal	COMMENT LINE	008000	comment	name
+pascal	COMMENT DOC	008080	comment	name
+pascal	PREPROCESSOR	804000	special	name
+pascal	PREPROCESSOR2	804000	special	name
+pascal	NUMBER	FF8000	number	name
+pascal	HEX NUMBER	FF8000	number	name
+pascal	INSTRUCTION WORD	0000FF	keyword	name
+pascal	STRING	808080	string	name
+pascal	CHARACTER	808080	string	name
+pascal	OPERATOR	000080	text	name
+pascal	ASM	000000	text	colour
+pascal	MULTILINESTRING	808080	string	name
+perl	DEFAULT	FF0000	text	name
+perl	INSTRUCTION WORD	0000FF	keyword	name
+perl	NUMBER	FF0000	number	name
+perl	OPERATOR	000080	text	name
+perl	IDENTIFIER	004080	text	name
+perl	SCALAR	FF8000	special	name
+perl	ARRAY	CF34CF	special	name
+perl	HASH	8080C0	special	name
+perl	SYMBOL TABLE	FF0000	special	name
+perl	PROTOTYPE	000080	function	name
+perl	COMMENT LINE	008000	comment	name
+perl	STRING SINGLEQUOTE	808080	string	name
+perl	STRING DOUBLEQUOTE	808080	string	name
+perl	STRING BACKTICKS	FFFF00	string	name
+perl	STRING Q	804080	string	name
+perl	STRING QQ	804080	string	name
+perl	STRING QX	8000FF	string	name
+perl	STRING QR	8080FF	string	name
+perl	STRING QW	CF34CF	string	name
+perl	REGEX MATCH	8080FF	string	name
+perl	REGEX SUBSTITUTION	8080C0	string	name
+perl	TRANSLATION	8080C0	string	name
+perl	HEREDOC DELIMITER	550055	text	name
+perl	HEREDOC SINGLEQUOTE	7F007F	string	name
+perl	HEREDOC DOUBLEQUOTE	7F007F	string	name
+perl	HEREDOC BACKTICK	8000FF	string	name
+perl	VAR IN STRING	808080	special	name
+perl	VAR IN REGEX	8080FF	special	name
+perl	VAR IN REGEX SUBSTITUTION	8080C0	special	name
+perl	VAR IN BACKTICKS	FFFF00	special	name
+perl	VAR IN HEREDOC DOUBLEQUOTE	7F007F	special	name
+perl	VAR IN HEREDOC BACKTICK	8000FF	special	name
+perl	VAR IN STRING QQ	804080	special	name
+perl	VAR IN STRING QX	8000FF	special	name
+perl	VAR IN STRING QR	8080FF	special	name
+perl	FORMAT IDENTIFIER	C000C0	string	colour
+perl	FORMAT BODY	C000C0	string	colour
+perl	DATA SECTION	808080	keyword	name
+perl	POD	000000	comment	name
+perl	POD VERBATIM	004000	comment	name
+perl	ERROR	FF80C0	error	name
+php	QUESTION MARK	FF0000	special	name
+php	DEFAULT	000000	text	name
+php	STRING	808080	string	name
+php	COMPLEX VARIABLE	808080	special	name
+php	STRING VARIABLE	808080	special	name
+php	SIMPLE STRING	808080	string	name
+php	KEYWORDS	0000FF	keyword	name
+php	NUMBER	FF8000	number	name
+php	VARIABLE	000080	special	name
+php	COMMENT	008000	comment	name
+php	COMMENT LINE	008000	comment	name
+php	OPERATOR	8000FF	text	name
+php	PREDEFINED	3333FF	special	name
+php	FUNCS AND METHODS 1	3333FF	function	name
+php	FUNCS AND METHODS 2	3333FF	function	name
+php	USER KEYWORDS 1	3333FF	keyword	name
+php	USER KEYWORDS 2	3333FF	keyword	name
+php	USER KEYWORDS 3	3333FF	keyword	name
+php	USER KEYWORDS 4	3333FF	keyword	name
+php	USER KEYWORDS 5	3333FF	keyword	name
+postscript	DEFAULT	000000	text	name
+postscript	COMMENT	008000	comment	name
+postscript	DSC COMMENT	008000	comment	name
+postscript	DSC VALUE	FF0000	string	name
+postscript	NUMBER	FF8000	number	name
+postscript	Name	000000	text	colour
+postscript	INSTRUCTION	0000FF	keyword	name
+postscript	LITERAL	0080C0	string	name
+postscript	IMMEVAL	000080	keyword	colour
+postscript	PAREN ARRAY	FF00FF	text	name
+postscript	PAREN DICT	0080FF	keyword	colour
+postscript	PAREN PROC	000080	keyword	colour
+postscript	TEXT	808000	text	name
+postscript	HEX STRING	808080	string	name
+postscript	BASE85 STRING	808080	string	name
+postscript	BAD STRING CHAR	804000	string	name
+powershell	DEFAULT	000000	text	name
+powershell	COMMENT	008000	comment	name
+powershell	STRING	808080	string	name
+powershell	CHARACTER	808080	string	name
+powershell	NUMBER	FF8000	number	name
+powershell	VARIABLE	000000	special	name
+powershell	OPERATOR	000080	text	name
+powershell	IDENTIFIER	000000	text	name
+powershell	INSTRUCTION WORD	0000FF	keyword	name
+powershell	CMDLET	8000FF	function	name
+powershell	ALIAS	0080FF	function	name
+powershell	FUNCTION	C40062	function	name
+powershell	USER KEYWORDS	800000	keyword	name
+powershell	COMMENT STREAM	008080	comment	name
+powershell	HERE STRING	808080	string	name
+powershell	HERE CHARACTER	808080	string	name
+powershell	COMMENT DOC KEYWORD	008080	comment-bold	name
+props	DEFAULT	000000	text	name
+props	COMMENT	008000	comment	name
+props	SECTION	8000FF	keyword	name
+props	ASSIGNMENT	FF0000	text	name
+props	DEFVAL	FF0000	string	name
+props	KEY	0000FF	type	name
+purebasic	DEFAULT	000000	text	name
+purebasic	COMMENT	007F00	comment	name
+purebasic	NUMBER	007F7F	number	name
+purebasic	KEYWORD1	00007F	keyword	name
+purebasic	STRING	7F007F	string	name
+purebasic	OPERATOR	000000	text	name
+purebasic	IDENTIFIER	000000	text	name
+purebasic	KEYWORD2	7F7F00	type	name
+purebasic	KEYWORD3	00007F	function	name
+purebasic	KEYWORD4	00007F	function	name
+purebasic	CONSTANT	007F7F	number	name
+purebasic	LABEL	7F7F00	special	name
+purebasic	ERROR	000000	error	name
+purebasic	HEXNUMBER	007F7F	number	name
+purebasic	BINNUMBER	007F7F	number	name
+python	DEFAULT	000000	text	name
+python	COMMENT LINE	008000	comment	name
+python	NUMBER	FF0000	number	name
+python	STRING	808080	string	name
+python	CHARACTER	808080	string	name
+python	KEYWORDS	0000FF	keyword	name
+python	TRIPLE	FF8000	string	name
+python	TRIPLE DOUBLE	FF8000	string	name
+python	CLASS NAME	000000	function	name
+python	DEF NAME	FF00FF	function	name
+python	OPERATOR	000080	text	name
+python	IDENTIFIER	000000	text	name
+python	COMMENT BLOCK	008000	comment	name
+python	BUILTINS	880088	function	name
+python	DECORATOR	FF8000	special	name
+python	ATTRIBUTE	FF8000	type	name
+python	F STRING	808080	string	name
+python	F CHARACTER	808080	string	name
+python	F TRIPLE	FF8000	string	name
+python	F TRIPLEDOUBLE	FF8000	string	name
+python	USER KEYWORDS 1	000000	keyword	name
+python	USER KEYWORDS 2	000000	keyword	name
+python	USER KEYWORDS 3	000000	keyword	name
+python	USER KEYWORDS 4	000000	keyword	name
+python	USER KEYWORDS 5	000000	keyword	name
+python	USER KEYWORDS 6	000000	keyword	name
+python	USER KEYWORDS 7	000000	keyword	name
+python	USER KEYWORDS 8	000000	keyword	name
+r	DEFAULT	000000	text	name
+r	COMMENT	008000	comment	name
+r	INSTRUCTION WORD	0000FF	keyword	name
+r	BASE WORD	8000FF	type	name
+r	KEYWORD	0080FF	keyword	name
+r	NUMBER	FF8000	number	name
+r	STRING	808080	string	name
+r	STRING2	808080	string	name
+r	OPERATOR	000080	text	name
+r	IDENTIFIER	000000	text	name
+r	INFIX	804000	special	name
+r	INFIXEOL	808080	error	name
+r	BACKTICKS	000000	string	name
+r	RAWSTRING	808080	string	name
+r	RAWSTRING2	808080	string	name
+r	ESCAPESEQUENCE	FF8040	special	name
+raku	DEFAULT	FF0000	text	name
+raku	ERROR	FF80C0	error	name
+raku	COMMENT LINE	008000	comment	name
+raku	COMMENT EMBED	008000	comment	name
+raku	POD	000000	comment	name
+raku	CHARACTER	808080	string	name
+raku	HEREDOC Q	7F007F	string	name
+raku	HEREDOC QQ	7F007F	string	name
+raku	STRING	808080	string	name
+raku	STRING Q	804080	string	name
+raku	STRING QQ	804080	string	name
+raku	STRING Q_LANG	804080	string	name
+raku	STRING VAR	808080	special	name
+raku	REGEX	8080FF	string	name
+raku	REGEX VAR	8080FF	string	name
+raku	ADVERB	804000	special	name
+raku	NUMBER	FF0000	number	name
+raku	PREPROCESSOR	804000	special	name
+raku	OPERATOR	000080	text	name
+raku	INSTRUCTION WORD	0000FF	keyword	name
+raku	FUNCTION	0000FF	function	name
+raku	IDENTIFIER	004080	text	name
+raku	TYPEDEF	0000FF	type	name
+raku	MU	808080	text	name
+raku	POSITIONAL	6E05BE	special	name
+raku	ASSOCIATIVE	F4D50A	special	name
+raku	CALLABLE	004080	function	name
+raku	GRAMMAR	804000	type	name
+raku	CLASS	804000	type	name
+rc	PREPROCESSOR	804000	special	name
+rc	DEFAULT	000000	text	name
+rc	INSTRUCTION WORD	0000FF	keyword	name
+rc	TYPE WORD	8000FF	type	name
+rc	NUMBER	FF8000	number	name
+rc	STRING	808080	string	name
+rc	CHARACTER	808080	string	name
+rc	OPERATOR	000080	text	name
+rc	VERBATIM	000000	string	name
+rc	REGEX	000000	string	name
+rc	COMMENT	008000	comment	name
+rc	COMMENT LINE	008000	comment	name
+rc	COMMENT DOC	008080	comment	name
+rc	COMMENT LINE DOC	008080	comment	name
+rc	COMMENT DOC KEYWORD	008080	comment-bold	name
+rc	COMMENT DOC KEYWORD ERROR	008080	comment	name
+rc	PREPROCESSOR COMMENT	008000	comment	name
+rc	PREPROCESSOR COMMENT DOC	008080	comment	name
+rc	USER KEYWORDS 1	0000FF	keyword	name
+rc	USER KEYWORDS 2	0000FF	keyword	name
+rc	USER KEYWORDS 3	0000FF	keyword	name
+rc	USER KEYWORDS 4	0000FF	keyword	name
+rc	USER KEYWORDS 5	0000FF	keyword	name
+rc	USER KEYWORDS 6	0000FF	keyword	name
+rc	USER KEYWORDS 7	0000FF	keyword	name
+rc	USER KEYWORDS 8	0000FF	keyword	name
+rebol	DEFAULT	000000	text	name
+rebol	ANY OTHER TEXT	000000	text	colour
+rebol	LINE COMMENT	007F00	comment	name
+rebol	BLOCK COMMENT	007F00	comment	name
+rebol	PREFACE	007F00	comment	colour
+rebol	OPERATORS	000000	text	name
+rebol	CHARACTERS	7F007F	string	name
+rebol	STRING WITH QUOTES	7F007F	string	name
+rebol	STRING WITH BRACES	7F007F	string	name
+rebol	NUMBER	007F7F	number	name
+rebol	PAIR ( 800X600 )	005090	keyword	colour
+rebol	TUPLE ( 127.0.0.1 )	005090	keyword	colour
+rebol	BINARY ( 16#{1A803F59} )	C000C0	string	colour
+rebol	MONEY	003070	keyword	colour
+rebol	ISSUE { #123-CD-456 }	800000	number	colour
+rebol	TAG { &lt;TITLE HEIGHT=100&gt; }	C00000	keyword	name
+rebol	FILE { %/C/WINNT/SOME.DLL }	0080FF	keyword	colour
+rebol	EMAIL { JOE@MAIL.DOM }	0080FF	keyword	colour
+rebol	URL { FTP://THERE.DOM }	0080FF	keyword	colour
+rebol	DATE { 17-FEB-2004 1/3/99 }	8000FF	number	name
+rebol	TIME { 12:30 11:22:59 01:59:59.123 }	8000FF	type	colour
+rebol	IDENTIFIERS	000000	text	name
+rebol	KEYWORD (ALL)	00007F	keyword	name
+rebol	KEYWORD (TEST FUNCTIONS)	8000C0	function	name
+rebol	KEYWORD (DATATYPES)	800060	type	name
+rebol	KEYWORD 4	DD9900	function	name
+rebol	KEYWORD 5	DD9900	function	name
+rebol	KEYWORD 6	DD9900	function	name
+rebol	KEYWORD 7	DD9900	function	name
+registry	DEFAULT STYLE	000000	text	name
+registry	DEFAULT	000000	text	name
+registry	COMMENT	007F00	comment	name
+registry	VALUE NAME	0000FF	type	name
+registry	STRING	7F007F	string	name
+registry	HEX DIGIT	7F0B0C	number	name
+registry	VALUE TYPE	00007F	type	name
+registry	ADDED KEY	530155	function	name
+registry	REMOVED KEY	FF0000	error-fg	name
+registry	ESCAPED CHARACTERS IN STRINGS	7D8187	special	name
+registry	GUID IN KEY PATH	7B5F15	special	name
+registry	GUID IN STRING	7B5F15	string	name
+registry	PARAMETER	0B6561	special	name
+registry	OPERATORS	000000	text	name
+ruby	DEFAULT	000000	text	name
+ruby	ERROR	000000	error	name
+ruby	COMMENT LINE	008000	comment	name
+ruby	POD	004000	comment	name
+ruby	NUMBER	FF8000	number	name
+ruby	INSTRUCTION	0000FF	keyword	name
+ruby	STRING	808080	string	name
+ruby	CHARACTER	808000	string	name
+ruby	CLASS NAME	0080C0	function	name
+ruby	DEF NAME	8080FF	function	name
+ruby	OPERATOR	000080	text	name
+ruby	IDENTIFIER	000000	text	name
+ruby	REGEX	0080FF	string	name
+ruby	GLOBAL	000080	special	name
+ruby	SYMBOL	000000	text	name
+ruby	MODULE NAME	804000	type	name
+ruby	INSTANCE VAR	000000	special	name
+ruby	CLASS VAR	000000	type	name
+ruby	BACKTICKS	FFFF00	string	name
+ruby	DATA SECTION	600000	keyword	name
+ruby	STRING Q	808080	string	name
+rust	DEFAULT	000000	text	name
+rust	WHITESPACE	808080	text	name
+rust	BLOCK COMMENT	007F00	comment	name
+rust	LINE COMMENT	007F00	comment	name
+rust	BLOCK DOC COMMENT	3F703F	comment	name
+rust	LINE DOC COMMENT	3F703F	comment	name
+rust	NUMBER	007F7F	number	name
+rust	KEYWORDS 1	00007F	keyword	name
+rust	KEYWORDS 2	00007F	type	name
+rust	KEYWORDS 3	00007F	function	name
+rust	KEYWORDS 4	00007F	function	name
+rust	KEYWORDS 5	00007F	function	name
+rust	KEYWORDS 6	00007F	function	name
+rust	KEYWORDS 7	00007F	function	name
+rust	REGULAR STRING	7F007F	string	name
+rust	RAW STRING	B090B0	string	name
+rust	CHARACTER	7F007F	string	name
+rust	OPERATOR	000000	text	name
+rust	IDENTIFIER	000000	text	name
+rust	LIFETIME	007F7F	number	name
+rust	MACRO	7F7F00	special	name
+rust	LEXICAL ERROR	000000	error	name
+rust	BYTE STRING	7F007F	string	name
+rust	RAW BYTE STRING	B090B0	string	name
+rust	BYTE CHARACTER	7F007F	string	name
+rust	C STRING	7F007F	string	name
+rust	RAW C STRING	B090B0	string	name
+sas	DEFAULT	FF0000	text	name
+sas	COMMENT	008000	comment	name
+sas	COMMENT LINE	008000	comment	name
+sas	COMMENT BLOCK	008000	comment	name
+sas	NUMBER	FF0000	number	name
+sas	OPERATOR	000080	text	name
+sas	IDENTIFIER	004080	text	name
+sas	STRING	804080	string	name
+sas	MACRO	8080C0	special	name
+sas	MACRO KEYWORD	CF34CF	special	name
+sas	MACRO FUNCTION	C000C0	special	name
+sas	FUNCTION	000080	function	name
+sas	STATEMENT	0000FF	keyword	name
+fcST	DEFAULT	000000	text	name
+fcST	COMMENT	008000	comment	name
+fcST	COMMENT LINE	008000	comment	name
+fcST	KEYWORD	0000FF	keyword	name
+fcST	TYPE	8000FF	type	name
+fcST	FUNCTION	0080C0	function	name
+fcST	FUNCTION BLOCK	0080C0	function	name
+fcST	NUMBER	FF0000	number	name
+fcST	HEX NUMBER	FF0000	number	name
+fcST	PRAGMA	804000	special	name
+fcST	OPERATOR	000080	text	name
+fcST	CHARACTER	808000	string	name
+fcST	STRING	808080	string	name
+fcST	DOUBLE-QUOTED STRING	808080	string	name
+fcST	STRING EOL	880088	error	name
+fcST	IDENTIFIER	000000	text	name
+fcST	DATE AND TIME	FF8040	number	name
+fcST	VARIABLE	004080	special	name
+fcST	PRAGMA KEYWORD	804000	special	name
+scheme	DEFAULT	000000	text	name
+scheme	COMMENT LINE	008000	comment	name
+scheme	NUMBER	FF8000	number	name
+scheme	FUNCTION WORD	0000FF	function	name
+scheme	FUNCTION WORD2	0000FF	function	name
+scheme	SYMBOL	000080	text	name
+scheme	STRING	808080	string	name
+scheme	IDENTIFIER	000000	text	name
+scheme	OPERATOR	0080C0	text	name
+scheme	SPECIAL	800000	special	name
+scheme	COMMENT	808080	comment	name
+smalltalk	DEFAULT	000000	text	name
+smalltalk	STRING	808080	string	name
+smalltalk	NUMBER	FF8000	number	name
+smalltalk	COMMENT	008000	comment	name
+smalltalk	SYMBOL	408080	text	name
+smalltalk	BINARY	000080	keyword	colour
+smalltalk	BOOL	8000FF	type	colour
+smalltalk	SELF	8080FF	keyword	colour
+smalltalk	SUPER	0080FF	keyword	colour
+smalltalk	NIL	8080C0	keyword	colour
+smalltalk	GLOBAL	800000	special	name
+smalltalk	RETURN	0000FF	keyword	colour
+smalltalk	SPECIAL	808000	special	name
+smalltalk	KWS END	0080FF	keyword	colour
+smalltalk	ASSIGN	FF0000	text	name
+smalltalk	CHARACTER	808080	string	name
+smalltalk	SPECIAL SELECTOR	FF80C0	special	name
+spice	DEFAULT	808080	text	name
+spice	IDENTIFIERS	000000	text	name
+spice	KEYWORD	00007F	keyword	name
+spice	KEYWORD2	00007F	type	name
+spice	KEYWORD3	0040E0	function	name
+spice	NUMBER	007F7F	number	name
+spice	OPERATORS (DELIMITERS)	000000	text	name
+spice	VALUE	7F007F	string	name
+spice	COMMENT	007F00	comment	name
+sql	KEYWORD	0000FF	keyword	name
+sql	USER1	0000FF	keyword	name
+sql	KEYWORD2	800080	type	name
+sql	NUMBER	FF8000	number	name
+sql	STRING	808080	string	name
+sql	STRING2	808080	string	name
+sql	OPERATOR	000080	text	name
+sql	COMMENT	008000	comment	name
+sql	COMMENT LINE	008000	comment	name
+sql	COMMENT DOC	008000	comment	name
+sql	Q OPERATOR	808080	text	name
+srec	DEFAULT	000000	text	name
+srec	RECSTART	7F0000	special	name
+srec	RECTYPE	7F0000	type	name
+srec	RECTYPE_UNKNOWN	7F0000	type	name
+srec	BYTECOUNT	7F7F00	special	colour
+srec	BYTECOUNT_WRONG	000000	error	name
+srec	NOADDRESS	7F00FF	type	colour
+srec	DATAADDRESS	007FFF	keyword	colour
+srec	RECCOUNT	7F00FF	type	colour
+srec	STARTADDRESS	007FFF	keyword	colour
+srec	ADDRESSFIELD_UNKNOWN	000000	type	name
+srec	DATA_ODD	000000	text	colour
+srec	DATA_EVEN	000000	text	colour
+srec	DATA_UNKNOWN	000000	text	colour
+srec	DATA_EMPTY	000000	text	colour
+srec	CHECKSUM	00BF00	comment	colour
+srec	CHECKSUM_WRONG	000000	error	name
+srec	GARBAGE	000000	error	name
+swift	PREPROCESSOR	804000	special	name
+swift	DEFAULT	000000	text	name
+swift	INSTRUCTION WORD	0000FF	keyword	name
+swift	TYPE WORD	8000FF	type	name
+swift	NUMBER	FF8000	number	name
+swift	STRING	808080	string	name
+swift	CHARACTER	808080	string	name
+swift	OPERATOR	000080	text	name
+swift	VERBATIM	000000	string	name
+swift	REGEX	000000	string	name
+swift	COMMENT	008000	comment	name
+swift	COMMENT LINE	008000	comment	name
+swift	COMMENT DOC	008080	comment	name
+swift	COMMENT LINE DOC	008080	comment	name
+swift	COMMENT DOC KEYWORD	008080	comment-bold	name
+swift	COMMENT DOC KEYWORD ERROR	008080	comment	name
+swift	PREPROCESSOR COMMENT	008000	comment	name
+swift	PREPROCESSOR COMMENT DOC	008080	comment	name
+swift	USER KEYWORDS 1	0000FF	keyword	name
+swift	USER KEYWORDS 2	0000FF	keyword	name
+swift	USER KEYWORDS 3	0000FF	keyword	name
+swift	USER KEYWORDS 4	0000FF	keyword	name
+swift	USER KEYWORDS 5	0000FF	keyword	name
+swift	USER KEYWORDS 6	0000FF	keyword	name
+swift	USER KEYWORDS 7	0000FF	keyword	name
+swift	USER KEYWORDS 8	0000FF	keyword	name
+tcl	DEFAULT	000000	text	name
+tcl	MODIFIER	804000	special	colour
+tcl	EXPAND	000000	text	colour
+tcl	TCL KEYWORD	0000FF	keyword	name
+tcl	iTCL KEYWORD	8000FF	keyword	name
+tcl	TK KEYWORD	0000FF	keyword	name
+tcl	TK COMMAND	0000FF	keyword	name
+tcl	NUMBER	FF8000	number	name
+tcl	SUB BRACE	808080	text	name
+tcl	SUBSTITUTION	808080	special	name
+tcl	OPERATOR	000080	text	name
+tcl	IDENTIFIER	000000	text	name
+tcl	WORD IN QUOTE	000000	text	colour
+tcl	IN QUOTE	000000	text	colour
+tcl	COMMENT	008000	comment	name
+tcl	COMMENT LINE	008000	comment	name
+tcl	COMMENT BOX	008080	comment	name
+tcl	BLOCK COMMENT	008080	comment	name
+tcl	USER1	0000FF	keyword	name
+tcl	USER2	0000FF	keyword	name
+tcl	USER3	0000FF	keyword	name
+tcl	USER4	0000FF	keyword	name
+tehex	DEFAULT	000000	text	name
+tehex	RECSTART	7F0000	special	name
+tehex	RECTYPE	7F0000	type	name
+tehex	RECTYPE_UNKNOWN	7F0000	type	name
+tehex	BYTECOUNT	7F7F00	special	colour
+tehex	BYTECOUNT_WRONG	000000	error	name
+tehex	DATAADDRESS	007FFF	keyword	colour
+tehex	STARTADDRESS	007FFF	keyword	colour
+tehex	ADDRESSFIELD_UNKNOWN	000000	type	name
+tehex	DATA_ODD	000000	text	colour
+tehex	DATA_EVEN	000000	text	colour
+tehex	CHECKSUM	00BF00	comment	colour
+tehex	CHECKSUM_WRONG	000000	error	name
+tehex	GARBAGE	000000	error	name
+tex	DEFAULT	000000	text	name
+tex	SPECIAL	FF8000	special	name
+tex	GROUP	8000FF	keyword	name
+tex	SYMBOL	800000	text	name
+tex	COMMAND	0000FF	keyword	name
+tex	TEXT	000000	text	name
+toml	DEFAULT	FF0000	text	name
+toml	COMMENT	008000	comment	name
+toml	IDENTIFIER	000000	text	name
+toml	KEYWORD	8000FF	keyword	name
+toml	NUMBER	FF0000	number	name
+toml	TABLE	804000	keyword	name
+toml	KEY	0000FF	type	name
+toml	ERROR	FFFF80	error	name
+toml	OPERATOR	808000	text	name
+toml	STRING SQ	808080	string	name
+toml	STRING DQ	808080	string	name
+toml	TRIPLE STRING SQ	808080	string	name
+toml	TRIPLE STRING DQ	808080	string	name
+toml	ESCAPE CHAR	8080FF	special	name
+toml	DATETIME	FF8040	number	name
+txt2tags	DEFAULT	000000	text	name
+txt2tags	SPECIAL	000000	special	name
+txt2tags	STRONG	445675	keyword	name
+txt2tags	STRONG 2 (NOT USED)	445675	keyword	name
+txt2tags	EM1 (ITALIC)	653A39	text	name
+txt2tags	EM2 (UNDERLINE)	386742	text	name
+txt2tags	H1	E20700	keyword	name
+txt2tags	H2	E20700	keyword	name
+txt2tags	H3	A81D05	keyword	name
+txt2tags	H4	871704	keyword	name
+txt2tags	H5	871704	keyword	name
+txt2tags	H6	871704	keyword	name
+txt2tags	PRECHAR (NOT USED)	871704	special	name
+txt2tags	ULIST	E300EE	special	name
+txt2tags	OLIST	E300EE	special	name
+txt2tags	BLOCKQUOTE	015F52	comment	name
+txt2tags	STRIKEOUT	644A9B	comment	name
+txt2tags	HRULE	ff901e	comment	name
+txt2tags	LINK	0930DE	keyword	name
+txt2tags	CODE	009f00	string	name
+txt2tags	CODE2	009f00	string	name
+txt2tags	CODEBLOCK	005f00	string	name
+txt2tags	COMMENT	777777	comment	name
+txt2tags	OPTION	C0036E	special	name
+txt2tags	PREPROC	848B00	special	name
+txt2tags	POSTPROC	C05600	special	name
+typescript	DEFAULT	000000	text	name
+typescript	INSTRUCTION WORD	0000FF	keyword	name
+typescript	TYPE WORD	8000FF	type	name
+typescript	WINDOW INSTRUCTION	804000	keyword	name
+typescript	NUMBER	FF8000	number	name
+typescript	STRING	c94949	string	name
+typescript	STRING RAW	000080	string	name
+typescript	CHARACTER	c94949	string	name
+typescript	OPERATOR	000080	text	name
+typescript	VERBATIM	000000	string	name
+typescript	REGEX	000000	string	name
+typescript	COMMENT	008000	comment	name
+typescript	COMMENT LINE	008000	comment	name
+typescript	COMMENT DOC	008080	comment	name
+typescript	COMMENT LINE DOC	008080	comment	name
+typescript	COMMENT DOC KEYWORD	008080	comment-bold	name
+typescript	COMMENT DOC KEYWORD ERROR	008080	comment	name
+typescript	USER KEYWORDS 1	0000FF	keyword	name
+typescript	USER KEYWORDS 2	0000FF	keyword	name
+typescript	USER KEYWORDS 3	0000FF	keyword	name
+typescript	USER KEYWORDS 4	0000FF	keyword	name
+typescript	USER KEYWORDS 5	0000FF	keyword	name
+typescript	USER KEYWORDS 6	0000FF	keyword	name
+typescript	USER KEYWORDS 7	0000FF	keyword	name
+typescript	USER KEYWORDS 8	0000FF	keyword	name
+vb	DEFAULT	000000	text	name
+vb	COMMENT	008000	comment	name
+vb	NUMBER	FF0000	number	name
+vb	WORD	0000FF	keyword	name
+vb	STRING	808080	string	name
+vb	PREPROCESSOR	FF0000	special	name
+vb	OPERATOR	000000	text	name
+vb	DATE	00FF00	number	name
+verilog	DEFAULT	000000	text	name
+verilog	IDENTIFIER	000000	text	name
+verilog	INSTRUCTION WORD	0000FF	keyword	name
+verilog	KEYWORD	8000FF	keyword	name
+verilog	OPERATOR	000080	text	name
+verilog	NUMBER	FF8000	number	name
+verilog	PREPROCESSOR	804000	special	name
+verilog	STRING	808080	string	name
+verilog	COMMENT	008000	comment	name
+verilog	COMMENT LINE	008000	comment	name
+verilog	COMMENT LINE BANG	008080	comment	name
+verilog	USER	000000	text	colour
+vhdl	DEFAULT	000000	text	name
+vhdl	COMMENT	008000	comment	name
+vhdl	COMMENT LINE BANG	008080	comment	name
+vhdl	COMMENT BLOCK	008000	comment	name
+vhdl	NUMBER	FF8000	number	name
+vhdl	STRING	808080	string	name
+vhdl	STRING EOL	808080	error	name
+vhdl	OPERATOR	000080	text	name
+vhdl	IDENTIFIER	000000	text	name
+vhdl	INSTRUCTION	0000FF	keyword	name
+vhdl	STD OPERATOR	0080C0	text	name
+vhdl	ATTRIBUTE	8080FF	type	name
+vhdl	STD FUNCTION	0080FF	function	name
+vhdl	STD PACKAGE	800000	type	name
+vhdl	STD TYPE	8000FF	type	name
+vhdl	USER DEFINE	B5E71F	special	colour
+visualprolog	DEFAULT	000000	text	name
+visualprolog	MAJOR	808000	special	colour
+visualprolog	MINOR	333399	keyword	colour
+visualprolog	DIRECTIVE	800080	special	name
+visualprolog	COMMENT BLOCK	808080	comment	name
+visualprolog	COMMENT LINE	808080	comment	name
+visualprolog	COMMENT KEY	8050A0	comment	name
+visualprolog	COMMENT KEY ERROR	808080	comment	name
+visualprolog	IDENTIFIER	000000	text	name
+visualprolog	VARIABLE	008000	special	name
+visualprolog	ANONYMOUS	A0A0C0	type	colour
+visualprolog	NUMBER	0000C0	number	name
+visualprolog	OPERATOR	A00000	text	name
+visualprolog	CHARACTER	800000	string	name
+visualprolog	CHARACTER TOO MANY	800000	string	name
+visualprolog	CHARACTER ESCAPE ERROR	800000	error	name
+visualprolog	STRING	3898B2	string	name
+visualprolog	STRING ESCAPE	FF8040	special	name
+visualprolog	STRING ESCAPE ERROR	FF0000	error	name
+visualprolog	STRING EOL OPEN	FFFFFF	error	name
+visualprolog	STRING VERBATIM	8064A2	string	name
+visualprolog	STRING VERBATIM SPECIAL	800040	string	name
+visualprolog	STRING VERBATIM EOL	FFFFFF	string	name
+xml	XML START	FF0000	special	name
+xml	XML END	FF0000	special	name
+xml	DEFAULT	000000	text	name
+xml	COMMENT	008000	comment	name
+xml	NUMBER	FF0000	number	name
+xml	DOUBLE STRING	8000FF	string	name
+xml	SINGLE STRING	8000FF	string	name
+xml	TAG	0000FF	keyword	name
+xml	TAG END	0000FF	keyword	name
+xml	TAG UNKNOWN	0000FF	keyword	name
+xml	ATTRIBUTE	FF0000	type	name
+xml	ATTRIBUTE UNKNOWN	FF0000	type	name
+xml	SGML DEFAULT	000000	special	name
+xml	SGML COMMAND	0000DD	special	name
+xml	SGML 1ST PARAM	0000DD	special	name
+xml	SGML DOUBLESTRING	8000FF	string	name
+xml	SGML SIMPLESTRING	8000FF	string	name
+xml	SGML BLOCK DEFAULT	000000	special	name
+xml	CDATA	FF8000	string	name
+xml	ENTITY	000000	number	name
+xml	USER ATTRIBUTES 1	FF0000	type	name
+xml	USER ATTRIBUTES 2	FF0000	type	name
+xml	USER ATTRIBUTES 3	FF0000	type	name
+xml	USER ATTRIBUTES 4	FF0000	type	name
+xml	USER ATTRIBUTES 5	FF0000	type	name
+xml	USER ATTRIBUTES 6	FF0000	type	name
+xml	USER ATTRIBUTES 7	FF0000	type	name
+xml	USER ATTRIBUTES 8	FF0000	type	name
+yaml	DEFAULT	000000	text	name
+yaml	IDENTIFIER	000080	text	name
+yaml	COMMENT	008000	comment	name
+yaml	INSTRUCTION WORD	0000FF	keyword	name
+yaml	NUMBER	FF8040	number	name
+yaml	REFERENCE	804000	special	name
+yaml	DOCUMENT	0000FF	keyword	name
+yaml	TEXT	808080	text	name
+yaml	ERROR	FF0000	error	name
+searchResult	Search Header	000080	search-header	name
+searchResult	File Header	008000	file-header	name
+searchResult	Line Number	FF8040	linenum	name
+searchResult	Hit Word	FF0000	hit	name
+searchResult	Current line background colour	None	current-line	name

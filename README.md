@@ -36,6 +36,7 @@ Fonts folder, for the static-font weight tests.
 | `statictest/` | Static test fonts of many weights, a GDI weight check, and `fontcheck` (each font-list name drawn as Notepad++ draws it vs. the font Windows maps it to; `run.sh`, `build.sh`). `fontcheck-app.cpp` is the same check with Notepad++'s `FontFamilyNames.cpp` mapping in front of unmodified Scintilla (build with `-DAPP_MAPPING -I<worktree>/PowerEditor/src/ScintillaComponent` plus that .cpp); `mapprobe.cpp` prints the mapping per name |
 | `xbuild.sh`, `gen-libs-version.sh` | MinGW-w64 cross build of a Notepad++ checkout or worktree |
 | `fork/` | Local tests of the Pyre909 build packaging (portable zip and installer scripts of the `pyre` branch): a package check probe, the signing stand-in, instructions |
+| `themes/` | Lucid Light and Lucid Dark, Notepad++ colour themes computed from contrast targets (APCA), with the generator, the checks and the evidence: see `themes/README.md` |
 | `archive/` | Earlier harnesses and one-off scripts, kept for reference; and the list of other projects' sources consulted |
 | `STATUS.md` | Where everything stands: branches, upstream PRs and tickets, releases, next steps |
 

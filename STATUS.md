@@ -123,6 +123,15 @@ Note: a fresh settings folder starts in DirectWrite (technology 1) in this build
    the build, its releases and updating).
 4. Optional: the slimmer #18418, the font-name issue/PR (kit section 5), the live switch PR after #18418.
 
+## Colour themes (2026-10-02)
+
+`themes/`: Lucid Light and Lucid Dark, a pair of Notepad++ themes whose colours are solved for contrast targets
+(text Lc 98 / 90, comments Lc 70 / 64, every syntax colour at the highest contrast where its hue still shows),
+checked for colour blindness, and generated for all 93 lexers of `stylers.model.xml`. Rendered and checked in the
+Pyre909 build under Wine (C++, Python, HTML, diff; dark mode switches the theme). Not yet seen on real Windows
+(ClearType/DirectWrite and Consolas). Install steps and the evidence are in `themes/README.md`. Shipping them in the
+Pyre909 build (portable zip and installer) would need `package.ps1`/`installer.ps1` to add them: not done.
+
 ## Parked: how the fork's code is laid out (2026-10-02)
 
 Question: put all the fork's changes in one separate file? No: one module per feature behind a small interface,
