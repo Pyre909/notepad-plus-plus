@@ -61,12 +61,14 @@ def de_ok(h1, h2):
     return math.dist(hex_to_oklab(h1), hex_to_oklab(h2))
 
 # WCAG 2.x contrast ratio
-def rel_lum(h):
-    r, g, b = (srgb_to_lin(c) for c in hex_to_rgb(h))
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+WCAG_WEIGHTS = (0.2126, 0.7152, 0.0722)
 
-def wcag(fg, bg):
-    a, b = rel_lum(fg), rel_lum(bg)
+def rel_lum(h, k=WCAG_WEIGHTS):
+    r, g, b = (srgb_to_lin(c) for c in hex_to_rgb(h))
+    return k[0] * r + k[1] * g + k[2] * b
+
+def wcag(fg, bg, k=WCAG_WEIGHTS):
+    a, b = rel_lum(fg, k), rel_lum(bg, k)
     return (max(a, b) + 0.05) / (min(a, b) + 0.05)
 
 # APCA-W3 0.0.98G-4g (Somers): Lc, positive = dark text on light, negative = light text on dark
@@ -94,6 +96,10 @@ def apca(fg, bg, k=SRGB_WEIGHTS):
 def lc(fg, bg):
     """Contrast for the worse-off of two readers, aged 32 (standard) and 70: |Lc|."""
     return min(abs(apca(fg, bg)), abs(apca(fg, bg, AGE70_WEIGHTS)))
+
+def wcag_worst(fg, bg):
+    """WCAG 2 ratio for the worse-off of the same two readers."""
+    return min(wcag(fg, bg), wcag(fg, bg, AGE70_WEIGHTS))
 
 # Colour-vision deficiency, Machado, Oliveira & Fernandes 2009, severity 1.0, applied to linear RGB
 CVD = {

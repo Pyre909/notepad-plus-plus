@@ -123,16 +123,19 @@ Note: a fresh settings folder starts in DirectWrite (technology 1) in this build
    the build, its releases and updating).
 4. Optional: the slimmer #18418, the font-name issue/PR (kit section 5), the live switch PR after #18418.
 
-## Colour themes (2026-10-02)
+## Colour themes (2026-10-03, version 2)
 
-`themes/`: Lucid Light and Lucid Dark, a pair of Notepad++ themes whose colours are solved for contrast targets
-(text Lc 98 / 90, comments Lc 70 / 64, every syntax colour at the highest contrast where its hue still shows),
-checked for colour blindness, and generated for all 93 lexers of `stylers.model.xml`. Rebuilt the same day so
-every target also holds for a 70-year-old reader (CIE 2006 lens model) and the dark theme's cyan keeps a
-perceived-lightness gap to the text (Helmholtz-Kohlrausch, Hellwig 2022): `themes/vision-report.md`. Rendered and checked in the
-Pyre909 build under Wine (C++, Python, HTML, diff; dark mode switches the theme). Not yet seen on real Windows
-(ClearType/DirectWrite and Consolas). Install steps and the evidence are in `themes/README.md`. Shipping them in the
-Pyre909 build (portable zip and installer) would need `package.ps1`/`installer.ps1` to add them: not done.
+`themes/`: Lucid Light and Lucid Dark, a pair of Notepad++ themes generated for all 93 lexers of
+`stylers.model.xml`. Version 1 (2026-10-02) maximised each colour's contrast and looked off to Pyre909 (neon cyan
+beside pastels in the dark theme, olive and brown in the light theme). Version 2 is designed for harmony: one
+lightness for all syntax colours per theme, chroma held below the gamut edge, the same hue per role in both themes
+(violet keywords, blue functions, teal types, green strings, orange numbers, magenta macros, red errors), no dark
+yellow or brown. Floors: every style WCAG AA (4.5:1) for readers aged 32 and 70; text 14:1 (light) / 11:1 (dark).
+Rendered in the Pyre909 build under Wine (C++, Python, HTML, diff; dark mode switches the theme). Not yet seen on
+real Windows (ClearType/DirectWrite and Consolas). Install steps, the evidence and what matters beyond colour
+(brightness, room light, breaks, glasses, font size, line spacing, rendering in the VM) are in `themes/README.md`.
+Possible fork features: a line-spacing setting (Scintilla's extra ascent/descent); shipping the themes in the
+Pyre909 zip and installer (`package.ps1`/`installer.ps1`). Neither done.
 
 ## Parked: how the fork's code is laid out (2026-10-02)
 

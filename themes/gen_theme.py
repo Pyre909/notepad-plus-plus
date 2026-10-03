@@ -5,7 +5,7 @@ name, or, when the name says nothing, from the hue of its colour in the model. T
 comments are kept: only fgColor, bgColor and fontStyle change, so the themes have every lexer and style the model
 has. Usage: python3 gen_theme.py <stylers.model.xml> <DarkModeDefault.xml> <output folder>"""
 import os, re, sys
-from colormath import oklch, lc, wcag
+from colormath import oklch, wcag_worst
 from palette import build, blend, ALPHA
 
 OVERRIDES = {
@@ -113,7 +113,7 @@ def escseq_style(name, p, mode):
         bgc = p['margin_bg'] if dark_end else blend(p['text'], p['bg'], 0.22)
     else:
         bgc = blend(p[ANSI_BG[bg]], p['bg'], ALPHA)
-    if lc(fgc, bgc) < 60 or wcag(fgc, bgc) < 4.5:  # e.g. WHITE on BLACK in the light theme
+    if wcag_worst(fgc, bgc) < 4.5:  # e.g. WHITE on BLACK in the light theme: keep it readable
         fgc = p['text']
     return fgc, bgc, bold
 
@@ -140,7 +140,7 @@ def style_for(role, p, model_bold):
         'type': (p['type'], bg, model_bold),
         'function': (p['function'], bg, model_bold),
         'special': (p['special'], bg, model_bold),
-        'search-header': (p['keyword'], p['sel_bg'], True),
+        'search-header': (p['text'], p['sel_bg'], True),
         'file-header': (p['ansi_green'], p['added_bg'], True),
         'linenum': (p['comment'], bg, False),
         'hit': (p['text'], blend(p['tagattr'], bg, ALPHA), True),
@@ -206,13 +206,15 @@ TITLE = {'dark': 'Lucid Dark', 'light': 'Lucid Light'}
 
 def header(mode, p):
     other = 'Lucid Light' if mode == 'dark' else 'Lucid Dark'
-    lcs = [lc(p[r], p['bg']) for r in ('keyword', 'type', 'string', 'number', 'function', 'special', 'error')]
+    syntax = ('keyword', 'function', 'type', 'string', 'number', 'special', 'error')
+    ratios = [wcag_worst(p[r], p['bg']) for r in syntax]
     return f'''<!--
-{TITLE[mode]}: a Notepad++ theme for legible code; "{other}" is its other half.
-Colours are solved for perceptual contrast (APCA Lc) against the background #{p["bg"]}, not picked by eye, for
-readers aged 32 and 70 (the lens yellows with age):
-text #{p["text"]} Lc {lc(p["text"], p["bg"]):.0f}; comments Lc {lc(p["comment"], p["bg"]):.0f}; each syntax colour gets the highest contrast at which
-its hue still shows in thin strokes (Lc {min(lcs):.0f}-{max(lcs):.0f}). Checked for colour blindness (protan, deutan, tritan).
+{TITLE[mode]} (version 2): a Notepad++ theme for legible code; "{other}" is its other half.
+Background #{p["bg"]}, text #{p["text"]} ({wcag_worst(p["text"], p["bg"]):.1f}:1), comments #{p["comment"]} ({wcag_worst(p["comment"], p["bg"]):.1f}:1).
+The syntax colours share one lightness and stay inside the screen's colour range, and each role keeps its hue
+in both themes: keywords violet, functions blue, types teal, strings green, numbers orange, macros and
+variables magenta, errors red. Their contrast is {min(ratios):.1f}:1 to {max(ratios):.1f}:1 (WCAG 2), also for a 70-year-old
+reader; checked for colour blindness.
 Generated from stylers.model.xml: regenerate rather than edit by hand, to keep the measured contrast.
 License: GPL2
 -->

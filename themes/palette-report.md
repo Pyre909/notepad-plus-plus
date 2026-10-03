@@ -1,54 +1,54 @@
-## dark: background #191C20
+## dark: background #1F232A
 
-| Role | Colour | OKLCH L C h | Lc at 32 | Lc at 70 | WCAG | on current line | on selection | worst on a find/mark highlight |
-|---|---|---|---|---|---|---|---|---|
-| text | #E2E6ED | 0.924 0.010 262 | 89.9 | 89.7 | 13.7:1 | 88.3 | 82.5 | 76.0 |
-| keyword | #FEAFF7 | 0.852 0.129 330 | 72.6 | 73.4 | 10.3:1 | 71.1 | 65.2 | 58.8 |
-| type | #4FDEE5 | 0.828 0.120 200 | 73.8 | 71.3 | 10.5:1 | 69.9 | 64.5 | 57.6 |
-| string | #92E095 | 0.837 0.129 145 | 75.4 | 74.8 | 10.8:1 | 73.4 | 68.0 | 61.1 |
-| number | #FFAD75 | 0.815 0.120 55 | 67.0 | 69.9 | 9.4:1 | 65.6 | 59.7 | 53.3 |
-| special | #ABBAFF | 0.803 0.099 275 | 65.5 | 63.8 | 9.1:1 | 62.4 | 57.0 | 50.1 |
-| function | #EBD271 | 0.865 0.121 95 | 78.3 | 80.1 | 11.4:1 | 76.8 | 70.9 | 64.5 |
-| comment | #B0BDCC | 0.793 0.026 252 | 64.5 | 64.0 | 9.0:1 | 62.6 | 57.1 | 50.2 |
-| error | #FF9B94 | 0.791 0.121 24 | 61.7 | 64.5 | 8.4:1 | 60.3 | 54.3 | 47.9 |
+| Role | Colour | OKLCH L C h | of max chroma | WCAG (worse reader) | APCA Lc at 32 | Lc at 70 | on current line | on selection | worst on a highlight |
+|---|---|---|---|---|---|---|---|---|---|
+| text | #D6DBE3 | 0.890 0.012 260 | 23% | 11.3:1 | 82.0 | 81.8 | 80.3 | 73.4 | 72.5 |
+| keyword | #C7B0F2 | 0.800 0.095 300 | 79% | 8.1:1 | 63.2 | 62.5 | 61.1 | 54.5 | 53.2 |
+| function | #97C2F2 | 0.801 0.082 252 | 80% | 8.2:1 | 65.1 | 63.3 | 61.8 | 55.3 | 54.0 |
+| type | #6BD0D6 | 0.799 0.095 201 | 70% | 8.4:1 | 66.6 | 64.8 | 63.3 | 56.8 | 55.5 |
+| string | #95D08E | 0.800 0.110 142 | 41% | 8.8:1 | 66.9 | 66.6 | 65.1 | 58.4 | 57.3 |
+| number | #F3AB7A | 0.799 0.106 55 | 80% | 8.2:1 | 63.3 | 65.8 | 61.8 | 54.8 | 53.9 |
+| special | #EEA2D4 | 0.801 0.110 340 | 71% | 8.1:1 | 62.5 | 63.7 | 61.0 | 54.0 | 53.1 |
+| error | #F3A7A0 | 0.800 0.091 25 | 80% | 8.1:1 | 62.9 | 65.1 | 61.4 | 54.4 | 53.6 |
+| comment | #A1A8B5 | 0.730 0.020 263 | 15% | 6.6:1 | 52.4 | 52.1 | 50.6 | 43.8 | 42.8 |
 
-Other: linenum #9DA1A7 (Lc 50), guide #5A5F64 (Lc 18), whitespace #767A7F (Lc 30), caret #E4EFFF (Lc 95), brace #FFEBC4 (Lc 95)
+Other: linenum #757B83 (3.9:1), guide #363940 (1.4:1), whitespace #54585F (2.2:1), caret #B6D8FF (10.5:1), brace #FADB86 (11.7:1)
 
-| Vision | min ΔE_OK syntax vs text | closest syntax pair (ΔE_OK) |
+| Vision | nearest syntax colour to text (ΔE_OK) | closest syntax pair (ΔE_OK) |
 |---|---|---|
-| normal | 0.132 (comment) | number/error 0.067 |
-| protan | 0.057 (type) | keyword/special 0.013 |
-| deutan | 0.085 (keyword) | keyword/type 0.029 |
-| tritan | 0.090 (function) | special/comment 0.031 |
+| normal | 0.114 (function) | number/error 0.053 |
+| protan | 0.060 (type) | keyword/function 0.030 |
+| deutan | 0.088 (special) | keyword/function 0.004 |
+| tritan | 0.096 (keyword) | number/error 0.008 |
 
-keyword vs string ΔE_OK: normal 0.258, protan 0.175, deutan 0.124, tritan 0.175
+keyword vs string ΔE_OK: normal 0.201, protan 0.167, deutan 0.140, tritan 0.078
 
-Contrast columns after Lc at 70 are for the worse-off of the two readers (32 and 70).
+WCAG and the contrast columns after "Lc at 70" are for the worse-off of two readers, aged 32 and 70.
 
-## light: background #FBFAF7
+## light: background #FAF7F3
 
-| Role | Colour | OKLCH L C h | Lc at 32 | Lc at 70 | WCAG | on current line | on selection | worst on a find/mark highlight |
-|---|---|---|---|---|---|---|---|---|
-| text | #272B2F | 0.287 0.009 248 | 98.0 | 98.2 | 13.7:1 | 92.8 | 79.9 | 79.0 |
-| keyword | #841A75 | 0.433 0.170 335 | 85.8 | 85.0 | 8.4:1 | 79.7 | 66.8 | 65.9 |
-| type | #0155A8 | 0.457 0.151 255 | 81.7 | 84.1 | 7.0:1 | 76.7 | 64.6 | 64.0 |
-| string | #10641D | 0.440 0.130 145 | 82.0 | 82.4 | 7.0:1 | 76.9 | 64.1 | 63.2 |
-| number | #912F00 | 0.447 0.141 40 | 83.8 | 81.9 | 7.7:1 | 76.5 | 63.6 | 62.7 |
-| special | #6343A4 | 0.469 0.150 295 | 82.1 | 83.4 | 7.0:1 | 77.0 | 65.0 | 64.2 |
-| function | #7A5B00 | 0.490 0.100 85 | 78.2 | 77.3 | 6.1:1 | 71.9 | 59.0 | 58.1 |
-| comment | #687582 | 0.556 0.026 248 | 69.7 | 70.2 | 4.5:1 | 64.7 | 52.0 | 51.1 |
-| error | #9B0E1B | 0.440 0.170 25 | 84.2 | 81.8 | 8.1:1 | 76.5 | 63.6 | 62.7 |
+| Role | Colour | OKLCH L C h | of max chroma | WCAG (worse reader) | APCA Lc at 32 | Lc at 70 | on current line | on selection | worst on a highlight |
+|---|---|---|---|---|---|---|---|---|---|
+| text | #23272C | 0.271 0.011 254 | 13% | 14.1:1 | 97.3 | 97.6 | 93.1 | 81.5 | 83.8 |
+| keyword | #724AAB | 0.501 0.150 300 | 56% | 6.0:1 | 76.9 | 78.0 | 72.7 | 62.0 | 63.4 |
+| function | #2165A9 | 0.500 0.127 252 | 85% | 5.6:1 | 75.0 | 77.2 | 70.8 | 60.2 | 61.5 |
+| type | #247073 | 0.501 0.073 199 | 85% | 5.4:1 | 74.0 | 75.1 | 69.8 | 59.0 | 60.5 |
+| string | #277620 | 0.499 0.143 142 | 85% | 5.3:1 | 73.4 | 73.9 | 69.2 | 57.8 | 59.9 |
+| number | #A65010 | 0.530 0.133 50 | 95% | 4.8:1 | 72.6 | 70.6 | 66.4 | 54.6 | 56.9 |
+| special | #98397E | 0.500 0.151 340 | 69% | 5.9:1 | 77.0 | 76.1 | 71.9 | 60.0 | 62.3 |
+| error | #A83634 | 0.500 0.150 25 | 74% | 5.6:1 | 76.6 | 74.3 | 70.1 | 58.3 | 60.6 |
+| comment | #676C75 | 0.530 0.015 262 | 6% | 4.9:1 | 71.7 | 72.0 | 67.5 | 56.0 | 58.2 |
 
-Other: linenum #85898F (Lc 55), guide #D3D8DE (Lc 18), whitespace #BEC3C9 (Lc 30), caret #002E76 (Lc 95), brace #591A00 (Lc 95)
+Other: linenum #7C8088 (3.5:1), guide #DAD7D2 (1.3:1), whitespace #BAB7B0 (1.9:1), caret #004E8F (7.9:1), brace #A51C30 (6.4:1)
 
-| Vision | min ΔE_OK syntax vs text | closest syntax pair (ΔE_OK) |
+| Vision | nearest syntax colour to text (ΔE_OK) | closest syntax pair (ΔE_OK) |
 |---|---|---|
-| normal | 0.203 (string) | number/error 0.051 |
-| protan | 0.081 (error) | string/function 0.011 |
-| deutan | 0.157 (keyword) | number/error 0.011 |
-| tritan | 0.170 (string) | number/error 0.027 |
+| normal | 0.240 (type) | number/error 0.070 |
+| protan | 0.162 (error) | keyword/function 0.048 |
+| deutan | 0.229 (type) | keyword/function 0.003 |
+| tritan | 0.228 (keyword) | type/string 0.018 |
 
-keyword vs string ΔE_OK: normal 0.299, protan 0.206, deutan 0.129, tritan 0.220
+keyword vs string ΔE_OK: normal 0.288, protan 0.241, deutan 0.209, tritan 0.107
 
-Contrast columns after Lc at 70 are for the worse-off of the two readers (32 and 70).
+WCAG and the contrast columns after "Lc at 70" are for the worse-off of two readers, aged 32 and 70.
 
