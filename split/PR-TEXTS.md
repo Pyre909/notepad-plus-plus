@@ -15,7 +15,7 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 7 | `live-rendering-switch_20261005` | `53d0026` + `d50fb3b` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
 | 8 | `directwrite-font-smoothing_20261006` | `76b3210` | 4 | small | DirectWrite following the Windows font smoothing | no: bug fix of #14954 (open since 2024) |
 
-Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs, 2026-09-30; 6 and 7: 13/13, 2026-10-06; 8 is not pushed yet). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
+Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs, 2026-09-30; 6, 7 and 8: 13/13, 2026-10-06). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
 
 **How the split was checked.** Each branch was built and tested on its own (results in each
 PR's Testing section). Recombined, branches 1 to 5 and the first live switch (`live-rendering-switch_20260930`) give
@@ -558,7 +558,8 @@ views get the quality when created but follow a change of the setting only after
 parameters, where `SurfaceD2D::SetFontQuality` does nothing.
 
 Before opening:
-1. Push the branch, CI (the MinGW and Clang jobs too).
+1. Done: pushed on 2026-10-06, CI 13/13, the MinGW and Clang jobs too (the ARM64 Debug job hung once on GitHub's runner
+   and passed when re-run).
 2. With section 6 or 7 merged first: a view whose technology changes at run time (6: a right-to-left view goes to GDI
    and back; 7: the live switch) calls `applyWindowsFontQuality` after the switch, see Conflicts at the top.
 3. Attach `vm/shots/font-smoothing-before-after.png` to the PR.

@@ -73,14 +73,15 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
 | Branch | Head | What |
 |---|---|---|
 | `master` | `37f76d4` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
-| `pyre` | `76552d9` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
+| `pyre` | `595d632` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
 | `claude/awesome-darwin-bsud9v` | `357fec9` | The cloud session's branch: the combined development branch, all the features (pyre is built on it) |
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418, closed by donho on 2026-10-02: Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (on hold: #18418 closed) |
 | `live-rendering-switch_20260930` | `08cc23b` | Superseded by `live-rendering-switch_20261005` (this one was stacked on #18418) |
 | `rtl-views-gdi_20261006` | `53d0026` | Right-to-left views drawn with GDI, the startup direction sync (bug fix: #17865, #17518, the RTL UI languages on DirectWrite), on upstream `master`: PR to open (kit section 6) |
 | `live-rendering-switch_20261005` | `d50fb3b` | Rendering mode applied without restart (MISC. box), one commit on `rtl-views-gdi_20261006`: feature request to open, PR after it's Accepted and section 6 is merged (kit section 7). Its refusal version is kept as `archive/live-rendering-switch-refusal_20261005`, the fallback |
-| `directwrite-font-names_20260930` | `6e8579e` | Fonts such as "Fira Code Light" drawn by DirectWrite (Notepad++-only change; issue + PR not opened yet) |
+| `directwrite-font-smoothing_20261006` | `76b3210` | DirectWrite following the Windows font smoothing (bug fix: #14954), on upstream `master`: PR to open (kit section 8). CI: all 13 jobs pass (its ARM64 Debug job hung on GitHub's runner once, passed when re-run) |
+| `directwrite-font-names_20260930` | `6e8579e` | Fonts such as "Fira Code Light" drawn by DirectWrite (Notepad++-only change; a bug fix of #12393, PR after the checks of kit section 5) |
 | `per-monitor-dpi_20260925` | `8a0ff70` | Opt-in per-monitor DPI awareness (discuss with maintainers before a PR) |
 | `font-size-1pt_20260925` | `faaeb59` | Font sizes 1-4 pt: PR #18412 closed upstream (not wanted); kept in the fork |
 | `font-weight-names_20260925` | `47341a4` | Superseded: the Scintilla version of the font-name fix |
@@ -101,6 +102,12 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
   (`53d0026`).
 - The live switch (kit section 7), split from it on 2026-10-06 (one feature or bug fix per PR): the feature request
   first; the PR once it's Accepted and section 6 is merged. CI: all 13 jobs pass (`d50fb3b`, with section 6's commit).
+- DirectWrite following the Windows font smoothing (2026-10-06, kit section 8): with DirectWrite, the default since 8.6,
+  turning the Windows font smoothing off, or to Standard, changes nothing (#14954, open since 2024). A bug fix PR, 4
+  files, no new setting, made from pyre's "Follow Windows" antialiasing: ready to open. Tested with the Windows setting
+  off, Standard and ClearType (Pyre909 changed it) and live; CI: all 13 jobs pass (`76b3210`).
+- Fonts of a weight under DirectWrite (kit section 5): upstream already has the bug report, #12393 (2022), so it's a
+  bug fix PR, no feature request to wait for. Before opening: a rebase and the Cascadia Code SemiBold check.
 - PR #18412 (font sizes 1-4 pt): closed, not wanted.
 - Next PRs from the fork only when a feature looks worthwhile to upstream.
 
@@ -149,16 +156,22 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
 2. The test round on the VM (see the handoff above).
 3. Keep `pyre` current: Sync fork on `master`, then merge `master` into `pyre` (`PYRE-BUILD.md` on `pyre` describes
    the build, its releases and updating).
-4. Pyre909 opens the RTL fix PR (kit section 6) and the live switch's feature request (kit section 7); the live switch
-   PR follows once both allow it. Optional: the font-name issue/PR (kit section 5), which will need pyre's
-   `refreshStyleFonts` once the technology can change at run time (the live switch, the RTL views).
+4. Pyre909 opens the RTL fix PR (kit section 6), the font smoothing PR (kit section 8) and the live switch's feature
+   request (kit section 7); the live switch PR follows once both allow it. Then the font-name PR (kit section 5, a bug
+   fix of #12393), which will need pyre's `refreshStyleFonts` once the technology can change at run time (the live
+   switch, the RTL views).
 5. Before pushing any branch: the review harness in `review/` (`review.ps1`, then the AI review of `checklist.md`;
    the skill `npp-review` does both). After pushing, check CI, which picks its jobs from the push's last commit alone
    (`git diff --name-only HEAD~1` in `CI_build.yml`): if it changes only `.md` or `.txt` files nothing is built, if
    only XML files just the XML check runs. So a push ending with a CLAUDE.md commit after code commits needs
    `[force all]` in that commit's title, as `CLAUDE.md` says (found on 2026-10-06 when `pyre`'s RTL commit wasn't
    built: see "Later").
-6. Later: the toolchain and the unused features below.
+6. `pyre`: its "Follow Windows" antialiasing follows a change of the Windows font smoothing only on `SPI_SETFONTSMOOTHING`
+   and `SPI_SETFONTSMOOTHINGTYPE` (`NppBigSwitch.cpp`), but the ClearType Text Tuner announces its change as
+   `SPI_SETFONTSMOOTHINGORIENTATION`, so a change made there needs a restart (found 2026-10-06 with the live check of
+   kit section 8). Take section 8's rule: on any `WM_SETTINGCHANGE`, the views still at the quality they got from
+   Windows follow it.
+7. Later: the toolchain and the unused features below.
 
 ## Colour themes (2026-10-03, version 2)
 
@@ -185,8 +198,16 @@ tree: all 13 jobs pass (run 37432491225).
 
 Toolchain:
 
-- VM updates (winget): Build Tools 2026 18.7.2 -> 18.10.2, Git 2.55.0.3 -> 2.55.0.5, .NET 8 Desktop Runtime 8.0.6 ->
-  8.0.31. Hold LLVM 22 -> 23 (a major version) unless Clang is used locally.
+- Done on 2026-10-06, the VM cleanup Pyre909 chose: removed Visual Studio 2022 Build Tools and Windows SDK 10.0.26100
+  (the builds use VS 2026, toolset v145), the VS download cache (3 GB to 0.06 GB, the update ran with `--nocache`),
+  LLVM, Rust, the .NET 10 SDK and the NuGet caches, Python 3.11, PIX, the Teams add-in for Office, 17 preinstalled
+  Store apps (Xbox, News, Weather, Bing Search, Solitaire, Clipchamp, Outlook, Teams, To Do, Office hub, Phone Link,
+  Cross-device, Dev Home, Feedback Hub) and 9.8 GB of build outputs. Updated: VS Build Tools 2026 18.7.2 to 18.10.2
+  (through winget: the installer's own `update` found none), Git 2.55.0.5, 7-Zip 26.04, the ARM64 VC++ runtime, .NET 8
+  Desktop Runtime 8.0.31, Python 3.14.7 and its launcher, Windows Terminal (winget has no ARM64 Zed update: Zed updates
+  itself). Free space 53 GB to 59 GB; about 20 GB more stay in the restore points made during the installs until
+  Pyre909 cleans them up (Disk Cleanup, System Restore and Shadow Copies). Kept: Neovim, Zed, Chrome, Python 3.14, the
+  Japanese, Korean and Chinese language packs. Left: `setup-vm.ps1` still installs VS 2022 Build Tools.
 - `pyre-release.yml`: `actions/checkout` v6 -> v7 (read its release notes first). `CI_build.yml` is upstream's: leave
   it to upstream (merge conflicts).
 - `installer.ps1` calls `makensis` and `7z` by name, and neither is on the VM's PATH: `setup-vm.ps1` should put NSIS
