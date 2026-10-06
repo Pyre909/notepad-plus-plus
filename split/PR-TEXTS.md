@@ -1,52 +1,56 @@
 # Upstream PR kit: issues and pull requests to paste
 
 All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on official
-`master` (v8.9.8.1, `dd40fe4`), as CONTRIBUTING.md asks; 2 and 3 are rebased on the newer master `37f76d4` (2026-09-27).
+`master` (v8.9.8.1, `dd40fe4`), as CONTRIBUTING.md asks; 2 and 3 are rebased on the newer master `37f76d4` (2026-09-27),
+6 is on master `697f46b` (2026-10-05), and 7 is 6's commit plus its own until 6 is merged.
 
 | # | Branch | Commit | Files | Exe size (MSVC x64) | What | Needs an approved issue |
 |---|---|---|---|---|---|---|
 | 1 | `font-size-1pt_20260925` | `faaeb59` | 2 | +0 | Font sizes 1–4 pt in the size lists | #18412; **PR closed, not accepted** |
-| 2 | `text-rendering_20260925` | `a485acc` + `bb32194` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 open** |
-| 3 | `text-rendering-translations_20260925` | `1aa8b0e` | 29 xml | – | Label capitalisation (stacked on 2) | no (`[xml]`) |
+| 2 | `text-rendering_20260925` | `a485acc` + `bb32194` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 closed** (2026-10-02: too large a change) |
+| 3 | `text-rendering-translations_20260925` | `1aa8b0e` | 29 xml | – | Label capitalisation (stacked on 2) | no (`[xml]`); on hold, 2 is closed |
 | 4 | `per-monitor-dpi_20260925` | `8a0ff70` | 63 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
 | 5 | `directwrite-font-names_20260930` | `6e8579e` | 6 (Notepad++ only) | +16 KB | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | yes (issue text below). Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
-| 6 | `live-rendering-switch_20260930` | `bb32194` + `08cc23b` (on 2) | 4 | small | Rendering mode applied at once, no restart | follow-up of 2 (#18414): open after 2 is merged; `bb32194` could go into 2 now |
+| 6 | `rtl-views-gdi_20261006` | `53d0026` | 4 | small | Right-to-left views drawn with GDI (DirectWrite can't mirror them) | no: bug fix of #17865 and #17518 (both open); open it first |
+| 7 | `live-rendering-switch_20261005` | `53d0026` + `d50fb3b` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
 
-Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All branches pass CI on every job (5 and 6: 13/13 jobs, 2026-09-30). Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
+Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All branches pass CI on every job (5: 13/13 jobs, 2026-09-30; 6 and 7: 13/13, 2026-10-06). 6 and 7 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
 
 **How the split was checked.** Each branch was built and tested on its own (results in each
-PR's Testing section). Recombined, the branches give the combined branch back byte for byte,
-except where two PRs touch the same lines (see Conflicts): nothing was lost or duplicated.
+PR's Testing section). Recombined, branches 1 to 5 and the first live switch (`live-rendering-switch_20260930`) give
+the combined branch back byte for byte, except where two PRs touch the same lines (see Conflicts): nothing was lost or
+duplicated. 6 and 7 came later (2026-10-05 and 06), on upstream `master`; `pyre` has both, in its own version.
 
-**Order.** 1 was opened and closed without merging. Open 2 now, linked to its issue #18414:
-CONTRIBUTING.md needs the issue `Accepted` before the PR is *merged*, not before it is opened. Then open 3 right after 2 is merged (3 contains 2's commit until then). Open 4
-after a maintainer agrees on the approach: upstream already has DPI work in progress, so link
-or comment on their existing per-monitor DPI issue first. 5 was first offered to Scintilla (bug #2519), but Scintilla's
+**Order.** 1 and 2 were opened and closed without merging (2, #18418, on 2026-10-02: too large a change), so 3 is on
+hold. Open 4 after a maintainer agrees on the approach: upstream already has DPI work in progress, so link or comment
+on their existing per-monitor DPI issue first. 5 was first offered to Scintilla (bug #2519), but Scintilla's
 maintainer has twice declined font-name mapping in Scintilla (bugs #2080, #2356: "leave implementation choice to the
-application"), so it is now a Notepad++-only change: open its issue, then its PR. 6 builds on 2's code: open it after 2
-is merged. Its first commit (`bb32194`, the RTL message pointing to Editing 1 instead of MISC) fixes a message that 2
-itself makes stale, so it can be pushed to 2 as a new commit now.
-The general parts of 2's Scintilla patch go to Scintilla too (same file).
+application"), so it is now a Notepad++-only change: open its issue, then its PR. 6 is a bug fix: open it first. 7 is
+an enhancement on top of 6: its feature request now, its PR once the request is Accepted and 6 is merged. No code goes
+to Scintilla: its maintainer takes no LLM-generated contributions (2026-09-30).
 
 **Conflicts between the PRs.** The PRs merge in any order, except:
 - 2 and 4 both change the MISC page layout in `preference.rc`;
-- 5 and 6 work together only with one more line: after a live switch, the styles must be set again, because 5's font
-  parameters depend on the technology. Whichever of 5 and 6 lands second adds, in the Rendering mode handler of
-  `preferenceDlg.cpp`, `::SendMessage(::GetParent(_hParent), WM_UPDATESCINTILLAS, FALSE, 0);` when the technology
-  changed (combined branch commit `6317b19`).
+- 5 with 6 and 7: 5's font names depend on the technology ("Bahnschrift Light" is "Bahnschrift" at weight 300 for
+  DirectWrite, not for GDI), and 6 (a right-to-left view gets GDI, and the setting's technology back once
+  left-to-right) and 7 (the live switch) change a view's technology at run time. Whichever lands second sets the style
+  fonts again when a view's technology changes: `pyre` does it with `ScintillaEditView::refreshStyleFonts` (called from
+  `changeTextDirection` and `setTechnologyToAll`; test `pyre-rtl-style-fonts`). The combined branch's one line for the
+  first live switch (`WM_UPDATESCINTILLAS` from the Rendering mode handler, `6317b19`) doesn't cover 6;
+- 7 contains 6's commit until 6 is merged.
 
 Whichever lands second needs a quick rebase. The combined branch
-`claude/awesome-darwin-bsud9v` shows the resolved result.
+`claude/awesome-darwin-bsud9v` shows the resolved result for 1 to 5, `pyre` for 5 with 6 and 7.
 
 **Before opening.** CONTRIBUTING.md asks you to test each PR at least once. All branches pass the
-repository's CI on the fork (official MSVC toolchain). The functional tests ran under Wine,
-so run each branch's CI exe on real Windows before opening its PR. The exe is the
-`Notepad++.MSVC.x64.Release` artifact of the branch's run in the fork's Actions tab.
+repository's CI on the fork (official MSVC toolchain). The functional tests of 1 to 5 ran under Wine,
+so run those branches' CI exe on real Windows before opening their PR (6 and 7 were tested on the Windows VM). The
+exe is the `Notepad++.MSVC.x64.Release` artifact of the branch's run in the fork's Actions tab.
 
 **Screenshot for PR 2.** Its body says "screenshot attached": take one of Preferences > Editing 1
 on Windows. The Wine test setup greys out the Rendering mode box, so its captures aren't usable.
 
-**`fix #NNNNN`.** Replace it with the issue number. Done for 1 (#18412, PR closed without merging) and 2 (#18414, PR #18418 open); 4 and 5 still need their issues. 6 uses #18414.
+**`fix #NNNNN`.** Replace it with the issue number. Done for 1 (#18412, PR closed without merging), 2 (#18414, PR #18418 closed) and 6 (#17865, #17518); 4, 5 and 7 still need their issues.
 
 **AI.** The template asks to say when AI was used. The texts below say so.
 
@@ -442,10 +446,10 @@ Reviewed on 2026-10-05 and 2026-10-06 with the review harness and two independen
 list sound; the RTL lock-out of the first version fixed). App-level tests: `live-rendering-switch` (40 checks: every
 view of Notepad++ and of plugins follows, a view a plugin switched itself is left alone, a view destroyed at run time
 is skipped, the RTL views kept on GDI, 50 quick switches, the choice saved), `live-rendering-switch-rtl-ui` (15, Hebrew
-UI) and `live-rendering-switch-scroll` (11). Known, not changed: smart highlighting and link styling of lines newly in
-view after a switch come with the next scroll or caret move (as after a font change in the Style Configurator);
-plugins get no notification of the switch; a plugin view set to the same technology as the previous setting is
-switched too (nothing tells it apart).
+UI) and `live-rendering-switch-scroll` (11). The fork's CI: all 13 jobs pass (`d50fb3b`, run 37431216681). Known, not
+changed: smart highlighting and link styling of lines newly in view after a switch come with the next scroll or caret
+move (as after a font change in the Style Configurator); plugins get no notification of the switch; a plugin view set
+to the same technology as the previous setting is switched too (nothing tells it apart).
 
 Order: Pyre909 opens the feature request below; once it's Accepted and section 6's PR is merged, the branch is rebased
 on `master` (one commit) and the PR is opened from
