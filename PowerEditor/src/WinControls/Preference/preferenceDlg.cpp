@@ -3374,7 +3374,7 @@ intptr_t CALLBACK MiscSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 
 			NativeLangSpeaker* pNativeSpeaker = nppParam.getNativeLangSpeaker();
 			wstring tipScintillaRenderingTechnology2Show = pNativeSpeaker->getLocalizedStrFromID("scintillaRenderingTechnology-tip",
-				L"May improve rendering of special characters or resolve some graphics issues, restart Notepad++ to apply the changes.");
+				L"May improve rendering of special characters or resolve some graphics issues.");
 			_tipScintillaRenderingTechnology = createToolTip(IDC_COMBO_SC_TECHNOLOGY_CHOICE, _hSelf, _hInst,
 				tipScintillaRenderingTechnology2Show.data(), pNativeSpeaker->isRTL());
 
@@ -3606,8 +3606,9 @@ intptr_t CALLBACK MiscSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM)
 
 						else if (LOWORD(wParam) == IDC_COMBO_SC_TECHNOLOGY_CHOICE)
 						{
-							nppGUI._writeTechnologyEngine = static_cast<writeTechnologyEngine>(::SendDlgItemMessage(_hSelf,
-								IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_GETCURSEL, 0, 0));
+							const auto selIndex = ::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_GETCURSEL, 0, 0);
+							if (selIndex != CB_ERR) // applied at once
+								ScintillaEditView::setTechnologyToAll(static_cast<writeTechnologyEngine>(selIndex));
 						}
 
 						else if (LOWORD(wParam) == IDC_COMBO_AUTOUPDATE)
