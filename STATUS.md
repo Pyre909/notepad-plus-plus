@@ -73,7 +73,7 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
 | Branch | Head | What |
 |---|---|---|
 | `master` | `37f76d4` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
-| `pyre` | `d49c16a` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
+| `pyre` | `76552d9` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
 | `claude/awesome-darwin-bsud9v` | `357fec9` | The cloud session's branch: the combined development branch, all the features (pyre is built on it) |
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418, closed by donho on 2026-10-02: Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (on hold: #18418 closed) |
@@ -97,9 +97,10 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
 - Right-to-left views drawn with GDI (2026-10-06, kit section 6): upstream refuses RTL with DirectWrite (#8847, closed
   "scintilla dependent"; Ctrl+Alt+R then does nothing, #17865), and with an RTL UI language its editor is drawn
   left-to-right in a mirrored window by default (found on 8.9.8.1; a regression of #14374 since 2724e0d), and with
-  `editZoneRTL="no"` it stays mirrored (#17518). A bug fix PR, 4 files: ready to open.
+  `editZoneRTL="no"` it stays mirrored (#17518). A bug fix PR, 4 files: ready to open. CI: all 13 jobs pass
+  (`53d0026`).
 - The live switch (kit section 7), split from it on 2026-10-06 (one feature or bug fix per PR): the feature request
-  first; the PR once it's Accepted and section 6 is merged.
+  first; the PR once it's Accepted and section 6 is merged. CI: all 13 jobs pass (`d50fb3b`, with section 6's commit).
 - PR #18412 (font sizes 1-4 pt): closed, not wanted.
 - Next PRs from the fork only when a feature looks worthwhile to upstream.
 
@@ -152,7 +153,11 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
    PR follows once both allow it. Optional: the font-name issue/PR (kit section 5), which will need pyre's
    `refreshStyleFonts` once the technology can change at run time (the live switch, the RTL views).
 5. Before pushing any branch: the review harness in `review/` (`review.ps1`, then the AI review of `checklist.md`;
-   the skill `npp-review` does both).
+   the skill `npp-review` does both). After pushing, check CI, which picks its jobs from the push's last commit alone
+   (`git diff --name-only HEAD~1` in `CI_build.yml`): if it changes only `.md` or `.txt` files nothing is built, if
+   only XML files just the XML check runs. So a push ending with a CLAUDE.md commit after code commits needs
+   `[force all]` in that commit's title, as `CLAUDE.md` says (found on 2026-10-06 when `pyre`'s RTL commit wasn't
+   built: see "Later").
 6. Later: the toolchain and the unused features below.
 
 ## Colour themes (2026-10-03, version 2)
@@ -174,6 +179,9 @@ Pyre909 zip and installer (`package.ps1`/`installer.ps1`). Neither done.
 Done on `pyre` (2026-10-06): the RTL views drawn with GDI replace the refusal of its live switch (which counted hidden
 views and locked DirectWrite out with an RTL UI language) and its two messages; its style fonts are mapped again when a
 view's technology changes (`refreshStyleFonts`, test `pyre-rtl-style-fonts`). The refusal port's tests are removed.
+CI didn't build it at first: `e3f08a8` was pushed with a CLAUDE.md commit on top (`999c593`), and CI picks its jobs
+from a push's last commit alone (Next, item 5). `76552d9` (CLAUDE.md again, `[force all]` in its title) built the whole
+tree: all 13 jobs pass (run 37432491225).
 
 Toolchain:
 

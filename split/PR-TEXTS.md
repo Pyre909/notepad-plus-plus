@@ -345,10 +345,10 @@ Reviewed on 2026-10-06 with the review harness (`review/`) and an independent AI
 out of DX11, back, RTL under DX11, all drawn right, with this VM's default "Optimizations for windowed games"); the
 casts and braces (fixed); a reply on #17865 is from a user, not a maintainer (its claim was wrong). App-level tests,
 ARM64 build on the VM: `rtl-views-gdi` (16 checks), `rtl-ui-gdi` (10, Hebrew UI) and `rtl-ui-editzone-no` (7);
-unmodified upstream fails the RTL UI and #17518 ones. Known, not changed (disclosed in the PR): a plugin that set its
-own technology on one of Notepad++'s views gets the setting's after an RTL round trip; a plugin's
-`SCI_SETBIDIRECTIONAL` is cleared when its view goes to GDI (Scintilla does that); session documents saved RTL now
-show RTL under DirectWrite too (intended).
+unmodified upstream fails the RTL UI and #17518 ones. The fork's CI: all 13 jobs pass (`53d0026`, run 37431213095).
+Known, not changed (disclosed in the PR): a plugin that set its own technology on one of Notepad++'s views gets the
+setting's after an RTL round trip; a plugin's `SCI_SETBIDIRECTIONAL` is cleared when its view goes to GDI (Scintilla
+does that); session documents saved RTL now show RTL under DirectWrite too (intended).
 
 Order: Pyre909 opens the bug report below if they want a record of the RTL UI case (optional: #17865 and #17518 are
 open), then the PR with the numbers and `vm/shots/rtl-ui-before-after.png`. The commit can be amended until the PR is
