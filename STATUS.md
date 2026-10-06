@@ -73,7 +73,7 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
 | Branch | Head | What |
 |---|---|---|
 | `master` | `37f76d4` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
-| `pyre` | `595d632` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
+| `pyre` | `328f690` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
 | `claude/awesome-darwin-bsud9v` | `357fec9` | The cloud session's branch: the combined development branch, all the features (pyre is built on it) |
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418, closed by donho on 2026-10-02: Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (on hold: #18418 closed) |
@@ -207,12 +207,14 @@ Toolchain:
   Desktop Runtime 8.0.31, Python 3.14.7 and its launcher, Windows Terminal (winget has no ARM64 Zed update: Zed updates
   itself). Free space 53 GB to 59 GB; about 20 GB more stay in the restore points made during the installs until
   Pyre909 cleans them up (Disk Cleanup, System Restore and Shadow Copies). Kept: Neovim, Zed, Chrome, Python 3.14, the
-  Japanese, Korean and Chinese language packs. Left: `setup-vm.ps1` still installs VS 2022 Build Tools.
+  Japanese, Korean and Chinese language packs. Then `setup-vm.ps1` installs VS 2026 instead of 2022 (`pyre`
+  `328f690`: the Build Tools with the ARM64 compiler, `--nocache`), and the clone's `out/` (113 MB of local release
+  packages from 2026-10-01) is deleted.
 - `pyre-release.yml`: `actions/checkout` v6 -> v7 (read its release notes first). `CI_build.yml` is upstream's: leave
   it to upstream (merge conflicts).
 - `installer.ps1` calls `makensis` and `7z` by name, and neither is on the VM's PATH: `setup-vm.ps1` should put NSIS
-  and 7-Zip on the user PATH (as it does for Claude Code), and ask for `Microsoft.VisualStudio.Component.VC.Tools.ARM64`
-  by name (installed on this VM, but the script doesn't request it).
+  and 7-Zip on the user PATH (as it does for Claude Code). Its default worktree list also names older branches
+  (`live-rendering-switch_20260930` and not the three PR branches of 2026-10-06).
 - `vm/measure.ps1` measures the first Notepad++ window `FindWindow` returns, which can be Pyre909's everyday one. Add
   a launcher that creates `C:\npp-fonttest`, copies `weights.cpp` (a stale copy cost a round on 2026-10-01) and starts
   the test copy with `-titleAdd=FONTTEST`, and make `measure.ps1` match that title.
