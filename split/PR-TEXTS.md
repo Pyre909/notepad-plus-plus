@@ -312,32 +312,142 @@ and bold keywords in Bahnschrift SemiBold (they were a fallback font before).
 
 ---
 
-## 6. Rendering mode applied at once, without restarting (standalone)
+## 6. Right-to-left views drawn with GDI (bug fix, first)
 
+Branch `rtl-views-gdi_20261006` (worktree `npp.worktrees\rtl-views-gdi_20261006`), one commit on upstream `master`,
+4 files, +18 −21, no Scintilla change. Split from the live switch on 2026-10-06 (Pyre909's choice, after the
+independent review): CONTRIBUTING wants a single feature or bug fix per PR, and this part fixes two open issues, while
+the live switch (section 7) is an enhancement that needs its issue Accepted first.
+
+Notepad++ shows RTL by mirroring the Scintilla window (`WS_EX_LAYOUTRTL`), and only GDI follows the mirroring. On the
+VM (`vm/shots/rtl-directwrite-modes.png`): DirectWrite and DX11 draw left-to-right while Windows mirrors the scrollbar
+and the mouse (a click 60 px from the editor's left edge reaches Scintilla at x = 936 of 968); DirectWrite (Use DC)
+mirrors the whole picture, letters backwards. Scintilla has nothing for it: `SC_BIDIRECTIONAL_R2L` was never
+finished, and its maintainer has answered twice (feature request #1435, 2022, from a Notepad++ user: mirroring was
+never actively supported, "may have worked with GDI drawing but not DirectWrite"; bug #2233, 2021, ScintillaNET,
+still open: patch your own copy), so no new Scintilla ticket.
+
+History: Don's 9bc790b (2023-11-19, #14374) turned DirectWrite off for the whole program when a view was mirrored at
+creation; 2724e0d (2023-11-30, per-document RTL) removed that check and added the refusal in `changeTextDirection`
+(warned once, then silently nothing: #17865). Since then, with an RTL UI language (Hebrew, Arabic, Farsi, Kurdish,
+Urdu, Uyghur; `editZoneRTL` defaults to yes) documents start RTL and every view is mirrored from creation, so with
+DirectWrite, the default of a fresh config, the editor is drawn left-to-right in a mirrored window without a warning
+(official 8.9.8.1 and master 697f46b: `vm/shots/rtl-ui-before-after.png`). The fix restores 9bc790b's intent per view:
+a mirrored view uses GDI (`init` for a view mirrored at creation; `changeTextDirection`: GDI before mirroring, the
+setting's technology back after unmirroring, so a view switching between RTL and LTR tabs switches technology too). The
+refusal and its `RTLvsDirectWrite` entry are removed. Startup: the first documents are activated while already
+current (`activateBuffer` returns early), so with `editZoneRTL="no"` the views stayed mirrored (#17518, reproduced on
+master with `-nosession` and no file; it would have shown under DirectWrite too with the GDI rule): two lines in
+`Notepad_plus::init` give them the direction of their document.
+
+Reviewed on 2026-10-06 with the review harness (`review/`) and an independent AI review. Its findings: the
+`editZoneRTL="no"` regression (fixed, test added); the DX11 swap chain kept after leaving that mode (tested on the VM:
+out of DX11, back, RTL under DX11, all drawn right, with this VM's default "Optimizations for windowed games"); the
+casts and braces (fixed); a reply on #17865 is from a user, not a maintainer (its claim was wrong). App-level tests,
+ARM64 build on the VM: `rtl-views-gdi` (16 checks), `rtl-ui-gdi` (10, Hebrew UI) and `rtl-ui-editzone-no` (7);
+unmodified upstream fails the RTL UI and #17518 ones. Known, not changed (disclosed in the PR): a plugin that set its
+own technology on one of Notepad++'s views gets the setting's after an RTL round trip; a plugin's
+`SCI_SETBIDIRECTIONAL` is cleared when its view goes to GDI (Scintilla does that); session documents saved RTL now
+show RTL under DirectWrite too (intended).
+
+Order: Pyre909 opens the bug report below if they want a record of the RTL UI case (optional: #17865 and #17518 are
+open), then the PR with the numbers and `vm/shots/rtl-ui-before-after.png`. The commit can be amended until the PR is
+opened, then new commits only. The PR is opened from
+https://github.com/notepad-plus-plus/notepad-plus-plus/compare/master...Pyre909:notepad-plus-plus:rtl-views-gdi_20261006
+
+### Issue (optional, bug) — title
+`[BUG] RTL UI languages: the editor is mirrored but drawn left-to-right with DirectWrite`
+
+### Issue — checkboxes
+Searched: yes (#8847 and #14374 have the same cause, both closed). Without plugin: yes. Portable: yes. SciTE: leave it
+unticked (SciTE has no mirrored RTL mode; mirroring is how Notepad++ shows RTL).
+
+### Issue — Description of the Issue
+```
+With a right-to-left UI language (Hebrew, Arabic, Farsi, Kurdish, Urdu, Uyghur), new documents are RTL and the editor window is mirrored, but with DirectWrite on (the default rendering mode) the text is still drawn left-to-right. The scrollbar is on the left and clicks are mirrored, while the line numbers and the text are drawn like LTR, so clicking the line numbers puts the caret at the far end of the line instead. No warning shows.
+
+Same cause as #8847 and #14374: Notepad++ shows RTL by mirroring the editor window (WS_EX_LAYOUTRTL), and only GDI drawing follows that. 9bc790b turned DirectWrite off in this case; the per-document RTL change (2724e0d) removed that check.
+```
+
+### Issue — Steps To Reproduce
+```
+1. Notepad++ 8.9.8.1 portable with a fresh config (Rendering mode is DirectWrite by default)
+2. Settings > Preferences > General > Localization: עברית (Hebrew), then restart Notepad++
+3. Open a text file, or type a few words
+```
+
+### Issue — Current Behavior
+```
+The editor window is mirrored (scrollbar on the left) but drawn left-to-right: line numbers on the left, text left-aligned. Clicks land on the mirrored side. (screenshot, left)
+```
+
+### Issue — Expected Behavior
+```
+The text drawn right-to-left, like with Rendering mode GDI. (screenshot, right: with the fix)
+```
+
+### Issue — Debug Information
+? > Debug Info... > Copy debug info into clipboard, then paste.
+
+### Issue — Anything else?
+```
+This can be fixed in Notepad++ alone, drawing the mirrored views with GDI and the others with DirectWrite. I'll send a PR, which also fixes #17865 and #17518.
+```
+
+### PR — title
+`Draw right-to-left views with GDI, as DirectWrite can't mirror them`
+
+### PR — body
+```
+Notepad++ shows a right-to-left document by mirroring its editor window (WS_EX_LAYOUTRTL), and only GDI follows that mirroring. With DirectWrite the text is drawn left-to-right while Windows mirrors the scrollbar and the mouse, so clicks land on the opposite side. Scintilla doesn't support it either: its maintainer has said that mirroring only works with GDI drawing (https://sourceforge.net/p/scintilla/feature-requests/1435/).
+
+Today that means:
+- With DirectWrite on, View > Text Direction RTL shows "RTL is not compatible with DirectWrite mode" once, then does nothing (#17865).
+- With an RTL UI language (Hebrew, Arabic, Farsi, Kurdish, Urdu, Uyghur), every view starts mirrored and documents are RTL, so with the default rendering mode the editor is drawn left-to-right in a mirrored window, with no warning (screenshots: 8.9.8.1 left, this PR right). 9bc790b turned DirectWrite off in that case; the per-document RTL change (2724e0d) removed that check.
+
+This PR draws a right-to-left view with GDI whatever the rendering mode, and gives it the rendering mode back once it's left-to-right again, also when switching between RTL and LTR tabs. A view that starts mirrored doesn't get DirectWrite. The refusal and its message are removed.
+
+It also sets the views' direction at startup: their first document is activated while already current, so with editZoneRTL="no" the views stayed mirrored (#17518).
+
+4 files, no Scintilla changes.
+
+Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build too), from a fresh config (DirectWrite): RTL and LTR back and forth, RTL and LTR tabs, an RTL document cloned to the other view, the Document Map following, a long wrapped document keeping its scroll position through the switches; the Hebrew UI from start to exit, also with editZoneRTL="no" and no session. No message anywhere, and LTR documents stay on DirectWrite.
+
+Known: a plugin that set its own technology on one of Notepad++'s views gets the rendering mode instead after an RTL round trip, and a plugin's SCI_SETBIDIRECTIONAL is cleared when its view goes to GDI (Scintilla does that).
+
+AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
+
+- [x] I have read contributing guidelines
+
+fix #17865, fix #17518
+```
+
+Translations: the other languages' `RTLvsDirectWrite` entry is no longer used (left to translators, or a separate
+`[xml]` PR).
+
+---
+
+## 7. Rendering mode applied at once, without restarting (enhancement, after section 6)
+
+Branch `live-rendering-switch_20261005` (worktree `npp.worktrees\live-rendering-switch_20261005`): section 6's commit,
+then one commit for the live switch (5 files on top of it, +34 −5; `english_customizable.xml` mirrors `english.xml`).
 #18418 was closed by donho on 2026-10-02 (the large modification could bring regressions; he'll look again once
-Scintilla accepts its part, which it won't: see the appendix), so the live switch can't be its follow-up. It was
-rebuilt on upstream `master` as a change of its own: branch `live-rendering-switch_20261005` (worktree
-`npp.worktrees\live-rendering-switch_20261005`), one commit, 5 files (`english_customizable.xml` mirrors
-`english.xml`), +67 −8, no Scintilla change. It applies the existing Rendering mode box of Preferences > MISC. at
-once. The old follow-up branch `live-rendering-switch_20260930` (stacked on #18418, box in Editing 1) is superseded.
+Scintilla accepts its part, which it won't: see the appendix), so the live switch was rebuilt on upstream `master` on
+its own; the old follow-up branch `live-rendering-switch_20260930` (stacked on #18418) is superseded. Its first
+standalone version (`305ff13`, pushed 2026-10-05) refused DirectWrite while RTL text was shown; with section 6's rule
+the right-to-left views simply keep GDI. If section 6 is turned down, `305ff13` is the fallback.
 
-Right-to-left: DirectWrite can't display it (#8847), so choosing DirectWrite is refused while the main or second view
-shows RTL text; only those count, because with an RTL UI language every Scintilla inherits RTL from the mirrored
-window, hidden ones included (counting them locked DirectWrite out: found by the independent review, reproduced with
-hebrew.xml). Back to GDI, a document shown gets its RTL back at once (as `activateBuffer` does).
+Reviewed on 2026-10-05 and 2026-10-06 with the review harness and two independent AI reviews (lifetime of the view
+list sound; the RTL lock-out of the first version fixed). App-level tests: `live-rendering-switch` (40 checks: every
+view of Notepad++ and of plugins follows, a view a plugin switched itself is left alone, a view destroyed at run time
+is skipped, the RTL views kept on GDI, 50 quick switches, the choice saved), `live-rendering-switch-rtl-ui` (15, Hebrew
+UI) and `live-rendering-switch-scroll` (11). Known, not changed: smart highlighting and link styling of lines newly in
+view after a switch come with the next scroll or caret move (as after a font change in the Style Configurator);
+plugins get no notification of the switch; a plugin view set to the same technology as the previous setting is
+switched too (nothing tells it apart).
 
-Reviewed on 2026-10-05 with the review harness (`review/`): no FAIL; MSVC ARM64, x64 and Win32 builds without
-warning in the changed files; independent AI review (its findings: the RTL lock-out above, RTL not restored back in
-GDI, the message pointing to the active view only: all fixed; lifetime of the view list verified sound). App-level
-tests, ARM64 build on the VM: `live-rendering-switch` (41 checks: every view of Notepad++ and of plugins follows,
-a view a plugin switched itself is left alone, a view destroyed at run time is skipped, RTL refusal and restore,
-messages, 50 quick switches, the choice saved) and `live-rendering-switch-rtl-ui` (Hebrew UI). Known, not changed:
-smart highlighting and link styling of lines newly in view after a switch come with the next scroll or caret move
-(as after a font change in the Style Configurator); plugins get no notification of the switch.
-
-Order: Pyre909 opens the issue, then the PR with its number. Until the PR is opened, the commit can still be
-amended; after that, new commits only (CONTRIBUTING rule 10). The branch is on the fork since 2026-10-05 (commit
-`305ff13`); the PR is opened from
+Order: Pyre909 opens the feature request below; once it's Accepted and section 6's PR is merged, the branch is rebased
+on `master` (one commit) and the PR is opened from
 https://github.com/notepad-plus-plus/notepad-plus-plus/compare/master...Pyre909:notepad-plus-plus:live-rendering-switch_20261005
 
 ### Issue — title
@@ -345,14 +455,14 @@ https://github.com/notepad-plus-plus/notepad-plus-plus/compare/master...Pyre909:
 
 ### Issue — Description of the Issue
 ```
-Changing the rendering mode in Preferences > MISC. (GDI or one of the DirectWrite modes) only takes effect after restarting Notepad++, and the tooltip says so. That makes it a hassle to compare how text looks in GDI vs DirectWrite, or to switch to GDI when you need right-to-left text (the RTL message also tells you to restart).
+Changing the rendering mode in Preferences > MISC. (GDI or one of the DirectWrite modes) only takes effect after restarting Notepad++, and the tooltip says so. That makes it a hassle to compare how text looks in GDI vs DirectWrite.
 ```
 
 ### Issue — Describe the solution you'd like
 ```
-Apply the new rendering mode right away to everything that's open: both views, the Document Map, search results and so on. Since DirectWrite can't show right-to-left text, picking it while a view is in RTL could just show a message and keep the current mode.
+Apply the new rendering mode right away to everything that's open: both views, the Document Map, search results and so on.
 
-I have a small patch for this (5 files, no Scintilla changes) that I tested on Windows 11, and I'll open a PR for it.
+I have a small patch for this (no Scintilla changes) that I tested on Windows 11, and I'll open a PR for it.
 ```
 
 ### Issue — Debug Information
@@ -371,13 +481,14 @@ Related to #18418 (closed), but this one is small and doesn't need any Scintilla
 Picking a rendering mode in Preferences > MISC. now applies right away to every Notepad++ view that follows the setting (both views, Document Map, search results, plugins' views) instead of after a restart.
 
 - A view whose technology a plugin changed itself is left alone: only the views still on the old setting follow.
-- DirectWrite can't display right-to-left text (#8847), so picking it while the main or second view shows RTL text shows a message and the box goes back to the mode in use. Only those two views count: with an RTL UI language every Scintilla inherits RTL from the window, hidden ones too, and they must not block it.
-- Back to GDI, a document that DirectWrite showed LTR gets its RTL back right away, like when its tab is activated.
-- The tooltip and the RTL message no longer say to restart.
+- Right-to-left views keep GDI, the only technology that follows their mirroring (#<section 6's PR>): they get the new mode once they're left-to-right.
+- The tooltip no longer says to restart.
 
 5 files (english_customizable.xml mirrors english.xml), no Scintilla changes.
 
-Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build too): I went through all five modes many times with both views, the Document Map, search results and plugin-created Scintillas open. Every view switched together and the text redrew right away; a view a plugin had switched itself stayed as it was. With an RTL document shown, DirectWrite was refused with the message; back in LTR it applied, also with the Hebrew UI. Back to GDI, the RTL document was RTL again. The chosen mode is saved in config.xml.
+Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build too): I went through all five modes many times with both views, the Document Map, search results and plugin-created Scintillas open. Every view switched together and redrew right away; a view a plugin had switched itself stayed as it was, and RTL documents stayed on GDI. The chosen mode is saved in config.xml.
+
+Known: a plugin view set to the same mode as the previous setting is switched too, and plugins get no notification.
 
 AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
 
@@ -386,8 +497,7 @@ AI disclosure: this change was written with the help of an AI assistant (Claude)
 fix #NNNNN
 ```
 
-Translations: the other languages' tooltip and RTL message still mention the restart until translators update them;
-the new `DirectWriteVsRTL` message shows in English until then.
+Translations: the other languages' tooltip still mentions the restart until translators update it.
 
 ---
 

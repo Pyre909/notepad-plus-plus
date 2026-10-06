@@ -1,4 +1,4 @@
-# Status (2026-10-05)
+# Status (2026-10-06)
 
 Where the Notepad++ text rendering, DPI and font work stands: branches, upstream PRs and tickets, the Pyre909
 build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` (rules, build, code map). The PR kit with every issue/PR/ticket text is `split/PR-TEXTS.md`; the Scintilla side is
@@ -78,7 +78,8 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418, closed by donho on 2026-10-02: Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (on hold: #18418 closed) |
 | `live-rendering-switch_20260930` | `08cc23b` | Superseded by `live-rendering-switch_20261005` (this one was stacked on #18418) |
-| `live-rendering-switch_20261005` | `305ff13` | Rendering mode applied without restart, standalone on upstream `master` (MISC. box): pushed to the fork 2026-10-05; issue + PR to open (kit section 6) |
+| `rtl-views-gdi_20261006` | `53d0026` | Right-to-left views drawn with GDI, the startup direction sync (bug fix: #17865, #17518, the RTL UI languages on DirectWrite), on upstream `master`: PR to open (kit section 6) |
+| `live-rendering-switch_20261005` | `d50fb3b` | Rendering mode applied without restart (MISC. box), one commit on `rtl-views-gdi_20261006`: feature request to open, PR after it's Accepted and section 6 is merged (kit section 7). `305ff13` (the refusal design, pushed 2026-10-05) is the fallback |
 | `directwrite-font-names_20260930` | `6e8579e` | Fonts such as "Fira Code Light" drawn by DirectWrite (Notepad++-only change; issue + PR not opened yet) |
 | `per-monitor-dpi_20260925` | `8a0ff70` | Opt-in per-monitor DPI awareness (discuss with maintainers before a PR) |
 | `font-size-1pt_20260925` | `faaeb59` | Font sizes 1-4 pt: PR #18412 closed upstream (not wanted); kept in the fork |
@@ -92,8 +93,12 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
   100 setting combinations are overwhelming) and adding: "it's rather the large modification which could bring the
   regression. When the PR is accepted in Scintilla project, then we will check again." Issue #18414 stays open. The
   text rendering settings stay in the fork.
-- The live switch, rebuilt on its own (MISC. box, 5 files, no Scintilla change): issue + PR ready to open (kit
-  section 6).
+- Right-to-left views drawn with GDI (2026-10-06, kit section 6): upstream refuses RTL with DirectWrite (#8847, closed
+  "scintilla dependent"; Ctrl+Alt+R then does nothing, #17865), and with an RTL UI language its editor is drawn
+  left-to-right in a mirrored window by default (found on 8.9.8.1; a regression of #14374 since 2724e0d), and with
+  `editZoneRTL="no"` it stays mirrored (#17518). A bug fix PR, 4 files: ready to open.
+- The live switch (kit section 7), split from it on 2026-10-06 (one feature or bug fix per PR): the feature request
+  first; the PR once it's Accepted and section 6 is merged.
 - PR #18412 (font sizes 1-4 pt): closed, not wanted.
 - Next PRs from the fork only when a feature looks worthwhile to upstream.
 
@@ -111,6 +116,10 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
 - #2520 (crash in FontDirectWrite::HFont with no text format): open; zufuliu suggested clamping weight and
   stretch in the E_INVALIDARG retry; our reply (with a clamp + guard patch as illustration) is posted. The guard is
   kept in the fork until a Scintilla release fixes it.
+- Right-to-left with DirectWrite (2026-10-06): not reported, already asked twice. Feature request #1435 (2022, a
+  Notepad++ user): mirroring (`WS_EX_LAYOUTRTL`) was never actively supported, "may have worked with GDI drawing but
+  not DirectWrite". Bug #2233 (2021, ScintillaNET, open): `SC_BIDIRECTIONAL_R2L` was never finished; for a DirectWrite
+  reading direction, patch your own copy. Fixed in Notepad++ instead (GDI for mirrored views, kit section 6).
 
 ## The Pyre909 build (releases)
 
@@ -138,8 +147,9 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
 2. The test round on the VM (see the handoff above).
 3. Keep `pyre` current: Sync fork on `master`, then merge `master` into `pyre` (`PYRE-BUILD.md` on `pyre` describes
    the build, its releases and updating).
-4. The live switch: Pyre909 opens the issue, then the PR (kit section 6). Optional: the font-name issue/PR (kit
-   section 5).
+4. Pyre909 opens the RTL fix PR (kit section 6) and the live switch's feature request (kit section 7); the live switch
+   PR follows once both allow it. Optional: the font-name issue/PR (kit section 5), which will need pyre's
+   `refreshStyleFonts` once the technology can change at run time (the live switch, the RTL views).
 5. Before pushing any branch: the review harness in `review/` (`review.ps1`, then the AI review of `checklist.md`;
    the skill `npp-review` does both).
 6. Later: the toolchain and the unused features below.
@@ -160,8 +170,9 @@ Pyre909 zip and installer (`package.ps1`/`installer.ps1`). Neither done.
 
 ## Later: toolchain and unused features (noted 2026-10-01, not started)
 
-Fix on `pyre`: the `DirectWriteVsRTL` message says "Edit > Text Direction LTR", but the item is in the View menu
-(`english.xml` and the default text in `ScintillaEditView.cpp`; the standalone live switch says View).
+Done on `pyre` (2026-10-06): the RTL views drawn with GDI replace the refusal of its live switch (which counted hidden
+views and locked DirectWrite out with an RTL UI language) and its two messages; its style fonts are mapped again when a
+view's technology changes (`refreshStyleFonts`, test `pyre-rtl-style-fonts`). The refusal port's tests are removed.
 
 Toolchain:
 
@@ -191,8 +202,10 @@ Notepad++ changes using existing Scintilla calls, so Scintilla's no-LLM rule doe
   buffering off; slower.
 - `SCI_SETFONTLOCALE`: the locale DirectWrite uses for language-specific glyphs (Simplified vs Traditional Chinese,
   Japanese forms); Notepad++ leaves "en-us".
-- `SCI_SETBIDIRECTIONAL`: experimental Arabic/Hebrew inside left-to-right UTF-8 documents, DirectWrite only;
-  Notepad++ refuses RTL with DirectWrite today. Bigger and riskier.
+- `SCI_SETBIDIRECTIONAL`: experimental Arabic/Hebrew inside left-to-right UTF-8 documents, DirectWrite only. Tried
+  on the VM (2026-10-06): the caret lands right in mixed Hebrew/English, but lines stay left-aligned, the opaque
+  selection is drawn at the logical place (needs `SCI_SETSELECTIONLAYER` under or over the text), and `R2L` does
+  nothing more than `L2R` (never finished). Not a replacement for Notepad++'s RTL; bigger and riskier.
 
 Notepad++ options for tests: `-titleAdd=`, `-noPlugin` (clean comparisons), `-loadingTime` (startup time: GDI vs
 DirectWrite, the fork vs official); ? > Debug Info for upstream issues (the bug form asks for it).
