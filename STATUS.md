@@ -209,7 +209,8 @@ Toolchain:
   Pyre909 cleans them up (Disk Cleanup, System Restore and Shadow Copies). Kept: Neovim, Zed, Chrome, Python 3.14, the
   Japanese, Korean and Chinese language packs. Then `setup-vm.ps1` installs VS 2026 instead of 2022 (`pyre`
   `328f690`: the Build Tools with the ARM64 compiler, `--nocache`), and the clone's `out/` (113 MB of local release
-  packages from 2026-10-01) is deleted.
+  packages from 2026-10-01) is deleted. Rebuilt with 18.10.2 the same day: the three PR branches and `pyre` build
+  without warnings (ARM64, x64, Win32) and pass their app-level tests.
 - `pyre-release.yml`: `actions/checkout` v6 -> v7 (read its release notes first). `CI_build.yml` is upstream's: leave
   it to upstream (merge conflicts).
 - `installer.ps1` calls `makensis` and `7z` by name, and neither is on the VM's PATH: `setup-vm.ps1` should put NSIS
