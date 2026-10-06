@@ -369,7 +369,11 @@ if ($Test.Count) {
 		if (-not (Test-Path $testExe)) { break }
 		$out = @(& pwsh -NoProfile -File $s.FullName -Exe $testExe 2>&1 | ForEach-Object { "$_" })
 		$summary = $out | Where-Object { $_ -match '^(\d+) checks?, (\d+) failed' } | Select-Object -Last 1
-		if ($summary -and ($summary -match '^(\d+) checks?, (\d+) failed') -and ([int]$Matches[2] -eq 0)) { Report PASS "$($s.BaseName): $summary" }
+		$checks = -1; $failed = -1
+		if ($summary -match '^(\d+) checks?, (\d+) failed') { $checks = [int]$Matches[1]; $failed = [int]$Matches[2] }
+		# a test that ran no check proves nothing: it skipped this build (for example a pyre test on an upstream branch)
+		if ($checks -eq 0) { Report INFO "$($s.BaseName): no check ran, the test skips this build" @($out | Where-Object { $_ -match '^(SKIP|INFO)\b' }) }
+		elseif (($checks -gt 0) -and ($failed -eq 0)) { Report PASS "$($s.BaseName): $summary" }
 		else { Report FAIL "$($s.BaseName): $(if ($summary) { $summary } else { 'no summary line' })" @($out | Where-Object { $_ -match '^FAIL\b|Exception|\berror\b' }) }
 	}
 }

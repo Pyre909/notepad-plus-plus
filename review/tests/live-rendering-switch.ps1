@@ -2,7 +2,8 @@
 # (branch live-rendering-switch_20261005, kit section 6). Drives the real combo box handler (CB_SETCURSEL, then the
 # CBN_SELCHANGE notification a click sends) and reads SCI_GETTECHNOLOGY (0 GDI, 1-4 DirectWrite variants) from every
 # Scintilla window of the process: views of Notepad++, of plugins (NPPM_CREATESCINTILLAHANDLE), one a plugin switched
-# itself, one destroyed at run time; RTL refusal and messages; 50 quick switches; the choice saved on exit.
+# itself, one destroyed at run time; right-to-left views on GDI in every mode, without a message, switching with the
+# tabs; 50 quick switches; the choice saved on exit.
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
 param([Parameter(Mandatory)] [string] $Exe,
 	[string] $TestFile = (Join-Path $PSScriptRoot '..\..\vm\weights.cpp'))
@@ -53,21 +54,22 @@ function Get-Tech([IntPtr] $h) { $r = [IntPtr]::Zero; if ([LT.U]::SendMessageTim
 function Test-RTL([IntPtr] $h) { ([LT.U]::GetWindowLong($h, -20) -band 0x00400000) -ne 0 }
 function Send-Sync([IntPtr] $h, [int] $msg, [IntPtr] $w, [IntPtr] $l) { $r = [IntPtr]::Zero; [void][LT.U]::SendMessageTimeout($h, $msg, $w, $l, 2, 5000, [ref]$r); $r }
 function Invoke-Cmd([int] $id) { [void](Send-Sync $script:main $WM_COMMAND ([IntPtr]$id) ([IntPtr]::Zero)) }
-function Select-Mode([int] $idx, [switch] $Async) {
+function Select-Mode([int] $idx) {
 	[void][LT.U]::SendMessage($script:combo, $CB_SETCURSEL, [IntPtr]$idx, [IntPtr]::Zero)
-	if ($Async) { [void][LT.U]::PostMessage($script:misc, $WM_COMMAND, $SELCHANGE, $script:combo) } else { [void](Send-Sync $script:misc $WM_COMMAND $SELCHANGE $script:combo) }
+	[void](Send-Sync $script:misc $WM_COMMAND $SELCHANGE $script:combo)
 	Start-Sleep -Milliseconds 150
 }
 function Get-Sel { [LT.U]::SendMessage($script:combo, $CB_GETCURSEL, [IntPtr]::Zero, [IntPtr]::Zero).ToInt64() }
 # the main and second views: the visible Scintillas whose parent is the Notepad++ window
 function Get-MainViews { @(Get-Views | Where-Object { ([LT.U]::GetParent($_) -eq $script:main) -and [LT.U]::IsWindowVisible($_) }) }
-function Wait-Box([string] $title, [int] $tenths = 50) {
+# a message box (any dialog but Preferences) shown within the given time
+function Wait-AnyBox([int] $tenths = 10) {
 	for ($i = 0; $i -lt $tenths; $i++) {
 		Start-Sleep -Milliseconds 100
-		$b = Get-Tops | Where-Object { (Get-Cls $_) -eq '#32770' -and (Get-Txt $_) -eq $title } | Select-Object -First 1
-		if ($b) { $t = (Get-Kids $b | Where-Object { (Get-Cls $_) -eq 'Static' } | ForEach-Object { Get-Txt $_ } | Where-Object { $_ }) -join ' '; return @($b, $t) }
+		$b = Get-Tops | Where-Object { (Get-Cls $_) -eq '#32770' -and [LT.U]::IsWindowVisible($_) -and $_ -ne $script:pref } | Select-Object -First 1
+		if ($b) { return $b }
 	}
-	return @($null, '')
+	return $null
 }
 # a message box with only OK closes on WM_CLOSE (its button has the id IDCANCEL, not IDOK)
 function Close-Box([IntPtr] $box) {
@@ -83,6 +85,13 @@ function Check([string] $name, [bool] $ok, [string] $detail = '') {
 function Check-All([string] $name, [int] $expected, $except = @()) {
 	$vs = @(Get-Views | Where-Object { $except -notcontains $_ }); $ts = @($vs | ForEach-Object { Get-Tech $_ })
 	Check $name ((@($ts | Where-Object { $_ -ne $expected }).Count -eq 0) -and $vs.Count -gt 0) ("{0} views: {1}" -f $vs.Count, ($ts -join ','))
+}
+# the mirrored (right-to-left) views on GDI, the others on the given technology
+function Check-Split([string] $name, [int] $expected) {
+	$vs = @(Get-Views); $rtl = @($vs | Where-Object { Test-RTL $_ }); $ltr = @($vs | Where-Object { -not (Test-RTL $_) })
+	$rt = @($rtl | ForEach-Object { Get-Tech $_ }); $lt = @($ltr | ForEach-Object { Get-Tech $_ })
+	$ok = ($rtl.Count -gt 0) -and ($ltr.Count -gt 0) -and (@($rt | Where-Object { $_ -ne 0 }).Count -eq 0) -and (@($lt | Where-Object { $_ -ne $expected }).Count -eq 0)
+	Check $name $ok ("RTL views: {0}; LTR views: {1}" -f ($rt -join ','), ($lt -join ','))
 }
 
 # a fresh settings folder of its own under the temp folder, so nothing of the user's is touched
@@ -106,8 +115,8 @@ try {
 	Invoke-Cmd $IDM_SETTING_PREFERENCE
 	for ($i = 0; $i -lt 50 -and -not $script:misc; $i++) {
 		Start-Sleep -Milliseconds 100
-		$pref = Get-Tops | Where-Object { (Get-Cls $_) -eq '#32770' -and (Get-Txt $_) -eq 'Preferences' } | Select-Object -First 1
-		if ($pref) { $script:misc = Get-Kids $pref | Where-Object { [LT.U]::GetDlgItem($_, $IDC_COMBO_SC_TECHNOLOGY_CHOICE) -ne [IntPtr]::Zero } | Select-Object -First 1 }
+		$script:pref = Get-Tops | Where-Object { (Get-Cls $_) -eq '#32770' -and (Get-Txt $_) -eq 'Preferences' } | Select-Object -First 1
+		if ($script:pref) { $script:misc = Get-Kids $script:pref | Where-Object { [LT.U]::GetDlgItem($_, $IDC_COMBO_SC_TECHNOLOGY_CHOICE) -ne [IntPtr]::Zero } | Select-Object -First 1 }
 	}
 	$script:combo = [LT.U]::GetDlgItem($script:misc, $IDC_COMBO_SC_TECHNOLOGY_CHOICE)
 	Check 'Preferences > MISC. rendering mode box found' ($script:combo -ne [IntPtr]::Zero)
@@ -134,44 +143,38 @@ try {
 	Check 'switches after a destroyed view: no crash' (-not $proc.HasExited)
 	Check-All 'switches after a destroyed view: the others follow' 1
 
-	# right-to-left: allowed with GDI, then DirectWrite is refused with a message and nothing changes
-	Select-Mode 0; Invoke-Cmd $IDM_EDIT_RTL
-	Check 'RTL with GDI' (@(Get-Views | Where-Object { Test-RTL $_ }).Count -ge 1)
-	Select-Mode 1 -Async
-	$box, $text = Wait-Box 'Cannot use DirectWrite'
-	Check 'refused: message shown' ($null -ne $box)
-	Check 'refused: message text' ($text -eq 'DirectWrite cannot display right-to-left text. Please switch the documents shown to left-to-right first (View > Text Direction LTR).') $text
-	if ($box) { Close-Box $box }
-	Check 'refused: box back to GDI' ((Get-Sel) -eq 0) ("sel " + (Get-Sel))
-	Check-All 'refused: no view switched' 0
-	Invoke-Cmd $IDM_EDIT_LTR; Select-Mode 1
-	Check-All 'after LTR: DirectWrite applies' 1
-
-	# the RTL warning given with DirectWrite on no longer asks to restart
+	# right-to-left: DirectWrite ignores the mirroring of the window, so the mirrored views (the document, and the Document
+	# Map that follows it) are drawn with GDI in every rendering mode, without a message; the other views follow the switches
 	[void][LT.U]::PostMessage($script:main, $WM_COMMAND, [IntPtr]$IDM_EDIT_RTL, [IntPtr]::Zero)
-	$box, $text = Wait-Box 'Cannot run RTL'
-	Check 'RTL with DirectWrite: warning shown, no restart asked' (($null -ne $box) -and ($text -notmatch 'restart') -and ($text -match 'MISC')) $text
+	$box = Wait-AnyBox
+	Check 'RTL with DirectWrite: no message' ($null -eq $box) $(if ($box) { Get-Txt $box })
 	if ($box) { Close-Box $box }
-	Check 'RTL with DirectWrite: views stay LTR' (@(Get-Views | Where-Object { Test-RTL $_ }).Count -eq 0)
+	Check 'RTL with DirectWrite: the document shown is mirrored' (@(Get-MainViews | Where-Object { Test-RTL $_ }).Count -eq 1)
+	Check-Split 'RTL with DirectWrite: the mirrored views on GDI, the others on DirectWrite' 1
+	foreach ($t in 4, 0, 2, 3, 1) { Select-Mode $t; Check-Split "switch to $t`: the mirrored views keep GDI, the others follow" $t }
+	Invoke-Cmd $IDM_EDIT_LTR
+	Check-All 'back to LTR: every view on DirectWrite again' 1
 
-	# an RTL document in a background tab doesn't block DirectWrite; shown under DirectWrite it is LTR, back to GDI it is RTL again
-	Select-Mode 0; Invoke-Cmd $IDM_FILE_NEW; Invoke-Cmd $IDM_EDIT_RTL; Invoke-Cmd $IDM_VIEW_TAB1
-	Check 'RTL document in a background tab' (@(Get-MainViews | Where-Object { Test-RTL $_ }).Count -eq 0)
-	Select-Mode 1; Check-All 'background RTL document: DirectWrite applies' 1
-	[void][LT.U]::PostMessage($script:main, $WM_COMMAND, [IntPtr]$IDM_VIEW_TAB2, [IntPtr]::Zero); Start-Sleep -Milliseconds 400
-	$box, $text = Wait-Box 'Cannot run RTL' 5; if ($box) { Close-Box $box }
-	Check 'RTL document shown under DirectWrite: displayed LTR' (@(Get-MainViews | Where-Object { Test-RTL $_ }).Count -eq 0)
-	Select-Mode 0
-	Check 'back to GDI: the RTL document shown is RTL again' (@(Get-MainViews | Where-Object { Test-RTL $_ }).Count -eq 1)
-	Invoke-Cmd $IDM_VIEW_TAB1
-	Check 'its LTR neighbour tab is LTR' (@(Get-MainViews | Where-Object { Test-RTL $_ }).Count -eq 0)
+	# an RTL document in another tab: its view switches between GDI and the rendering mode with the tabs
+	Invoke-Cmd $IDM_FILE_NEW; Invoke-Cmd $IDM_EDIT_RTL
+	$v = @(Get-MainViews | Where-Object { Test-RTL $_ })
+	Check 'new RTL document: its view mirrored, on GDI' (($v.Count -eq 1) -and ((Get-Tech $v[0]) -eq 0))
+	if ($v.Count -eq 1) {
+		Invoke-Cmd $IDM_VIEW_TAB1
+		Check 'its LTR neighbour tab: the view unmirrored, on DirectWrite' ((-not (Test-RTL $v[0])) -and ((Get-Tech $v[0]) -eq 1))
+		Select-Mode 4; Invoke-Cmd $IDM_VIEW_TAB2
+		Check 'the RTL tab again, after a switch to DX11: mirrored, on GDI' ((Test-RTL $v[0]) -and ((Get-Tech $v[0]) -eq 0))
+		Invoke-Cmd $IDM_VIEW_TAB1
+		Check 'its LTR neighbour on DX11' ((-not (Test-RTL $v[0])) -and ((Get-Tech $v[0]) -eq 4))
+		Invoke-Cmd $IDM_VIEW_TAB2 # the RTL document stays shown for the quick switches
+	}
 
-	# 50 quick switches through every mode
+	# 50 quick switches through every mode, an RTL document shown
 	$seq = 0..49 | ForEach-Object { @(0, 1, 2, 3, 4)[$_ % 5] }
 	foreach ($t in $seq) { [void][LT.U]::SendMessage($script:combo, $CB_SETCURSEL, [IntPtr]$t, [IntPtr]::Zero); [void](Send-Sync $script:misc $WM_COMMAND $SELCHANGE $script:combo) }
 	Start-Sleep -Milliseconds 300
 	Check '50 quick switches: still running' (-not $proc.HasExited)
-	Check-All '50 quick switches: every view on the last mode' $seq[-1]
+	Check-Split '50 quick switches: the mirrored views on GDI, the others on the last mode' $seq[-1]
 
 	# the choice is saved on exit
 	Select-Mode 2
