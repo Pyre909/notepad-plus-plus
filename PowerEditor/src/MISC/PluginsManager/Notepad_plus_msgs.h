@@ -733,7 +733,7 @@ enum Platform { PF_UNKNOWN, PF_X86, PF_X64, PF_IA64, PF_ARM64 };
 	// BOOL NPPM_SETSMOOTHFONT(0, BOOL setSmoothFontOrNot)
 	// Set (or remove) smooth font. The API uses underlying Scintilla command SCI_SETFONTQUALITY to manage the font quality.
 	// wParam: 0 (not used)
-	// lParam[in]: setSmoothFontOrNot - if value is TRUE, this message sets SC_EFF_QUALITY_LCD_OPTIMIZED else SC_EFF_QUALITY_DEFAULT
+	// lParam[in]: setSmoothFontOrNot - if value is TRUE, this message sets SC_EFF_QUALITY_LCD_OPTIMIZED else the quality matching the Windows font smoothing (SC_EFF_QUALITY_DEFAULT with GDI or ClearType)
 	// Return TRUE
 
 	#define NPPM_SETEDITORBORDEREDGE    (NPPMSG + 93)

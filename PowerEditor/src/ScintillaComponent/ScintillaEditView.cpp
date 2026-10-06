@@ -499,6 +499,7 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 		// If useDirectWrite is turned off, leave the technology setting untouched,
 		// so that existing plugins using SCI_SETTECHNOLOGY behave like before
 	}
+	applyWindowsFontQuality(); // DirectWrite ignores the Windows font smoothing
 
 	_codepage = nppParams.currentSystemCodepage();
 
@@ -541,6 +542,14 @@ LRESULT CALLBACK ScintillaEditView::ScintillaProc(
 		case WM_NCDESTROY:
 		{
 			::RemoveWindowSubclass(hWnd, ScintillaEditView::ScintillaProc, uIdSubclass);
+			break;
+		}
+
+		case WM_SETTINGCHANGE:
+		{
+			// a view still at the quality it got from the Windows font smoothing follows it ("Enable smooth font" is kept)
+			if (pScint->execute(SCI_GETFONTQUALITY) == pScint->_windowsFontQuality)
+				pScint->applyWindowsFontQuality();
 			break;
 		}
 
@@ -4516,6 +4525,23 @@ bool ScintillaEditView::isTextDirectionRTL() const
 {
 	long exStyle = static_cast<long>(::GetWindowLongPtr(_hSelf, GWL_EXSTYLE));
 	return (exStyle & WS_EX_LAYOUTRTL) != 0;
+}
+
+// DirectWrite antialiases the text whatever the Windows font smoothing (off, Standard or ClearType), while GDI's default
+// quality follows it (#14954): a DirectWrite view gets the quality matching it
+void ScintillaEditView::applyWindowsFontQuality()
+{
+	_windowsFontQuality = SC_EFF_QUALITY_DEFAULT; // GDI, or ClearType: DirectWrite's default
+	if (execute(SCI_GETTECHNOLOGY) != SC_TECHNOLOGY_DEFAULT)
+	{
+		BOOL isSmoothingOn = TRUE;
+		UINT smoothingType = FE_FONTSMOOTHINGCLEARTYPE;
+		if (::SystemParametersInfo(SPI_GETFONTSMOOTHING, 0, &isSmoothingOn, 0) && !isSmoothingOn)
+			_windowsFontQuality = SC_EFF_QUALITY_NON_ANTIALIASED;
+		else if (::SystemParametersInfo(SPI_GETFONTSMOOTHINGTYPE, 0, &smoothingType, 0) && (smoothingType == FE_FONTSMOOTHINGSTANDARD))
+			_windowsFontQuality = SC_EFF_QUALITY_ANTIALIASED;
+	}
+	execute(SCI_SETFONTQUALITY, _windowsFontQuality);
 }
 
 void ScintillaEditView::changeTextDirection(bool isRTL)
