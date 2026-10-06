@@ -30,9 +30,9 @@ branch, read it with `git show origin/pyre:CLAUDE.md`.
 | `text-rendering_20260925` | Upstream PR #18418, **closed** by the maintainer on 2026-10-02 (too large a change, regression risk; reconsidered only if Scintilla takes its part, which it won't). Kept as history. |
 | `text-rendering-translations_20260925` | Follow-up of the closed #18418: on hold. |
 | `rtl-views-gdi_20261006` | Right-to-left views drawn with GDI (DirectWrite ignores the mirroring `WS_EX_LAYOUTRTL`; fixes #17865, #17518 and the RTL UI languages, drawn left-to-right in a mirrored window by default upstream), one commit on upstream `master`; PR texts in kit section 6. `pyre` has the same design since 2026-10-06. |
-| `live-rendering-switch_20261005` | The rendering mode applied without restarting (MISC. box), one commit on top of `rtl-views-gdi_20261006` (rebased on `master` once that one is merged); feature request + PR texts in kit section 7, the PR once the request is Accepted. Amend freely until the PR is opened, then new commits only (upstream CONTRIBUTING rule 10). Supersedes `live-rendering-switch_20260930` (stacked on #18418). |
+| `live-rendering-switch_20261005` | The rendering mode applied without restarting (MISC. box), one commit on top of `rtl-views-gdi_20261006` (rebased on `master` once that one is merged); feature request + PR texts in kit section 7, the PR once the request is Accepted. Amend freely until the PR is opened, then new commits only (upstream CONTRIBUTING rule 10). Supersedes `live-rendering-switch_20260930` (stacked on #18418). Its first version (`305ff13`, pushed 2026-10-05), which refused DirectWrite while right-to-left documents were shown, is kept as `archive/live-rendering-switch-refusal_20261005`: the fallback if `rtl-views-gdi_20261006` is turned down. |
 | `directwrite-font-names_20260930`, `per-monitor-dpi_20260925` | Ready PR candidates (font names: issue + PR texts ready; DPI: discuss with maintainers first). |
-| `font-size-1pt_20260925`, `font-weight-names_20260925`, `archive/*` | History: a closed PR, a superseded version, early drafts. Don't build on them. |
+| `font-size-1pt_20260925`, `font-weight-names_20260925`, the other `archive/*` | History: a closed PR, a superseded version, early drafts. Don't build on them. |
 | `scintilla-upstream_20260930` | Tooling branch (no Notepad++ history): test tools, PR kit, status notes. |
 
 PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
@@ -71,7 +71,9 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
   on Windows, don't start the exe directly: the command waits until Notepad++ closes, and an unquoted
   `C:\npp-test` loses its backslash. Use `powershell -Command "Start-Process ..."` instead.
 - CI (`.github/workflows/CI_build.yml`) runs on every push: 13 jobs (MSVC x64/Win32/ARM64 Release and Debug,
-  CMake, MinGW, Clang). MSVC catches things GCC doesn't; check it after pushing.
+  CMake, MinGW, Clang). MSVC catches things GCC doesn't; check it after pushing. The jobs depend on the push's
+  **last commit** alone: if it changes only `.md` or `.txt` files nothing is built, if only XML files just the XML
+  check runs. So when code commits come before such a commit (CLAUDE.md last), put `[force all]` in its title.
 
 ## Code conventions
 
