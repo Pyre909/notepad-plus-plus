@@ -10,7 +10,7 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 2 | `text-rendering_20260925` | `a485acc` + `bb32194` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 closed** (2026-10-02: too large a change) |
 | 3 | `text-rendering-translations_20260925` | `1aa8b0e` | 29 xml | – | Label capitalisation (stacked on 2) | no (`[xml]`); on hold, 2 is closed |
 | 4 | `per-monitor-dpi_20260925` | `8a0ff70` | 63 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
-| 5 | `directwrite-font-names_20260930` | `6e8579e` | 6 (Notepad++ only) | +16 KB | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | yes (issue text below). Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
+| 5 | `directwrite-font-names_20260930` | `6e8579e` | 6 (Notepad++ only) | +16 KB | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | no: bug fix of #12393 (open since 2022). Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
 | 6 | `rtl-views-gdi_20261006` | `53d0026` | 4 | small | Right-to-left views drawn with GDI (DirectWrite can't mirror them) | no: bug fix of #17865 and #17518 (both open); open it first |
 | 7 | `live-rendering-switch_20261005` | `53d0026` + `d50fb3b` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
 
@@ -25,7 +25,8 @@ duplicated. 6 and 7 came later (2026-10-05 and 06), on upstream `master`; `pyre`
 hold. Open 4 after a maintainer agrees on the approach: upstream already has DPI work in progress, so link or comment
 on their existing per-monitor DPI issue first. 5 was first offered to Scintilla (bug #2519), but Scintilla's
 maintainer has twice declined font-name mapping in Scintilla (bugs #2080, #2356: "leave implementation choice to the
-application"), so it is now a Notepad++-only change: open its issue, then its PR. 6 is a bug fix: open it first. 7 is
+application"), so it is now a Notepad++-only change, and a bug fix of #12393: its PR after the checks of section 5.
+6 is a bug fix: open it first. 7 is
 an enhancement on top of 6: its feature request now, its PR once the request is Accepted and 6 is merged. No code goes
 to Scintilla: its maintainer takes no LLM-generated contributions (2026-09-30).
 
@@ -50,7 +51,7 @@ exe is the `Notepad++.MSVC.x64.Release` artifact of the branch's run in the fork
 **Screenshot for PR 2.** Its body says "screenshot attached": take one of Preferences > Editing 1
 on Windows. The Wine test setup greys out the Rendering mode box, so its captures aren't usable.
 
-**`fix #NNNNN`.** Replace it with the issue number. Done for 1 (#18412, PR closed without merging), 2 (#18414, PR #18418 closed) and 6 (#17865, #17518); 4, 5 and 7 still need their issues.
+**`fix #NNNNN`.** Replace it with the issue number. Done for 1 (#18412, PR closed without merging), 2 (#18414, PR #18418 closed), 5 (#12393) and 6 (#17865, #17518); 4 and 7 still need their issues.
 
 **AI.** The template asks to say when AI was used. The texts below say so.
 
@@ -261,30 +262,28 @@ Why not Scintilla: its maintainer declined this twice (bug #2080 in 2019, bug #2
 "encodes a particular policy for font naming", "the application can adjust these parameters itself using
 IDWriteGdiInterop"). Scintilla bug #2519 (our ticket) points there; this branch is that application-side fix.
 
-### Issue — title
-`DirectWrite draws fonts of a weight such as "Fira Code Light" or "Cascadia Code SemiBold" with a fallback font`
+Upstream already has the bug report: #12393 (2022-10-24, open, no reply yet), a theme whose styles use fonts of other
+weights than Regular and Bold ("hardcoded font faces"), drawn wrong once DirectWrite is on (for ligatures). So this is a
+bug fix, `fix #12393`: no new issue, no Accepted label to wait for (found 2026-10-06). The issue texts drafted before
+are replaced by the optional comment below.
 
-### Issue — Description of the Issue
-The font lists in the Style Configurator show GDI family names. When a family has more weights or widths than
-regular and bold, GDI names each of them as its own family: "Fira Code Light", "Cascadia Code SemiBold",
-"Bahnschrift SemiBold SemiConden" (truncated to 31 characters). DirectWrite only knows the family "Fira Code" with
-a Light weight, so with a DirectWrite rendering mode, text in these fonts is drawn with a fallback font.
+### Comment on #12393 (optional, before the PR)
+Gives the maintainers a repro without the reporter's theme. Before posting, check it on official 8.9.8.1 (the
+baseline font test in `STATUS.md` is still to do).
+```
+Ran into this too, and it's not only themes: any font whose name in the font list includes a weight (Bahnschrift Light, Cascadia Code SemiBold, Fira Code Light...) gets swapped for a fallback font once DirectWrite is on. GDI lists every weight as its own family, but DirectWrite only knows "Bahnschrift" with a Light weight, so the name matches nothing.
 
-Steps: install Fira Code (or use Bahnschrift Light, part of Windows 10/11), pick it as the font of the Default Style
-in Settings > Style Configurator, and choose a DirectWrite rendering mode. The text is drawn in another font. With GDI,
-it is drawn correctly, but bold of a light font is a fake bold of the light font.
+Repro without installing anything: Style Configurator > Default Style, font Bahnschrift Light (comes with Windows 10/11), then Preferences > MISC. > Rendering mode DirectWrite.
 
-### Issue — Describe the solution you'd like
-Notepad++ gives Scintilla the font as DirectWrite knows it: the family name with its weight, width and style
-(SCI_STYLESETWEIGHT / SCI_STYLESETSTRETCH exist for this). Bold is relative to the font's own weight, as GDI does
-it. Scintilla's maintainer leaves this to the application (Scintilla bugs #2080, #2356).
+I have a fix that maps these names to the DirectWrite family + weight in Notepad++ itself (Scintilla's maintainer leaves font naming to the app), PR coming.
+```
 
 ### PR — title
 `Draw the fonts of a weight such as "Fira Code Light" with DirectWrite`
 
 ### PR — body
 ```
-The font lists show GDI family names, which name a weight or width when a family has more than regular and bold ("Fira Code Light", "Cascadia Code SemiBold", "Bahnschrift SemiBold SemiConden"). DirectWrite only knows the family ("Fira Code"), so with a DirectWrite rendering mode these fonts were drawn with a fallback font.
+The font lists show GDI family names, which name a weight or width when a family has more than regular and bold ("Fira Code Light", "Cascadia Code SemiBold", "Bahnschrift SemiBold SemiConden"). DirectWrite only knows the family ("Fira Code"), so with a DirectWrite rendering mode these fonts were drawn with a fallback font (#12393: a theme using fonts of such weights).
 
 Notepad++ now sets each style with the font parameters of the rendering technology in use (new FontFamilyNames.cpp, called by ScintillaEditView::setSpecialStyle):
 - DirectWrite: the font's DirectWrite family, weight, width and style (SCI_STYLESETWEIGHT, SCI_STYLESETSTRETCH). Bold is relative to the font's weight, as GDI emboldens it: bold of "Fira Code Light" is "Fira Code" SemiBold.
@@ -307,12 +306,18 @@ AI disclosure: this change was written with the help of an AI assistant (Claude)
 
 - [x] I have read contributing guidelines
 
-fix #NNNNN
+fix #12393
 ```
 
-Before opening, check on Windows with the branch's CI exe (`Notepad++.MSVC.x64.Release` artifact of its run in the fork's Actions tab):
-Default Style font "Bahnschrift Light", Rendering mode DirectWrite: the text must be drawn in Bahnschrift Light,
-and bold keywords in Bahnschrift SemiBold (they were a fallback font before).
+Before opening:
+1. Rebase on `master` (10 commits behind on 2026-10-06, merges cleanly), then the review harness and CI again.
+2. On Windows with this branch's build (the CI exe, `Notepad++.MSVC.x64.Release` artifact of its run in the fork's
+   Actions tab, or a local build), Rendering mode DirectWrite: Default Style font "Bahnschrift Light" drawn in
+   Bahnschrift Light, bold keywords in Bahnschrift SemiBold (passed in the Pyre909 build on 2026-10-01: weights 300 and
+   600, `STATUS.md`); "Cascadia Code SemiBold" with its bold drawn Bold (to do). Then replace the body's "Not tested"
+   line with the results.
+3. If section 6 is merged first, this branch also has to set the style fonts again when a view's technology changes (a
+   right-to-left view goes to GDI), as `pyre`'s `refreshStyleFonts` does (see Conflicts at the top).
 
 ---
 
