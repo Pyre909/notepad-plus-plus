@@ -79,13 +79,14 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (on hold: #18418 closed) |
 | `live-rendering-switch_20260930` | `08cc23b` | Superseded by `live-rendering-switch_20261005` (this one was stacked on #18418) |
 | `rtl-views-gdi_20261006` | `53d0026` | Right-to-left views drawn with GDI, the startup direction sync (bug fix: #17865, #17518, the RTL UI languages on DirectWrite), on upstream `master`: PR to open (kit section 6) |
-| `live-rendering-switch_20261005` | `d50fb3b` | Rendering mode applied without restart (MISC. box), one commit on `rtl-views-gdi_20261006`: feature request to open, PR after it's Accepted and section 6 is merged (kit section 7). `305ff13` (the refusal design, pushed 2026-10-05) is the fallback |
+| `live-rendering-switch_20261005` | `d50fb3b` | Rendering mode applied without restart (MISC. box), one commit on `rtl-views-gdi_20261006`: feature request to open, PR after it's Accepted and section 6 is merged (kit section 7). Its refusal version is kept as `archive/live-rendering-switch-refusal_20261005`, the fallback |
 | `directwrite-font-names_20260930` | `6e8579e` | Fonts such as "Fira Code Light" drawn by DirectWrite (Notepad++-only change; issue + PR not opened yet) |
 | `per-monitor-dpi_20260925` | `8a0ff70` | Opt-in per-monitor DPI awareness (discuss with maintainers before a PR) |
 | `font-size-1pt_20260925` | `faaeb59` | Font sizes 1-4 pt: PR #18412 closed upstream (not wanted); kept in the fork |
 | `font-weight-names_20260925` | `47341a4` | Superseded: the Scintilla version of the font-name fix |
 | `scintilla-upstream_20260930` | | This branch: tools, kits, notes (no Notepad++ history) |
 | `archive/wip-text-rendering-ui_20260925`, `archive/wip-per-monitor-dpi-review_20260925` | | Early work-in-progress snapshots, superseded (kept so nothing is lost) |
+| `archive/live-rendering-switch-refusal_20261005` | `305ff13` | The live switch's first standalone version (pushed 2026-10-05 as `live-rendering-switch_20261005`): it refused DirectWrite while the documents shown were RTL. Replaced on 2026-10-06 by the RTL views drawn with GDI; the fallback for the live switch if `rtl-views-gdi_20261006` is turned down |
 
 ## Upstream Notepad++
 
