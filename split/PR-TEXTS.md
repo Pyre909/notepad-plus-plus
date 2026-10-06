@@ -435,7 +435,8 @@ then one commit for the live switch (5 files on top of it, +34 −5; `english_cu
 Scintilla accepts its part, which it won't: see the appendix), so the live switch was rebuilt on upstream `master` on
 its own; the old follow-up branch `live-rendering-switch_20260930` (stacked on #18418) is superseded. Its first
 standalone version (`305ff13`, pushed 2026-10-05) refused DirectWrite while RTL text was shown; with section 6's rule
-the right-to-left views simply keep GDI. If section 6 is turned down, `305ff13` is the fallback.
+the right-to-left views simply keep GDI. That version is kept as `archive/live-rendering-switch-refusal_20261005`: if
+section 6 is turned down, it is the fallback (its tests: `review/tests` as of this branch's commit `be26267`).
 
 Reviewed on 2026-10-05 and 2026-10-06 with the review harness and two independent AI reviews (lifetime of the view
 list sound; the RTL lock-out of the first version fixed). App-level tests: `live-rendering-switch` (40 checks: every
