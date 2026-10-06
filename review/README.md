@@ -59,6 +59,12 @@ The rendering mode applied at once (`live-rendering-switch_20261005`, kit sectio
 | `live-rendering-switch-rtl-ui.ps1` | With a right-to-left UI language (hebrew.xml): the mirrored views keep GDI through the switches, an LTR document follows them (15 checks) |
 | `live-rendering-switch-scroll.ps1` | A long wrapped document keeps its scroll position when its view switches technology with the tabs, with the DirectWrite setting and with GDI set at run time; no message on exit (11 checks) |
 
+DirectWrite following the Windows font smoothing (`directwrite-font-smoothing_20261006`, kit section 8):
+
+| Test | What it proves |
+|---|---|
+| `directwrite-font-smoothing.ps1` | With DirectWrite, both views and the Document Map get the font quality of the Windows font smoothing, which the test reads and never changes (off 1, Standard 2, ClearType 0); "Enable smooth font" (`NPPM_SETSMOOTHFONT`) gives 3, and turned off the Windows one again; setting changes (`WM_SETTINGCHANGE`) leave smooth font, a plugin's quality and an unchanged Windows setting alone; with GDI after a restart, 0 (16 checks). With ClearType it can't tell the fix from upstream: change the Windows setting yourself to off or Standard and run it again (upstream fails 4). Following a real change of the setting was checked by hand (kit section 8) |
+
 pyre only (skipped on other builds):
 
 | Test | What it proves |

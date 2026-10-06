@@ -2,7 +2,7 @@
 
 All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on official
 `master` (v8.9.8.1, `dd40fe4`), as CONTRIBUTING.md asks; 2 and 3 are rebased on the newer master `37f76d4` (2026-09-27),
-6 is on master `697f46b` (2026-10-05), and 7 is 6's commit plus its own until 6 is merged.
+6 is on master `697f46b` (2026-10-05), 8 on `a69bc23` (2026-10-06), and 7 is 6's commit plus its own until 6 is merged.
 
 | # | Branch | Commit | Files | Exe size (MSVC x64) | What | Needs an approved issue |
 |---|---|---|---|---|---|---|
@@ -13,13 +13,15 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 5 | `directwrite-font-names_20260930` | `6e8579e` | 6 (Notepad++ only) | +16 KB | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | no: bug fix of #12393 (open since 2022). Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
 | 6 | `rtl-views-gdi_20261006` | `53d0026` | 4 | small | Right-to-left views drawn with GDI (DirectWrite can't mirror them) | no: bug fix of #17865 and #17518 (both open); open it first |
 | 7 | `live-rendering-switch_20261005` | `53d0026` + `d50fb3b` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
+| 8 | `directwrite-font-smoothing_20261006` | `76b3210` | 4 | small | DirectWrite following the Windows font smoothing | no: bug fix of #14954 (open since 2024) |
 
-Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All branches pass CI on every job (5: 13/13 jobs, 2026-09-30; 6 and 7: 13/13, 2026-10-06). 6 and 7 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
+Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs, 2026-09-30; 6 and 7: 13/13, 2026-10-06; 8 is not pushed yet). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
 
 **How the split was checked.** Each branch was built and tested on its own (results in each
 PR's Testing section). Recombined, branches 1 to 5 and the first live switch (`live-rendering-switch_20260930`) give
 the combined branch back byte for byte, except where two PRs touch the same lines (see Conflicts): nothing was lost or
-duplicated. 6 and 7 came later (2026-10-05 and 06), on upstream `master`; `pyre` has both, in its own version.
+duplicated. 6, 7 and 8 came later (2026-10-05 and 06), on upstream `master`; `pyre` has them in its own version (8 as
+the "Follow Windows" antialiasing of its Text Rendering settings).
 
 **Order.** 1 and 2 were opened and closed without merging (2, #18418, on 2026-10-02: too large a change), so 3 is on
 hold. Open 4 after a maintainer agrees on the approach: upstream already has DPI work in progress, so link or comment
@@ -27,7 +29,8 @@ on their existing per-monitor DPI issue first. 5 was first offered to Scintilla 
 maintainer has twice declined font-name mapping in Scintilla (bugs #2080, #2356: "leave implementation choice to the
 application"), so it is now a Notepad++-only change, and a bug fix of #12393: its PR after the checks of section 5.
 6 is a bug fix: open it first. 7 is
-an enhancement on top of 6: its feature request now, its PR once the request is Accepted and 6 is merged. No code goes
+an enhancement on top of 6: its feature request now, its PR once the request is Accepted and 6 is merged. 8 is a bug
+fix too: its PR after the checks of section 8. No code goes
 to Scintilla: its maintainer takes no LLM-generated contributions (2026-09-30).
 
 **Conflicts between the PRs.** The PRs merge in any order, except:
@@ -38,6 +41,8 @@ to Scintilla: its maintainer takes no LLM-generated contributions (2026-09-30).
   fonts again when a view's technology changes: `pyre` does it with `ScintillaEditView::refreshStyleFonts` (called from
   `changeTextDirection` and `setTechnologyToAll`; test `pyre-rtl-style-fonts`). The combined branch's one line for the
   first live switch (`WM_UPDATESCINTILLAS` from the Rendering mode handler, `6317b19`) doesn't cover 6;
+- 8 with 6 and 7: a view whose technology changes at run time (6: a right-to-left view goes to GDI and back; 7: the
+  live switch) needs its font quality set again (`applyWindowsFontQuality`), whichever lands second;
 - 7 contains 6's commit until 6 is merged.
 
 Whichever lands second needs a quick rebase. The combined branch
@@ -51,7 +56,7 @@ exe is the `Notepad++.MSVC.x64.Release` artifact of the branch's run in the fork
 **Screenshot for PR 2.** Its body says "screenshot attached": take one of Preferences > Editing 1
 on Windows. The Wine test setup greys out the Rendering mode box, so its captures aren't usable.
 
-**`fix #NNNNN`.** Replace it with the issue number. Done for 1 (#18412, PR closed without merging), 2 (#18414, PR #18418 closed), 5 (#12393) and 6 (#17865, #17518); 4 and 7 still need their issues.
+**`fix #NNNNN`.** Replace it with the issue number. Done for 1 (#18412, PR closed without merging), 2 (#18414, PR #18418 closed), 5 (#12393), 6 (#17865, #17518) and 8 (#14954); 4 and 7 still need their issues.
 
 **AI.** The template asks to say when AI was used. The texts below say so.
 
@@ -508,6 +513,82 @@ fix #NNNNN
 ```
 
 Translations: the other languages' tooltip still mentions the restart until translators update it.
+
+---
+
+## 8. DirectWrite following the Windows font smoothing (bug fix)
+
+Branch `directwrite-font-smoothing_20261006` (worktree `npp.worktrees\directwrite-font-smoothing_20261006`), one commit
+(`76b3210`) on upstream `master` `a69bc23`, 4 files, +52 −4, no Scintilla change, no new setting or UI text. Made on
+2026-10-06 from the "Follow Windows" antialiasing of the fork's Text Rendering settings (#18418, rejected), without the
+setting.
+
+Upstream bug #14954 (2024-04-07, open): since 8.6 made DirectWrite the default, unticking "Enable smooth font"
+(Preferences > Editing 1) no longer gives unsmoothed text to someone whose Windows font smoothing is off, as it did in
+8.1.4 with GDI, whose default quality follows Windows (rdipardo's reply: it's DirectWrite; the workaround is GDI in
+MISC.). Scintilla turns its font quality into DirectWrite's text antialias mode (`DWriteMapFontQuality` in
+`SurfaceD2D.cxx`: non-antialiased to aliased, antialiased to grayscale, LCD optimized to ClearType, default to
+Direct2D's default), and Direct2D's default smooths whatever Windows says: on the VM, master draws ClearType with the
+Windows font smoothing off and with Standard. The fix: `ScintillaEditView::applyWindowsFontQuality` gives a view on
+DirectWrite the quality matching Windows (off: `SC_EFF_QUALITY_NON_ANTIALIASED`, Standard: `SC_EFF_QUALITY_ANTIALIASED`,
+ClearType: `SC_EFF_QUALITY_DEFAULT` as before; a GDI view the default) and remembers it, when the view is created (`init`:
+both views, Document Map, search results, plugins' views) and when "Enable smooth font" is turned off
+(`NPPM_SETSMOOTHFONT`). On any `WM_SETTINGCHANGE` (Notepad++ passes it on to both views and the search results), a view
+still at the quality it got follows a new one; "Enable smooth font" and a quality set by a plugin are kept. Any, because
+the ClearType Text Tuner announces its change as `SPI_SETFONTSMOOTHINGORIENTATION` and Performance Options as
+`SPI_SETFONTSMOOTHING` then `VisualEffects` (logged on the VM).
+
+Reviewed on 2026-10-06 with the review harness (0 FAIL, 0 WARN; ARM64, x64 and Win32 builds) and an independent AI
+review, which found no bug. Its points, taken: the first version listened only for `SPI_SETFONTSMOOTHING` and
+`SPI_SETFONTSMOOTHINGTYPE` (it would have missed the Tuner) and reset any quality but ClearType on a setting change, a
+plugin's too; the PR text now names the reporter's case, what people with smoothing off will see, and every view that
+follows a change only after a restart. Tested with the Windows font smoothing off, Standard and ClearType (Pyre909
+changed it): the app-level test `directwrite-font-smoothing` (16 checks) passes on this branch each time, unmodified
+upstream fails 4 with off and with Standard (its views and Document Map stay at the default quality). Screenshots,
+`vm/shots/font-smoothing-before-after.png` (captures in `vm/shots/font-smoothing/`): off, master ClearType and this
+branch aliased (2 colors); Standard, master ClearType and this branch grayscale (no colored pixel); ClearType, both the
+same. Live, both builds running: the Tuner (Standard to ClearType) and Performance Options (off, then on) changed this
+branch's views at once (quality 2 to 0, 0 to 1, 1 to 0); master's stayed at the default.
+
+Known, not changed (disclosed in the PR): people whose Windows font smoothing is off or Standard ("Adjust for best
+performance", some Remote Desktop and VM setups) get unsmoothed or grayscale text after updating, as Windows is set;
+"Enable smooth font" gives ClearType back. The Document Map, the tab preview, extra search results windows and plugins'
+views get the quality when created but follow a change of the setting only after a restart (Notepad++ doesn't pass
+`WM_SETTINGCHANGE` on to them). The autocompletion list stays smoothed: Scintilla draws it on a surface without rendering
+parameters, where `SurfaceD2D::SetFontQuality` does nothing.
+
+Before opening:
+1. Push the branch, CI (the MinGW and Clang jobs too).
+2. With section 6 or 7 merged first: a view whose technology changes at run time (6: a right-to-left view goes to GDI
+   and back; 7: the live switch) calls `applyWindowsFontQuality` after the switch, see Conflicts at the top.
+3. Attach `vm/shots/font-smoothing-before-after.png` to the PR.
+
+### PR — title
+`Follow the Windows font smoothing with DirectWrite`
+
+### PR — body
+```
+With DirectWrite (the default rendering mode since 8.6), Notepad++ smooths text whatever the Windows font smoothing: turning off "Smooth edges of screen fonts", or using Standard smoothing instead of ClearType, changes nothing, so unticking "Enable smooth font" doesn't give unsmoothed text anymore either (#14954). GDI follows the setting.
+
+Scintilla turns its font quality into DirectWrite's antialias mode, and with the default quality Direct2D smooths anyway. So a view on DirectWrite now gets the quality that matches Windows:
+- smoothing off: SC_EFF_QUALITY_NON_ANTIALIASED (unsmoothed text)
+- Standard: SC_EFF_QUALITY_ANTIALIASED (grayscale)
+- ClearType: SC_EFF_QUALITY_DEFAULT, as before
+
+It's set when a view is created and when "Enable smooth font" is turned off. When Windows announces a setting change (WM_SETTINGCHANGE), a view still at the quality it got from Windows follows it, so "Enable smooth font" and a quality set by a plugin are kept. GDI views keep the default quality.
+
+4 files, no new setting, no Scintilla change.
+
+Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build too), with the Windows font smoothing off, Standard and ClearType: both views and the Document Map get the matching quality, and the text is drawn unsmoothed, grayscale and ClearType (screenshot: master left, this PR right). Changing the setting while Notepad++ runs, in Performance Options and in the ClearType Text Tuner, updates the views right away. Also "Enable smooth font" on and off, a plugin's own quality kept, GDI unchanged.
+
+Known: people with the Windows font smoothing off or on Standard get unsmoothed or grayscale text after updating, as Windows is set ("Enable smooth font" brings ClearType back). The Document Map, the tab preview, extra search results windows and plugins' views follow a change of the Windows setting only after a restart, since Notepad++ doesn't pass WM_SETTINGCHANGE on to them. The autocompletion list stays smoothed (Scintilla draws it without the font quality).
+
+AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
+
+- [x] I have read contributing guidelines
+
+fix #14954
+```
 
 ---
 
