@@ -312,32 +312,55 @@ and bold keywords in Bahnschrift SemiBold (they were a fallback font before).
 
 ---
 
-## 6. Rendering mode applied at once, without restarting (follow-up of 2)
+## 6. Rendering mode applied at once, without restarting (standalone)
 
-Branch `live-rendering-switch_20260930` (pushed, CI 13/13 jobs), two commits on 2 (`a485acc`):
-- `bb32194` "Point the RTL vs DirectWrite message to Editing 1": 2 moves the Rendering mode box from MISC to
-  Editing 1, so the existing message "Please disable DirectWrite mode in MISC. section" becomes wrong with 2 alone.
-  It belongs in 2: **pushed to `text-rendering_20260925` on 2026-09-30** as a new commit (fast-forward, no force-push).
-- `08cc23b` "Apply the rendering mode at once, without restarting": the feature. Open it after 2 is merged, or
-  add it to 2 if the reviewer prefers (it is 4 files, +61 −6).
+#18418 was closed by donho on 2026-10-02 (the large modification could bring regressions; he'll look again once
+Scintilla accepts its part, which it won't: see the appendix), so the live switch can't be its follow-up. It was
+rebuilt on upstream `master` as a change of its own: branch `live-rendering-switch_20261005` (worktree
+`npp.worktrees\live-rendering-switch_20261005`), one commit, 5 files (`english_customizable.xml` mirrors
+`english.xml`), +67 −8, no Scintilla change. It applies the existing Rendering mode box of Preferences > MISC. at
+once. The old follow-up branch `live-rendering-switch_20260930` (stacked on #18418, box in Editing 1) is superseded.
 
-**Decision (2026-09-30): a follow-up PR, opened after #18418 is merged**, so #18418 stays as reviewed. Both
-branches are pushed. When #18418 is merged, rebase this branch onto master and open the PR:
+Right-to-left: DirectWrite can't display it (#8847), so choosing DirectWrite is refused while the main or second view
+shows RTL text; only those count, because with an RTL UI language every Scintilla inherits RTL from the mirrored
+window, hidden ones included (counting them locked DirectWrite out: found by the independent review, reproduced with
+hebrew.xml). Back to GDI, a document shown gets its RTL back at once (as `activateBuffer` does).
 
-```sh
-git fetch upstream master
-# bb32194 went into #18418, so only 08cc23b is replayed:
-git rebase --onto upstream/master bb32194 live-rendering-switch_20260930
+Reviewed on 2026-10-05 with the review harness (`review/`): no FAIL; MSVC ARM64, x64 and Win32 builds without
+warning in the changed files; independent AI review (its findings: the RTL lock-out above, RTL not restored back in
+GDI, the message pointing to the active view only: all fixed; lifetime of the view list verified sound). App-level
+tests, ARM64 build on the VM: `live-rendering-switch` (41 checks: every view of Notepad++ and of plugins follows,
+a view a plugin switched itself is left alone, a view destroyed at run time is skipped, RTL refusal and restore,
+messages, 50 quick switches, the choice saved) and `live-rendering-switch-rtl-ui` (Hebrew UI). Known, not changed:
+smart highlighting and link styling of lines newly in view after a switch come with the next scroll or caret move
+(as after a font change in the Style Configurator); plugins get no notification of the switch.
+
+Order: Pyre909 opens the issue, then the PR with its number. Until the PR is opened, the commit can still be
+amended; after that, new commits only (CONTRIBUTING rule 10). The branch is on the fork since 2026-10-05 (commit
+`305ff13`); the PR is opened from
+https://github.com/notepad-plus-plus/notepad-plus-plus/compare/master...Pyre909:notepad-plus-plus:live-rendering-switch_20261005
+
+### Issue — title
+`[Feature request] Apply the rendering mode without restarting Notepad++`
+
+### Issue — Description of the Issue
+```
+Changing the rendering mode in Preferences > MISC. (GDI or one of the DirectWrite modes) only takes effect after restarting Notepad++, and the tooltip says so. That makes it a hassle to compare how text looks in GDI vs DirectWrite, or to switch to GDI when you need right-to-left text (the RTL message also tells you to restart).
 ```
 
-If #18418 is merged as one squashed commit, the rebase replays only this PR's commits; rebuild and rerun
-`techswitch.sh` before pushing (a rebased branch with no PR open yet can be force-pushed).
-
-Comment for #18418 about bb32194 and the follow-up: **posted 2026-09-30** (a more casual rewording of this draft, which also gave the Scintilla status: feature request #1592, and the font-name fix going to Notepad++ instead):
+### Issue — Describe the solution you'd like
 ```
-I pushed a small commit: the message shown when RTL is asked with DirectWrite still pointed to the MISC. section, where the rendering mode no longer is. It now names the GDI rendering mode in Editing 1.
+Apply the new rendering mode right away to everything that's open: both views, the Document Map, search results and so on. Since DirectWrite can't show right-to-left text, picking it while a view is in RTL could just show a message and keep the current mode.
 
-A follow-up is ready on my fork (branch live-rendering-switch_20260930): the rendering mode applies at once, without restarting. I'll open it once this PR is merged, to keep this one as reviewed.
+I have a small patch for this (5 files, no Scintilla changes) that I tested on Windows 11, and I'll open a PR for it.
+```
+
+### Issue — Debug Information
+? > Debug Info... > Copy debug info into clipboard, then paste.
+
+### Issue — Anything else?
+```
+Related to #18418 (closed), but this one is small and doesn't need any Scintilla change.
 ```
 
 ### PR — title
@@ -345,32 +368,26 @@ A follow-up is ready on my fork (branch live-rendering-switch_20260930): the ren
 
 ### PR — body
 ```
-Follow-up of #18418. Choosing a rendering mode in Preferences > Editing 1 now switches the Notepad++ edit views at once (main and second view, search results, document map), instead of after a restart.
-- Views whose technology a plugin changed itself are left as they are: only the views using the technology of the setting follow it.
-- The "Follow Windows" antialiasing is applied again, as it depends on the technology.
-- DirectWrite can't draw right-to-left text: choosing DirectWrite while a view shows RTL text is refused with a message, and the box shows the rendering mode in use again.
-- The tooltip and the RTL message no longer ask to restart.
+Picking a rendering mode in Preferences > MISC. now applies right away to every Notepad++ view that follows the setting (both views, Document Map, search results, plugins' views) instead of after a restart.
 
-Testing (MinGW-w64 GCC 13 x64 build under Wine 9; test build with the Wine check of ScintillaEditView::init disabled so that DirectWrite can be chosen, not part of this PR): a probe drives the Rendering mode box and reads each view's technology and font quality. 9/9 checks pass:
-- GDI → DirectWrite → DirectWrite (draw to GDI DC) → GDI switch every view, with the matching antialiasing;
-- a view a plugin set to another technology is left alone;
-- with RTL text, DirectWrite is refused with the message and the box shows GDI again; after LTR, DirectWrite applies;
-- config.xml saves the chosen mode.
-nppshot and screenshot comparisons at 96 and 144 DPI: unchanged.
-On Windows 11 ARM64 (in a VM), with my fork's build, which includes this change: switching between GDI and DirectWrite redraws the text at once, without restarting.
+- A view whose technology a plugin changed itself is left alone: only the views still on the old setting follow.
+- DirectWrite can't display right-to-left text (#8847), so picking it while the main or second view shows RTL text shows a message and the box goes back to the mode in use. Only those two views count: with an RTL UI language every Scintilla inherits RTL from the window, hidden ones too, and they must not block it.
+- Back to GDI, a document that DirectWrite showed LTR gets its RTL back right away, like when its tab is activated.
+- The tooltip and the RTL message no longer say to restart.
+
+5 files (english_customizable.xml mirrors english.xml), no Scintilla changes.
+
+Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build too): I went through all five modes many times with both views, the Document Map, search results and plugin-created Scintillas open. Every view switched together and the text redrew right away; a view a plugin had switched itself stayed as it was. With an RTL document shown, DirectWrite was refused with the message; back in LTR it applied, also with the Hebrew UI. Back to GDI, the RTL document was RTL again. The chosen mode is saved in config.xml.
 
 AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
 
 - [x] I have read contributing guidelines
 
-fix #18414
+fix #NNNNN
 ```
 
-With 5 merged too, add the restyle line (see Conflicts above), so that fonts such as "Fira Code Light" follow the
-switch. Tested on the combined branch: DirectWrite → GDI → DirectWrite gives "Fira Code" 300/600, then
-"Fira Code Light" 300 / "Fira Code SemiBold", then "Fira Code" 300/600 again.
-
-Translations: other languages' tooltip and RTL message still mention the restart until translators update them.
+Translations: the other languages' tooltip and RTL message still mention the restart until translators update them;
+the new `DirectWriteVsRTL` message shows in English until then.
 
 ---
 
