@@ -255,9 +255,8 @@ public:
 	}
 
 	~ScintillaEditView() override {
-		unregisterLiveView(this);
-
 		--_refCount;
+		std::erase(_liveViews, this); // normally done already on WM_NCDESTROY
 
 		if (!_refCount && _SciInit)
 		{
@@ -266,8 +265,6 @@ public:
 	}
 
 	void destroy() override {
-		unregisterLiveView(this);
-
 		if (_hSelf)
 		{
 			::DestroyWindow(_hSelf);
@@ -278,14 +275,15 @@ public:
 
 	void init(HINSTANCE hInst, HWND hPere) override;
 
-	// Apply the text rendering settings (antialiasing, DirectWrite rendering mode, contrast & advanced overrides)
-	void applyTextRenderingSettings() const;
-	// Apply them to every live Notepad++ Scintilla (edit views, Finders, Document Map, Peeker, plugins' Scintillas...)
+	// Pyre909 build: the Text Rendering settings (antialiasing, DirectWrite mode, contrast) applied to the view, or to every
+	// live Notepad++ Scintilla (edit views, Finders, Document Map, Peeker, plugins' Scintillas...)
+	void applyTextRenderingSettings();
 	static void applyTextRenderingSettingsToAll();
-	// Switch every live Notepad++ Scintilla following the Rendering mode setting to another technology, without restarting
-	// (the right-to-left views keep GDI, see changeTextDirection)
-	static void setTechnologyToAll(writeTechnologyEngine technology);
-	// Send a message to every live Notepad++ Scintilla window
+	// Pyre909 build: setTechnologyToAll, then each view that switched updates what depends on the technology
+	static void switchTechnologyOfAll(writeTechnologyEngine technology);
+	// Pyre909 build: after the technology of the view changed, its "Follow Windows" antialiasing and its style fonts
+	void technologyChanged(int previousTechnology);
+	// Pyre909 build: sends a message to every live Notepad++ Scintilla window
 	static void sendMessageToAll(UINT Msg, WPARAM wParam = 0, LPARAM lParam = 0);
 
 	LRESULT execute(UINT Msg, WPARAM wParam=0, LPARAM lParam=0) const {
@@ -705,6 +703,10 @@ public:
 	void sortLines(size_t fromLine, size_t toLine, ISorter *pSort);
 	void changeTextDirection(bool isRTL);
 	bool isTextDirectionRTL() const;
+	void applyWindowsFontQuality();
+	// switches the views following the Rendering mode setting to another technology, without restarting
+	// (the right-to-left views keep GDI, see changeTextDirection)
+	static void setTechnologyToAll(writeTechnologyEngine technology);
 	void setPositionRestoreNeeded(bool val) { _positionRestoreNeeded = val; }
 	void markedTextToClipboard(int indiStyle, bool doAll = false);
 	void removeAnyDuplicateLines();
@@ -717,10 +719,8 @@ protected:
 
 	static int _refCount;
 
-	// initialized views whose Scintilla window is not destroyed yet
+	// the initialized views, for the settings applied to all of them at once (see setTechnologyToAll)
 	static std::vector<ScintillaEditView*> _liveViews;
-	static void registerLiveView(ScintillaEditView* pView);
-	static void unregisterLiveView(const ScintillaEditView* pView);
 
     static UserDefineDialog _userDefineDlg;
 
@@ -757,6 +757,9 @@ protected:
 	intptr_t _beginSelectPosition = -1;
 	static std::string _defaultCharList;
 	bool _isMultiPasteActive = false;
+
+	int _windowsFontQuality = SC_EFF_QUALITY_DEFAULT; // the font quality applyWindowsFontQuality gave the view
+	int getWindowsFontQuality() const;
 
 //Lexers and Styling
 	void restyleBuffer();

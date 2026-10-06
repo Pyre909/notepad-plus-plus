@@ -338,13 +338,6 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			// (mouse wheel vertical & horizontal scroll amount, DirectWrite rendering params, base elements, style etc.)
 			ScintillaEditView::sendMessageToAll(WM_SETTINGCHANGE, wParam, lParam);
 
-			// keep the "Follow Windows" text antialiasing in sync with the Windows font smoothing (Scintilla updates the other parameters)
-			if ((wParam == SPI_SETFONTSMOOTHING || wParam == SPI_SETFONTSMOOTHINGTYPE) &&
-				(nppParam.getSVP()._textAntialiasing == textAntialiasingFollowWindows))
-			{
-				ScintillaEditView::applyTextRenderingSettingsToAll();
-			}
-
 			return ::DefWindowProc(hwnd, message, wParam, lParam);
 		}
 
@@ -1911,9 +1904,16 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 
 		case NPPM_SETSMOOTHFONT:
 		{
-			int param = (lParam == 0 ? SC_EFF_QUALITY_DEFAULT : SC_EFF_QUALITY_LCD_OPTIMIZED);
-			_mainEditView.execute(SCI_SETFONTQUALITY, param);
-			_subEditView.execute(SCI_SETFONTQUALITY, param);
+			if (lParam == 0) // the font quality follows the Windows font smoothing
+			{
+				_mainEditView.applyWindowsFontQuality();
+				_subEditView.applyWindowsFontQuality();
+			}
+			else
+			{
+				_mainEditView.execute(SCI_SETFONTQUALITY, SC_EFF_QUALITY_LCD_OPTIMIZED);
+				_subEditView.execute(SCI_SETFONTQUALITY, SC_EFF_QUALITY_LCD_OPTIMIZED);
+			}
 			return TRUE;
 		}
 

@@ -66,7 +66,7 @@ static constexpr int MAX_FOLD_LINES_MORE_THAN = 99;
 // initialize the static variable
 bool ScintillaEditView::_SciInit = false;
 int ScintillaEditView::_refCount = 0;
-std::vector<ScintillaEditView*> ScintillaEditView::_liveViews;
+std::vector<ScintillaEditView*> ScintillaEditView::_liveViews{};
 UserDefineDialog ScintillaEditView::_userDefineDlg;
 
 const int ScintillaEditView::_SC_MARGE_LINENUMBER = 0;
@@ -488,13 +488,13 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 		// If useDirectWrite is turned off, leave the technology setting untouched,
 		// so that existing plugins using SCI_SETTECHNOLOGY behave like before
 	}
-
-	applyTextRenderingSettings();
+	applyWindowsFontQuality(); // DirectWrite ignores the Windows font smoothing, see getWindowsFontQuality
 
 	_codepage = nppParams.currentSystemCodepage();
+	applyTextRenderingSettings(); // Pyre909 build: the Text Rendering settings (Preferences > Editing 1)
 
 	::SetWindowSubclass(_hSelf, ScintillaEditView::ScintillaProc, static_cast<UINT_PTR>(SubclassID::first), reinterpret_cast<DWORD_PTR>(this));
-	registerLiveView(this); // unregistered on WM_NCDESTROY (see ScintillaProc), destroy() or destruction
+	_liveViews.push_back(this); // removed on WM_NCDESTROY (see ScintillaProc)
 
 	if (_defaultCharList.empty())
 	{
@@ -517,51 +517,38 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 	attachDefaultDoc();
 }
 
-// DirectWrite font quality matching the Windows "Smooth edges of screen fonts" & ClearType settings
-static int getSystemFontQuality()
-{
-	BOOL isFontSmoothingOn = FALSE;
-	if (!::SystemParametersInfo(SPI_GETFONTSMOOTHING, 0, &isFontSmoothingOn, 0))
-		return SC_EFF_QUALITY_DEFAULT;
-
-	if (!isFontSmoothingOn)
-		return SC_EFF_QUALITY_NON_ANTIALIASED;
-
-	UINT fontSmoothingType = 0;
-	if (!::SystemParametersInfo(SPI_GETFONTSMOOTHINGTYPE, 0, &fontSmoothingType, 0))
-		return SC_EFF_QUALITY_DEFAULT;
-
-	// DirectWrite's default quality draws ClearType with the monitor's parameters, as Notepad++ always did
-	// (SC_EFF_QUALITY_LCD_OPTIMIZED would use the ClearType Tuner gamma of GDI: the "ClearType" setting)
-	return (fontSmoothingType == FE_FONTSMOOTHINGCLEARTYPE) ? SC_EFF_QUALITY_DEFAULT : SC_EFF_QUALITY_ANTIALIASED;
-}
-
-void ScintillaEditView::applyTextRenderingSettings() const
+// Pyre909 build: the Text Rendering settings of Preferences > Editing 1
+void ScintillaEditView::applyTextRenderingSettings()
 {
 	const ScintillaViewParams& svp = NppParameters::getInstance().getSVP();
 
-	int fontQuality = SC_EFF_QUALITY_DEFAULT;
-	switch (svp._textAntialiasing)
+	// "Follow Windows" is the font quality following the Windows font smoothing, followed when it changes (see the
+	// WM_SETTINGCHANGE of ScintillaProc); the other antialiasing choices don't follow it
+	if (svp._textAntialiasing == textAntialiasingFollowWindows)
 	{
-		case textAntialiasingClearType:
-		case textAntialiasingClearTypeLessColor:
-			fontQuality = SC_EFF_QUALITY_LCD_OPTIMIZED;
-			break;
-
-		case textAntialiasingGrayscale:
-			fontQuality = SC_EFF_QUALITY_ANTIALIASED;
-			break;
-
-		case textAntialiasingNone:
-			fontQuality = SC_EFF_QUALITY_NON_ANTIALIASED;
-			break;
-
-		default: // textAntialiasingFollowWindows
-			// GDI's default quality already follows the Windows font smoothing, DirectWrite's default antialiasing
-			// ignores it (smoothing off or Standard), so DirectWrite gets the Windows setting explicitly
-			fontQuality = (execute(SCI_GETTECHNOLOGY) == SC_TECHNOLOGY_DEFAULT) ? SC_EFF_QUALITY_DEFAULT : getSystemFontQuality();
+		if ((getWindowsFontQuality() != _windowsFontQuality) || (execute(SCI_GETFONTQUALITY) != _windowsFontQuality))
+			applyWindowsFontQuality();
 	}
-	execute(SCI_SETFONTQUALITY, fontQuality);
+	else
+	{
+		int fontQuality = SC_EFF_QUALITY_DEFAULT;
+		switch (svp._textAntialiasing)
+		{
+			case textAntialiasingClearType:
+			case textAntialiasingClearTypeLessColor:
+				fontQuality = SC_EFF_QUALITY_LCD_OPTIMIZED;
+				break;
+
+			case textAntialiasingGrayscale:
+				fontQuality = SC_EFF_QUALITY_ANTIALIASED;
+				break;
+
+			default: // textAntialiasingNone
+				fontQuality = SC_EFF_QUALITY_NON_ANTIALIASED;
+		}
+		_windowsFontQuality = -1; // none: the view doesn't follow Windows
+		execute(SCI_SETFONTQUALITY, fontQuality);
+	}
 
 	// The following parameters are used only by DirectWrite, SC_FONTRENDERING_DEFAULT (-1) removes the override.
 	// They are sent even with GDI, so they are ready if the technology is switched to DirectWrite (by a plugin for example).
@@ -588,10 +575,6 @@ void ScintillaEditView::applyTextRenderingSettings() const
 		default: // textRenderingModeAutomatic
 			break;
 	}
-
-	// a rendering mode override is incompatible with aliased text (it would put the DirectWrite render target in an error state)
-	if (fontQuality == SC_EFF_QUALITY_NON_ANTIALIASED)
-		renderingMode = SC_FONTRENDERING_DEFAULT;
 
 	// DirectWrite's enhanced contrast only darkens dark text (it's reduced to nothing for light text),
 	// light text (on dark themes) gets heavier with a higher gamma, which would make dark text lighter:
@@ -628,51 +611,35 @@ void ScintillaEditView::applyTextRenderingSettings() const
 
 void ScintillaEditView::applyTextRenderingSettingsToAll()
 {
-	// index based loop: the list must not be invalidated if it's modified meanwhile
-	for (size_t i = 0; i < _liveViews.size(); ++i)
-		_liveViews[i]->applyTextRenderingSettings();
+	for (ScintillaEditView* pView : _liveViews)
+		pView->applyTextRenderingSettings();
 }
 
-void ScintillaEditView::setTechnologyToAll(writeTechnologyEngine technology)
+void ScintillaEditView::switchTechnologyOfAll(writeTechnologyEngine technology)
 {
-	NppGUI& nppGui = NppParameters::getInstance().getNppGUI();
-	const writeTechnologyEngine previous = nppGui._writeTechnologyEngine;
-	if ((technology == previous) || (technology >= directWriteTechnologyUnavailable) || (previous >= directWriteTechnologyUnavailable))
+	std::vector<std::pair<ScintillaEditView*, int>> previousTechnologies;
+	for (ScintillaEditView* pView : _liveViews)
+		previousTechnologies.emplace_back(pView, static_cast<int>(pView->execute(SCI_GETTECHNOLOGY)));
+	setTechnologyToAll(technology);
+	for (const auto& [pView, previousTechnology] : previousTechnologies)
+		pView->technologyChanged(previousTechnology);
+}
+
+void ScintillaEditView::technologyChanged(int previousTechnology)
+{
+	// DirectWrite in another mode (DirectX 11...) draws the same fonts with the same antialiasing
+	const int technology = static_cast<int>(execute(SCI_GETTECHNOLOGY));
+	if ((technology == SC_TECHNOLOGY_DEFAULT) == (previousTechnology == SC_TECHNOLOGY_DEFAULT))
 		return;
-
-	nppGui._writeTechnologyEngine = technology;
-
-	// the views using the technology of the setting follow it, those a plugin switched itself are left as they are,
-	// and the right-to-left ones keep GDI (see changeTextDirection)
-	// Pyre909 build: index based loop, the list must not be invalidated if it's modified meanwhile
-	for (size_t i = 0; i < _liveViews.size(); ++i)
-	{
-		ScintillaEditView* pView = _liveViews[i];
-		if (!pView->isTextDirectionRTL() && (pView->execute(SCI_GETTECHNOLOGY) == static_cast<LRESULT>(previous)))
-		{
-			pView->execute(SCI_SETTECHNOLOGY, technology);
-			pView->applyTextRenderingSettings(); // Pyre909 build: the "Follow Windows" antialiasing depends on the technology
-			pView->refreshStyleFonts(static_cast<int>(pView->execute(SCI_GETTECHNOLOGY)), previous); // Pyre909 build: so do the style fonts
-		}
-	}
+	applyTextRenderingSettings(); // the "Follow Windows" antialiasing depends on the technology (see getWindowsFontQuality)
+	refreshStyleFonts(technology, previousTechnology); // so do the style fonts (see getScintillaFont)
 }
 
 void ScintillaEditView::sendMessageToAll(UINT Msg, WPARAM wParam, LPARAM lParam)
 {
-	// index based loop: the list must not be invalidated if it's modified meanwhile
+	// index based loop: the list must not be invalidated if a view is created or destroyed meanwhile
 	for (size_t i = 0; i < _liveViews.size(); ++i)
 		::SendMessage(_liveViews[i]->getHSelf(), Msg, wParam, lParam);
-}
-
-void ScintillaEditView::registerLiveView(ScintillaEditView* pView)
-{
-	if (pView && std::find(_liveViews.begin(), _liveViews.end(), pView) == _liveViews.end())
-		_liveViews.push_back(pView);
-}
-
-void ScintillaEditView::unregisterLiveView(const ScintillaEditView* pView)
-{
-	std::erase(_liveViews, pView);
 }
 
 LRESULT CALLBACK ScintillaEditView::ScintillaProc(
@@ -690,9 +657,20 @@ LRESULT CALLBACK ScintillaEditView::ScintillaProc(
 	{
 		case WM_NCDESTROY:
 		{
-			// the window can also be destroyed together with its parent, without destroy() being called
-			unregisterLiveView(pScint);
+			std::erase(_liveViews, pScint);
 			::RemoveWindowSubclass(hWnd, ScintillaEditView::ScintillaProc, uIdSubclass);
+			break;
+		}
+
+		case WM_SETTINGCHANGE:
+		{
+			// the Windows font smoothing may have changed: a view still at the quality it got from it follows it
+			// ("Enable smooth font", or a quality set by a plugin, is kept)
+			if ((pScint->execute(SCI_GETFONTQUALITY) == pScint->_windowsFontQuality)
+				&& (pScint->getWindowsFontQuality() != pScint->_windowsFontQuality))
+			{
+				pScint->applyWindowsFontQuality();
+			}
 			break;
 		}
 
@@ -4812,21 +4790,63 @@ void ScintillaEditView::sortLines(size_t fromLine, size_t toLine, ISorter* pSort
 	}
 }
 
+void ScintillaEditView::setTechnologyToAll(writeTechnologyEngine technology)
+{
+	NppGUI& nppGui = NppParameters::getInstance().getNppGUI();
+	const writeTechnologyEngine previous = nppGui._writeTechnologyEngine;
+	if ((technology == previous) || (technology >= directWriteTechnologyUnavailable) || (previous >= directWriteTechnologyUnavailable))
+		return;
+
+	nppGui._writeTechnologyEngine = technology;
+
+	// the views using the technology of the setting follow it, those a plugin switched itself are left as they are,
+	// and the right-to-left ones keep GDI (see changeTextDirection)
+	for (ScintillaEditView* pView : _liveViews)
+	{
+		if (!pView->isTextDirectionRTL() && (pView->execute(SCI_GETTECHNOLOGY) == static_cast<LRESULT>(previous)))
+			pView->execute(SCI_SETTECHNOLOGY, technology);
+	}
+}
+
 bool ScintillaEditView::isTextDirectionRTL() const
 {
 	long exStyle = static_cast<long>(::GetWindowLongPtr(_hSelf, GWL_EXSTYLE));
 	return (exStyle & WS_EX_LAYOUTRTL) != 0;
 }
 
+// The font quality following the Windows font smoothing (off, Standard or ClearType): GDI's default quality follows it,
+// DirectWrite's antialiases the text whatever it is (#14954)
+int ScintillaEditView::getWindowsFontQuality() const
+{
+	if (execute(SCI_GETTECHNOLOGY) == SC_TECHNOLOGY_DEFAULT)
+		return SC_EFF_QUALITY_DEFAULT;
+
+	BOOL isSmoothingOn = TRUE;
+	if (::SystemParametersInfo(SPI_GETFONTSMOOTHING, 0, &isSmoothingOn, 0) && !isSmoothingOn)
+		return SC_EFF_QUALITY_NON_ANTIALIASED;
+
+	UINT smoothingType = FE_FONTSMOOTHINGCLEARTYPE;
+	if (::SystemParametersInfo(SPI_GETFONTSMOOTHINGTYPE, 0, &smoothingType, 0) && (smoothingType == FE_FONTSMOOTHINGSTANDARD))
+		return SC_EFF_QUALITY_ANTIALIASED;
+
+	return SC_EFF_QUALITY_DEFAULT; // ClearType, DirectWrite's default
+}
+
+void ScintillaEditView::applyWindowsFontQuality()
+{
+	_windowsFontQuality = getWindowsFontQuality();
+	execute(SCI_SETFONTQUALITY, _windowsFontQuality);
+}
+
 void ScintillaEditView::changeTextDirection(bool isRTL)
 {
 	if (isTextDirectionRTL() == isRTL)
 		return;
+	const int previousTechnology = static_cast<int>(execute(SCI_GETTECHNOLOGY)); // Pyre909 build: see technologyChanged
 
 	// DirectWrite doesn't follow the mirroring of the window (WS_EX_LAYOUTRTL), only GDI does: a right-to-left view is
 	// drawn with GDI, and gets the rendering mode of the setting back once left-to-right
-	const LRESULT previousTechnology = execute(SCI_GETTECHNOLOGY);
-	if (isRTL && (previousTechnology != SC_TECHNOLOGY_DEFAULT))
+	if (isRTL && (execute(SCI_GETTECHNOLOGY) != SC_TECHNOLOGY_DEFAULT))
 		execute(SCI_SETTECHNOLOGY, SC_TECHNOLOGY_DEFAULT);
 
 	long exStyle = static_cast<long>(::GetWindowLongPtr(_hSelf, GWL_EXSTYLE));
@@ -4835,16 +4855,9 @@ void ScintillaEditView::changeTextDirection(bool isRTL)
 
 	const writeTechnologyEngine technology = NppParameters::getInstance().getNppGUI()._writeTechnologyEngine;
 	if (!isRTL && (technology > defaultTechnology) && (technology < directWriteTechnologyUnavailable)
-		&& (previousTechnology == SC_TECHNOLOGY_DEFAULT))
+		&& (execute(SCI_GETTECHNOLOGY) == SC_TECHNOLOGY_DEFAULT))
 	{
 		execute(SCI_SETTECHNOLOGY, technology);
-	}
-
-	// Pyre909 build: the antialiasing and the style fonts depend on the technology
-	if (execute(SCI_GETTECHNOLOGY) != previousTechnology)
-	{
-		applyTextRenderingSettings();
-		refreshStyleFonts(static_cast<int>(execute(SCI_GETTECHNOLOGY)), static_cast<int>(previousTechnology));
 	}
 
 	if (isRTL)
@@ -4878,6 +4891,8 @@ void ScintillaEditView::changeTextDirection(bool isRTL)
 
 	Buffer* buf = getCurrentBuffer();
 	buf->setRTL(isRTL);
+
+	technologyChanged(previousTechnology); // Pyre909 build: the antialiasing and the style fonts depend on the technology
 }
 
 wstring ScintillaEditView::getEOLString() const

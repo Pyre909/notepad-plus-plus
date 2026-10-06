@@ -2156,7 +2156,7 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 									return TRUE;
 
 								// applied at once, with the style fonts of the new technology (the right-to-left views keep GDI)
-								ScintillaEditView::setTechnologyToAll(static_cast<writeTechnologyEngine>(selIndex));
+								ScintillaEditView::switchTechnologyOfAll(static_cast<writeTechnologyEngine>(selIndex));
 								enableDirectWriteTextRendering();
 								return TRUE;
 							}
