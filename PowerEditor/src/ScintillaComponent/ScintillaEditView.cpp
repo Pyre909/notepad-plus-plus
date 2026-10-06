@@ -651,11 +651,13 @@ bool ScintillaEditView::setTechnologyToAll(writeTechnologyEngine technology, HWN
 	{
 		for (size_t i = 0; i < _liveViews.size(); ++i)
 		{
-			if (isFollowing(_liveViews[i]) && _liveViews[i]->isTextDirectionRTL())
+			// only the main and second views show a direction the user chose (with an RTL UI language, every view inherits RTL)
+			const ScintillaEditView* pView = _liveViews[i];
+			if (isFollowing(pView) && pView->_isMainEditZone && pView->isTextDirectionRTL() && ::IsWindowVisible(pView->getHSelf()))
 			{
 				nppParams.getNativeLangSpeaker()->messageBox("DirectWriteVsRTL",
 					hMsgParent,
-					L"DirectWrite cannot display right-to-left text. Please switch the text direction to left-to-right first (Edit > Text Direction LTR).",
+					L"DirectWrite cannot display right-to-left text. Please switch the documents shown to left-to-right first (View > Text Direction LTR).",
 					L"Cannot use DirectWrite",
 					MB_OK | MB_APPLMODAL);
 				return false;
@@ -665,14 +667,18 @@ bool ScintillaEditView::setTechnologyToAll(writeTechnologyEngine technology, HWN
 
 	nppGui._writeTechnologyEngine = technology;
 
-	// index based loop: the list must not be invalidated if it's modified meanwhile
+	// Pyre909 build: index based loop, the list must not be invalidated if it's modified meanwhile
 	for (size_t i = 0; i < _liveViews.size(); ++i)
 	{
 		ScintillaEditView* pView = _liveViews[i];
 		if (isFollowing(pView))
 		{
 			pView->execute(SCI_SETTECHNOLOGY, technology);
-			pView->applyTextRenderingSettings(); // the "Follow Windows" antialiasing depends on the technology
+			pView->applyTextRenderingSettings(); // Pyre909 build: the "Follow Windows" antialiasing depends on the technology
+
+			// back to GDI, a document shown gets the right-to-left direction DirectWrite couldn't display (see activateBuffer)
+			if ((technology == defaultTechnology) && pView->_isMainEditZone && (pView->isTextDirectionRTL() != pView->getCurrentBuffer()->isRTL()))
+				pView->changeTextDirection(pView->getCurrentBuffer()->isRTL());
 		}
 	}
 	return true;

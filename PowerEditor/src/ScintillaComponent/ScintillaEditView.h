@@ -281,7 +281,7 @@ public:
 	// Apply them to every live Notepad++ Scintilla (edit views, Finders, Document Map, Peeker, plugins' Scintillas...)
 	static void applyTextRenderingSettingsToAll();
 	// Switch every live Notepad++ Scintilla following the Rendering mode setting to another technology, without restarting.
-	// Returns false, with nothing changed, when DirectWrite is chosen while a view shows right-to-left text.
+	// Returns false, with nothing changed, when DirectWrite is chosen while the main or second view shows right-to-left text.
 	static bool setTechnologyToAll(writeTechnologyEngine technology, HWND hMsgParent);
 	// Send a message to every live Notepad++ Scintilla window
 	static void sendMessageToAll(UINT Msg, WPARAM wParam = 0, LPARAM lParam = 0);
