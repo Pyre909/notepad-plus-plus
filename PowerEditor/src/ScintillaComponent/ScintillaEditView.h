@@ -280,9 +280,9 @@ public:
 	void applyTextRenderingSettings() const;
 	// Apply them to every live Notepad++ Scintilla (edit views, Finders, Document Map, Peeker, plugins' Scintillas...)
 	static void applyTextRenderingSettingsToAll();
-	// Switch every live Notepad++ Scintilla following the Rendering mode setting to another technology, without restarting.
-	// Returns false, with nothing changed, when DirectWrite is chosen while the main or second view shows right-to-left text.
-	static bool setTechnologyToAll(writeTechnologyEngine technology, HWND hMsgParent);
+	// Switch every live Notepad++ Scintilla following the Rendering mode setting to another technology, without restarting
+	// (the right-to-left views keep GDI, see changeTextDirection)
+	static void setTechnologyToAll(writeTechnologyEngine technology);
 	// Send a message to every live Notepad++ Scintilla window
 	static void sendMessageToAll(UINT Msg, WPARAM wParam = 0, LPARAM lParam = 0);
 
@@ -758,6 +758,19 @@ protected:
 	mutable int _defaultStyleFontStyle = STYLE_NOT_USED;
 	std::wstring _clearedStyleFontName;
 	int _clearedStyleFontStyle = STYLE_NOT_USED;
+
+	// the font of each style, as the font lists name it (empty: not set by Notepad++), mapped by getScintillaFont for
+	// the technology in use, and again when the technology changes (see refreshStyleFonts)
+	struct StyleFont
+	{
+		std::wstring _name;
+		bool _isBold = false;
+		bool _isItalic = false;
+	};
+	mutable std::vector<StyleFont> _styleFonts = std::vector<StyleFont>(STYLE_MAX + 1);
+	void setStyleFont(int styleID, const StyleFont& styleFont) const;
+	// sets the style fonts again after the technology changed: the same font may have another name or weight
+	void refreshStyleFonts() const;
 
 //Lexers and Styling
 	void restyleBuffer();

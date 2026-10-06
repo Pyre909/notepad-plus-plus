@@ -2155,12 +2155,8 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 								if (selIndex == CB_ERR)
 									return TRUE;
 
-								// applied at once, refused (the current rendering mode is shown again) for right-to-left text with DirectWrite
-								const writeTechnologyEngine previousTechnology = nppGUI._writeTechnologyEngine;
-								if (!ScintillaEditView::setTechnologyToAll(static_cast<writeTechnologyEngine>(selIndex), _hSelf))
-									::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_SETCURSEL, nppGUI._writeTechnologyEngine, 0);
-								else if (nppGUI._writeTechnologyEngine != previousTechnology)
-									::SendMessage(::GetParent(_hParent), WM_UPDATESCINTILLAS, FALSE, 0); // the style fonts depend on the technology (see ScintillaEditView::setSpecialStyle)
+								// applied at once, with the style fonts of the new technology (the right-to-left views keep GDI)
+								ScintillaEditView::setTechnologyToAll(static_cast<writeTechnologyEngine>(selIndex));
 								enableDirectWriteTextRendering();
 								return TRUE;
 							}

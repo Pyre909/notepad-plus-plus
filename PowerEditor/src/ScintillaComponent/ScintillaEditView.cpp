@@ -481,7 +481,8 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 			nppGui._writeTechnologyEngine = defaultTechnology;
 	}
 
-	if ((nppGui._writeTechnologyEngine > defaultTechnology) && (nppGui._writeTechnologyEngine < directWriteTechnologyUnavailable))
+	if ((nppGui._writeTechnologyEngine > defaultTechnology) && (nppGui._writeTechnologyEngine < directWriteTechnologyUnavailable)
+		&& !isTextDirectionRTL()) // a view mirrored like its window (RTL UI language) keeps GDI, see changeTextDirection
 	{
 		execute(SCI_SETTECHNOLOGY, nppGui._writeTechnologyEngine);
 		// If useDirectWrite is turned off, leave the technology setting untouched,
@@ -632,56 +633,28 @@ void ScintillaEditView::applyTextRenderingSettingsToAll()
 		_liveViews[i]->applyTextRenderingSettings();
 }
 
-bool ScintillaEditView::setTechnologyToAll(writeTechnologyEngine technology, HWND hMsgParent)
+void ScintillaEditView::setTechnologyToAll(writeTechnologyEngine technology)
 {
-	NppParameters& nppParams = NppParameters::getInstance();
-	NppGUI& nppGui = nppParams.getNppGUI();
+	NppGUI& nppGui = NppParameters::getInstance().getNppGUI();
 	const writeTechnologyEngine previous = nppGui._writeTechnologyEngine;
-	if ((technology == previous) || (technology < defaultTechnology) || (technology >= directWriteTechnologyUnavailable) ||
-		(previous >= directWriteTechnologyUnavailable))
-		return technology == previous;
-
-	// the views using the technology of the setting follow it, those a plugin switched itself are left as they are
-	auto isFollowing = [previous](const ScintillaEditView* pView) -> bool {
-		return pView->execute(SCI_GETTECHNOLOGY) == static_cast<LRESULT>(previous);
-	};
-
-	// DirectWrite can't draw right-to-left text (see changeTextDirection)
-	if (technology > defaultTechnology)
-	{
-		for (size_t i = 0; i < _liveViews.size(); ++i)
-		{
-			// only the main and second views show a direction the user chose (with an RTL UI language, every view inherits RTL)
-			const ScintillaEditView* pView = _liveViews[i];
-			if (isFollowing(pView) && pView->_isMainEditZone && pView->isTextDirectionRTL() && ::IsWindowVisible(pView->getHSelf()))
-			{
-				nppParams.getNativeLangSpeaker()->messageBox("DirectWriteVsRTL",
-					hMsgParent,
-					L"DirectWrite cannot display right-to-left text. Please switch the documents shown to left-to-right first (View > Text Direction LTR).",
-					L"Cannot use DirectWrite",
-					MB_OK | MB_APPLMODAL);
-				return false;
-			}
-		}
-	}
+	if ((technology == previous) || (technology >= directWriteTechnologyUnavailable) || (previous >= directWriteTechnologyUnavailable))
+		return;
 
 	nppGui._writeTechnologyEngine = technology;
 
+	// the views using the technology of the setting follow it, those a plugin switched itself are left as they are,
+	// and the right-to-left ones keep GDI (see changeTextDirection)
 	// Pyre909 build: index based loop, the list must not be invalidated if it's modified meanwhile
 	for (size_t i = 0; i < _liveViews.size(); ++i)
 	{
 		ScintillaEditView* pView = _liveViews[i];
-		if (isFollowing(pView))
+		if (!pView->isTextDirectionRTL() && (pView->execute(SCI_GETTECHNOLOGY) == static_cast<LRESULT>(previous)))
 		{
 			pView->execute(SCI_SETTECHNOLOGY, technology);
 			pView->applyTextRenderingSettings(); // Pyre909 build: the "Follow Windows" antialiasing depends on the technology
-
-			// back to GDI, a document shown gets the right-to-left direction DirectWrite couldn't display (see activateBuffer)
-			if ((technology == defaultTechnology) && pView->_isMainEditZone && (pView->isTextDirectionRTL() != pView->getCurrentBuffer()->isRTL()))
-				pView->changeTextDirection(pView->getCurrentBuffer()->isRTL());
+			pView->refreshStyleFonts(); // Pyre909 build: so do the style fonts (see getScintillaFont)
 		}
 	}
-	return true;
 }
 
 void ScintillaEditView::sendMessageToAll(UINT Msg, WPARAM wParam, LPARAM lParam)
@@ -1077,16 +1050,11 @@ void ScintillaEditView::setSpecialStyle(const Style& styleToSet) const
 		const std::wstring& currentFontName = isDefaultStyle ? _defaultStyleFontName : _clearedStyleFontName;
 		const int currentFontStyle = isDefaultStyle ? _defaultStyleFontStyle : _clearedStyleFontStyle;
 		const int effectiveFontStyle = (fontStyle != STYLE_NOT_USED) ? fontStyle : ((currentFontStyle != STYLE_NOT_USED) ? currentFontStyle : 0);
-		const ScintillaFont font = getScintillaFont(fontName.empty() ? currentFontName : fontName, (effectiveFontStyle & FONTSTYLE_BOLD) != 0,
-			(effectiveFontStyle & FONTSTYLE_ITALIC) != 0, static_cast<int>(execute(SCI_GETTECHNOLOGY)));
-		if (!font._name.empty())
-		{
-			std::string fontNameA = wstring2string(font._name, CP_UTF8);
-			execute(SCI_STYLESETFONT, styleID, reinterpret_cast<LPARAM>(fontNameA.c_str()));
-		}
-		execute(SCI_STYLESETWEIGHT, styleID, font._weight);
-		execute(SCI_STYLESETSTRETCH, styleID, font._stretch);
-		execute(SCI_STYLESETITALIC, styleID, font._isItalic);
+		const StyleFont styleFont{ fontName.empty() ? currentFontName : fontName, (effectiveFontStyle & FONTSTYLE_BOLD) != 0,
+			(effectiveFontStyle & FONTSTYLE_ITALIC) != 0 };
+		if ((styleID >= 0) && (styleID <= STYLE_MAX)) // the styles of stylers.xml can have any id
+			_styleFonts[styleID] = styleFont;
+		setStyleFont(styleID, styleFont);
 		if (fontStyle != STYLE_NOT_USED)
 			execute(SCI_STYLESETUNDERLINE, styleID, fontStyle & FONTSTYLE_UNDERLINE);
 	}
@@ -1169,12 +1137,40 @@ void ScintillaEditView::setStyle(Style styleToSet) const
 	setSpecialStyle(styleToSet);
 }
 
+void ScintillaEditView::setStyleFont(int styleID, const StyleFont& styleFont) const
+{
+	const ScintillaFont font = getScintillaFont(styleFont._name, styleFont._isBold, styleFont._isItalic, static_cast<int>(execute(SCI_GETTECHNOLOGY)));
+	if (!font._name.empty())
+	{
+		std::string fontNameA = wstring2string(font._name, CP_UTF8);
+		execute(SCI_STYLESETFONT, styleID, reinterpret_cast<LPARAM>(fontNameA.c_str()));
+	}
+	execute(SCI_STYLESETWEIGHT, styleID, font._weight);
+	execute(SCI_STYLESETSTRETCH, styleID, font._stretch);
+	execute(SCI_STYLESETITALIC, styleID, font._isItalic);
+}
+
+void ScintillaEditView::refreshStyleFonts() const
+{
+	for (int styleID = 0; styleID <= STYLE_MAX; ++styleID)
+	{
+		if (!_styleFonts[styleID]._name.empty())
+			setStyleFont(styleID, _styleFonts[styleID]);
+	}
+}
+
 void ScintillaEditView::clearAllStyles()
 {
 	execute(SCI_STYLECLEARALL);
 	// the font of the styles without their own font name or font style (see setSpecialStyle)
 	_clearedStyleFontName = _defaultStyleFontName;
 	_clearedStyleFontStyle = _defaultStyleFontStyle;
+	// every other style now has the font of STYLE_DEFAULT
+	for (int styleID = 0; styleID <= STYLE_MAX; ++styleID)
+	{
+		if (styleID != STYLE_DEFAULT)
+			_styleFonts[styleID] = _styleFonts[STYLE_DEFAULT];
+	}
 }
 
 
@@ -4812,28 +4808,29 @@ void ScintillaEditView::changeTextDirection(bool isRTL)
 	if (isTextDirectionRTL() == isRTL)
 		return;
 
-	NppParameters& nppParamInst = NppParameters::getInstance();
-	if (isRTL && (nppParamInst.getNppGUI()._writeTechnologyEngine > defaultTechnology)
-		&& (nppParamInst.getNppGUI()._writeTechnologyEngine < directWriteTechnologyUnavailable)) // RTL is not compatible with DirectWrite
-	{
-		static bool theWarningIsGiven = false;
-
-		if (!theWarningIsGiven)
-		{
-			(nppParamInst.getNativeLangSpeaker())->messageBox("RTLvsDirectWrite",
-				getHSelf(),
-				L"RTL is not compatible with Direct Write mode. Please choose the GDI rendering mode in Editing 1 section of Preferences dialog.",
-				L"Cannot run RTL",
-				MB_OK | MB_APPLMODAL);
-
-			theWarningIsGiven = true;
-		}
-		return;
-	}
+	// DirectWrite doesn't follow the mirroring of the window (WS_EX_LAYOUTRTL), only GDI does: a right-to-left view is
+	// drawn with GDI, and gets the rendering mode of the setting back once left-to-right
+	const LRESULT previousTechnology = execute(SCI_GETTECHNOLOGY);
+	if (isRTL && (previousTechnology != SC_TECHNOLOGY_DEFAULT))
+		execute(SCI_SETTECHNOLOGY, SC_TECHNOLOGY_DEFAULT);
 
 	long exStyle = static_cast<long>(::GetWindowLongPtr(_hSelf, GWL_EXSTYLE));
 	exStyle = isRTL ? (exStyle | WS_EX_LAYOUTRTL) : (exStyle & (~WS_EX_LAYOUTRTL));
 	::SetWindowLongPtr(_hSelf, GWL_EXSTYLE, exStyle);
+
+	const writeTechnologyEngine technology = NppParameters::getInstance().getNppGUI()._writeTechnologyEngine;
+	if (!isRTL && (technology > defaultTechnology) && (technology < directWriteTechnologyUnavailable)
+		&& (previousTechnology == SC_TECHNOLOGY_DEFAULT))
+	{
+		execute(SCI_SETTECHNOLOGY, technology);
+	}
+
+	// Pyre909 build: the antialiasing and the style fonts depend on the technology
+	if (execute(SCI_GETTECHNOLOGY) != previousTechnology)
+	{
+		applyTextRenderingSettings();
+		refreshStyleFonts();
+	}
 
 	if (isRTL)
 	{
