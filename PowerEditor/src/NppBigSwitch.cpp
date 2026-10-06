@@ -1910,9 +1910,16 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 
 		case NPPM_SETSMOOTHFONT:
 		{
-			int param = (lParam == 0 ? SC_EFF_QUALITY_DEFAULT : SC_EFF_QUALITY_LCD_OPTIMIZED);
-			_mainEditView.execute(SCI_SETFONTQUALITY, param);
-			_subEditView.execute(SCI_SETFONTQUALITY, param);
+			if (lParam == 0) // the font quality follows the Windows font smoothing
+			{
+				_mainEditView.applyWindowsFontQuality();
+				_subEditView.applyWindowsFontQuality();
+			}
+			else
+			{
+				_mainEditView.execute(SCI_SETFONTQUALITY, SC_EFF_QUALITY_LCD_OPTIMIZED);
+				_subEditView.execute(SCI_SETFONTQUALITY, SC_EFF_QUALITY_LCD_OPTIMIZED);
+			}
 			return TRUE;
 		}
 

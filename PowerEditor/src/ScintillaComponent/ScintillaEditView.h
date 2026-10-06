@@ -686,6 +686,7 @@ public:
 	void sortLines(size_t fromLine, size_t toLine, ISorter *pSort);
 	void changeTextDirection(bool isRTL);
 	bool isTextDirectionRTL() const;
+	void applyWindowsFontQuality();
 	void setPositionRestoreNeeded(bool val) { _positionRestoreNeeded = val; }
 	void markedTextToClipboard(int indiStyle, bool doAll = false);
 	void removeAnyDuplicateLines();
@@ -722,6 +723,9 @@ protected:
 	intptr_t _beginSelectPosition = -1;
 	static std::string _defaultCharList;
 	bool _isMultiPasteActive = false;
+
+	int _windowsFontQuality = SC_EFF_QUALITY_DEFAULT; // the font quality applyWindowsFontQuality gave the view
+	int getWindowsFontQuality() const;
 
 //Lexers and Styling
 	void restyleBuffer();
