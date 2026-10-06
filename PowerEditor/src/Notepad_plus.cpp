@@ -884,6 +884,11 @@ LRESULT Notepad_plus::init(HWND hwnd)
 	activateBuffer(_mainEditView.getCurrentBufferID(), MAIN_VIEW);
 	activateBuffer(_subEditView.getCurrentBufferID(), SUB_VIEW);
 
+	// with an RTL UI language the views are mirrored like the Notepad++ window, but their first document can be LTR
+	// (editZoneRTL="no"): activateBuffer returns early for the document already current, so its direction is set here
+	_mainEditView.changeTextDirection(_mainEditView.getCurrentBuffer()->isRTL());
+	_subEditView.changeTextDirection(_subEditView.getCurrentBuffer()->isRTL());
+
 	_mainEditView.grabFocus();
 
 	return TRUE;

@@ -493,7 +493,8 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 			nppGui._writeTechnologyEngine = defaultTechnology;
 	}
 
-	if ((nppGui._writeTechnologyEngine > defaultTechnology) && (nppGui._writeTechnologyEngine < directWriteTechnologyUnavailable))
+	if ((nppGui._writeTechnologyEngine > defaultTechnology) && (nppGui._writeTechnologyEngine < directWriteTechnologyUnavailable)
+		&& !isTextDirectionRTL()) // a view mirrored like its window (RTL UI language) keeps GDI, see changeTextDirection
 	{
 		execute(SCI_SETTECHNOLOGY, nppGui._writeTechnologyEngine);
 		// If useDirectWrite is turned off, leave the technology setting untouched,
@@ -4523,28 +4524,21 @@ void ScintillaEditView::changeTextDirection(bool isRTL)
 	if (isTextDirectionRTL() == isRTL)
 		return;
 
-	NppParameters& nppParamInst = NppParameters::getInstance();
-	if (isRTL && (nppParamInst.getNppGUI()._writeTechnologyEngine > defaultTechnology)
-		&& (nppParamInst.getNppGUI()._writeTechnologyEngine < directWriteTechnologyUnavailable)) // RTL is not compatible with DirectWrite
-	{
-		static bool theWarningIsGiven = false;
-
-		if (!theWarningIsGiven)
-		{
-			(nppParamInst.getNativeLangSpeaker())->messageBox("RTLvsDirectWrite",
-				getHSelf(),
-				L"RTL is not compatible with Direct Write mode. Please disable DirectWrite mode in MISC. section of Preferences dialog, and restart Notepad++.",
-				L"Cannot run RTL",
-				MB_OK | MB_APPLMODAL);
-
-			theWarningIsGiven = true;
-		}
-		return;
-	}
+	// DirectWrite doesn't follow the mirroring of the window (WS_EX_LAYOUTRTL), only GDI does: a right-to-left view is
+	// drawn with GDI, and gets the rendering mode of the setting back once left-to-right
+	if (isRTL && (execute(SCI_GETTECHNOLOGY) != SC_TECHNOLOGY_DEFAULT))
+		execute(SCI_SETTECHNOLOGY, SC_TECHNOLOGY_DEFAULT);
 
 	long exStyle = static_cast<long>(::GetWindowLongPtr(_hSelf, GWL_EXSTYLE));
 	exStyle = isRTL ? (exStyle | WS_EX_LAYOUTRTL) : (exStyle & (~WS_EX_LAYOUTRTL));
 	::SetWindowLongPtr(_hSelf, GWL_EXSTYLE, exStyle);
+
+	const writeTechnologyEngine technology = NppParameters::getInstance().getNppGUI()._writeTechnologyEngine;
+	if (!isRTL && (technology > defaultTechnology) && (technology < directWriteTechnologyUnavailable)
+		&& (execute(SCI_GETTECHNOLOGY) == SC_TECHNOLOGY_DEFAULT))
+	{
+		execute(SCI_SETTECHNOLOGY, technology);
+	}
 
 	if (isRTL)
 	{
