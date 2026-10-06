@@ -408,23 +408,6 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 				addTextRenderingInfo(L"Text Antialiasing: ", { L"Follow Windows", L"ClearType", L"ClearType less color fringing", L"Grayscale", L"None" }, svp._textAntialiasing);
 				addTextRenderingInfo(L"DirectWrite Rendering Mode: ", { L"Automatic", L"Natural", L"Symmetric", L"GDI classic", L"Adaptive" }, svp._textRenderingMode);
 				addTextRenderingInfo(L"Text Contrast: ", { L"Follow Windows", L"Medium", L"High", L"Very high" }, svp._textContrast);
-
-				// advanced overrides of config.xml, only the set ones
-				wstring overrides;
-				for (const auto& [name, value] : std::initializer_list<std::pair<const wchar_t*, int>>{
-					{ L"fontGamma", svp._fontGamma }, { L"fontEnhancedContrast", svp._fontEnhancedContrast },
-					{ L"fontGrayscaleEnhancedContrast", svp._fontGrayscaleEnhancedContrast }, { L"fontClearTypeLevel", svp._fontClearTypeLevel },
-					{ L"fontPixelGeometry", svp._fontPixelGeometry }, { L"fontLightTextGamma", svp._fontLightTextGamma } })
-				{
-					if (value == SC_FONTRENDERING_DEFAULT)
-						continue;
-					if (!overrides.empty())
-						overrides += L", ";
-					overrides += name;
-					overrides += L"=" + std::to_wstring(value);
-				}
-				if (!overrides.empty())
-					_debugInfoStr += L"Text Rendering Overrides: " + overrides + L"\r\n";
 			}
 
 			// Multi-instance

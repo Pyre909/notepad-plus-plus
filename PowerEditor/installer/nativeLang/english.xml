@@ -1954,7 +1954,7 @@ If you select advanced mode but do not edit files in the aforementioned language
 			<global-override-tip value="Enabling &quot;Global override&quot; here will override that parameter in all language styles. What you probably really want is to use the &quot;Default Style&quot; settings instead"/>
 			<scintillaRenderingTechnology-tip value="May improve rendering of special characters or resolve some graphics issues."/>
 			<!-- Don't translate "ClearType", "DirectWrite", "GDI" and "DPI" in the 3 following tips -->
-			<textAntialiasing-tip value="Grayscale is recommended for OLED screens and for rotated (portrait) screens, where ClearType color fringes are more visible."/>
+			<textAntialiasing-tip value="Follow Windows: the Windows font smoothing (off, Standard or ClearType). ClearType: always, as &quot;Enable smooth font&quot; did; &quot;less color fringing&quot; applies to DirectWrite only. Grayscale is recommended for OLED screens and for rotated (portrait) screens, where ClearType color fringes are more visible."/>
 			<textRenderingMode-tip value="Natural avoids the vertical blur of small text. GDI classic snaps the glyphs to whole pixels like GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text."/>
 			<textContrast-tip value="DirectWrite only. Makes the strokes heavier: darkens dark text on light backgrounds and thickens light text on dark themes."/>
 

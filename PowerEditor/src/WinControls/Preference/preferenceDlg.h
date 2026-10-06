@@ -88,36 +88,18 @@ friend class PreferenceDlg;
 public :
 	EditingSubDlg() = default;
 	~EditingSubDlg() override {
-		if (_tipScintillaRenderingTechnology != nullptr)
+		for (auto& tip : _tips)
 		{
-			::DestroyWindow(_tipScintillaRenderingTechnology);
-			_tipScintillaRenderingTechnology = nullptr;
-		}
-
-		if (_tipTextAntialiasing != nullptr)
-		{
-			::DestroyWindow(_tipTextAntialiasing);
-			_tipTextAntialiasing = nullptr;
-		}
-
-		if (_tipTextRenderingMode != nullptr)
-		{
-			::DestroyWindow(_tipTextRenderingMode);
-			_tipTextRenderingMode = nullptr;
-		}
-
-		if (_tipTextContrast != nullptr)
-		{
-			::DestroyWindow(_tipTextContrast);
-			_tipTextContrast = nullptr;
+			if (tip != nullptr)
+			{
+				::DestroyWindow(tip);
+				tip = nullptr;
+			}
 		}
 	}
 
 private :
-	HWND _tipScintillaRenderingTechnology = nullptr;
-	HWND _tipTextAntialiasing = nullptr;
-	HWND _tipTextRenderingMode = nullptr;
-	HWND _tipTextContrast = nullptr;
+	std::vector<HWND> _tips; // Pyre909 build: of the Text Rendering combo boxes
 
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	void initScintParam();

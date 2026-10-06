@@ -759,13 +759,26 @@ template <typename T>
 	return static_cast<T>(val);
 }
 
-// DirectWrite text rendering override: SC_FONTRENDERING_DEFAULT (not set) or a value of its range
-[[nodiscard]] static int getFontRenderingAttribute(const NppXml::Element& elem, const char* name, int minVal, int maxVal, int defaultVal)
+// Pyre909 build: the Text Rendering settings (Preferences > Editing 1) of <GUIConfig name="ScintillaPrimaryView">,
+// fontAntialiasing="0" fontRenderingMode="0" fontContrast="0". smoothFont="yes" was ClearType, and a smoothFont that
+// disagrees with fontAntialiasing was changed since by a Notepad++ without these settings sharing config.xml: the newer.
+static void readTextRenderingParams(const NppXml::Element& elem, ScintillaViewParams& svp)
 {
-	const int val = NppXml::intAttribute(elem, name, defaultVal);
-	if (val == SC_FONTRENDERING_DEFAULT || (val >= minVal && val <= maxVal))
-		return val;
-	return defaultVal;
+	svp._textAntialiasing = getRangeDefaultAttribute(elem, "fontAntialiasing", textAntialiasingFollowWindows, textAntialiasingNone, svp._textAntialiasing);
+	if (svp._doSmoothFont != svp.isClearTypeAntialiasing())
+		svp._textAntialiasing = svp._doSmoothFont ? textAntialiasingClearType : textAntialiasingFollowWindows;
+	svp._textRenderingMode = getRangeDefaultAttribute(elem, "fontRenderingMode", textRenderingModeAutomatic, textRenderingModeAdaptive, svp._textRenderingMode);
+	svp._textContrast = getRangeDefaultAttribute(elem, "fontContrast", textContrastFollowWindows, textContrastVeryHigh, svp._textContrast);
+}
+
+static void writeTextRenderingParams(NppXml::Element& elem, const ScintillaViewParams& svp)
+{
+	NppXml::setAttribute(elem, "fontAntialiasing", svp._textAntialiasing);
+	NppXml::setAttribute(elem, "fontRenderingMode", svp._textRenderingMode);
+	NppXml::setAttribute(elem, "fontContrast", svp._textContrast);
+	// the advanced overrides of the former Pyre909 builds
+	for (const char* name : { "fontGamma", "fontEnhancedContrast", "fontGrayscaleEnhancedContrast", "fontClearTypeLevel", "fontPixelGeometry", "fontLightTextGamma" })
+		elem.remove_attribute(name);
 }
 
 static void setBoolAttribute(NppXml::Element& elem, const char* name, bool isTrue, const std::array<const char*, 2>& strs2set = STR_BOOL_YESNO)
@@ -7127,9 +7140,8 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 // virtualSpace="no" scrollBeyondLastLine="yes" rightClickKeepsSelection="no" selectedTextForegroundSingleColor="no" disableAdvancedScrolling="no"
 // wrapSymbolShow="hide" Wrap="no" borderEdge="yes" isEdgeBgMode="no" edgeMultiColumnPos="" zoom="0" zoom2="0" whiteSpaceShow="hide"
 // eolShow="hide" eolMode="1" npcShow="hide" npcMode="1" npcCustomColor="no" npcIncludeCcUniEOL="no" npcNoInputC0="yes" ccShow="yes"
-// borderWidth="2" smoothFont="no" fontAntialiasing="0" fontRenderingMode="0" fontContrast="0" fontGamma="-1" fontEnhancedContrast="-1"
-// fontGrayscaleEnhancedContrast="-1" fontClearTypeLevel="-1" fontPixelGeometry="-1" fontLightTextGamma="-1" paddingLeft="0" paddingRight="0"
-// distractionFreeDivPart="4" lineCopyCutWithoutSelection="yes" multiSelection="yes" columnSel2MultiEdit="yes" disableSelectedTextDragDrop="no" />
+// borderWidth="2" smoothFont="no" paddingLeft="0" paddingRight="0" distractionFreeDivPart="4" lineCopyCutWithoutSelection="yes"
+// multiSelection="yes" columnSel2MultiEdit="yes" disableSelectedTextDragDrop="no" />
 void NppParameters::feedScintillaParam(const NppXml::Element& element)
 {
 	// Line Number Margin
@@ -7316,23 +7328,9 @@ void NppParameters::feedScintillaParam(const NppXml::Element& element)
 
 	_svp._borderWidth = getRangeClampAttribute(element, "borderWidth", 0, 30, _svp._borderWidth);
 
-	// Text antialiasing, retro-compatibility: smoothFont="yes" was ClearType
-	if (NppXml::attribute(element, "fontAntialiasing"))
-		_svp._textAntialiasing = getRangeDefaultAttribute(element, "fontAntialiasing", textAntialiasingFollowWindows, textAntialiasingNone, _svp._textAntialiasing);
-	else if (getBoolAttribute(element, "smoothFont"))
-		_svp._textAntialiasing = textAntialiasingClearType;
-
-	// Text rendering mode & contrast (DirectWrite only)
-	_svp._textRenderingMode = getRangeDefaultAttribute(element, "fontRenderingMode", textRenderingModeAutomatic, textRenderingModeAdaptive, _svp._textRenderingMode);
-	_svp._textContrast = getRangeDefaultAttribute(element, "fontContrast", textContrastWindows, textContrastVeryHigh, _svp._textContrast);
-
-	// Advanced DirectWrite text rendering overrides
-	_svp._fontGamma = getFontRenderingAttribute(element, "fontGamma", 1000, 2200, _svp._fontGamma);
-	_svp._fontEnhancedContrast = getFontRenderingAttribute(element, "fontEnhancedContrast", 0, 1000, _svp._fontEnhancedContrast);
-	_svp._fontGrayscaleEnhancedContrast = getFontRenderingAttribute(element, "fontGrayscaleEnhancedContrast", 0, 1000, _svp._fontGrayscaleEnhancedContrast);
-	_svp._fontClearTypeLevel = getFontRenderingAttribute(element, "fontClearTypeLevel", 0, 100, _svp._fontClearTypeLevel);
-	_svp._fontPixelGeometry = getFontRenderingAttribute(element, "fontPixelGeometry", SC_PIXELGEOMETRY_FLAT, SC_PIXELGEOMETRY_BGR, _svp._fontPixelGeometry);
-	_svp._fontLightTextGamma = getFontRenderingAttribute(element, "fontLightTextGamma", 1000, 2200, _svp._fontLightTextGamma);
+	// Do antialiased font
+	_svp._doSmoothFont = getBoolAttribute(element, "smoothFont");
+	readTextRenderingParams(element, _svp); // Pyre909 build
 
 	_svp._paddingLeft = getRangeClampAttribute<unsigned char>(element, "paddingLeft", 0U, 30U, _svp._paddingLeft);
 	_svp._paddingRight = getRangeClampAttribute<unsigned char>(element, "paddingRight", 0U, 30U, _svp._paddingRight);
@@ -7613,16 +7611,8 @@ bool NppParameters::writeScintillaParams()
 	setBoolAttribute(scintNode, "npcNoInputC0", _svp._npcNoInputC0);
 	setBoolAttribute(scintNode, "ccShow", _svp._ccUniEolShow);
 	NppXml::setAttribute(scintNode, "borderWidth", _svp._borderWidth);
-	setBoolAttribute(scintNode, "smoothFont", _svp.isClearTypeAntialiasing()); // for the older Notepad++ versions sharing this config.xml
-	NppXml::setAttribute(scintNode, "fontAntialiasing", _svp._textAntialiasing);
-	NppXml::setAttribute(scintNode, "fontRenderingMode", _svp._textRenderingMode);
-	NppXml::setAttribute(scintNode, "fontContrast", _svp._textContrast);
-	NppXml::setAttribute(scintNode, "fontGamma", _svp._fontGamma);
-	NppXml::setAttribute(scintNode, "fontEnhancedContrast", _svp._fontEnhancedContrast);
-	NppXml::setAttribute(scintNode, "fontGrayscaleEnhancedContrast", _svp._fontGrayscaleEnhancedContrast);
-	NppXml::setAttribute(scintNode, "fontClearTypeLevel", _svp._fontClearTypeLevel);
-	NppXml::setAttribute(scintNode, "fontPixelGeometry", _svp._fontPixelGeometry);
-	NppXml::setAttribute(scintNode, "fontLightTextGamma", _svp._fontLightTextGamma);
+	setBoolAttribute(scintNode, "smoothFont", _svp._doSmoothFont);
+	writeTextRenderingParams(scintNode, _svp); // Pyre909 build
 	NppXml::setAttribute(scintNode, "paddingLeft", _svp._paddingLeft);
 	NppXml::setAttribute(scintNode, "paddingRight", _svp._paddingRight);
 	NppXml::setAttribute(scintNode, "distractionFreeDivPart", _svp._distractionFreeDivPart);
@@ -8293,9 +8283,8 @@ void NppParameters::createXmlTreeFromGUIParams()
 	// virtualSpace="no" scrollBeyondLastLine="yes" rightClickKeepsSelection="no" selectedTextForegroundSingleColor="no" disableAdvancedScrolling="no"
 	// wrapSymbolShow="hide" Wrap="no" borderEdge="yes" isEdgeBgMode="no" edgeMultiColumnPos="" zoom="0" zoom2="0" whiteSpaceShow="hide"
 	// eolShow="hide" eolMode="1" npcShow="hide" npcMode="1" npcCustomColor="no" npcIncludeCcUniEOL="no" npcNoInputC0="yes" ccShow="yes"
-	// borderWidth="2" smoothFont="no" fontAntialiasing="0" fontRenderingMode="0" fontContrast="0" fontGamma="-1" fontEnhancedContrast="-1"
-	// fontGrayscaleEnhancedContrast="-1" fontClearTypeLevel="-1" fontPixelGeometry="-1" fontLightTextGamma="-1" paddingLeft="0" paddingRight="0"
-	// distractionFreeDivPart="4" lineCopyCutWithoutSelection="yes" multiSelection="yes" columnSel2MultiEdit="yes" disableSelectedTextDragDrop="no" />
+	// borderWidth="2" smoothFont="no" paddingLeft="0" paddingRight="0" distractionFreeDivPart="4" lineCopyCutWithoutSelection="yes"
+	// multiSelection="yes" columnSel2MultiEdit="yes" disableSelectedTextDragDrop="no" />
 	writeScintillaParams();
 
 	// <GUIConfig name="DockingManager" leftWidth="328" rightWidth="359" topHeight="200" bottomHeight="436">

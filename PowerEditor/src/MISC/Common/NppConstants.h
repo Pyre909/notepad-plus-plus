@@ -251,7 +251,7 @@ enum textRenderingMode
 // the order has to match the Preferences > Editing 1 "Text contrast" combo box items
 enum textContrast
 {
-	textContrastWindows,
+	textContrastFollowWindows,
 	textContrastMedium,
 	textContrastHigh,
 	textContrastVeryHigh

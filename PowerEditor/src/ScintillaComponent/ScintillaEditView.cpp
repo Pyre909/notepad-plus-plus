@@ -523,7 +523,8 @@ void ScintillaEditView::applyTextRenderingSettings()
 	const ScintillaViewParams& svp = NppParameters::getInstance().getSVP();
 
 	// "Follow Windows" is the font quality following the Windows font smoothing, followed when it changes (see the
-	// WM_SETTINGCHANGE of ScintillaProc); the other antialiasing choices don't follow it
+	// WM_SETTINGCHANGE of ScintillaProc); the other antialiasing choices don't follow it. A font quality set restyles the
+	// view, so it's set only when it changes.
 	if (svp._textAntialiasing == textAntialiasingFollowWindows)
 	{
 		if ((getWindowsFontQuality() != _windowsFontQuality) || (execute(SCI_GETFONTQUALITY) != _windowsFontQuality))
@@ -531,50 +532,30 @@ void ScintillaEditView::applyTextRenderingSettings()
 	}
 	else
 	{
-		int fontQuality = SC_EFF_QUALITY_DEFAULT;
-		switch (svp._textAntialiasing)
-		{
-			case textAntialiasingClearType:
-			case textAntialiasingClearTypeLessColor:
-				fontQuality = SC_EFF_QUALITY_LCD_OPTIMIZED;
-				break;
-
-			case textAntialiasingGrayscale:
-				fontQuality = SC_EFF_QUALITY_ANTIALIASED;
-				break;
-
-			default: // textAntialiasingNone
-				fontQuality = SC_EFF_QUALITY_NON_ANTIALIASED;
-		}
+		static constexpr int fontQualities[]{ // indexed by textAntialiasing
+			SC_EFF_QUALITY_DEFAULT,          // textAntialiasingFollowWindows: see above
+			SC_EFF_QUALITY_LCD_OPTIMIZED,    // textAntialiasingClearType
+			SC_EFF_QUALITY_LCD_OPTIMIZED,    // textAntialiasingClearTypeLessColor
+			SC_EFF_QUALITY_ANTIALIASED,      // textAntialiasingGrayscale
+			SC_EFF_QUALITY_NON_ANTIALIASED   // textAntialiasingNone
+		};
+		static_assert(std::size(fontQualities) == static_cast<size_t>(textAntialiasingNone) + 1);
 		_windowsFontQuality = -1; // none: the view doesn't follow Windows
-		execute(SCI_SETFONTQUALITY, fontQuality);
+		const int fontQuality = fontQualities[svp._textAntialiasing];
+		if (execute(SCI_GETFONTQUALITY) != fontQuality)
+			execute(SCI_SETFONTQUALITY, fontQuality);
 	}
 
-	// The following parameters are used only by DirectWrite, SC_FONTRENDERING_DEFAULT (-1) removes the override.
-	// They are sent even with GDI, so they are ready if the technology is switched to DirectWrite (by a plugin for example).
-
-	int renderingMode = SC_FONTRENDERING_DEFAULT;
-	switch (svp._textRenderingMode)
-	{
-		case textRenderingModeNatural:
-			renderingMode = SC_RENDERINGMODE_NATURAL;
-			break;
-
-		case textRenderingModeSymmetric:
-			renderingMode = SC_RENDERINGMODE_NATURALSYMMETRIC;
-			break;
-
-		case textRenderingModeGdiClassic:
-			renderingMode = SC_RENDERINGMODE_GDICLASSIC;
-			break;
-
-		case textRenderingModeAdaptive:
-			renderingMode = SC_RENDERINGMODE_ADAPTIVE;
-			break;
-
-		default: // textRenderingModeAutomatic
-			break;
-	}
+	// The DirectWrite rendering parameters, sent with GDI too so that they're ready if the technology is switched to
+	// DirectWrite (by a plugin for example). SC_FONTRENDERING_DEFAULT: the monitor's value; an unchanged value costs nothing.
+	static constexpr int renderingModes[]{ // indexed by textRenderingMode
+		SC_FONTRENDERING_DEFAULT,          // textRenderingModeAutomatic
+		SC_RENDERINGMODE_NATURAL,          // textRenderingModeNatural
+		SC_RENDERINGMODE_NATURALSYMMETRIC, // textRenderingModeSymmetric
+		SC_RENDERINGMODE_GDICLASSIC,       // textRenderingModeGdiClassic
+		SC_RENDERINGMODE_ADAPTIVE          // textRenderingModeAdaptive
+	};
+	static_assert(std::size(renderingModes) == static_cast<size_t>(textRenderingModeAdaptive) + 1);
 
 	// DirectWrite's enhanced contrast only darkens dark text (it's reduced to nothing for light text),
 	// light text (on dark themes) gets heavier with a higher gamma, which would make dark text lighter:
@@ -586,27 +567,26 @@ void ScintillaEditView::applyTextRenderingSettings()
 		int _lightTextGamma = SC_FONTRENDERING_DEFAULT;            // in thousandths
 	};
 	static constexpr TextContrastParams textContrastParams[]{ // indexed by textContrast
-		{},                 // textContrastWindows: the Windows parameters, as Notepad++ always did
+		{},                 // textContrastFollowWindows: the Windows parameters, as Notepad++ always did
 		{ 100, 150, 2000 }, // textContrastMedium
 		{ 200, 250, 2200 }, // textContrastHigh
 		{ 300, 350, 2200 }  // textContrastVeryHigh (2.2: the highest gamma DirectWrite's text blending uses)
 	};
+	static_assert(std::size(textContrastParams) == static_cast<size_t>(textContrastVeryHigh) + 1);
 	const TextContrastParams& contrast = textContrastParams[svp._textContrast];
 
 	// ClearType level in percent: 50% reduces the color fringes while keeping ClearType horizontal resolution
 	static constexpr int clearTypeLessColorLevel = 50;
-	const int clearTypeLevel = (svp._textAntialiasing == textAntialiasingClearTypeLessColor) ? clearTypeLessColorLevel : SC_FONTRENDERING_DEFAULT;
 
-	// the advanced overrides of config.xml (SC_FONTRENDERING_DEFAULT: not set) take precedence over the values derived from the settings
-	auto overriddenBy = [](int value, int overrideValue) -> int { return (overrideValue != SC_FONTRENDERING_DEFAULT) ? overrideValue : value; };
-
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_GAMMA, overriddenBy(SC_FONTRENDERING_DEFAULT, svp._fontGamma));
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_ENHANCEDCONTRAST, overriddenBy(contrast._enhancedContrast, svp._fontEnhancedContrast));
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_GRAYSCALEENHANCEDCONTRAST, overriddenBy(contrast._grayscaleEnhancedContrast, svp._fontGrayscaleEnhancedContrast));
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_CLEARTYPELEVEL, overriddenBy(clearTypeLevel, svp._fontClearTypeLevel));
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_PIXELGEOMETRY, overriddenBy(SC_FONTRENDERING_DEFAULT, svp._fontPixelGeometry));
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_RENDERINGMODE, renderingMode);
-	execute(SCI_SETFONTRENDERINGPARAMETER, SC_FONTRENDERING_LIGHTTEXTGAMMA, overriddenBy(contrast._lightTextGamma, svp._fontLightTextGamma));
+	const std::pair<int, int> parameters[]{
+		{ SC_FONTRENDERING_RENDERINGMODE, renderingModes[svp._textRenderingMode] },
+		{ SC_FONTRENDERING_ENHANCEDCONTRAST, contrast._enhancedContrast },
+		{ SC_FONTRENDERING_GRAYSCALEENHANCEDCONTRAST, contrast._grayscaleEnhancedContrast },
+		{ SC_FONTRENDERING_LIGHTTEXTGAMMA, contrast._lightTextGamma },
+		{ SC_FONTRENDERING_CLEARTYPELEVEL, (svp._textAntialiasing == textAntialiasingClearTypeLessColor) ? clearTypeLessColorLevel : SC_FONTRENDERING_DEFAULT }
+	};
+	for (const auto& [parameter, value] : parameters)
+		execute(SCI_SETFONTRENDERINGPARAMETER, parameter, value);
 }
 
 void ScintillaEditView::applyTextRenderingSettingsToAll()

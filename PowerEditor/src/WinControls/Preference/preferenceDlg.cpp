@@ -46,7 +46,6 @@
 #include "Parameters.h"
 #include "ScintillaEditView.h"
 #include "ToolBar.h"
-#include "WordStyleDlg.h"
 #include "dpiManagerV2.h"
 #include "localization.h"
 #include "menuCmdID.h"
@@ -423,14 +422,13 @@ intptr_t CALLBACK PreferenceDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			if (_indentationSubDlg._tipAutoIndentAdvanced)
 				NppDarkMode::setDarkTooltips(_indentationSubDlg._tipAutoIndentAdvanced, NppDarkMode::ToolTipsType::tooltip);
 
-			if (_editingSubDlg._tipScintillaRenderingTechnology)
-				NppDarkMode::setDarkTooltips(_editingSubDlg._tipScintillaRenderingTechnology, NppDarkMode::ToolTipsType::tooltip);
-			if (_editingSubDlg._tipTextAntialiasing)
-				NppDarkMode::setDarkTooltips(_editingSubDlg._tipTextAntialiasing, NppDarkMode::ToolTipsType::tooltip);
-			if (_editingSubDlg._tipTextRenderingMode)
-				NppDarkMode::setDarkTooltips(_editingSubDlg._tipTextRenderingMode, NppDarkMode::ToolTipsType::tooltip);
-			if (_editingSubDlg._tipTextContrast)
-				NppDarkMode::setDarkTooltips(_editingSubDlg._tipTextContrast, NppDarkMode::ToolTipsType::tooltip);
+			for (auto& tip : _editingSubDlg._tips)
+			{
+				if (tip != nullptr)
+				{
+					NppDarkMode::setDarkTooltips(tip, NppDarkMode::ToolTipsType::tooltip);
+				}
+			}
 
 			// groupbox label in dark mode support disabled text color
 			if (NppDarkMode::isEnabled())
@@ -1777,45 +1775,42 @@ void EditingSubDlg::initTextRenderingParam()
 	}
 
 	// the items order has to match the textAntialiasing, textRenderingMode & textContrast enums
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTANTIALIASING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Follow Windows"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTANTIALIASING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"ClearType"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTANTIALIASING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"ClearType (less color fringing)"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTANTIALIASING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Grayscale"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTANTIALIASING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"None"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTANTIALIASING, CB_SETCURSEL, svp._textAntialiasing, 0);
-
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Automatic"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Natural (sharper small text)"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Symmetric (smoother)"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"GDI classic (pixel-aligned)"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Adaptive (Natural for small text)"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTRENDERINGMODE, CB_SETCURSEL, svp._textRenderingMode, 0);
-
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Follow Windows"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Medium"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"High"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Very high"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_TEXTCONTRAST, CB_SETCURSEL, svp._textContrast, 0);
+	auto setComboItems = [this](int comboId, std::initializer_list<const wchar_t*> items, int selected) {
+		for (const wchar_t* item : items)
+			::SendDlgItemMessage(_hSelf, comboId, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(item));
+		::SendDlgItemMessage(_hSelf, comboId, CB_SETCURSEL, selected, 0);
+	};
+	setComboItems(IDC_COMBO_TEXTANTIALIASING, { L"Follow Windows", L"ClearType", L"ClearType (less color fringing)", L"Grayscale", L"None" },
+		svp._textAntialiasing);
+	setComboItems(IDC_COMBO_TEXTRENDERINGMODE, { L"Automatic", L"Natural (sharper small text)", L"Symmetric (smoother)",
+		L"GDI classic (pixel-aligned)", L"Adaptive (Natural for small text)" }, svp._textRenderingMode);
+	setComboItems(IDC_COMBO_TEXTCONTRAST, { L"Follow Windows", L"Medium", L"High", L"Very high" }, svp._textContrast);
 
 	enableDirectWriteTextRendering();
 
+	// the tooltips: their id in the localization files, their English text
+	struct ComboTip
+	{
+		int _comboId = 0;
+		const char* _stringId = nullptr;
+		const wchar_t* _text = nullptr;
+	};
+	static constexpr ComboTip comboTips[]{
+		{ IDC_COMBO_SC_TECHNOLOGY_CHOICE, "scintillaRenderingTechnology-tip",
+			L"May improve rendering of special characters or resolve some graphics issues." },
+		{ IDC_COMBO_TEXTANTIALIASING, "textAntialiasing-tip",
+			L"Follow Windows: the Windows font smoothing (off, Standard or ClearType). ClearType: always, as \"Enable smooth font\" did; \"less color fringing\" applies to DirectWrite only. Grayscale is recommended for OLED screens and for rotated (portrait) screens, where ClearType color fringes are more visible." },
+		{ IDC_COMBO_TEXTRENDERINGMODE, "textRenderingMode-tip",
+			L"Natural avoids the vertical blur of small text. GDI classic snaps the glyphs to whole pixels like GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text." },
+		{ IDC_COMBO_TEXTCONTRAST, "textContrast-tip",
+			L"DirectWrite only. Makes the strokes heavier: darkens dark text on light backgrounds and thickens light text on dark themes." }
+	};
 	NativeLangSpeaker* pNativeSpeaker = nppParam.getNativeLangSpeaker();
-
-	wstring tip2Show = pNativeSpeaker->getLocalizedStrFromID("scintillaRenderingTechnology-tip",
-		L"May improve rendering of special characters or resolve some graphics issues.");
-	_tipScintillaRenderingTechnology = createToolTip(IDC_COMBO_SC_TECHNOLOGY_CHOICE, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
-
-	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textAntialiasing-tip",
-		L"Grayscale is recommended for OLED screens and for rotated (portrait) screens, where ClearType color fringes are more visible.");
-	_tipTextAntialiasing = createToolTip(IDC_COMBO_TEXTANTIALIASING, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
-
-	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textRenderingMode-tip",
-		L"Natural avoids the vertical blur of small text. GDI classic snaps the glyphs to whole pixels like GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text.");
-	_tipTextRenderingMode = createToolTip(IDC_COMBO_TEXTRENDERINGMODE, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
-
-	tip2Show = pNativeSpeaker->getLocalizedStrFromID("textContrast-tip",
-		L"DirectWrite only. Makes the strokes heavier: darkens dark text on light backgrounds and thickens light text on dark themes.");
-	_tipTextContrast = createToolTip(IDC_COMBO_TEXTCONTRAST, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL());
+	for (const ComboTip& comboTip : comboTips)
+	{
+		wstring tip2Show = pNativeSpeaker->getLocalizedStrFromID(comboTip._stringId, comboTip._text);
+		_tips.push_back(createToolTip(comboTip._comboId, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL()));
+	}
 }
 
 static bool isDirectWriteTechnology()
@@ -1824,12 +1819,17 @@ static bool isDirectWriteTechnology()
 	return (technology > defaultTechnology) && (technology < directWriteTechnologyUnavailable);
 }
 
-// the DirectWrite mode & the text contrast don't apply to the GDI rendering mode
+// the text contrast applies to antialiased DirectWrite text only
+static bool isTextContrastApplied()
+{
+	return isDirectWriteTechnology() && (NppParameters::getInstance().getSVP()._textAntialiasing != textAntialiasingNone);
+}
+
+// the DirectWrite mode doesn't apply to the GDI rendering mode, nor the text contrast (see isTextContrastApplied)
 void EditingSubDlg::enableDirectWriteTextRendering() const
 {
-	const bool isDirectWrite = isDirectWriteTechnology();
-	::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_TEXTRENDERINGMODE), isDirectWrite);
-	::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_TEXTCONTRAST), isDirectWrite);
+	::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_TEXTRENDERINGMODE), isDirectWriteTechnology());
+	::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_TEXTCONTRAST), isTextContrastApplied());
 
 	// the labels show the state with their text color (see WM_CTLCOLORSTATIC)
 	redrawDlgItem(IDC_TEXTRENDERINGMODE_STATIC);
@@ -2020,9 +2020,14 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 				return NppDarkMode::onCtlColorDlgStaticText(reinterpret_cast<HDC>(wParam), (svp._currentLineHiliteMode == LINEHILITE_FRAME));
 			}
 
-			if (dlgCtrlID == IDC_TEXTRENDERINGMODE_STATIC || dlgCtrlID == IDC_TEXTCONTRAST_STATIC)
+			if (dlgCtrlID == IDC_TEXTRENDERINGMODE_STATIC)
 			{
 				return NppDarkMode::onCtlColorDlgStaticText(reinterpret_cast<HDC>(wParam), isDirectWriteTechnology());
+			}
+
+			if (dlgCtrlID == IDC_TEXTCONTRAST_STATIC)
+			{
+				return NppDarkMode::onCtlColorDlgStaticText(reinterpret_cast<HDC>(wParam), isTextContrastApplied());
 			}
 			return NppDarkMode::onCtlColorDlg(reinterpret_cast<HDC>(wParam));
 		}
@@ -2170,7 +2175,11 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 									return TRUE;
 
 								if (ctrlId == IDC_COMBO_TEXTANTIALIASING)
+								{
 									svp._textAntialiasing = static_cast<textAntialiasing>(selIndex);
+									svp._doSmoothFont = svp.isClearTypeAntialiasing(); // see ScintillaViewParams
+									enableDirectWriteTextRendering(); // the contrast doesn't apply without antialiasing
+								}
 								else if (ctrlId == IDC_COMBO_TEXTRENDERINGMODE)
 									svp._textRenderingMode = static_cast<textRenderingMode>(selIndex);
 								else
