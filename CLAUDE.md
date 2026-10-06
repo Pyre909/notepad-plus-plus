@@ -29,7 +29,8 @@ branch, read it with `git show origin/pyre:CLAUDE.md`.
 | `claude/awesome-darwin-bsud9v` | The cloud session's branch: the combined development branch `pyre` was built on (`357fec9`); no longer needed for new work (`claude --teleport` checks it out: switch back to `pyre`). |
 | `text-rendering_20260925` | Upstream PR #18418, **closed** by the maintainer on 2026-10-02 (too large a change, regression risk; reconsidered only if Scintilla takes its part, which it won't). Kept as history. |
 | `text-rendering-translations_20260925` | Follow-up of the closed #18418: on hold. |
-| `live-rendering-switch_20261005` | The rendering mode applied without restarting, standalone on upstream `master` (MISC. box), one commit; issue + PR texts in kit section 6. Amend freely until the PR is opened, then new commits only (upstream CONTRIBUTING rule 10). Supersedes `live-rendering-switch_20260930` (stacked on #18418). |
+| `rtl-views-gdi_20261006` | Right-to-left views drawn with GDI (DirectWrite ignores the mirroring `WS_EX_LAYOUTRTL`; fixes #17865, #17518 and the RTL UI languages, drawn left-to-right in a mirrored window by default upstream), one commit on upstream `master`; PR texts in kit section 6. `pyre` has the same design since 2026-10-06. |
+| `live-rendering-switch_20261005` | The rendering mode applied without restarting (MISC. box), one commit on top of `rtl-views-gdi_20261006` (rebased on `master` once that one is merged); feature request + PR texts in kit section 7, the PR once the request is Accepted. Amend freely until the PR is opened, then new commits only (upstream CONTRIBUTING rule 10). Supersedes `live-rendering-switch_20260930` (stacked on #18418). |
 | `directwrite-font-names_20260930`, `per-monitor-dpi_20260925` | Ready PR candidates (font names: issue + PR texts ready; DPI: discuss with maintainers first). |
 | `font-size-1pt_20260925`, `font-weight-names_20260925`, `archive/*` | History: a closed PR, a superseded version, early drafts. Don't build on them. |
 | `scintilla-upstream_20260930` | Tooling branch (no Notepad++ history): test tools, PR kit, status notes. |
@@ -90,8 +91,9 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
 |---|---|
 | Text rendering settings (Editing 1 > Text Rendering) | `ScintillaEditView::applyTextRenderingSettings` / `applyTextRenderingSettingsToAll`, `EditingSubDlg` in `preferenceDlg.cpp`, enums in `NppConstants.h`, config.xml `fontAntialiasing` / `fontRenderingMode` / `fontContrast` (`Parameters.cpp`) |
 | DirectWrite rendering parameters (Scintilla, local patch) | `scintilla/win32/SurfaceD2D.cxx`, `ScintillaWin.cxx`, `ListBox.cxx`; private messages `SCI_SETFONTRENDERINGPARAMETER` 5101 / `SCI_GETFONTRENDERINGPARAMETER` 5102 |
-| Rendering mode applied without restart | `ScintillaEditView::setTechnologyToAll` (all views in `_liveViews`), restyle via `WM_UPDATESCINTILLAS` in `preferenceDlg.cpp` |
-| Fonts of a weight under DirectWrite ("Fira Code Light") | `ScintillaComponent/FontFamilyNames.cpp/.h`, `ScintillaEditView::setSpecialStyle` and `clearAllStyles` |
+| Rendering mode applied without restart | `ScintillaEditView::setTechnologyToAll` (all views in `_liveViews`), the handler in `preferenceDlg.cpp` |
+| Right-to-left views drawn with GDI (DirectWrite ignores `WS_EX_LAYOUTRTL`) | `ScintillaEditView::changeTextDirection`, `init` (a view mirrored at creation), `setTechnologyToAll` (skips mirrored views), the startup direction sync in `Notepad_plus::init` |
+| Fonts of a weight under DirectWrite ("Fira Code Light") | `ScintillaComponent/FontFamilyNames.cpp/.h`, `ScintillaEditView::setSpecialStyle` and `clearAllStyles`; `refreshStyleFonts` maps them again when a view's technology changes |
 | Per-monitor DPI (MISC., `perMonitorDpiAwareness`) | `dpiManagerV2`, `StaticDialog`, docking (`DockingCont`, `DockingManager`, `Gripper`), panels |
 | Font sizes 1-4 pt | `fontSizeStrs` in `NppConstants.h` |
 | Crash guard (Scintilla bug #2520) | `FontDirectWrite::HFont` in `SurfaceD2D.cxx` |
