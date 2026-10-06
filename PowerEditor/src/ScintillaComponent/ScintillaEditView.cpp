@@ -65,6 +65,7 @@ static constexpr int MAX_FOLD_LINES_MORE_THAN = 99;
 // initialize the static variable
 bool ScintillaEditView::_SciInit = false;
 int ScintillaEditView::_refCount = 0;
+std::vector<ScintillaEditView*> ScintillaEditView::_liveViews{};
 UserDefineDialog ScintillaEditView::_userDefineDlg;
 
 const int ScintillaEditView::_SC_MARGE_LINENUMBER = 0;
@@ -503,6 +504,7 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 	_codepage = nppParams.currentSystemCodepage();
 
 	::SetWindowSubclass(_hSelf, ScintillaEditView::ScintillaProc, static_cast<UINT_PTR>(SubclassID::first), reinterpret_cast<DWORD_PTR>(this));
+	_liveViews.push_back(this); // removed on WM_NCDESTROY (see ScintillaProc)
 
 	if (_defaultCharList.empty())
 	{
@@ -540,6 +542,7 @@ LRESULT CALLBACK ScintillaEditView::ScintillaProc(
 	{
 		case WM_NCDESTROY:
 		{
+			std::erase(_liveViews, pScint);
 			::RemoveWindowSubclass(hWnd, ScintillaEditView::ScintillaProc, uIdSubclass);
 			break;
 		}
@@ -4512,6 +4515,51 @@ void ScintillaEditView::sortLines(size_t fromLine, size_t toLine, ISorter* pSort
 	}
 }
 
+bool ScintillaEditView::setTechnologyToAll(writeTechnologyEngine technology, HWND hMsgParent)
+{
+	NppParameters& nppParams = NppParameters::getInstance();
+	NppGUI& nppGui = nppParams.getNppGUI();
+	const writeTechnologyEngine previous = nppGui._writeTechnologyEngine;
+	if ((technology == previous) || (technology >= directWriteTechnologyUnavailable) || (previous >= directWriteTechnologyUnavailable))
+		return technology == previous;
+
+	// the views using the technology of the setting follow it, those a plugin switched itself are left as they are
+	std::vector<ScintillaEditView*> followingViews{};
+	bool isRTLShown = false;
+	for (ScintillaEditView* pView : _liveViews)
+	{
+		if (pView->execute(SCI_GETTECHNOLOGY) == static_cast<LRESULT>(previous))
+		{
+			followingViews.push_back(pView);
+
+			// only the main and second views show a direction the user chose (with an RTL UI language, every view inherits RTL)
+			if (pView->_isMainEditZone && pView->isTextDirectionRTL() && ::IsWindowVisible(pView->getHSelf()))
+				isRTLShown = true;
+		}
+	}
+
+	if (isRTLShown && (technology != defaultTechnology)) // DirectWrite can't display right-to-left text
+	{
+		nppParams.getNativeLangSpeaker()->messageBox("DirectWriteVsRTL",
+			hMsgParent,
+			L"DirectWrite cannot display right-to-left text. Please switch the documents shown to left-to-right first (View > Text Direction LTR).",
+			L"Cannot use DirectWrite",
+			MB_OK | MB_APPLMODAL);
+		return false;
+	}
+
+	nppGui._writeTechnologyEngine = technology;
+	for (ScintillaEditView* pView : followingViews)
+	{
+		pView->execute(SCI_SETTECHNOLOGY, technology);
+
+		// back to GDI, a document shown gets the right-to-left direction DirectWrite couldn't display (see activateBuffer)
+		if ((technology == defaultTechnology) && pView->_isMainEditZone && (pView->isTextDirectionRTL() != pView->getCurrentBuffer()->isRTL()))
+			pView->changeTextDirection(pView->getCurrentBuffer()->isRTL());
+	}
+	return true;
+}
+
 bool ScintillaEditView::isTextDirectionRTL() const
 {
 	long exStyle = static_cast<long>(::GetWindowLongPtr(_hSelf, GWL_EXSTYLE));
@@ -4533,7 +4581,7 @@ void ScintillaEditView::changeTextDirection(bool isRTL)
 		{
 			(nppParamInst.getNativeLangSpeaker())->messageBox("RTLvsDirectWrite",
 				getHSelf(),
-				L"RTL is not compatible with Direct Write mode. Please disable DirectWrite mode in MISC. section of Preferences dialog, and restart Notepad++.",
+				L"RTL is not compatible with DirectWrite mode. Please disable DirectWrite mode in MISC. section of Preferences dialog.",
 				L"Cannot run RTL",
 				MB_OK | MB_APPLMODAL);
 

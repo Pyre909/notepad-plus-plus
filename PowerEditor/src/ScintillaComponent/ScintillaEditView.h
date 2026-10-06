@@ -254,6 +254,7 @@ public:
 
 	~ScintillaEditView() override {
 		--_refCount;
+		std::erase(_liveViews, this); // normally done already on WM_NCDESTROY
 
 		if (!_refCount && _SciInit)
 		{
@@ -686,6 +687,9 @@ public:
 	void sortLines(size_t fromLine, size_t toLine, ISorter *pSort);
 	void changeTextDirection(bool isRTL);
 	bool isTextDirectionRTL() const;
+	// switches the views following the Rendering mode setting to another technology, without restarting; returns false,
+	// with nothing changed, when it can't (DirectWrite unavailable, or chosen while the main or second view shows RTL text)
+	static bool setTechnologyToAll(writeTechnologyEngine technology, HWND hMsgParent);
 	void setPositionRestoreNeeded(bool val) { _positionRestoreNeeded = val; }
 	void markedTextToClipboard(int indiStyle, bool doAll = false);
 	void removeAnyDuplicateLines();
@@ -697,6 +701,9 @@ protected:
 	static bool _SciInit;
 
 	static int _refCount;
+
+	// the initialized views, for the settings applied to all of them at once (see setTechnologyToAll)
+	static std::vector<ScintillaEditView*> _liveViews;
 
     static UserDefineDialog _userDefineDlg;
 
