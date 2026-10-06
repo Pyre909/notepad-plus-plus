@@ -20,3 +20,7 @@ Start-Process "C:\Program Files\Notepad++\notepad++.exe" -ArgumentList '-multiIn
 
 What the numbers should show: for one font, the bold lines' ink well above the regular lines'; GDI and DirectWrite
 about the same ink and width per line (same font, same weight); a fallback font shows up as a different width.
+
+Setting the font: Settings > Style Configurator opens on Global override; pick Default Style (the next entry) and
+close with Save & Close: X or Cancel undoes every change made in the dialog. If `weights.cpp` is rewritten while
+Notepad++ runs, use File > Reload from Disk (Notepad++ only notices the change when its window is activated).
