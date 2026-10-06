@@ -254,6 +254,7 @@ public:
 
 	~ScintillaEditView() override {
 		--_refCount;
+		std::erase(_liveViews, this); // normally done already on WM_NCDESTROY
 
 		if (!_refCount && _SciInit)
 		{
@@ -686,6 +687,7 @@ public:
 	void sortLines(size_t fromLine, size_t toLine, ISorter *pSort);
 	void changeTextDirection(bool isRTL);
 	bool isTextDirectionRTL() const;
+	static void setTechnologyToAll(writeTechnologyEngine technology); // the Rendering mode applied at once
 	void setPositionRestoreNeeded(bool val) { _positionRestoreNeeded = val; }
 	void markedTextToClipboard(int indiStyle, bool doAll = false);
 	void removeAnyDuplicateLines();
@@ -697,6 +699,8 @@ protected:
 	static bool _SciInit;
 
 	static int _refCount;
+
+	static std::vector<ScintillaEditView*> _liveViews; // the initialized views, see setTechnologyToAll
 
     static UserDefineDialog _userDefineDlg;
 

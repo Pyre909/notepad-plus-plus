@@ -65,6 +65,7 @@ static constexpr int MAX_FOLD_LINES_MORE_THAN = 99;
 // initialize the static variable
 bool ScintillaEditView::_SciInit = false;
 int ScintillaEditView::_refCount = 0;
+std::vector<ScintillaEditView*> ScintillaEditView::_liveViews{};
 UserDefineDialog ScintillaEditView::_userDefineDlg;
 
 const int ScintillaEditView::_SC_MARGE_LINENUMBER = 0;
@@ -506,6 +507,7 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 	_codepage = nppParams.currentSystemCodepage();
 
 	::SetWindowSubclass(_hSelf, ScintillaEditView::ScintillaProc, static_cast<UINT_PTR>(SubclassID::first), reinterpret_cast<DWORD_PTR>(this));
+	_liveViews.push_back(this); // removed on WM_NCDESTROY (see ScintillaProc)
 
 	if (_defaultCharList.empty())
 	{
@@ -543,6 +545,7 @@ LRESULT CALLBACK ScintillaEditView::ScintillaProc(
 	{
 		case WM_NCDESTROY:
 		{
+			std::erase(_liveViews, pScint);
 			::RemoveWindowSubclass(hWnd, ScintillaEditView::ScintillaProc, uIdSubclass);
 			break;
 		}
@@ -4512,6 +4515,30 @@ void ScintillaEditView::sortLines(size_t fromLine, size_t toLine, ISorter* pSort
 	if (text != joined)
 	{
 		replaceTarget(joined.c_str(), startPos, endPos);
+	}
+}
+
+void ScintillaEditView::setTechnologyToAll(writeTechnologyEngine technology)
+{
+	NppGUI& nppGui = NppParameters::getInstance().getNppGUI();
+	const writeTechnologyEngine previous = nppGui._writeTechnologyEngine;
+	if ((technology == previous) || (technology >= directWriteTechnologyUnavailable) || (previous >= directWriteTechnologyUnavailable))
+		return;
+
+	nppGui._writeTechnologyEngine = technology;
+
+	// the views on the previous setting follow it (not those a plugin switched); RTL ones keep GDI until LTR
+	for (ScintillaEditView* pView : _liveViews)
+	{
+		if (pView->isTextDirectionRTL())
+		{
+			if (pView->_technologyIfLTR == static_cast<int>(previous))
+				pView->_technologyIfLTR = technology;
+		}
+		else if (pView->execute(SCI_GETTECHNOLOGY) == static_cast<LRESULT>(previous))
+		{
+			pView->execute(SCI_SETTECHNOLOGY, technology);
+		}
 	}
 }
 
