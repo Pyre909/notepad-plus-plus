@@ -39,15 +39,31 @@ A test drives a built Notepad++ the way a user would and checks the result. Cont
 - takes `-Exe <path to notepad++.exe>`;
 - uses a settings folder of its own (`-multiInst -nosession -settingsDir=<folder in %TEMP%>`), never the user's;
 - prints `PASS <check>` / `FAIL <check>` lines and, last, `<n> checks, <m> failed`;
-- prints `0 checks, 0 failed` when the build isn't the one it tests (a pyre test on an upstream branch): `review.ps1`
-  reports it as INFO, skipped, not as a pass;
+- prints `0 checks, 0 failed` when the build hasn't what it tests (a pyre test on an upstream branch, a live switch
+  test on a build without it): `review.ps1` reports it as INFO, skipped, not as a pass;
 - closes Notepad++ at the end.
+
+Right-to-left views drawn with GDI (`rtl-views-gdi_20261006`, kit section 6; also in the live switch branch and pyre):
 
 | Test | What it proves |
 |---|---|
-| `live-rendering-switch.ps1` | The rendering mode of Preferences > MISC. applies at once to every view (Notepad++'s, plugins'), leaves a view a plugin switched itself alone, survives a view destroyed at run time; right-to-left views (the document, the Document Map) drawn with GDI in every mode without a message, the others following; an RTL tab and an LTR tab switching the view between GDI and the mode; 50 quick switches; the choice saved on exit (39 checks) |
-| `live-rendering-switch-rtl-ui.ps1` | With a right-to-left UI language (hebrew.xml): every view mirrored from the start and drawn with GDI under DirectWrite, the default; no message at start, on RTL or on exit; an LTR document getting the mode; the hidden mirrored views keeping GDI through the switches (15 checks). Unmodified upstream fails 7 of them |
-| `pyre-live-rendering-switch*.ps1` | pyre's versions of the two tests, as of the refusal design of commit `305ff13` (box in Editing 1); they skip other builds |
+| `rtl-views-gdi.ps1` | With DirectWrite (fresh settings): View > Text Direction RTL allowed without a message; the view and the Document Map mirrored on GDI, the other views on DirectWrite, back on DirectWrite once LTR; an RTL tab and an LTR tab switching the view's technology while a long wrapped document keeps its scroll position; an RTL document cloned to the other view on GDI there too; no message on exit (16 checks) |
+| `rtl-ui-gdi.ps1` | With a right-to-left UI language (hebrew.xml): every view mirrored from the start and drawn with GDI under DirectWrite, the default; no message at start, on RTL or on exit; an LTR document getting DirectWrite, the hidden mirrored views keeping GDI (10 checks). Unmodified upstream fails the start ones |
+| `rtl-ui-editzone-no.ps1` | Issue #17518: with `editZoneRTL="no"`, started without a session or a file, the first document is LTR, on DirectWrite (7 checks). Unmodified upstream fails it |
+
+The rendering mode applied at once (`live-rendering-switch_20261005`, kit section 7; skipped on builds without it):
+
+| Test | What it proves |
+|---|---|
+| `live-rendering-switch.ps1` | The rendering mode of Preferences > MISC. applies at once to every view (Notepad++'s, plugins'), leaves a view a plugin switched itself alone, survives a view destroyed at run time; right-to-left views (the document, the Document Map) kept on GDI in every mode without a message, the others following; an RTL tab and an LTR tab switching the view between GDI and the mode; 50 quick switches; no message on exit; the choice saved on exit (40 checks) |
+| `live-rendering-switch-rtl-ui.ps1` | With a right-to-left UI language (hebrew.xml): the mirrored views keep GDI through the switches, an LTR document follows them (15 checks) |
+| `live-rendering-switch-scroll.ps1` | A long wrapped document keeps its scroll position when its view switches technology with the tabs, with the DirectWrite setting and with GDI set at run time; no message on exit (11 checks) |
+
+pyre only (skipped on other builds):
+
+| Test | What it proves |
+|---|---|
+| `pyre-rtl-style-fonts.ps1` | pyre maps the fonts of the font lists for the technology in use ("Bahnschrift Light" is "Bahnschrift" at weight 300 for DirectWrite): a view switching technology, with its text direction, its tabs or the rendering mode, gets its style fonts mapped again (13 checks) |
 
 Driving Notepad++ from a test: menu commands are `WM_COMMAND` with the ids of `menuCmdID.h`; a combo box is
 `CB_SETCURSEL` then `WM_COMMAND` with `MAKEWPARAM(id, CBN_SELCHANGE)` to its dialog (what a click sends); Scintilla

@@ -8,6 +8,10 @@
 param([Parameter(Mandatory)] [string] $Exe,
 	[string] $TestFile = (Join-Path $PSScriptRoot '..\..\vm\weights.cpp'))
 $ErrorActionPreference = 'Stop'
+# a build without the live rendering mode switch (upstream, or the right-to-left fix alone) still says to restart
+if ([Text.Encoding]::Unicode.GetString([IO.File]::ReadAllBytes($Exe)).Contains('graphics issues, restart Notepad++')) {
+	'INFO  no live rendering mode switch in this build: skipped'; '0 checks, 0 failed'; exit
+}
 Add-Type -Namespace LT -Name U -MemberDefinition @'
 public delegate bool EnumProc(IntPtr h, IntPtr l);
 [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc f, IntPtr l);
@@ -178,7 +182,17 @@ try {
 
 	# the choice is saved on exit
 	Select-Mode 2
+	# no message on exit; a "Save file?" means a document was modified (maybe by input typed into the test window): answered No
 	[void][LT.U]::PostMessage($script:main, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero)
+	$boxes = @()
+	for ($i = 0; $i -lt 60 -and -not $proc.HasExited; $i++) {
+		$b = Wait-AnyBox 2
+		if ($b) {
+			$boxes += (Get-Txt $b) + ': ' + ((Get-Kids $b | ForEach-Object { Get-Txt $_ } | Where-Object { $_ }) -join ' | ')
+			$no = [LT.U]::GetDlgItem($b, 7); if ($no -ne [IntPtr]::Zero) { [void][LT.U]::PostMessage($b, $WM_COMMAND, [IntPtr]7, $no) } else { [void][LT.U]::PostMessage($b, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero) }
+		}
+	}
+	Check 'exit: no message' ($boxes.Count -eq 0) ($boxes -join '; ')
 	$exited = $proc.WaitForExit(15000)
 	Check 'Notepad++ closes normally' ($exited -and $proc.ExitCode -eq 0) $(if ($exited) { "exit code $($proc.ExitCode)" } else { 'still running' })
 	$cfg = Join-Path $settings 'config.xml'

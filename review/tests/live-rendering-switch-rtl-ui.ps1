@@ -8,6 +8,10 @@ param([Parameter(Mandatory)] [string] $Exe,
 	[string] $LangXml = (Join-Path (Split-Path (Split-Path (Split-Path $Exe))) 'PowerEditor\installer\nativeLang\hebrew.xml'),
 	[string] $TestFile = (Join-Path $PSScriptRoot '..\..\vm\weights.cpp'))
 $ErrorActionPreference = 'Stop'
+# a build without the live rendering mode switch (upstream, or the right-to-left fix alone) still says to restart
+if ([Text.Encoding]::Unicode.GetString([IO.File]::ReadAllBytes($Exe)).Contains('graphics issues, restart Notepad++')) {
+	'INFO  no live rendering mode switch in this build: skipped'; '0 checks, 0 failed'; exit
+}
 Add-Type -Namespace LTR -Name U -MemberDefinition @'
 public delegate bool EnumProc(IntPtr h, IntPtr l);
 [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc f, IntPtr l);
@@ -112,8 +116,9 @@ try {
 	[void][LTR.U]::PostMessage($script:main, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero)
 	$box = $null
 	for ($i = 0; $i -lt 150 -and -not $proc.HasExited -and -not $box; $i++) { $box = Wait-AnyBox 1 }
-	Check 'exit: no message' ($null -eq $box) $(if ($box) { Get-Txt $box })
-	if ($box) { [void][LTR.U]::PostMessage($box, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero) }
+	# its texts tell a "Save file?" (a document modified, maybe by input typed into the test window) from a warning
+	Check 'exit: no message' ($null -eq $box) $(if ($box) { (Get-Txt $box) + ': ' + ((Get-Kids $box | ForEach-Object { Get-Txt $_ } | Where-Object { $_ }) -join ' | ') })
+	if ($box) { $no = [LTR.U]::GetDlgItem($box, 7); if ($no -ne [IntPtr]::Zero) { [void][LTR.U]::PostMessage($box, $WM_COMMAND, [IntPtr]7, $no) } else { [void][LTR.U]::PostMessage($box, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero) } }
 	$exited = $proc.WaitForExit(15000)
 	Check 'Notepad++ closes normally' ($exited -and $proc.ExitCode -eq 0) $(if ($exited) { "exit code $($proc.ExitCode)" } else { 'still running' })
 }
