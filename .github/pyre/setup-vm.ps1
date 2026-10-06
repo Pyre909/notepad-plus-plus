@@ -1,6 +1,6 @@
 # Sets up a Windows 10/11 machine (or VM) to work on the Pyre909 build of Notepad++ with Claude Code:
-# - installs, with winget: Git for Windows, GitHub CLI, PowerShell 7, 7-Zip, NSIS and the Visual Studio 2022
-#   C++ build tools (or the full Visual Studio 2022 Community IDE with -WithVisualStudioIde)
+# - installs, with winget: Git for Windows, GitHub CLI, PowerShell 7, 7-Zip, NSIS and the Visual Studio 2026
+#   C++ build tools, ARM64 compiler included (or the full Visual Studio 2026 Community IDE with -WithVisualStudioIde)
 # - installs Claude Code (native installer), unless it's already there
 # - clones the fork (branch pyre) and adds the official repository as remote "upstream"
 # - adds a worktree per branch you're likely to work on, next to the clone
@@ -75,11 +75,14 @@ if (-not $SkipInstall) {
 	Install-WingetPackage 'Microsoft.PowerShell'
 	Install-WingetPackage '7zip.7zip'
 	Install-WingetPackage 'NSIS.NSIS'
+	# Visual Studio 2026 (toolset v145), with the ARM64 compiler for native builds on ARM64 machines, without keeping the
+	# downloaded packages (several GB)
+	$vsOptions = '--add Microsoft.VisualStudio.Component.VC.Tools.ARM64 --includeRecommended --nocache'
 	if ($WithVisualStudioIde) {
-		Install-WingetPackage 'Microsoft.VisualStudio.2022.Community' @('--override', '--wait --quiet --add Microsoft.VisualStudio.Workload.NativeDesktop --includeRecommended')
+		Install-WingetPackage 'Microsoft.VisualStudio.Community' @('--override', "--wait --quiet --add Microsoft.VisualStudio.Workload.NativeDesktop $vsOptions")
 	}
 	else {
-		Install-WingetPackage 'Microsoft.VisualStudio.2022.BuildTools' @('--override', '--wait --quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended')
+		Install-WingetPackage 'Microsoft.VisualStudio.BuildTools' @('--override', "--wait --quiet --add Microsoft.VisualStudio.Workload.VCTools $vsOptions")
 	}
 	Update-SessionPath
 }

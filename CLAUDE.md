@@ -59,11 +59,12 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
   there under emulation (DirectWrite is the same system code, so rendering tests hold), but an x64 Explorer menu
   doesn't load in the ARM64 Explorer: test that with the ARM64 installer. macOS can rescale the VM window, so judge
   rendering from screenshots taken inside Windows, not from what Pyre909 sees on the Mac screen.
-- Visual Studio 2022 (toolset v143) or 2026 (v145) with "Desktop development with C++".
+- Visual Studio 2026 (toolset v145) or 2022 (v143) with "Desktop development with C++". The VM has the VS 2026 Build
+  Tools only (18.10.2 since 2026-10-06, VS 2022 removed), which `setup-vm.ps1` installs.
 - `PowerEditor\visual.net\notepadPlus.sln`; from a Developer PowerShell:
   `msbuild PowerEditor\visual.net\notepadPlus.sln /m /p:configuration=Release /p:platform=x64`
   gives `PowerEditor\bin64\Notepad++.exe`; `/p:platform=ARM64` gives `PowerEditor\binarm64\Notepad++.exe` (native on
-  the VM; needs Visual Studio's MSVC ARM64 build tools component, which the setup script may not have added).
+  the VM; needs Visual Studio's MSVC ARM64 build tools component, which the setup script adds).
 - To run a build without touching the real settings (PowerShell; the folder must exist, else Notepad++ says
   "Invalid directory" and uses the normal settings):
   `Start-Process "C:\Program Files\Notepad++\notepad++.exe" -ArgumentList '-multiInst', '-nosession', '-settingsDir=C:\npp-test'`
