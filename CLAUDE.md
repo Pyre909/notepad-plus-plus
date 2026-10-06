@@ -27,8 +27,9 @@ branch, read it with `git show origin/pyre:CLAUDE.md`.
 | `master` | Exact mirror of upstream. Only updated with GitHub's **Sync fork**. Never commit here. |
 | `pyre` | The product. Merge `master` into it to take new upstream versions. New features land here. |
 | `claude/awesome-darwin-bsud9v` | The cloud session's branch: the combined development branch `pyre` was built on (`357fec9`); no longer needed for new work (`claude --teleport` checks it out: switch back to `pyre`). |
-| `text-rendering_20260925` | **Open upstream PR #18418.** New commits only: no amend, rebase or force-push (upstream CONTRIBUTING rule 10). Push only with Pyre909's OK. |
-| `text-rendering-translations_20260925`, `live-rendering-switch_20260930` | Follow-ups of #18418: open them after #18418 is merged, after rebasing onto `master` (commands in the PR kit). |
+| `text-rendering_20260925` | Upstream PR #18418, **closed** by the maintainer on 2026-10-02 (too large a change, regression risk; reconsidered only if Scintilla takes its part, which it won't). Kept as history. |
+| `text-rendering-translations_20260925` | Follow-up of the closed #18418: on hold. |
+| `live-rendering-switch_20261005` | The rendering mode applied without restarting, standalone on upstream `master` (MISC. box), one commit; issue + PR texts in kit section 6. Amend freely until the PR is opened, then new commits only (upstream CONTRIBUTING rule 10). Supersedes `live-rendering-switch_20260930` (stacked on #18418). |
 | `directwrite-font-names_20260930`, `per-monitor-dpi_20260925` | Ready PR candidates (font names: issue + PR texts ready; DPI: discuss with maintainers first). |
 | `font-size-1pt_20260925`, `font-weight-names_20260925`, `archive/*` | History: a closed PR, a superseded version, early drafts. Don't build on them. |
 | `scintilla-upstream_20260930` | Tooling branch (no Notepad++ history): test tools, PR kit, status notes. |
@@ -117,11 +118,12 @@ and can't run 32-bit NSIS installers):
    uninstall removing `disableNppAutoUpdate.xml` (it would remove Pyre909's working install; check it when going
    back to official Notepad++).
 2. DirectWrite in Notepad++: the rendering mode switches GDI <-> DirectWrite without restart, the text redraws
-   at once (**pass**, 2026-10-01, ARM64 install on the VM). Still to check: the font stays the same after the
-   switch (no fallback font), and with DirectWrite each Antialiasing choice and DirectWrite mode changes the text
-   at once.
-3. Fonts: Default Style "Bahnschrift Light" with DirectWrite draws Light, bold keywords SemiBold;
-   "Cascadia Code SemiBold" bold draws Bold (needed before opening the font-name PR).
+   at once (**pass**, 2026-10-01, ARM64 install on the VM), and the font stays the same, no fallback font
+   (**pass**, 2026-10-01, Bahnschrift Light). Still to check: with DirectWrite each Antialiasing choice and
+   DirectWrite mode changes the text at once.
+3. Fonts: Default Style "Bahnschrift Light" with DirectWrite draws Light, bold keywords SemiBold (**pass**,
+   2026-10-01: weights 300 and 600, ink and width per line within 2.4% and 3 px of GDI; readings in `STATUS.md`).
+   Still to check: "Cascadia Code SemiBold" bold draws Bold (needed before opening the font-name PR).
 4. Per-monitor DPI with monitors at different scales.
 
 ## Where the rest is
@@ -133,5 +135,8 @@ On branch `scintilla-upstream_20260930`. On the VM, the setup script checked it 
 - `STATUS.md`: **the handoff (where the test round stands, what's next)**, branches, upstream PRs and Scintilla
   tickets.
 - `split/PR-TEXTS.md`: every issue / PR / ticket text, rebase commands, testing notes.
+- `review/`: the review harness, run before pushing a branch: `review.ps1` (upstream and fork rules, coding style,
+  localization, MSVC builds, app-level tests in `review/tests/`) and `checklist.md` (the independent AI review). The
+  Claude Code skill `npp-review` (installed in `%USERPROFILE%\.claude\skills\`) does both.
 - `scintilla/SCINTILLA-UPSTREAM.md`: the Scintilla tickets and their outcome.
 - `README.md`: the Linux/Wine test tools (`harness/`, `harness-dpi/`, `statictest/`, `fork/`, ...).
