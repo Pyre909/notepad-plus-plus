@@ -46,6 +46,7 @@
 
 #include "Buffer.h"
 #include "Common.h"
+#include "FontFamilyNames.h"
 #include "NppConstants.h"
 #include "NppDarkMode.h"
 #include "Parameters.h"
@@ -858,7 +859,7 @@ LRESULT CALLBACK ScintillaEditView::ScintillaProc(
 	return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 
-#define DEFAULT_FONT_NAME "Courier New"
+#define DEFAULT_FONT_NAME L"Courier New"
 
 void ScintillaEditView::setSpecialStyle(const Style& styleToSet) const
 {
@@ -869,25 +870,30 @@ void ScintillaEditView::setSpecialStyle(const Style& styleToSet) const
     if ( styleToSet._colorStyle & COLORSTYLE_BACKGROUND )
 	    execute(SCI_STYLESETBACK, styleID, styleToSet._bgColor);
 
-    if (!styleToSet._fontName.empty())
-	{
-		if (!NppParameters::getInstance().isInFontList(styleToSet._fontName))
-		{
-			execute(SCI_STYLESETFONT, styleID, reinterpret_cast<LPARAM>(DEFAULT_FONT_NAME));
-		}
-		else
-		{
-			std::string fontNameA = wstring2string(styleToSet._fontName, CP_UTF8);
-			execute(SCI_STYLESETFONT, styleID, reinterpret_cast<LPARAM>(fontNameA.c_str()));
-		}
-	}
+	std::wstring fontName = styleToSet._fontName;
+	if (!fontName.empty() && !NppParameters::getInstance().isInFontList(fontName))
+		fontName = DEFAULT_FONT_NAME;
 	int fontStyle = styleToSet._fontStyle;
-    if (fontStyle != STYLE_NOT_USED)
-    {
-        execute(SCI_STYLESETBOLD,		styleID, fontStyle & FONTSTYLE_BOLD);
-        execute(SCI_STYLESETITALIC,		styleID, fontStyle & FONTSTYLE_ITALIC);
-        execute(SCI_STYLESETUNDERLINE,	styleID, fontStyle & FONTSTYLE_UNDERLINE);
-    }
+	if (!fontName.empty() || (fontStyle != STYLE_NOT_USED))
+	{
+		// The font lists name the fonts by their GDI family name, which DirectWrite may know by another name, weight and
+		// stretch ("Fira Code Light" is "Fira Code" Light): the style is set with the font parameters of the rendering
+		// technology in use, from its font name and font style, else from the ones it has (see clearAllStyles)
+		const bool isStyleRecorded = (styleID >= 0) && (styleID <= STYLE_MAX); // the styles of stylers.xml can have any id
+		StyleFont styleFont = _styleFonts[isStyleRecorded ? styleID : STYLE_DEFAULT];
+		if (!fontName.empty())
+			styleFont._name = fontName;
+		if (fontStyle != STYLE_NOT_USED)
+		{
+			styleFont._isBold = (fontStyle & FONTSTYLE_BOLD) != 0;
+			styleFont._isItalic = (fontStyle & FONTSTYLE_ITALIC) != 0;
+		}
+		if (isStyleRecorded)
+			_styleFonts[styleID] = styleFont;
+		setStyleFont(styleID, styleFont);
+		if (fontStyle != STYLE_NOT_USED)
+			execute(SCI_STYLESETUNDERLINE, styleID, fontStyle & FONTSTYLE_UNDERLINE);
+	}
 
 	if (styleToSet._fontSize > 0)
 		execute(SCI_STYLESETSIZE, styleID, styleToSet._fontSize);
@@ -965,6 +971,62 @@ void ScintillaEditView::setStyle(Style styleToSet) const
 		}
 	}
 	setSpecialStyle(styleToSet);
+}
+
+void ScintillaEditView::clearAllStyles()
+{
+	execute(SCI_STYLECLEARALL);
+	// every other style now has the font of STYLE_DEFAULT (see setSpecialStyle)
+	for (int styleID = 0; styleID <= STYLE_MAX; ++styleID)
+	{
+		if (styleID != STYLE_DEFAULT)
+			_styleFonts[styleID] = _styleFonts[STYLE_DEFAULT];
+	}
+}
+
+void ScintillaEditView::setStyleFont(int styleID, const StyleFont& styleFont) const
+{
+	setScintillaFont(styleID, getScintillaFont(styleFont._name, styleFont._isBold, styleFont._isItalic, static_cast<int>(execute(SCI_GETTECHNOLOGY))));
+}
+
+void ScintillaEditView::setScintillaFont(int styleID, const ScintillaFont& font) const
+{
+	if (!font._name.empty())
+	{
+		std::string fontNameA = wstring2string(font._name, CP_UTF8);
+		execute(SCI_STYLESETFONT, styleID, reinterpret_cast<LPARAM>(fontNameA.c_str()));
+	}
+	execute(SCI_STYLESETWEIGHT, styleID, font._weight);
+	execute(SCI_STYLESETSTRETCH, styleID, font._stretch);
+	execute(SCI_STYLESETITALIC, styleID, font._isItalic);
+}
+
+bool ScintillaEditView::hasScintillaFont(int styleID, const ScintillaFont& font) const
+{
+	if ((execute(SCI_STYLEGETWEIGHT, styleID) != font._weight) || (execute(SCI_STYLEGETSTRETCH, styleID) != font._stretch) ||
+		((execute(SCI_STYLEGETITALIC, styleID) != 0) != font._isItalic))
+		return false;
+	const size_t length = static_cast<size_t>(execute(SCI_STYLEGETFONT, styleID));
+	std::string fontNameA(length + 1, '\0');
+	execute(SCI_STYLEGETFONT, styleID, reinterpret_cast<LPARAM>(fontNameA.data()));
+	fontNameA.resize(length);
+	return fontNameA == wstring2string(font._name, CP_UTF8);
+}
+
+void ScintillaEditView::refreshStyleFonts(int technology, int previousTechnology) const
+{
+	for (int styleID = 0; styleID <= STYLE_MAX; ++styleID)
+	{
+		const StyleFont& styleFont = _styleFonts[styleID];
+		if (styleFont._name.empty())
+			continue;
+		const ScintillaFont font = getScintillaFont(styleFont._name, styleFont._isBold, styleFont._isItalic, technology);
+		const ScintillaFont previousFont = getScintillaFont(styleFont._name, styleFont._isBold, styleFont._isItalic, previousTechnology);
+		// the usual fonts are the same for both technologies; a style whose font was changed by someone else since (a plugin)
+		// is left as it is
+		if ((font != previousFont) && hasScintillaFont(styleID, previousFont))
+			setScintillaFont(styleID, font);
+	}
 }
 
 
@@ -1757,7 +1819,7 @@ void ScintillaEditView::defineDocType(LangType typeDoc)
 		setStyle(*pStyleDefault);
 	}
 
-	execute(SCI_STYLECLEARALL);
+	clearAllStyles();
 
 	Style defaultIndicatorStyle;
 	const Style * pStyle;
@@ -1920,7 +1982,7 @@ void ScintillaEditView::defineDocType(LangType typeDoc)
 				}
 			}
 			setSpecialStyle(nfoStyle);
-			execute(SCI_STYLECLEARALL);
+			clearAllStyles();
 
 			Buffer* buf = MainFileManager.getBufferByID(_currentBufferID);
 

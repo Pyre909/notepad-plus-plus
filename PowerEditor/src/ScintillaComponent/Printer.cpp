@@ -327,6 +327,11 @@ size_t Printer::doPrint(bool justDoIt)
 	if (!nppGUI._printSettings._printLineNumber)
 		_pSEView->showMargin(ScintillaEditView::_SC_MARGE_LINENUMBER, false);
 
+	// Scintilla prints with GDI: meanwhile the styles have the font parameters of GDI, "Fira Code Light" rather than
+	// "Fira Code" Light of DirectWrite (see getScintillaFont)
+	const int technology = static_cast<int>(_pSEView->execute(SCI_GETTECHNOLOGY));
+	_pSEView->refreshStyleFonts(SC_TECHNOLOGY_DEFAULT, technology);
+
 	int pageNum = 1;
 	const wchar_t pageVar[] = L"$(CURRENT_PRINTING_PAGE)";
 
@@ -503,6 +508,8 @@ size_t Printer::doPrint(bool justDoIt)
 		if ((_pdlg.Flags & PD_PAGENUMS) && (pageNum > _pdlg.nToPage))
 			break;
 	}
+
+	_pSEView->refreshStyleFonts(technology, SC_TECHNOLOGY_DEFAULT); // before the line numbers are measured again
 
 	if (!nppGUI._printSettings._printLineNumber)
 		_pSEView->showMargin(ScintillaEditView::_SC_MARGE_LINENUMBER, isShown);

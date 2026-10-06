@@ -19,6 +19,7 @@
 
 #include <windows.h>
 
+#include <array>
 #include <ios>
 #include <sstream>
 #include <string>
@@ -39,6 +40,7 @@
 #include "colors.h"
 
 class NppParameters;
+struct ScintillaFont;
 
 typedef sptr_t(*SCINTILLA_FUNC) (void *, unsigned int, uptr_t, sptr_t);
 typedef void * SCINTILLA_PTR;
@@ -665,6 +667,9 @@ public:
 	}
 
 	void defineDocType(LangType typeDoc);	//setup stylers for active document
+	// sets the style fonts again for another technology (printing uses GDI): a font of the font lists may have other
+	// parameters there (see getScintillaFont); a style whose font was changed by someone else (a plugin) is left as it is
+	void refreshStyleFonts(int technology, int previousTechnology) const;
 
 	void addCustomWordChars() const;
 	void restoreDefaultWordChars() const;
@@ -733,6 +738,21 @@ protected:
 	void makeStyle(LangType langType, const char** keywordArray = nullptr) const;
 	void setStyle(Style styleToSet) const; //NOT by reference (style edited)
 	void setSpecialStyle(const Style& styleToSet) const; //by reference
+	void clearAllStyles(); // SCI_STYLECLEARALL: the styles get the ones of STYLE_DEFAULT
+
+	// the font of each style set by setSpecialStyle or clearAllStyles, as the font lists name it (empty: not set), bold and
+	// italic: its font parameters depend on the technology (see getScintillaFont)
+	struct StyleFont
+	{
+		std::wstring _name;
+		bool _isBold = false;
+		bool _isItalic = false;
+	};
+	mutable std::array<StyleFont, STYLE_MAX + 1> _styleFonts;
+	void setStyleFont(int styleID, const StyleFont& styleFont) const;
+	void setScintillaFont(int styleID, const ScintillaFont& font) const;
+	bool hasScintillaFont(int styleID, const ScintillaFont& font) const;
+
 	void setSpecialIndicator(const Style& styleToSet) const {
 		execute(SCI_INDICSETFORE, styleToSet._styleID, styleToSet._bgColor);
 	}
