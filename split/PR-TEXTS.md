@@ -232,8 +232,7 @@ Review harness (2026-10-07, ARM64, x64 and Win32 builds): no FAIL of its own; th
 code moved into a new block; `UserDefineDialog.cpp` indented with spaces as upstream's file is; `try {` as upstream
 writes it 32 times out of 33. The independent AI review of `pyre`'s merge (2026-10-06) covered the same DPI code against
 the same upstream; its open point is disclosed in the PR body. Not tested: two monitors of different scales (test round
-row, waiting on Pyre909). CI of `8a455e0`: to check once pushed (the force push of 2026-10-07 got
-GitHub "Internal Server Error" three times); the body's CI line holds only after that.
+row, waiting on Pyre909). CI of `8a455e0`: all 13 jobs pass (run 37655731626, 2026-10-07).
 
 Why discuss first, and where: on #14959 (ozone10's hiDPI tracking issue, open), the unchecked items are the UDL
 splitter and the whole Panels section (title, tab control, main field, splitter, plugin support), and ozone10 wrote on

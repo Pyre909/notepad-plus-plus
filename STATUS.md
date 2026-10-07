@@ -11,8 +11,7 @@ This file is long: read it by section (grep the headings), not whole. One sessio
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
 - Everything is pushed: `pyre` up to `3a2c596` (CI run 37578284905: all 13 jobs pass), `per-monitor-dpi_20260925` at
-  `8a455e0` (force-pushed 2026-10-07; CI run 37655731626 was still queued at this handoff: check it, then the PR body's
-  CI line in kit 4 holds) and this branch. Upstream `master` was 2 commits past `a69bc23` on 2026-10-07: no merge needed
+  `8a455e0` (force-pushed 2026-10-07; CI run 37655731626: all 13 jobs pass) and this branch. Upstream `master` was 2 commits past `a69bc23` on 2026-10-07: no merge needed
   yet.
 - Done on 2026-10-06/07: upstream merged into `pyre` up to `a69bc23` ("Upstream merge (2026-10-06)" below, with a status
   bar DPI fix the merge needed); the DirectWrite mode Adaptive dropped ("Next" 8); the test round's open rows but DPI
@@ -25,7 +24,7 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
   per-monitor DPI branch (kit 4, reconciled with upstream on 2026-10-07).
 - Waiting on Pyre909 too: the test round's per-monitor DPI row and the merge's DPI checks ("Upstream merge" below) need
   a second display or a change of Windows' scale, which Claude doesn't make.
-- Next for Claude, once asked: the CI result of `8a455e0` if nobody checked it; replies on the PRs once they're open (casual voice, Pyre909 posts them); the next
+- Next for Claude, once asked: replies on the PRs once they're open (casual voice, Pyre909 posts them); the next
   upstream merge (Sync fork, then merge `master` into `pyre`, as on 2026-10-06); "Later" items.
 - Reviews: `review.ps1 -Quiet` (PASS lines to the log only), then the AI review (skill `npp-review`). Keep agents to the
   harness; no ad hoc fan-out. On a pull request branch, `-Test All` also runs the other PRs' tests, which fail as on
