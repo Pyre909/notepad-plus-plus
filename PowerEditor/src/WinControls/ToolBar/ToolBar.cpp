@@ -91,18 +91,6 @@ static constexpr ToolbarIconIdUnit toolbarIconIDs[]{
 	{ L"save-macro", true }
 };
 
-static void destroyHBmpElementsInVector(std::vector<HBITMAP>& vectorHBmp)
-{
-	for (auto& hBmp : vectorHBmp)
-	{
-		if (hBmp)
-		{
-			::DeleteObject(hBmp);
-			hBmp = nullptr;
-		}
-	}
-}
-
 void ToolBar::initHideButtonsConf(NppXml::Document toolButtonsDocRoot, const ToolBarButtonUnit* buttonUnitArray, int arraySize)
 {
 	NppXml::Element toolButtons = NppXml::firstChildElement(toolButtonsDocRoot, "NotepadPlus");
@@ -276,9 +264,7 @@ bool ToolBar::init(HINSTANCE hInst, HWND hPere, toolBarStatusType type, const To
 
 	//Create the list of buttons
 	_nbButtons = arraySize;
-	_vStdBtnBmp = std::vector<HBITMAP>(_nbButtons, nullptr);
 	_nbDynButtons = _vDynBtnReg.size();
-	_vDynBtnBmp = std::vector<HBITMAP>(_nbDynButtons, nullptr);
 	_nbTotalButtons = _nbButtons + (_nbDynButtons ? _nbDynButtons + 1 : 0);
 	_pTBB = std::make_unique<TBBUTTON[]>(_nbTotalButtons); //add one for the extra separator
 
@@ -370,11 +356,6 @@ void ToolBar::destroy()
 	::DestroyWindow(_hSelf);
 	_hSelf = nullptr;
 	_toolBarIcons.destroy();
-	destroyHBmpElementsInVector(_vStdBtnBmp);
-	if (_nbDynButtons > 0)
-	{
-		destroyHBmpElementsInVector(_vDynBtnBmp);
-	}
 }
 
 int ToolBar::getWidth() const
@@ -530,40 +511,13 @@ void ToolBar::reset(bool create)
 	}
 	else
 	{
-		//Else set the internal imagelist with standard bitmaps
-		int iconDpiDynamicalSize = _dpiManager.scale(16);
-		::SendMessage(_hSelf, TB_SETBITMAPSIZE, 0, MAKELPARAM(iconDpiDynamicalSize, iconDpiDynamicalSize));
-
-		TBADDBITMAP addbmp = { 0, 0 };
-		TBADDBITMAP addbmpdyn = { 0, 0 };
-		for (size_t i = 0; i < _nbButtons; ++i)
-		{
-			const int icoID = _toolBarIcons.getStdIconAt(static_cast<int>(i));
-			auto& hBmp = _vStdBtnBmp.at(i);
-			if (hBmp != nullptr)
-			{
-				::DeleteObject(hBmp);
-				hBmp = nullptr;
-			}
-			hBmp = static_cast<HBITMAP>(::LoadImage(_hInst, MAKEINTRESOURCE(icoID), IMAGE_BITMAP, iconDpiDynamicalSize, iconDpiDynamicalSize, LR_LOADMAP3DCOLORS | LR_LOADTRANSPARENT));
-
-			addbmp.nID = reinterpret_cast<UINT_PTR>(hBmp);
-			::SendMessage(_hSelf, TB_ADDBITMAP, 1, reinterpret_cast<LPARAM>(&addbmp));
-		}
-
-		if (_nbDynButtons > 0)
-		{
-			destroyHBmpElementsInVector(_vDynBtnBmp);
-			
-			for (size_t j = 0; j < _nbDynButtons; ++j)
-			{
-				auto& hBmp = _vDynBtnBmp.at(j);
-				hBmp = ToolBarIcons::resizeHBitmap(_vDynBtnReg.at(j)._hBmp, iconDpiDynamicalSize, iconDpiDynamicalSize);
-
-				addbmpdyn.nID = reinterpret_cast<UINT_PTR>(hBmp ? hBmp : _vDynBtnReg.at(j)._hBmp);
-				::SendMessage(_hSelf, TB_ADDBITMAP, 1, reinterpret_cast<LPARAM>(&addbmpdyn));
-			}
-		}
+		// Pyre909 build: the redrawn standard icons (ICOs from 16 to 48 pixels) at every scale; the 16x16 bitmaps are gone
+		const int iconDpiDynamicalSize = _dpiManager.scale(16);
+		int cx = 0, cy = 0;
+		if (!::ImageList_GetIconSize(_toolBarIcons.getDefaultLstStdHiDpi(), &cx, &cy) || cx != iconDpiDynamicalSize)
+			_toolBarIcons.resizeIcon(iconDpiDynamicalSize);
+		::SendMessage(_hSelf, TB_SETIMAGELIST, 0, reinterpret_cast<LPARAM>(_toolBarIcons.getDefaultLstStdHiDpi()));
+		::SendMessage(_hSelf, TB_SETDISABLEDIMAGELIST, 0, reinterpret_cast<LPARAM>(_toolBarIcons.getDisableLstStdHiDpi()));
 	}
 
 	if (create)

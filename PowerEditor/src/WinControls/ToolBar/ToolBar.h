@@ -115,8 +115,6 @@ private :
 	ToolBarIcons _toolBarIcons;
 	toolBarStatusType _state = TB_SMALL;
 	std::vector<DynamicCmdIcoBmp> _vDynBtnReg;
-	std::vector<HBITMAP> _vStdBtnBmp;
-	std::vector<HBITMAP> _vDynBtnBmp;
 	size_t _nbButtons = 0;
 	size_t _nbDynButtons = 0;
 	size_t _nbTotalButtons = 0;

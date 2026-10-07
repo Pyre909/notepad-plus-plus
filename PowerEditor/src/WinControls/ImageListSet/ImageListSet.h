@@ -100,8 +100,17 @@ enum ToolbarIconList
 	HLIST_DEFAULT_DM,
 	HLIST_DISABLE_DM,
 	HLIST_DEFAULT_DM2,
-	HLIST_DISABLE_DM2
+	HLIST_DISABLE_DM2,
+
+	// Standard icons: the redrawn ICOs (Pyre909 build: in place of the 16x16 bitmaps)
+
+	HLIST_STD_HIDPI,
+	HLIST_DISABLE_STD_HIDPI
 };
+
+// the high-DPI ICO of a standard toolbar bitmap: its ID + these (see resource.h)
+inline constexpr int stdHiDpiIconOffset = 4000;
+inline constexpr int stdHiDpiDisabledIconOffset = 4100;
 
 class ToolBarIcons
 {
@@ -142,6 +151,14 @@ public:
 
 	HIMAGELIST getDisableLstSetDM2() const {
 		return _iconListVector[HLIST_DISABLE_DM2].getHandle();
+	}
+
+	HIMAGELIST getDefaultLstStdHiDpi() const {
+		return _iconListVector[HLIST_STD_HIDPI].getHandle();
+	}
+
+	HIMAGELIST getDisableLstStdHiDpi() const {
+		return _iconListVector[HLIST_DISABLE_STD_HIDPI].getHandle();
 	}
 
 	void resizeIcon(int size) {

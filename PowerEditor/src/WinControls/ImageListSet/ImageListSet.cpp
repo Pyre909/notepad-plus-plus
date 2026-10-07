@@ -347,6 +347,9 @@ void ToolBarIcons::reInit(int size)
 	ImageList_SetIconSize(getDefaultLstSetDM2(), size, size);
 	ImageList_SetIconSize(getDisableLstSetDM2(), size, size);
 
+	ImageList_SetIconSize(getDefaultLstStdHiDpi(), size, size);
+	ImageList_SetIconSize(getDisableLstStdHiDpi(), size, size);
+
 	for (size_t i = 0; i < _iconListVector.size(); ++i)
 	{
 		_iconListVector[i].removeAll();
@@ -365,6 +368,9 @@ void ToolBarIcons::reInit(int size)
 			_iconListVector[HLIST_DISABLE_DM].addIcon(_tbiis[i]._grayDarkModeIcon, size, size, _tbiis[i]._stdIcon);
 			_iconListVector[HLIST_DEFAULT_DM2].addIcon(_tbiis[i]._defaultDarkModeIcon2, size, size, _tbiis[i]._stdIcon, true);
 			_iconListVector[HLIST_DISABLE_DM2].addIcon(_tbiis[i]._grayDarkModeIcon2, size, size, _tbiis[i]._stdIcon);
+
+			_iconListVector[HLIST_STD_HIDPI].addIcon(_tbiis[i]._stdIcon + stdHiDpiIconOffset, size, size); // not recoloured as Fluent ones
+			_iconListVector[HLIST_DISABLE_STD_HIDPI].addIcon(_tbiis[i]._stdIcon + stdHiDpiDisabledIconOffset, size, size);
 		}
 	}
 
@@ -375,6 +381,26 @@ void ToolBarIcons::reInit(int size)
 		_iconListVector[HLIST_DISABLE].addIcon(i._hIcon);
 		_iconListVector[HLIST_DEFAULT2].addIcon(i._hIcon);
 		_iconListVector[HLIST_DISABLE2].addIcon(i._hIcon);
+		// Pyre909 build: with the standard icons, a plugin's toolbar bitmap (as the standard icons showed it before), opaque
+		HICON hStdIcon = nullptr;
+		if (i._hBmp)
+		{
+			HBITMAP hBmp = resizeHBitmap(i._hBmp, size, size);
+			std::vector<BYTE> maskBits(((size + 15) / 16) * 2 * size, 0);
+			HBITMAP hMask = ::CreateBitmap(size, size, 1, 1, maskBits.data());
+			ICONINFO ii{};
+			ii.fIcon = TRUE;
+			ii.hbmColor = hBmp ? hBmp : i._hBmp;
+			ii.hbmMask = hMask;
+			hStdIcon = ::CreateIconIndirect(&ii);
+			::DeleteObject(hMask);
+			if (hBmp)
+				::DeleteObject(hBmp);
+		}
+		_iconListVector[HLIST_STD_HIDPI].addIcon(hStdIcon ? hStdIcon : i._hIcon);
+		_iconListVector[HLIST_DISABLE_STD_HIDPI].addIcon(hStdIcon ? hStdIcon : i._hIcon);
+		if (hStdIcon)
+			::DestroyIcon(hStdIcon);
 
 		HICON hIcon = nullptr;
 
@@ -469,6 +495,8 @@ void ToolBarIcons::create(HINSTANCE hInst, int iconSize)
 	_iconListVector.push_back(IconList());
 	_iconListVector.push_back(IconList());
 	_iconListVector.push_back(IconList());
+	_iconListVector.push_back(IconList());
+	_iconListVector.push_back(IconList());
 	
 
 	_iconListVector[HLIST_DEFAULT].init(hInst, iconSize);
@@ -481,6 +509,9 @@ void ToolBarIcons::create(HINSTANCE hInst, int iconSize)
 	_iconListVector[HLIST_DEFAULT_DM2].init(hInst, iconSize);
 	_iconListVector[HLIST_DISABLE_DM2].init(hInst, iconSize);
 
+	_iconListVector[HLIST_STD_HIDPI].init(hInst, iconSize);
+	_iconListVector[HLIST_DISABLE_STD_HIDPI].init(hInst, iconSize);
+
 	reInit(iconSize);
 }
 
@@ -490,6 +521,8 @@ void ToolBarIcons::destroy()
 	_iconListVector[HLIST_DEFAULT2].destroy();
 	_iconListVector[HLIST_DISABLE].destroy();
 	_iconListVector[HLIST_DISABLE2].destroy();
+	_iconListVector[HLIST_STD_HIDPI].destroy();
+	_iconListVector[HLIST_DISABLE_STD_HIDPI].destroy();
 }
 
 HBITMAP ToolBarIcons::resizeHBitmap(HBITMAP srcBmp, int destW, int destH)
