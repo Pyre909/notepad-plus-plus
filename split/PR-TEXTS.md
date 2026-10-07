@@ -15,7 +15,7 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 7 | `live-rendering-switch_20261005` | `53d0026` + `d50fb3b` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
 | 8 | `directwrite-font-smoothing_20261006` | `76b3210` | 4 | small | DirectWrite following the Windows font smoothing | no: bug fix of #14954 (open since 2024) |
 
-Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs for its first version, 2026-09-30, the rewritten `9f605be` not pushed yet; 6, 7 and 8: 13/13, 2026-10-06). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
+Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs, `9f605be`, 2026-10-06; 6, 7 and 8: 13/13, 2026-10-06). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
 
 **How the split was checked.** Each branch was built and tested on its own (results in each
 PR's Testing section). Recombined, branches 1 to 5 and the first live switch (`live-rendering-switch_20260930`) give
@@ -27,8 +27,8 @@ the "Follow Windows" antialiasing of its Text Rendering settings).
 hold. Open 4 after a maintainer agrees on the approach: upstream already has DPI work in progress, so link or comment
 on their existing per-monitor DPI issue first. 5 was first offered to Scintilla (bug #2519), but Scintilla's
 maintainer has twice declined font-name mapping in Scintilla (bugs #2080, #2356: "leave implementation choice to the
-application"), so it is now a Notepad++-only change, and a bug fix of #9951 and #12393: its PR after the checks of
-section 5.
+application"), so it is now a Notepad++-only change, and a bug fix of #9951 and #12393: its checks are done, ready to
+open (section 5).
 6 is a bug fix: open it first. 7 is
 an enhancement on top of 6: its feature request now, its PR once the request is Accepted and 6 is merged. 8 is a bug
 fix too: its PR after the checks of section 8. No code goes
@@ -278,7 +278,7 @@ so "Fira Code" Light printed as Regular; the styles now get their GDI names back
 ones back before the line number margin is measured again.
 
 Bold is 300 heavier than the font, as bold is to regular. Checked against GDI on 2026-10-06 (the ink of a sample line
-at 15 and 24 px, every font drawn by GDI, `fontmap\inkcmp.cpp` in the session's scratchpad):
+at 15 and 24 px, every font drawn by GDI, `vm/inkcmp.cpp`):
 - GDI emboldens a Light, SemiLight or Medium font, and how heavy that gets depends on the font and the size: from about
   the Regular (Segoe UI Light) to about the Bold (Bahnschrift Light at 15 px). 300 heavier is in that range, and the
   closest weight for MonoLisa Light, and at 24 px for Bahnschrift Light and MonoLisa Medium. A cap at Bold, as a
@@ -341,8 +341,8 @@ Testing (Windows 11 ARM64, Visual Studio 2026 Build Tools 18.10 with MSVC 19.51,
 - The mapping of every font-list name (319 fonts installed, regular, bold, italic) compared with an earlier version that matched the Win32 names of the whole font collection by hand: the same DirectWrite parameters for all of them, including truncated names ("Bahnschrift SemiBold SemiConden"), static families from Hairline to Black, CJK fonts and the "@" vertical names; about 15 ms for the whole list.
 - Bold against GDI's emboldening (the ink of a sample line at 15 and 24 px): for Light and Medium fonts, 300 heavier is in the range of GDI's, from about Regular to about Bold depending on the font; bold of "Cascadia Code SemiBold" is Cascadia Code Bold, not a simulated bold.
 - In Notepad++ with "Bahnschrift Light" as the Default Style font (an automated test): with DirectWrite the styles read back "Bahnschrift" weight 300, bold 600; with GDI "Bahnschrift Light" 400, bold 700, as before.
-- Printing to PDF with DirectWrite on: TODO.
-- GitHub Actions (this repository's CI_build workflow, on the fork): TODO.
+- Printing with DirectWrite on, "Segoe UI Light" as the Default Style font, to Microsoft Print to PDF: the PDF embeds Segoe UI Light (its name table, weight class 300), as GDI prints it; the bold keywords are GDI's emboldened Light, as before.
+- GitHub Actions (this repository's CI_build workflow, on the fork): all 13 jobs pass (MSVC x64/Win32/ARM64 Release and Debug with code analysis, CMake, MinGW, Clang).
 
 AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
 
@@ -353,13 +353,14 @@ fix #12393
 ```
 
 Before opening:
-1. Push the rewritten branch (a force push: it was rebased on `a69bc23` and amended) and check its CI, then fill the
-   body's CI line. The MSVC code analysis runs only in CI's Debug x64 job, and GCC and Clang compile `9f605be` there
-   for the first time: wait for all 13 jobs.
-2. Printing, by hand on Windows: Default Style font "Segoe UI Light" (or "Bahnschrift Light"), Rendering mode
-   DirectWrite, File > Print to "Microsoft Print to PDF": the PDF's fonts (File > Properties > Fonts in a PDF reader)
-   should list Segoe UI Light, not Segoe UI. Not automated: the VM's default printer is a real one, and Windows manages
-   it (printing to PDF once makes the PDF printer the default). Then fill the body's printing line.
+1. Push and CI: done (2026-10-06): force-pushed (`6e8579e` replaced), all 13 jobs pass, the Debug x64 code analysis
+   and GCC and Clang included; the body's CI line is filled.
+2. Printing: done (2026-10-06, `9f605be`'s ARM64 build, with Pyre909's OK as Windows then makes the PDF printer the
+   default): Default Style "Segoe UI Light", DirectWrite, File > Print to "Microsoft Print to PDF". The PDF names its
+   fonts CIDFont+F1..., so the embedded font's own name table was read: Segoe UI Light, weight class 300 (the first
+   version would have printed "Segoe UI" Regular). pyre (`fcbbb30`) prints Segoe UI Light too, and its bold keywords
+   in Segoe UI Semibold, the font its screen shows. Scripts: `vm/print-pdf.ps1` (the Windows 11 print dialog by UI
+   Automation, the PDF printer's Save dialog by window messages) and `vm/pdf-fonts.ps1`.
 3. "Cascadia Code SemiBold" with its bold drawn Bold: done (2026-10-06): DirectWrite matches its bold weight (900) to
    Cascadia Code Bold, the family's heaviest, without simulation (`inkcmp`). By eye in Notepad++ too if wanted.
 4. Optional: an exporter (NppExport, bundled with the installer) with "Bahnschrift Light" and DirectWrite, to see what

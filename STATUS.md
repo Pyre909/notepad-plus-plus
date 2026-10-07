@@ -128,15 +128,19 @@ keep the light-text gamma as it is.
   (a plugin that switches a view manages it, as kit 7 has it); `NPPM_SETSMOOTHFONT(FALSE)` follows Windows even with an
   explicit antialiasing chosen (kit 8's meaning, plugins only). The Linux/Wine harness (`harness/`) is history: written
   for the first API.
-- Not done yet: the push (pyre, the font-name branch by force, this branch) and CI; the printing check by hand (kit
-  section 5, Before opening: the VM's default printer is real and managed by Windows).
+- Pushed on 2026-10-06 with Pyre909's OK: pyre (`fcbbb30`, CI: all 13 jobs pass), the font-name branch by force
+  (`9f605be`, CI: all 13 jobs pass), this branch.
+- Printing checked (kit section 5, Before opening 2), with Pyre909's OK as it makes the PDF printer Windows' default:
+  "Segoe UI Light" with DirectWrite prints in Segoe UI Light (the PDF's embedded font: weight class 300), on the PR
+  build and on pyre (whose bold keywords print in Segoe UI Semibold, as its screen shows them). Tools in `vm/`:
+  `print-pdf.ps1`, `pdf-fonts.ps1`, and `inkcmp.cpp` for the bold weights.
 
 ## Branches of Pyre909/notepad-plus-plus
 
 | Branch | Head | What |
 |---|---|---|
 | `master` | `37f76d4` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
-| `pyre` | `328f690` (pushed; six commits up to `fcbbb30` local, see the review above) | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
+| `pyre` | `fcbbb30` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
 | `claude/awesome-darwin-bsud9v` | `357fec9` | The cloud session's branch: the combined development branch, all the features (pyre is built on it) |
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418, closed by donho on 2026-10-02: Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (on hold: #18418 closed) |
@@ -144,7 +148,7 @@ keep the light-text gamma as it is.
 | `rtl-views-gdi_20261006` | `53d0026` | Right-to-left views drawn with GDI, the startup direction sync (bug fix: #17865, #17518, the RTL UI languages on DirectWrite), on upstream `master`: PR to open (kit section 6) |
 | `live-rendering-switch_20261005` | `d50fb3b` | Rendering mode applied without restart (MISC. box), one commit on `rtl-views-gdi_20261006`: feature request to open, PR after it's Accepted and section 6 is merged (kit section 7). Its refusal version is kept as `archive/live-rendering-switch-refusal_20261005`, the fallback |
 | `directwrite-font-smoothing_20261006` | `76b3210` | DirectWrite following the Windows font smoothing (bug fix: #14954), on upstream `master`: PR to open (kit section 8). CI: all 13 jobs pass (its ARM64 Debug job hung on GitHub's runner once, passed when re-run) |
-| `directwrite-font-names_20260930` | `9f605be` | Fonts such as "Fira Code Light" drawn by DirectWrite (Notepad++-only change; a bug fix of #9951 and #12393, PR after the checks of kit section 5). Rewritten and rebased on 2026-10-06 (the first version, `6e8579e`, is the pushed one until the force push) |
+| `directwrite-font-names_20260930` | `9f605be` | Fonts such as "Fira Code Light" drawn by DirectWrite (Notepad++-only change; a bug fix of #9951 and #12393, PR after the checks of kit section 5). Rewritten, rebased and force-pushed on 2026-10-06 (the first version was `6e8579e`) |
 | `per-monitor-dpi_20260925` | `8a0ff70` | Opt-in per-monitor DPI awareness (discuss with maintainers before a PR) |
 | `font-size-1pt_20260925` | `faaeb59` | Font sizes 1-4 pt: PR #18412 closed upstream (not wanted); kept in the fork |
 | `font-weight-names_20260925` | `47341a4` | Superseded: the Scintilla version of the font-name fix |
@@ -171,7 +175,8 @@ keep the light-text gamma as it is.
   off, Standard and ClearType (Pyre909 changed it) and live; CI: all 13 jobs pass (`76b3210`).
 - Fonts of a weight under DirectWrite (kit section 5): upstream has the bug reports, #9951 (2021, open, 29 comments,
   labelled "scintilla dependent") and #12393 (2022), so it's a bug fix PR, no feature request to wait for. Rewritten and
-  rebased on 2026-10-06 (`9f605be`). Before opening: its CI and the printing check by hand.
+  rebased on 2026-10-06 (`9f605be`, printing checked, CI: all 13 jobs pass). Ready to open; the optional comment on
+  #9951 first.
 - PR #18412 (font sizes 1-4 pt): closed, not wanted.
 - Next PRs from the fork only when a feature looks worthwhile to upstream.
 

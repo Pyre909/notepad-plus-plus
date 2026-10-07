@@ -37,7 +37,7 @@ Fonts folder, for the static-font weight tests.
 | `xbuild.sh`, `gen-libs-version.sh` | MinGW-w64 cross build of a Notepad++ checkout or worktree |
 | `fork/` | Local tests of the Pyre909 build packaging (portable zip and installer scripts of the `pyre` branch): a package check probe, the signing stand-in, instructions |
 | `themes/` | Lucid Light and Lucid Dark, Notepad++ colour themes computed from contrast targets (APCA), with the generator, the checks and the evidence: see `themes/README.md` |
-| `vm/` | Font tests on the Windows VM: `weights.cpp` (test file), `measure.ps1` (screenshot with `PrintWindow`, ink and width per text line, appended to `results.csv`), the screenshots in `shots/`. See `vm/README.md` |
+| `vm/` | Font tests on the Windows VM: `weights.cpp` (test file), `measure.ps1` (screenshot with `PrintWindow`, ink and width per text line, appended to `results.csv`), the screenshots in `shots/`; `inkcmp.cpp` (GDI's bold against DirectWrite's weights), `print-pdf.ps1` and `pdf-fonts.ps1` (printing to PDF, the embedded fonts). See `vm/README.md` |
 | `review/` | The review harness, run on Windows before pushing a branch: `review.ps1` (upstream and fork rules, coding style, localization, MSVC ARM64/x64/Win32 builds, the app-level tests in `tests/`), `checklist.md` (the independent AI review), `SKILL.md` (the Claude Code skill `npp-review`). See `review/README.md` |
 | `archive/` | Earlier harnesses and one-off scripts, kept for reference; and the list of other projects' sources consulted |
 | `STATUS.md` | Where everything stands: branches, upstream PRs and tickets, releases, next steps |
