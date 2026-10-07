@@ -10,12 +10,12 @@ ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
-- Everything is pushed: `pyre` up to `3a2c596` (Adaptive dropped) and this branch. `pyre` has upstream up to `a69bc23` (2026-10-06, "Next"
+- Everything is pushed: `pyre` up to `3a2c596` (Adaptive dropped; CI run 37578284905: all 13 jobs pass) and this branch. `pyre` has upstream up to `a69bc23` (2026-10-06, "Next"
   7, see "Upstream merge (2026-10-06)" below).
 - Waiting on Pyre909: open the RTL fix PR (kit section 6), the font smoothing PR (kit 8), the live switch's feature
   request (kit 7); then the font-name PR (kit 5) and the optional comment on #9951.
-- Next for Claude, one per session: the test round's open rows (Antialiasing choices at once, the DPI one, now also the
-  merge's DPI checks below).
+- Waiting on Pyre909 too: the test round's per-monitor DPI row and the merge's DPI checks ("Upstream merge" below) need
+  a second display or a change of Windows' scale, which Claude doesn't make. The other open rows were done on 2026-10-06.
 - Reviews: `review.ps1 -Quiet` (PASS lines to the log only), then the AI review (skill `npp-review`). Keep agents to the
   harness; no ad hoc fan-out.
 
@@ -50,11 +50,11 @@ window: judge from the screenshots, not by eye.
 | Installer: installs over Notepad++, About "(ARM 64-bit, Pyre909 build)", Explorer "Edit with Notepad++", Plugins Admin, no "Update Notepad++" in the ? menu | **pass** |
 | Live switch: Text Rendering GDI <-> DirectWrite redraws the text at once, no restart | **pass** |
 | The font stays the same after the switch (no fallback font) | **pass** for Bahnschrift Light: after the live GDI -> DirectWrite switch, each line is within 3 px of its GDI width (readings below) |
-| With DirectWrite, each Antialiasing choice and DirectWrite mode changes the text at once | to do |
+| With DirectWrite, each Antialiasing choice and DirectWrite mode changes the text at once | **pass** (2026-10-06, `pyre` `3a2c596` ARM64, 150%): test `pyre-text-rendering-live` (30 checks): each choice reaches both views at once and redraws the text |
 | Default Style "Bahnschrift Light": Light text, SemiBold bold keywords, about the same ink in GDI and DirectWrite | **pass**: with DirectWrite the styles get weight 300 (text) and 600 (keywords) (`SCI_STYLEGETWEIGHT`); ink per line within 2.4% of GDI, width within 3 px; bold lines about 1.26x the regular lines' ink per letter in both (readings below) |
-| "Cascadia Code SemiBold": bold keywords draw Bold | to do |
-| Baseline: the font tests with the official 8.9.8.1 ARM64 portable (expect DirectWrite to draw a fallback or wrong weight) | to do |
-| Per-monitor DPI (MISC. option, restart; then change Windows' scale while Notepad++ runs, or two displays) | to do |
+| "Cascadia Code SemiBold": bold keywords draw Bold | **pass** (2026-10-06, see `CLAUDE.md`): DirectWrite draws them with Cascadia Code Bold, not a simulated bold |
+| Baseline: the font tests with the official 8.9.8.1 ARM64 portable (expect DirectWrite to draw a fallback or wrong weight) | **as expected** (2026-10-06), with upstream `master` `a69bc23` built for ARM64 instead of the official download: DirectWrite gets "Bahnschrift Light" at weight 400 / 700 (test `directwrite-font-names`: 4 FAIL) and draws a fallback font (Segoe UI-like): line height 28 px instead of 25, other widths, 5% to 24% more ink (readings below, `vm/shots/baseline-pyre-vs-upstream.png`) |
+| Per-monitor DPI (MISC. option, restart; then change Windows' scale while Notepad++ runs, or two displays) | to do: needs Pyre909 (a system setting or a second display) |
 | Uninstall removes `disableNppAutoUpdate.xml` | skipped: it would remove the working install |
 
 Note: a fresh settings folder starts in DirectWrite (technology 1) in this build, not GDI.
@@ -62,14 +62,15 @@ Note: a fresh settings folder starts in DirectWrite (technology 1) in this build
 Bahnschrift Light readings, Default Style at 10 pt in `C:\npp-fonttest` (tools and procedure in `vm/README.md`; all
 readings in `vm/results.csv`, screenshots in `vm/shots/`; ink = darkness / 1000, width in px):
 
-| Line of `vm/weights.cpp` | GDI ink / width | DirectWrite ink / width |
-|---|---|---|
-| 1, bold keywords | 350.2 / 277 | 343.4 / 276 |
-| 2, regular identifiers | 286.1 / 273 | 279.3 / 270 |
-| 3, bold keywords | 274.8 / 219 | 269.4 / 217 |
-| 4, regular identifiers | 240.3 / 219 | 236.1 / 218 |
+| Line of `vm/weights.cpp` | GDI ink / width | DirectWrite ink / width | upstream `a69bc23` DirectWrite (fallback font) |
+|---|---|---|---|
+| 1, bold keywords | 350.2 / 277 | 343.4 / 276 | 384.4 / 283 |
+| 2, regular identifiers | 286.1 / 273 | 279.3 / 270 | 293.9 / 265 |
+| 3, bold keywords | 274.8 / 219 | 269.4 / 217 | 334.1 / 232 |
+| 4, regular identifiers | 240.3 / 219 | 236.1 / 218 | 257.5 / 219 |
 
-Line height: 24 px in GDI, 25 px in DirectWrite. The same font set through Global override ("Enable global font")
+Line height: 24 px in GDI, 25 px in DirectWrite, 28 px for upstream's fallback (pyre `3a2c596` measured again on
+2026-10-06: the same numbers, `pyre-3a2c596-bahnschrift-light-dw`). The same font set through Global override ("Enable global font")
 gives identical GDI numbers (`bahnschrift-light-override-gdi`). For reference, Courier New with DirectWrite: bold
 lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
 
