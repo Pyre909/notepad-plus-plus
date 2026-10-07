@@ -411,7 +411,9 @@ setting's after an RTL round trip; a plugin's `SCI_SETBIDIRECTIONAL` is cleared 
 does that); session documents saved RTL now show RTL under DirectWrite too (intended).
 
 Order: Pyre909 opens the bug report below if they want a record of the RTL UI case (optional: #17865 and #17518 are
-open), then the PR with the numbers and `vm/shots/rtl-ui-before-after.png`. The commit can be amended until the PR is
+open), then the PR with the numbers and `vm/shots/rtl-ui-before-after.png` (in place of "(screenshot)"). PR body
+rewritten in a casual voice on 2026-10-07; checked then: the branch merges cleanly with `master` `a69bc23`, #17865 and
+#17518 still open, no other open PR on it. The commit can be amended until the PR is
 opened, then new commits only. The PR is opened from
 https://github.com/notepad-plus-plus/notepad-plus-plus/compare/master...Pyre909:notepad-plus-plus:rtl-views-gdi_20261006
 
@@ -459,23 +461,25 @@ This can be fixed in Notepad++ alone, drawing the mirrored views with GDI and th
 
 ### PR — body
 ```
-Notepad++ shows a right-to-left document by mirroring its editor window (WS_EX_LAYOUTRTL), and only GDI follows that mirroring. With DirectWrite the text is drawn left-to-right while Windows mirrors the scrollbar and the mouse, so clicks land on the opposite side. Scintilla doesn't support it either: its maintainer has said that mirroring only works with GDI drawing (https://sourceforge.net/p/scintilla/feature-requests/1435/).
+Notepad++ shows an RTL document by mirroring the editor window (WS_EX_LAYOUTRTL), but only GDI drawing actually follows that mirroring. With DirectWrite the text still comes out left-to-right while Windows mirrors the scrollbar and the mouse, so clicks end up on the wrong side. Scintilla won't help here either, its maintainer said mirroring only ever worked with GDI: https://sourceforge.net/p/scintilla/feature-requests/1435/
 
-Today that means:
-- With DirectWrite on, View > Text Direction RTL shows "RTL is not compatible with DirectWrite mode" once, then does nothing (#17865).
-- With an RTL UI language (Hebrew, Arabic, Farsi, Kurdish, Urdu, Uyghur), every view starts mirrored and documents are RTL, so with the default rendering mode the editor is drawn left-to-right in a mirrored window, with no warning (screenshots: 8.9.8.1 left, this PR right). 9bc790b turned DirectWrite off in that case; the per-document RTL change (2724e0d) removed that check.
+What that looks like right now:
+- With DirectWrite on, View > Text Direction RTL pops up "RTL is not compatible with DirectWrite mode" once, then just does nothing after that (#17865).
+- With an RTL UI language (Hebrew, Arabic, Farsi, Kurdish, Urdu, Uyghur), documents start RTL and every view is mirrored from the start. DirectWrite is the default rendering mode, so out of the box the editor is drawn left-to-right inside a mirrored window, no warning at all. Screenshot below: 8.9.8.1 on the left, this PR on the right. 9bc790b used to turn DirectWrite off for that case, but the per-document RTL change (2724e0d) took that check out.
 
-This PR draws a right-to-left view with GDI whatever the rendering mode, and gives it the rendering mode back once it's left-to-right again, also when switching between RTL and LTR tabs. A view that starts mirrored doesn't get DirectWrite. The refusal and its message are removed.
+So this PR just draws a mirrored view with GDI, whatever the rendering mode is, and gives it its rendering mode back once it's LTR again (that includes switching between RTL and LTR tabs). A view that starts mirrored never gets DirectWrite in the first place. The refusal and its message are gone.
 
-It also sets the views' direction at startup: their first document is activated while already current, so with editZoneRTL="no" the views stayed mirrored (#17518).
+While I was in there: at startup the first document gets activated while it's already the current one, so the views never got their direction set, and with editZoneRTL="no" they stayed mirrored anyway (#17518). Two lines in Notepad_plus::init fix that.
 
-4 files, no Scintilla changes.
+4 files, nothing in Scintilla.
 
-Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build too), from a fresh config (DirectWrite): RTL and LTR back and forth, RTL and LTR tabs, an RTL document cloned to the other view, the Document Map following, a long wrapped document keeping its scroll position through the switches; the Hebrew UI from start to exit, also with editZoneRTL="no" and no session. No message anywhere, and LTR documents stay on DirectWrite.
+(screenshot)
 
-Known: a plugin that set its own technology on one of Notepad++'s views gets the rendering mode instead after an RTL round trip, and a plugin's SCI_SETBIDIRECTIONAL is cleared when its view goes to GDI (Scintilla does that).
+Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build fine too), fresh config so DirectWrite is on: RTL/LTR back and forth, RTL and LTR tabs, an RTL doc cloned to the other view, the Document Map following along, a long wrapped doc keeping its scroll position through all of it, and the Hebrew UI from startup to exit, also with editZoneRTL="no" and no session. No messages anywhere, and LTR documents stay on DirectWrite.
 
-AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
+Two things I know about and left alone: if a plugin set its own technology on one of Notepad++'s views, it gets the rendering mode back after an RTL round trip, and a plugin's SCI_SETBIDIRECTIONAL gets cleared when its view switches to GDI (that's Scintilla's doing).
+
+AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
