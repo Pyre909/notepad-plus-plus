@@ -425,7 +425,7 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 				};
 				// the names have to match the textAntialiasing, textRenderingMode & textContrast enums
 				addTextRenderingInfo(L"Text Antialiasing: ", { L"Follow Windows", L"ClearType", L"ClearType less color fringing", L"Grayscale", L"None" }, svp._textAntialiasing);
-				addTextRenderingInfo(L"DirectWrite Rendering Mode: ", { L"Automatic", L"Natural", L"Symmetric", L"GDI classic", L"Adaptive" }, svp._textRenderingMode);
+				addTextRenderingInfo(L"DirectWrite Rendering Mode: ", { L"Automatic", L"Natural", L"Symmetric", L"GDI classic" }, svp._textRenderingMode);
 				addTextRenderingInfo(L"Text Contrast: ", { L"Follow Windows", L"Medium", L"High", L"Very high" }, svp._textContrast);
 			}
 

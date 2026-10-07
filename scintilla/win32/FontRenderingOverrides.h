@@ -17,15 +17,13 @@
 
 namespace Scintilla::Internal {
 
-// Text is drawn with the rendering parameters of its variant, combined as bits: light text gets a higher gamma, which
-// makes it heavier (and dark text lighter), small text no vertical antialiasing in the adaptive rendering mode
+// Text is drawn with the rendering parameters of its variant: light text gets a higher gamma, which makes it heavier (and
+// dark text lighter)
 constexpr int renderingVariantLight = 1;
-constexpr int renderingVariantSmall = 2;
-constexpr int renderingVariants = 4;
+constexpr int renderingVariants = 2;
 // The text colour intensity from which text is light, as weighted by DirectWrite's grayscale gamma correction which makes
-// text heavier above 0.5 and lighter below, and the em size up to which text is small, in pixels
+// text heavier above 0.5 and lighter below
 constexpr float lightTextMinIntensity = 0.5f;
-constexpr float smallTextMaxPixels = 20.0f;
 
 // The FontQuality bit above FontQuality::QualityMask that has DirectWrite measure text like GDI, for the GDI classic
 // rendering mode, so that its fonts are realised and cached apart
@@ -84,7 +82,7 @@ public:
 			return value >= 0 && value <= 100;
 		case SC_FONTRENDERING_RENDERINGMODE:
 			return value == SC_RENDERINGMODE_GDICLASSIC || value == SC_RENDERINGMODE_NATURAL ||
-				value == SC_RENDERINGMODE_NATURALSYMMETRIC || value == SC_RENDERINGMODE_ADAPTIVE;
+				value == SC_RENDERINGMODE_NATURALSYMMETRIC;
 		case SC_FONTRENDERING_LIGHTTEXTGAMMA:
 			// like SPI_GETFONTSMOOTHINGCONTRAST
 			return value >= 1000 && value <= 2200;
@@ -149,14 +147,11 @@ public:
 			std::array<FontRenderingParams, renderingVariants> &variants = isCustom ? sets.customs : sets.defaults;
 			for (int variant = 0; variant < renderingVariants; variant++) {
 				const bool isLight = (variant & renderingVariantLight) && (lightTextGamma != SC_FONTRENDERING_DEFAULT);
-				const bool isSmall = (variant & renderingVariantSmall) && (modeOverride == SC_RENDERINGMODE_ADAPTIVE);
-				const int applied = (isLight ? renderingVariantLight : 0) | (isSmall ? renderingVariantSmall : 0);
-				if (applied != variant) {
-					variants[variant] = variants[applied]; // a variant that doesn't apply has the parameters of the one made before
+				if (variant && !isLight) {
+					variants[variant] = variants[0]; // a variant that doesn't apply has the parameters of the one made before
 					continue;
 				}
-				variants[variant] = Create(factory, monitor, isLight ? std::max(baseGamma, lightTextMinGamma) : baseGamma,
-					isSmall ? DWRITE_RENDERING_MODE_NATURAL : mode);
+				variants[variant] = Create(factory, monitor, isLight ? std::max(baseGamma, lightTextMinGamma) : baseGamma, mode);
 				if (!variants[variant]) {
 					variants[variant] = variant ? variants[0] : base; // couldn't be made: as without the variant, or the override
 				}

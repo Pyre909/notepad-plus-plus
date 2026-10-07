@@ -1824,7 +1824,7 @@ void EditingSubDlg::initTextRenderingParam()
 	setComboItems(IDC_COMBO_TEXTANTIALIASING, { L"Follow Windows", L"ClearType", L"ClearType (less color fringing)", L"Grayscale", L"None" },
 		svp._textAntialiasing);
 	setComboItems(IDC_COMBO_TEXTRENDERINGMODE, { L"Automatic", L"Natural (sharper small text)", L"Symmetric (smoother)",
-		L"GDI classic (pixel-aligned)", L"Adaptive (Natural for small text)" }, svp._textRenderingMode);
+		L"GDI classic (pixel-aligned)" }, svp._textRenderingMode);
 	setComboItems(IDC_COMBO_TEXTCONTRAST, { L"Follow Windows", L"Medium", L"High", L"Very high" }, svp._textContrast);
 
 	enableDirectWriteTextRendering();
@@ -1842,7 +1842,7 @@ void EditingSubDlg::initTextRenderingParam()
 		{ IDC_COMBO_TEXTANTIALIASING, "textAntialiasing-tip",
 			L"Follow Windows: the Windows font smoothing (off, Standard or ClearType). ClearType: always, as \"Enable smooth font\" did; \"less color fringing\" applies to DirectWrite only. Grayscale is recommended for OLED screens and for rotated (portrait) screens, where ClearType color fringes are more visible." },
 		{ IDC_COMBO_TEXTRENDERINGMODE, "textRenderingMode-tip",
-			L"Natural avoids the vertical blur of small text. GDI classic snaps the glyphs to whole pixels like GDI rendering (the crispest on standard-DPI screens). Adaptive uses Natural for small text (up to 20 pixels) and the automatic mode for larger text." },
+			L"Natural avoids the vertical blur of small text. GDI classic snaps the glyphs to whole pixels like GDI rendering (the crispest on standard-DPI screens)." },
 		{ IDC_COMBO_TEXTCONTRAST, "textContrast-tip",
 			L"DirectWrite only. Makes the strokes heavier: darkens dark text on light backgrounds and thickens light text on dark themes." }
 	};

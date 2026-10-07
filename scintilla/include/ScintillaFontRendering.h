@@ -24,11 +24,9 @@
 #define SC_FONTRENDERING_LIGHTTEXTGAMMA 4            /* in thousandths, 1000-2200: the least gamma of light text, heavier */
 #define SC_FONTRENDERING_PARAMETERS 5
 
-/* DWRITE_RENDERING_MODE values; GDI classic text is also measured like GDI, and SC_RENDERINGMODE_ADAPTIVE is natural for
-   text up to 20 pixels high, else the monitor's mode */
+/* DWRITE_RENDERING_MODE values; GDI classic text is also measured like GDI */
 #define SC_RENDERINGMODE_GDICLASSIC 2
 #define SC_RENDERINGMODE_NATURAL 4
 #define SC_RENDERINGMODE_NATURALSYMMETRIC 5
-#define SC_RENDERINGMODE_ADAPTIVE 100
 
 #endif

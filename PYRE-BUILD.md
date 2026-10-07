@@ -9,7 +9,7 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **Text rendering settings** (Preferences > Editing 1 > Text Rendering): the rendering mode (GDI or a
   DirectWrite mode, moved here from MISC.), antialiasing (Follow Windows, ClearType, ClearType with less color
   fringing, Grayscale, None), the DirectWrite mode (Automatic, Natural for sharper small text, Symmetric, GDI
-  classic, Adaptive) and the text contrast. "Follow Windows" follows the Windows font smoothing with DirectWrite
+  classic) and the text contrast. "Follow Windows" follows the Windows font smoothing with DirectWrite
   too (official issue #17461), and a change of it at once, the ClearType Text Tuner's included.
 - **The rendering mode applies at once**, without restarting Notepad++.
 - **Fonts of a weight draw correctly with DirectWrite**: "Fira Code Light", "Cascadia Code SemiBold" or

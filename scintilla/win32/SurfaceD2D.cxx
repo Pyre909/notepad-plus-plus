@@ -1349,10 +1349,9 @@ void SurfaceD2D::DrawTextCommon(PRectangle rc, const Font *font_, XYPOSITION yba
 		const TextWide tbuf(text, codePageDraw);
 
 		// N++: the rendering parameters variant of the text (see FontRenderingOverrides.h), light from the intensity of its
-		// colour, small from its em size in pixels
+		// colour
 		const FLOAT intensity = 0.25f * penColour.r + 0.5f * penColour.g + 0.25f * penColour.b;
-		const int variant = ((intensity >= lightTextMinIntensity) ? renderingVariantLight : 0) |
-			((pfm->pTextFormat->GetFontSize() * static_cast<FLOAT>(deviceScaleFactor) <= smallTextMaxPixels) ? renderingVariantSmall : 0);
+		const int variant = (intensity >= lightTextMinIntensity) ? renderingVariantLight : 0;
 		SetFontQuality(pfm->extraFontFlag, variant);
 		if (fuOptions & ETO_CLIPPED) {
 			const D2D1_RECT_F rcClip = RectangleFromPRectangle(rc);

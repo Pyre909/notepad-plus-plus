@@ -770,7 +770,13 @@ static void readTextRenderingParams(const NppXml::Element& elem, ScintillaViewPa
 		svp._doSmoothFont = svp.isClearTypeAntialiasing();
 	else if (svp._doSmoothFont != svp.isClearTypeAntialiasing())
 		svp._textAntialiasing = svp._doSmoothFont ? textAntialiasingClearType : textAntialiasingFollowWindows;
-	svp._textRenderingMode = getRangeDefaultAttribute(elem, "fontRenderingMode", textRenderingModeAutomatic, textRenderingModeAdaptive, svp._textRenderingMode);
+	// 4 was Adaptive (dropped on 2026-10-06): Natural for text up to 20 pixels (10 pt up to 150% DPI), else Automatic; read
+	// as Natural
+	constexpr int textRenderingModeAdaptiveDropped = 4;
+	if (NppXml::intAttribute(elem, "fontRenderingMode", -1) == textRenderingModeAdaptiveDropped)
+		svp._textRenderingMode = textRenderingModeNatural;
+	else
+		svp._textRenderingMode = getRangeDefaultAttribute(elem, "fontRenderingMode", textRenderingModeAutomatic, textRenderingModeGdiClassic, svp._textRenderingMode);
 	svp._textContrast = getRangeDefaultAttribute(elem, "fontContrast", textContrastFollowWindows, textContrastVeryHigh, svp._textContrast);
 }
 

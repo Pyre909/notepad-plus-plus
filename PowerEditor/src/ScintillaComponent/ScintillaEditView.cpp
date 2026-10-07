@@ -552,10 +552,9 @@ void ScintillaEditView::applyTextRenderingSettings()
 		SC_FONTRENDERING_DEFAULT,          // textRenderingModeAutomatic
 		SC_RENDERINGMODE_NATURAL,          // textRenderingModeNatural
 		SC_RENDERINGMODE_NATURALSYMMETRIC, // textRenderingModeSymmetric
-		SC_RENDERINGMODE_GDICLASSIC,       // textRenderingModeGdiClassic
-		SC_RENDERINGMODE_ADAPTIVE          // textRenderingModeAdaptive
+		SC_RENDERINGMODE_GDICLASSIC        // textRenderingModeGdiClassic
 	};
-	static_assert(std::size(renderingModes) == static_cast<size_t>(textRenderingModeAdaptive) + 1);
+	static_assert(std::size(renderingModes) == static_cast<size_t>(textRenderingModeGdiClassic) + 1);
 
 	// DirectWrite's enhanced contrast only darkens dark text (it's reduced to nothing for light text),
 	// light text (on dark themes) gets heavier with a higher gamma, which would make dark text lighter:
