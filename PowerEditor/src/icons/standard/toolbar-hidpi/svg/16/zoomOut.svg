@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="16"
+   height="16"
+   viewBox="0 0 16 16"
+   version="1.1"
+   id="svg2"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs2" />
+  <path
+     d="M9,10 L14,15"
+     stroke="#7A4E18"
+     stroke-width="4"
+     stroke-linecap="round"
+     id="path1" />
+  <path
+     d="M9,10 L14,15"
+     stroke="#D3A665"
+     stroke-width="2"
+     stroke-linecap="round"
+     id="path2" />
+  <circle
+     cx="6"
+     cy="7"
+     r="4.5"
+     fill="#E3EEFB"
+     stroke="#4F7DB8"
+     id="circle2" />
+  <rect
+     x="10.5"
+     y="5.5"
+     width="5"
+     height="1"
+     fill="#E0443A"
+     stroke="#8A1610"
+     id="rect2" />
+</svg>

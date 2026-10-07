@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="20"
+   height="20"
+   viewBox="0 0 20 20"
+   version="1.1"
+   id="svg12"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs12" />
+  <rect
+     x="1.5"
+     y="1.5"
+     width="14"
+     height="13"
+     fill="#FFFFFF"
+     stroke="#2F5A9C"
+     id="rect1" />
+  <rect
+     x="2"
+     y="2"
+     width="13"
+     height="2"
+     fill="#86A9DC"
+     id="rect2" />
+  <rect
+     x="3"
+     y="5"
+     width="3"
+     height="1"
+     fill="#9CBCE8"
+     id="rect3" />
+  <rect
+     x="7"
+     y="5"
+     width="7"
+     height="1"
+     fill="#9CBCE8"
+     id="rect4" />
+  <rect
+     x="3"
+     y="8"
+     width="3"
+     height="1"
+     fill="#9CBCE8"
+     id="rect5" />
+  <rect
+     x="7"
+     y="8"
+     width="7"
+     height="1"
+     fill="#9CBCE8"
+     id="rect6" />
+  <rect
+     x="3"
+     y="11"
+     width="3"
+     height="2"
+     fill="#9CBCE8"
+     id="rect7" />
+  <rect
+     x="7"
+     y="11"
+     width="2"
+     height="2"
+     fill="#9CBCE8"
+     id="rect8" />
+  <path
+     d="M9.5,9.5 H17.5 L18.5,10.5 V18.5 H9.5 Z"
+     fill="#86A9DC"
+     stroke="#2F5A9C"
+     stroke-linejoin="round"
+     id="path8" />
+  <rect
+     x="11"
+     y="10"
+     width="6"
+     height="3"
+     fill="#FFFFFF"
+     id="rect9" />
+  <rect
+     x="14"
+     y="11"
+     width="1"
+     height="1"
+     fill="#86A9DC"
+     id="rect10" />
+  <rect
+     x="11"
+     y="15"
+     width="6"
+     height="3"
+     fill="#F4F7FC"
+     id="rect11" />
+  <rect
+     x="12"
+     y="16"
+     width="4"
+     height="1"
+     fill="#5DAA4E"
+     id="rect12" />
+</svg>

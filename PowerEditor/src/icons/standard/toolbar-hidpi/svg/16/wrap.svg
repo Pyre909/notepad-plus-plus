@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="16"
+   height="16"
+   viewBox="0 0 16 16"
+   version="1.1"
+   id="svg3"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs3" />
+  <rect
+     x="1"
+     y="2"
+     width="14"
+     height="2"
+     fill="#5A5A5A"
+     id="rect1" />
+  <rect
+     x="1"
+     y="12"
+     width="4"
+     height="2"
+     fill="#5A5A5A"
+     id="rect2" />
+  <path
+     d="M1,8.0 H12.5 A1.5,1.5 0 0 1 14.0,9.5 V11.5 A1.5,1.5 0 0 1 12.5,13.0 H8.0"
+     fill="none"
+     stroke="#2E6FCB"
+     stroke-width="2"
+     id="path2" />
+  <path
+     d="M6,13.0 L8.5,11.0 V15.0 Z"
+     fill="#2E6FCB"
+     id="path3" />
+</svg>
