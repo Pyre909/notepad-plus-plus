@@ -2,7 +2,8 @@
 # Parameters.cpp readTextRenderingParams) and the smoothFont of the Notepad++ versions without it, sharing config.xml:
 # smoothFont="yes" is ClearType, and a smoothFont that disagrees with fontAntialiasing was changed since by such a version,
 # so it wins; without smoothFont (written by hand), fontAntialiasing. smoothFont is written as the antialiasing is ClearType
-# or not, and the attributes of the former advanced overrides (fontGamma...) are dropped.
+# or not, and the attributes of the former advanced overrides (fontGamma...) are dropped. The DirectWrite mode
+# (fontRenderingMode): 4, the dropped Adaptive, is read as Natural, an unknown value as Automatic.
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
 param([Parameter(Mandatory)] [string] $Exe)
 $ErrorActionPreference = 'Stop'
@@ -19,7 +20,7 @@ public delegate bool EnumProc(IntPtr h, IntPtr l);
 [DllImport("user32.dll")] public static extern IntPtr GetParent(IntPtr h);
 [DllImport("user32.dll")] public static extern bool SystemParametersInfo(uint action, uint param, out uint value, uint winIni);
 '@
-$SCI_GETFONTQUALITY = 2612; $SCI_GETTECHNOLOGY = 2631
+$SCI_GETFONTQUALITY = 2612; $SCI_GETTECHNOLOGY = 2631; $SCI_GETFONTRENDERINGPARAMETER = 5102; $SC_FONTRENDERING_RENDERINGMODE = 3
 $script:results = [Collections.Generic.List[string]]::new(); $script:fails = 0
 function Check([string] $name, [bool] $ok, [string] $detail = '') {
 	if (-not $ok) { $script:fails++ }
@@ -36,18 +37,18 @@ $root = Join-Path ([IO.Path]::GetTempPath()) ('npp-review\pyre-text-rendering-co
 # Notepad++ with a settings folder: the font quality of its main view (-1 if none), the config.xml it wrote on exit
 function Invoke-Npp([string] $settings) {
 	$proc = Start-Process $Exe -ArgumentList '-multiInst', '-nosession', "-settingsDir=$settings", '-titleAdd=REVIEW-TEST' -PassThru
-	$quality = -1; $technology = -1
+	$quality = -1; $technology = -1; $mode = $null
 	try {
 		for ($i = 0; $i -lt 100; $i++) { $proc.Refresh(); if ($proc.MainWindowHandle -ne 0) { break }; Start-Sleep -Milliseconds 100 }
 		Start-Sleep -Milliseconds 800
 		$script:kids = [Collections.Generic.List[IntPtr]]::new(); [void][TC.U]::EnumChildWindows($proc.MainWindowHandle, { param($h, $l) $script:kids.Add($h); $true }, [IntPtr]::Zero)
 		$view = $script:kids | Where-Object { $sb = [Text.StringBuilder]::new(32); [void][TC.U]::GetClassName($_, $sb, 32); ($sb.ToString() -eq 'Scintilla') -and [TC.U]::IsWindowVisible($_) -and ([TC.U]::GetParent($_) -eq $proc.MainWindowHandle) } | Select-Object -First 1
-		if ($view) { $quality = Send $view $SCI_GETFONTQUALITY; $technology = Send $view $SCI_GETTECHNOLOGY }
+		if ($view) { $quality = Send $view $SCI_GETFONTQUALITY; $technology = Send $view $SCI_GETTECHNOLOGY; $mode = [int](Send $view $SCI_GETFONTRENDERINGPARAMETER $SC_FONTRENDERING_RENDERINGMODE) }
 	}
 	finally {
 		if (-not $proc.HasExited) { [void][TC.U]::PostMessage($proc.MainWindowHandle, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero); if (-not $proc.WaitForExit(10000)) { Stop-Process -Id $proc.Id -Force } }
 	}
-	[pscustomobject]@{ Quality = $quality; Technology = $technology; Config = [IO.File]::ReadAllText((Join-Path $settings 'config.xml')) }
+	[pscustomobject]@{ Quality = $quality; Technology = $technology; Mode = $mode; Config = [IO.File]::ReadAllText((Join-Path $settings 'config.xml')) }
 }
 function Get-Attribute([string] $config, [string] $name) { if ($config -match "<GUIConfig name=`"ScintillaPrimaryView`"[^>]*?\s$name=`"([^`"]*)`"") { $Matches[1] } else { '(none)' } }
 
@@ -76,6 +77,20 @@ try {
 		Check $case.Name ($run.Quality -eq $case.Quality) "technology $($run.Technology), font quality $($run.Quality), expected $($case.Quality)"
 		$written = "fontAntialiasing {0}, smoothFont {1}, fontGamma {2}" -f (Get-Attribute $run.Config 'fontAntialiasing'), (Get-Attribute $run.Config 'smoothFont'), (Get-Attribute $run.Config 'fontGamma')
 		Check "  saved: fontAntialiasing $($case.Written), smoothFont $($case.WrittenSmooth), no override" (((Get-Attribute $run.Config 'fontAntialiasing') -eq $case.Written) -and ((Get-Attribute $run.Config 'smoothFont') -eq $case.WrittenSmooth) -and ($run.Config -notmatch 'fontGamma|fontLightTextGamma')) $written
+	}
+
+	# the DirectWrite mode: the rendering mode parameter of the view (SC_RENDERINGMODE_*, -1 the monitor's) and the value saved
+	$modeCases = @(
+		@{ Name = 'fontRenderingMode 4 (Adaptive, dropped): Natural'; Value = '4'; Mode = 4; Written = '1' },
+		@{ Name = 'fontRenderingMode 2: Symmetric'; Value = '2'; Mode = 5; Written = '2' },
+		@{ Name = 'fontRenderingMode 5 (unknown): Automatic'; Value = '5'; Mode = -1; Written = '0' }
+	)
+	foreach ($case in $modeCases) {
+		$settings = Join-Path $root ("case{0}" -f ++$n); New-Item -ItemType Directory -Force $settings | Out-Null
+		[IO.File]::WriteAllText((Join-Path $settings 'config.xml'), ($baseConfig -replace 'fontRenderingMode="[^"]*"', "fontRenderingMode=`"$($case.Value)`""), [Text.UTF8Encoding]::new($false))
+		$run = Invoke-Npp $settings
+		$saved = Get-Attribute $run.Config 'fontRenderingMode'
+		Check $case.Name (($run.Mode -eq $case.Mode) -and ($saved -eq $case.Written)) "rendering mode $($run.Mode), expected $($case.Mode); saved $saved, expected $($case.Written)"
 	}
 }
 finally {
