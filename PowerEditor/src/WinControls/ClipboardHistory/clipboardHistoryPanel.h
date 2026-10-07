@@ -54,6 +54,7 @@ public:
 class ClipboardHistoryPanel : public DockingDlgInterface {
 public:
 	ClipboardHistoryPanel(): DockingDlgInterface(IDD_CLIPBOARDHISTORY_PANEL), _ppEditView(nullptr), _hwndNextCbViewer(nullptr), _lbBgColor(-1), _lbFgColor(-1) {}
+	~ClipboardHistoryPanel() override;
 
 	void init(HINSTANCE hInst, HWND hPere, ScintillaEditView **ppEditView) {
 		DockingDlgInterface::init(hInst, hPere);
@@ -85,6 +86,7 @@ public:
 
 protected:
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
+	void onDpiChanged(UINT prevDpi) override;
 
 private:
 	ScintillaEditView **_ppEditView = nullptr;
@@ -93,4 +95,11 @@ private:
 	int _lbBgColor = -1;
 	int _lbFgColor= -1;
 	bool _isTrackingClipboardOps = true; // false when we do not want to track & show some Clipboard operations
+
+	// per-monitor DPI awareness: the font and the item height of the list at its creation, their DPI
+	// (0: no DPI change yet), and the font for the current DPI
+	LOGFONT _lfOriginal{};
+	int _itemHeightOriginal = 0;
+	UINT _dpiOriginal = 0;
+	HFONT _hFontDpi = nullptr;
 };

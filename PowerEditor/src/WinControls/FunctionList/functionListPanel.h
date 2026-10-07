@@ -101,6 +101,7 @@ public:
 
 protected:
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
+	void onDpiChanged(UINT prevDpi) override;
 	HMENU _hPreferencesMenu = NULL;
 
 private:
@@ -142,4 +143,6 @@ private:
 	void findMarkEntry(HTREEITEM htItem, LONG line);
 	void initPreferencesMenu();
 	void showPreferencesMenu();
+	void setToolbarImageLists(int iconSize);
+	std::vector<int> getTreeImageIds();
 };

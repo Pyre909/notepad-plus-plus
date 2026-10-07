@@ -70,6 +70,16 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			_hToolbarMenu = CreateWindowEx(0,TOOLBARCLASSNAME,NULL, style,
 								   0,0,0,0,_hSelf, nullptr, _hInst, nullptr);
 
+			// the default font of the toolbar is for the system DPI
+			if (DPIManagerV2::isPerMonitorV2Active())
+			{
+				const UINT dpi = DPIManagerV2::getDpiForWindow(_hSelf);
+				if (dpi != DPIManagerV2::getDpiForSystem())
+				{
+					DPIManagerV2::replaceWindowFont(_hToolbarMenu, DPIManagerV2::getIconTitleFontForDpi(dpi), _hToolbarFontDpi);
+				}
+			}
+
 			TBBUTTON tbButtons[2]{};
 
 			NppParameters& nppParam = NppParameters::getInstance();
@@ -94,11 +104,7 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			SendMessage(_hToolbarMenu, TB_AUTOSIZE, 0, 0); 
 			ShowWindow(_hToolbarMenu, SW_SHOW);
 
-			std::vector<int> imgIds = _treeView.getImageIds(
-				{ IDI_PROJECT_WORKSPACE, IDI_PROJECT_WORKSPACEDIRTY, IDI_PROJECT_PROJECT, IDI_PROJECT_FOLDEROPEN, IDI_PROJECT_FOLDERCLOSE, IDI_PROJECT_FILE, IDI_PROJECT_FILEINVALID }
-				, { IDI_PROJECT_WORKSPACE_DM, IDI_PROJECT_WORKSPACEDIRTY_DM, IDI_PROJECT_PROJECT_DM, IDI_PROJECT_FOLDEROPEN_DM, IDI_PROJECT_FOLDERCLOSE_DM, IDI_PROJECT_FILE_DM, IDI_PROJECT_FILEINVALID_DM }
-				, { IDI_PROJECT_WORKSPACE2, IDI_PROJECT_WORKSPACEDIRTY2, IDI_PROJECT_PROJECT2, IDI_PROJECT_FOLDEROPEN2, IDI_PROJECT_FOLDERCLOSE2, IDI_PROJECT_FILE2, IDI_PROJECT_FILEINVALID2 }
-			);
+			std::vector<int> imgIds = getTreeImageIds();
 
 			_treeView.init(_hInst, _hSelf, ID_PROJECTTREEVIEW);
 			_treeView.setImageList(imgIds);
@@ -131,11 +137,7 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 				NppDarkMode::setTreeViewStyle(_treeView.getHSelf());
 			}
 
-			std::vector<int> imgIds = _treeView.getImageIds(
-				{ IDI_PROJECT_WORKSPACE, IDI_PROJECT_WORKSPACEDIRTY, IDI_PROJECT_PROJECT, IDI_PROJECT_FOLDEROPEN, IDI_PROJECT_FOLDERCLOSE, IDI_PROJECT_FILE, IDI_PROJECT_FILEINVALID }
-				, { IDI_PROJECT_WORKSPACE_DM, IDI_PROJECT_WORKSPACEDIRTY_DM, IDI_PROJECT_PROJECT_DM, IDI_PROJECT_FOLDEROPEN_DM, IDI_PROJECT_FOLDERCLOSE_DM, IDI_PROJECT_FILE_DM, IDI_PROJECT_FILEINVALID_DM }
-				, { IDI_PROJECT_WORKSPACE2, IDI_PROJECT_WORKSPACEDIRTY2, IDI_PROJECT_PROJECT2, IDI_PROJECT_FOLDEROPEN2, IDI_PROJECT_FOLDERCLOSE2, IDI_PROJECT_FILE2, IDI_PROJECT_FILEINVALID2 }
-			);
+			std::vector<int> imgIds = getTreeImageIds();
 
 			_treeView.setImageList(imgIds);
 
@@ -167,9 +169,12 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 
 			::MoveWindow(_hToolbarMenu, 0, 0, width, toolbarMenuRect.bottom, TRUE);
 
+			// gap in pixels of the system DPI
+			const int gap = DPIManagerV2::scaleFromSystemDpi(2, _dpiManager.getDpi());
+
 			HWND hwnd = _treeView.getHSelf();
 			if (hwnd)
-				::MoveWindow(hwnd, 0, toolbarMenuRect.bottom + 2, width, height - toolbarMenuRect.bottom - 2, TRUE);
+				::MoveWindow(hwnd, 0, toolbarMenuRect.bottom + gap, width, height - toolbarMenuRect.bottom - gap, TRUE);
 			break;
 		}
 
@@ -212,6 +217,11 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			_treeView.destroy();
 			destroyMenus();
 			::DestroyWindow(_hToolbarMenu);
+			if (_hToolbarFontDpi != nullptr)
+			{
+				::DeleteObject(_hToolbarFontDpi);
+				_hToolbarFontDpi = nullptr;
+			}
 			break;
 		}
 
@@ -219,6 +229,32 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
 	}
 	return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
+}
+
+std::vector<int> ProjectPanel::getTreeImageIds()
+{
+	return _treeView.getImageIds(
+		{ IDI_PROJECT_WORKSPACE, IDI_PROJECT_WORKSPACEDIRTY, IDI_PROJECT_PROJECT, IDI_PROJECT_FOLDEROPEN, IDI_PROJECT_FOLDERCLOSE, IDI_PROJECT_FILE, IDI_PROJECT_FILEINVALID }
+		, { IDI_PROJECT_WORKSPACE_DM, IDI_PROJECT_WORKSPACEDIRTY_DM, IDI_PROJECT_PROJECT_DM, IDI_PROJECT_FOLDEROPEN_DM, IDI_PROJECT_FOLDERCLOSE_DM, IDI_PROJECT_FILE_DM, IDI_PROJECT_FILEINVALID_DM }
+		, { IDI_PROJECT_WORKSPACE2, IDI_PROJECT_WORKSPACEDIRTY2, IDI_PROJECT_PROJECT2, IDI_PROJECT_FOLDEROPEN2, IDI_PROJECT_FOLDERCLOSE2, IDI_PROJECT_FILE2, IDI_PROJECT_FILEINVALID2 }
+	);
+}
+
+void ProjectPanel::onDpiChanged(UINT prevDpi)
+{
+	const UINT dpi = _dpiManager.getDpi();
+
+	// toolbar: text buttons, sized for their font
+	DPIManagerV2::replaceWindowFont(_hToolbarMenu, DPIManagerV2::getIconTitleFontForDpi(dpi), _hToolbarFontDpi);
+	::SendMessage(_hToolbarMenu, TB_AUTOSIZE, 0, 0);
+
+	// tree: font, item height, images, indent
+	_treeView.rescaleForDpi(dpi, prevDpi, getTreeImageIds());
+
+	// layout for the new toolbar height (the panel isn't always resized after the DPI change)
+	RECT rc{};
+	getClientRect(rc);
+	::SendMessage(_hSelf, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rc.right - rc.left, rc.bottom - rc.top));
 }
 
 bool ProjectPanel::checkIfNeedSave()

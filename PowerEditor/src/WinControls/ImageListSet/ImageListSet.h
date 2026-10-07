@@ -30,6 +30,8 @@ public :
 	IconList() = default;
 	void init(HINSTANCE hInst, int iconSize);
 	void create(int iconSize, HINSTANCE hInst, const int* iconIDArray, int iconIDArraySize);
+	// reloads the icons of create() at another size in the same image list
+	void resize(int iconSize);
 
 	void destroy() {
 		ImageList_Destroy(_hImglst);
@@ -170,3 +172,7 @@ private:
 
 	std::vector<IconList> _iconListVector;
 };
+
+// the light and dark mode image lists of a panel's toolbar icons, replacing the ones of imageLists (destroyed),
+// the one of the current mode is set to hToolbar
+void setPanelToolbarImageLists(HWND hToolbar, HINSTANCE hInst, int iconSize, const int* iconIDs, const int* iconDarkModeIDs, int nbIcons, std::vector<HIMAGELIST>& imageLists);

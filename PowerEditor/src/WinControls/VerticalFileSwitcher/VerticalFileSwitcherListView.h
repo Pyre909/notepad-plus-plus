@@ -79,8 +79,12 @@ public:
 		redraw(true);
 	}
 
+	// the font and the file state icons (nullptr: kept) for dpi, the column widths are set by resizeColumns()
+	void rescaleForDpi(UINT dpi, HIMAGELIST hImaLst);
+
 protected:
 	HIMAGELIST _hImaLst = nullptr;
+	HFONT _hFontDpi = nullptr; // font for the DPI of the panel (per-monitor DPI awareness)
 
 	int _currentIndex = 0;
 

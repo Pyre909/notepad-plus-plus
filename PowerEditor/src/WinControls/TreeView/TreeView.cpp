@@ -48,6 +48,16 @@ void TreeView::init(HINSTANCE hInst, HWND parent, int treeViewID)
 
 	NppDarkMode::setTreeViewStyle(_hSelf, true);
 
+	// the default font of the tree view is for the system DPI
+	if (DPIManagerV2::isPerMonitorV2Active())
+	{
+		const UINT dpi = DPIManagerV2::getDpiForWindow(_hParent);
+		if (dpi != DPIManagerV2::getDpiForSystem())
+		{
+			DPIManagerV2::replaceWindowFont(_hSelf, DPIManagerV2::getIconTitleFontForDpi(dpi), _hFontDpi);
+		}
+	}
+
 	const int itemHeight = DPIManagerV2::scale(g_treeviewIcoSize + g_treeviewItemPadding * 2, _hParent);
 	TreeView_SetItemHeight(_hSelf, itemHeight);
 
@@ -61,6 +71,33 @@ void TreeView::destroy()
 	cleanSubEntries(root);
 	::DestroyWindow(_hSelf);
 	_hSelf = NULL;
+
+	if (_hFontDpi != nullptr)
+	{
+		::DeleteObject(_hFontDpi);
+		_hFontDpi = nullptr;
+	}
+}
+
+void TreeView::rescaleForDpi(UINT dpi, UINT prevDpi, const std::vector<int>& imageIds)
+{
+	if (_hSelf == nullptr)
+		return;
+
+	if (_indentBaseDpi == 0) // first DPI change: the indent computed by the control
+	{
+		_indentBase = static_cast<int>(TreeView_GetIndent(_hSelf));
+		_indentBaseDpi = prevDpi;
+	}
+
+	DPIManagerV2::replaceWindowFont(_hSelf, DPIManagerV2::getIconTitleFontForDpi(dpi), _hFontDpi);
+
+	const int itemHeight = DPIManagerV2::scale(g_treeviewIcoSize + g_treeviewItemPadding * 2, dpi);
+	TreeView_SetItemHeight(_hSelf, itemHeight);
+
+	setImageList(imageIds);
+
+	TreeView_SetIndent(_hSelf, DPIManagerV2::scale(_indentBase, dpi, _indentBaseDpi));
 }
 
 LRESULT TreeView::staticProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)

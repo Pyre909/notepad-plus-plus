@@ -18,6 +18,7 @@
 #include "functionListPanel.h"
 #include "ScintillaEditView.h"
 #include "localization.h"
+#include "ImageListSet.h"
 #include <fstream>
 
 using nlohmann::json;
@@ -28,6 +29,12 @@ using namespace std;
 #define INDEX_LEAF        2
 
 #define FL_PREFERENCES_INITIALSORT_ID   1
+
+// toolbar sizes for 96 DPI
+static constexpr int toolbarIconSize = 16;
+static constexpr int searchEditWidth = 100;
+static constexpr int searchEditSepWidth = 105; // searchEditWidth + 5
+static constexpr int searchEditHeight = 20;
 
 FunctionListPanel::~FunctionListPanel()
 {
@@ -685,6 +692,57 @@ void FunctionListPanel::setSort(bool isEnabled)
 	::SendMessage(_hToolbarMenu, TB_SETBUTTONINFO, IDC_SORTBUTTON_FUNCLIST, reinterpret_cast<LPARAM>(&tbbuttonInfo));
 }
 
+void FunctionListPanel::setToolbarImageLists(int iconSize)
+{
+	static constexpr int iconIDs[] = { IDI_FUNCLIST_SORTBUTTON, IDI_FUNCLIST_RELOADBUTTON, IDI_FUNCLIST_PREFERENCEBUTTON };
+	static constexpr int iconDarkModeIDs[] = { IDI_FUNCLIST_SORTBUTTON_DM, IDI_FUNCLIST_RELOADBUTTON_DM, IDI_FUNCLIST_PREFERENCEBUTTON_DM };
+	setPanelToolbarImageLists(_hToolbarMenu, _hInst, iconSize, iconIDs, iconDarkModeIDs, static_cast<int>(std::size(iconIDs)), _iconListVector);
+}
+
+std::vector<int> FunctionListPanel::getTreeImageIds()
+{
+	return _treeView.getImageIds(
+		{ IDI_FUNCLIST_ROOT, IDI_FUNCLIST_NODE, IDI_FUNCLIST_LEAF }
+		, { IDI_FUNCLIST_ROOT_DM, IDI_FUNCLIST_NODE_DM, IDI_FUNCLIST_LEAF_DM }
+		, { IDI_FUNCLIST_ROOT2, IDI_FUNCLIST_NODE2, IDI_FUNCLIST_LEAF2 }
+	);
+}
+
+void FunctionListPanel::onDpiChanged(UINT prevDpi)
+{
+	const UINT dpi = _dpiManager.getDpi();
+
+	// toolbar: icons, place holder of the search field (the 1st button) and buttons size, as in WM_INITDIALOG
+	const int iconSizeDyn = _dpiManager.scale(toolbarIconSize);
+	setToolbarImageLists(iconSizeDyn);
+
+	TBBUTTON tbSearchPlaceHolder{};
+	tbSearchPlaceHolder.idCommand = 0;
+	tbSearchPlaceHolder.iBitmap = _dpiManager.scale(searchEditSepWidth); // width of the separator
+	tbSearchPlaceHolder.fsState = TBSTATE_ENABLED;
+	tbSearchPlaceHolder.fsStyle = BTNS_SEP;
+	tbSearchPlaceHolder.iString = 0;
+	::SendMessage(_hToolbarMenu, TB_DELETEBUTTON, 0, 0);
+	::SendMessage(_hToolbarMenu, TB_INSERTBUTTON, 0, reinterpret_cast<LPARAM>(&tbSearchPlaceHolder));
+
+	::SendMessage(_hToolbarMenu, TB_SETBUTTONSIZE, 0, MAKELONG(iconSizeDyn, iconSizeDyn));
+	::SendMessage(_hToolbarMenu, TB_AUTOSIZE, 0, 0);
+
+	// search field
+	DPIManagerV2::replaceWindowFont(_hSearchEdit, _dpiManager.getDefaultGUIFontForDpi(), _hFontSearchEdit);
+	::SetWindowPos(_hSearchEdit, nullptr, 0, 0, _dpiManager.scale(searchEditWidth), _dpiManager.scale(searchEditHeight), SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+
+	// trees: font, item height, images, indent
+	const std::vector<int> imgIds = getTreeImageIds();
+	_treeView.rescaleForDpi(dpi, prevDpi, imgIds);
+	_treeViewSearchResult.rescaleForDpi(dpi, prevDpi, imgIds);
+
+	// layout for the new toolbar height (the panel isn't always resized after the DPI change)
+	RECT rc{};
+	getClientRect(rc);
+	::SendMessage(_hSelf, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rc.right - rc.left, rc.bottom - rc.top));
+}
+
 intptr_t CALLBACK FunctionListPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
@@ -750,9 +808,9 @@ intptr_t CALLBACK FunctionListPanel::run_dlgProc(UINT message, WPARAM wParam, LP
 			NppParameters& nppParam = NppParameters::getInstance();
 
 			setDpi();
-			const int editWidth = _dpiManager.scale(100);
-			const int editWidthSep = _dpiManager.scale(105); //editWidth + 5
-			const int editHeight = _dpiManager.scale(20);
+			const int editWidth = _dpiManager.scale(searchEditWidth);
+			const int editWidthSep = _dpiManager.scale(searchEditSepWidth);
+			const int editHeight = _dpiManager.scale(searchEditHeight);
 
 			// Create toolbar menu
 			constexpr DWORD style = WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_LIST | TBSTYLE_TRANSPARENT | TBSTYLE_TOOLTIPS;
@@ -764,34 +822,11 @@ intptr_t CALLBACK FunctionListPanel::run_dlgProc(UINT message, WPARAM wParam, LP
 
 			::SetWindowSubclass(_hToolbarMenu, funclstToolbarProc, static_cast<UINT_PTR>(SubclassID::first), 0);
 
-			const int iconSizeDyn = _dpiManager.scale(16);
+			const int iconSizeDyn = _dpiManager.scale(toolbarIconSize);
 			constexpr int nbIcons = 3;
-			int iconIDs[nbIcons] = { IDI_FUNCLIST_SORTBUTTON, IDI_FUNCLIST_RELOADBUTTON, IDI_FUNCLIST_PREFERENCEBUTTON };
-			int iconDarkModeIDs[nbIcons] = { IDI_FUNCLIST_SORTBUTTON_DM, IDI_FUNCLIST_RELOADBUTTON_DM, IDI_FUNCLIST_PREFERENCEBUTTON_DM };
 
-			// Create an image lists for the toolbar icons
-			HIMAGELIST hImageList = ImageList_Create(iconSizeDyn, iconSizeDyn, ILC_COLOR32 | ILC_MASK, nbIcons, 0);
-			HIMAGELIST hImageListDm = ImageList_Create(iconSizeDyn, iconSizeDyn, ILC_COLOR32 | ILC_MASK, nbIcons, 0);
-			_iconListVector.push_back(hImageList);
-			_iconListVector.push_back(hImageListDm);
-
-			for (size_t i = 0; i < nbIcons; ++i)
-			{
-				int icoID = iconIDs[i];
-				HICON hIcon = nullptr;
-				DPIManagerV2::loadIcon(_hInst, MAKEINTRESOURCE(icoID), iconSizeDyn, iconSizeDyn, &hIcon, LR_LOADMAP3DCOLORS | LR_LOADTRANSPARENT);
-				ImageList_AddIcon(_iconListVector.at(0), hIcon);
-				::DestroyIcon(hIcon);
-				hIcon = nullptr;
-
-				icoID = iconDarkModeIDs[i];
-				DPIManagerV2::loadIcon(_hInst, MAKEINTRESOURCE(icoID), iconSizeDyn, iconSizeDyn, &hIcon, LR_LOADMAP3DCOLORS | LR_LOADTRANSPARENT);
-				ImageList_AddIcon(_iconListVector.at(1), hIcon);
-				::DestroyIcon(hIcon); // Clean up the loaded icon
-			}
-
-			// Attach the image list to the toolbar
-			::SendMessage(_hToolbarMenu, TB_SETIMAGELIST, 0, reinterpret_cast<LPARAM>(_iconListVector.at(NppDarkMode::isEnabled() ? 1 : 0)));
+			// Create the image lists for the toolbar icons and attach one to the toolbar
+			setToolbarImageLists(iconSizeDyn);
 
 			// Place holder of search text field
 			TBBUTTON tbButtons[1 + nbIcons]{};
@@ -851,11 +886,7 @@ intptr_t CALLBACK FunctionListPanel::run_dlgProc(UINT message, WPARAM wParam, LP
 				::SendMessage(_hSearchEdit, WM_SETFONT, reinterpret_cast<WPARAM>(_hFontSearchEdit), MAKELPARAM(TRUE, 0));
 			}
 
-			std::vector<int> imgIds = _treeView.getImageIds(
-				{ IDI_FUNCLIST_ROOT, IDI_FUNCLIST_NODE, IDI_FUNCLIST_LEAF }
-				, { IDI_FUNCLIST_ROOT_DM, IDI_FUNCLIST_NODE_DM, IDI_FUNCLIST_LEAF_DM }
-				, { IDI_FUNCLIST_ROOT2, IDI_FUNCLIST_NODE2, IDI_FUNCLIST_LEAF2 }
-			);
+			std::vector<int> imgIds = getTreeImageIds();
 
 			_treeView.init(_hInst, _hSelf, IDC_LIST_FUNCLIST);
 			_treeView.setImageList(imgIds);
@@ -884,11 +915,7 @@ intptr_t CALLBACK FunctionListPanel::run_dlgProc(UINT message, WPARAM wParam, LP
 				NppDarkMode::setTreeViewStyle(_treeView.getHSelf());
 			}
 
-			std::vector<int> imgIds = _treeView.getImageIds(
-				{ IDI_FUNCLIST_ROOT, IDI_FUNCLIST_NODE, IDI_FUNCLIST_LEAF }
-				, { IDI_FUNCLIST_ROOT_DM, IDI_FUNCLIST_NODE_DM, IDI_FUNCLIST_LEAF_DM }
-				, { IDI_FUNCLIST_ROOT2, IDI_FUNCLIST_NODE2, IDI_FUNCLIST_LEAF2 }
-			);
+			std::vector<int> imgIds = getTreeImageIds();
 
 			_treeView.setImageList(imgIds);
 			_treeViewSearchResult.setImageList(imgIds);
