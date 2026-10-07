@@ -9,7 +9,7 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 1 | `font-size-1pt_20260925` | `faaeb59` | 2 | +0 | Font sizes 1–4 pt in the size lists | #18412; **PR closed, not accepted** |
 | 2 | `text-rendering_20260925` | `a485acc` + `bb32194` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 closed** (2026-10-02: too large a change) |
 | 3 | `text-rendering-translations_20260925` | `1aa8b0e` | 29 xml | – | Label capitalisation (stacked on 2) | no (`[xml]`); on hold, 2 is closed |
-| 4 | `per-monitor-dpi_20260925` | `8a0ff70` | 63 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
+| 4 | `per-monitor-dpi_20260925` | `8a455e0` | 61 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
 | 5 | `directwrite-font-names_20260930` | `9f605be` | 7 (Notepad++ only) | not measured | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | no: bug fix of #9951 (open since 2021) and #12393. Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
 | 6 | `rtl-views-gdi_20261006` | `53d0026` | 4 | small | Right-to-left views drawn with GDI (DirectWrite can't mirror them) | no: bug fix of #17865 and #17518 (both open); open it first |
 | 7 | `live-rendering-switch_20261005` | `53d0026` + `d50fb3b` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
@@ -218,44 +218,74 @@ a485acc text-rendering-translations_20260925` (drops PR 2's original commit, wha
 
 ## 4. Per-monitor DPI awareness (discuss first)
 
-### Issue — title
+Branch `per-monitor-dpi_20260925`, one commit `8a455e0` on upstream `master` `a69bc23` (reconciled on 2026-10-07: rebased
+from 8.9.8.1's `8a0ff70`, authored by Pyre909 with the Co-Authored-By line), 61 files, +1529 −254. Upstream's 13 new
+commits made the About, hash and Shortcut Mapper dialogs per-monitor (ozone10, part of #14959): AboutDlg now takes
+upstream's code whole (the branch no longer changes it), dpiManagerV2.cpp keeps both sides' functions in `pyre`'s
+order, and the status bar gets `WM_DPICHANGED` from the main window (upstream's `e083cef9f` removed
+`WM_DPICHANGED_AFTERPARENT` from its subclass; `pyre`'s `7eba8f3`). Every DPI line equals `pyre`'s: 50 of the 61 files
+are byte-identical, the other 11 differ by `pyre`'s other features only (and the MISC. checkbox position, as `pyre`
+moved the rendering mode off that page), plus one trailing space this branch keeps as upstream has it.
+
+Review harness (2026-10-07, ARM64, x64 and Win32 builds): no FAIL of its own; the 4 FAILs are other PRs' tests
+(`directwrite-font-names`, the three RTL ones) failing as on unmodified upstream. WARNs explained: the size; whitespace of
+code moved into a new block; `UserDefineDialog.cpp` indented with spaces as upstream's file is; `try {` as upstream
+writes it 32 times out of 33. The independent AI review of `pyre`'s merge (2026-10-06) covered the same DPI code against
+the same upstream; its open point is disclosed in the PR body. Not tested: two monitors of different scales (test round
+row, waiting on Pyre909). CI of `8a455e0`: to check once pushed (the force push of 2026-10-07 got
+GitHub "Internal Server Error" three times); the body's CI line holds only after that.
+
+Why discuss first, and where: on #14959 (ozone10's hiDPI tracking issue, open), the unchecked items are the UDL
+splitter and the whole Panels section (title, tab control, main field, splitter, plugin support), and ozone10 wrote on
+2026-01-15 that panels are "really complex" (docked state, saving positions, plugins) and "feel free to do PR". Upstream
+is still system DPI aware (manifest) and makes its dialogs per-monitor one by one; this branch makes the whole GUI
+thread per-monitor, opt-in. Order: Pyre909 posts the comment below; the PR follows (or a split of it) if ozone10 or
+donho agree.
+
+### Comment on #14959
+```
+@ozone10 about the panels part you mentioned (docked state, saved positions, plugins), I've been working on exactly that and have it in a branch: https://github.com/Pyre909/notepad-plus-plus/tree/per-monitor-dpi_20260925
+
+Short version: it's an opt-in setting (MISC. > "Per-monitor DPI awareness (experimental, restart required)", off by default). When it's on, the GUI thread runs PerMonitorV2, so the main window and the panels rescale on WM_DPICHANGED instead of getting bitmap-stretched: Function List, Folder as Workspace, Project, Document List, Character panel, Clipboard History, search results, Document Map, the docked UDL, plus splitters, the panel titles/tabs, floating panels, and saved panel sizes kept right when starting on a monitor with another scale. When it's off, nothing changes. It sits on top of your dialog work (About, hash, Shortcut Mapper, Find), which keeps working the same either way.
+
+Not covered: plugin panels, since how they lay out is up to each plugin.
+
+It's big (61 files, mostly one rescale hook per panel), so before opening a PR I wanted to ask if the approach (opt-in, whole thread PerMonitorV2) fits what you have in mind, or if you'd rather have it split up some way. Happy to rework it.
+
+(Written with help from an AI assistant, which I'd disclose in the PR too.)
+```
+
+### Issue — title (if a separate feature request is wanted instead)
 `[Feature request] Opt-in per-monitor DPI awareness (sharp GUI on monitors of different scaling)`
-
-### Issue — Description of the Issue
-Notepad++ is system DPI aware. On a monitor whose scaling differs from the primary one,
-Windows bitmap-stretches the whole window, so text and icons are blurry.
-
-### Issue — Describe the solution you'd like
-An experimental, opt-in setting (MISC., restart required, off by default) that makes the GUI
-thread per-monitor v2 DPI aware. The main window, the panels and the dialogs then rescale on
-WM_DPICHANGED. When it's off, nothing changes.
 
 ### PR — title
 `Add opt-in per-monitor DPI awareness (experimental)`
 
 ### PR — body
 ```
-Preferences > MISC. > "Per-monitor DPI awareness (experimental, restart required)": off by default, disabled before Windows 10 1703. When off, Notepad++ stays system DPI aware and behaves exactly as before (every new code path is gated).
+Follow-up to the panels part of #14959. Preferences > MISC. > "Per-monitor DPI awareness (experimental, restart required)": off by default, greyed out before Windows 10 1703. When it's off, Notepad++ stays system DPI aware and nothing changes (every new code path checks it).
 
-When on, the GUI thread is per-monitor v2 DPI aware (SetThreadDpiAwarenessContext; the manifest is unchanged), so Notepad++ is drawn sharp on every monitor. These follow DPI changes: main window, toolbar, tabs, status bar, editor margins and markers, splitters, docked and floating panels (Function List, Folder as Workspace, Project, Document List, Character panel, Clipboard History, Search results, Document Map, docked UDL), incremental search bar and dialogs. Saved window and panel sizes are kept at startup on a monitor of another DPI.
+When it's on, the GUI thread runs PerMonitorV2 (SetThreadDpiAwarenessContext; the manifest stays as it is), so Notepad++ is sharp on every monitor instead of bitmap-stretched. These follow DPI changes: main window, toolbar, tabs, status bar, editor margins and markers, splitters, docked and floating panels (Function List, Folder as Workspace, Project, Document List, Character panel, Clipboard History, search results, Document Map, docked UDL), the incremental search bar and dialogs. Saved window and panel sizes stay right when starting on a monitor with another scale. The status bar gets WM_DPICHANGED from the main window, like the Find dialog's.
 
-Not covered: plugin panels (they depend on the plugin).
+The per-monitor dialogs already in master (About, hash dialogs, Shortcut Mapper, Find) work the same with the option on or off.
 
-63 files, mostly one rescale hook per panel; shared helpers in DPIManagerV2 and ImageListSet.
+Not covered: plugin panels, since that depends on the plugin.
 
-Testing (this branch alone, MinGW-w64 GCC 13 x64 build run under Wine 9 + Xvfb, 96 and 144 DPI):
-- Option off: the main window and docked panels are pixel-identical to master (the caret aside).
-- Option on (the thread becomes per-monitor aware under Wine too): at the same DPI the screenshots are also identical to master (the caret aside). The following all passed: docking a clone view, Function List and Document Map; synthetic WM_DPICHANGED 144->96->144 and WM_DPICHANGED_AFTERPARENT to every Scintilla (editor margins rescaled); clean exit (8/8 checks per run).
-- Clang with MSVC-like warnings on the added lines of the 33 changed .cpp files: no warnings.
-- GitHub Actions (this repository's CI_build workflow, on the fork): all 13 jobs pass. That covers the MSVC x64/Win32/ARM64 Release and Debug builds, the CMake build, the MinGW and Clang builds, XML validation, and the Function List and URL detection tests. MSVC x64 exe +23 KB.
-- Reviewed for: every new code path gated when off; fonts, image lists and bitmaps replaced before the old ones are deleted, and freed once; no DPI of 0; plugin API unchanged (tTbData, NPPM_*).
-- Not tested: real multi-monitor Windows with different scaling (the main case to try), plugin panels.
+It's big, 61 files, mostly one rescale hook per panel, with shared helpers in DPIManagerV2 and ImageListSet.
 
-AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
+Testing:
+- Windows 11 ARM64, Release builds for ARM64, x64 and Win32; with the option off, the app-level tests I have pass the same as on master.
+- Earlier, with a MinGW build under Wine at 96 and 144 DPI: option off, the main window and docked panels are pixel-identical to master; option on at the same DPI, identical too; docking a clone view, Function List and Document Map, synthetic WM_DPICHANGED 144 -> 96 -> 144 and WM_DPICHANGED_AFTERPARENT to every Scintilla (margins rescaled), clean exit.
+- All 13 CI jobs pass on my fork.
+- Not tested yet: two real monitors with different scaling, which is the main case. Plugin panels.
+
+Known: with the option off, upstream's always-PerMonitorV2 dialogs (Shortcut Mapper, About...) on a monitor of another scale still get system-DPI metrics from getSystemMetricsForWindow, same as master today.
+
+AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
-fix #NNNNN
+fix #NNNNN (or "ref #14959")
 ```
 
 ---

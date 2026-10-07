@@ -17,12 +17,12 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
   rewritten in a casual voice (sections 5 to 8, each with its date check).
 - Waiting on Pyre909, in this order: open the RTL fix PR (kit section 6), the font smoothing PR (kit 8), the live
   switch's feature request (kit 7); then the font-name PR (kit 5) and the optional comment on #9951. Each section's
-  "Before opening" says what changes if section 6 is merged first.
+  "Before opening" says what changes if section 6 is merged first. Also, any time: the comment on #14959 for the
+  per-monitor DPI branch (kit 4, reconciled with upstream on 2026-10-07).
 - Waiting on Pyre909 too: the test round's per-monitor DPI row and the merge's DPI checks ("Upstream merge" below) need
   a second display or a change of Windows' scale, which Claude doesn't make.
 - Next for Claude, once asked: replies on the PRs once they're open (casual voice, Pyre909 posts them); the next
-  upstream merge (Sync fork, then merge `master` into `pyre`, as on 2026-10-06); the per-monitor DPI PR candidate
-  (`per-monitor-dpi_20260925`) reconciled with upstream's per-monitor dialogs ("Next" 7); "Later" items.
+  upstream merge (Sync fork, then merge `master` into `pyre`, as on 2026-10-06); "Later" items.
 - Reviews: `review.ps1 -Quiet` (PASS lines to the log only), then the AI review (skill `npp-review`). Keep agents to the
   harness; no ad hoc fan-out.
 
@@ -217,7 +217,7 @@ list (#15640, #16214), so each theme needed it set again, scrolled to.
 | `live-rendering-switch_20261005` | `d50fb3b` | Rendering mode applied without restart (MISC. box), one commit on `rtl-views-gdi_20261006`: feature request to open, PR after it's Accepted and section 6 is merged (kit section 7). Its refusal version is kept as `archive/live-rendering-switch-refusal_20261005`, the fallback |
 | `directwrite-font-smoothing_20261006` | `76b3210` | DirectWrite following the Windows font smoothing (bug fix: #14954), on upstream `master`: PR to open (kit section 8). CI: all 13 jobs pass (its ARM64 Debug job hung on GitHub's runner once, passed when re-run) |
 | `directwrite-font-names_20260930` | `9f605be` | Fonts such as "Fira Code Light" drawn by DirectWrite (Notepad++-only change; a bug fix of #9951 and #12393, PR after the checks of kit section 5). Rewritten, rebased and force-pushed on 2026-10-06 (the first version was `6e8579e`) |
-| `per-monitor-dpi_20260925` | `8a0ff70` | Opt-in per-monitor DPI awareness (discuss with maintainers before a PR) |
+| `per-monitor-dpi_20260925` | `8a455e0` | Opt-in per-monitor DPI awareness (discuss with maintainers before a PR) |
 | `font-size-1pt_20260925` | `faaeb59` | Font sizes 1-4 pt: PR #18412 closed upstream (not wanted); kept in the fork |
 | `font-weight-names_20260925` | `47341a4` | Superseded: the Scintilla version of the font-name fix |
 | `scintilla-upstream_20260930` | | This branch: tools, kits, notes (no Notepad++ history) |
@@ -305,9 +305,9 @@ list (#15640, #16214), so each theme needed it set again, scrolled to.
    built: see "Later").
 6. Done on 2026-10-06 (`84dc7f8`, see the review above): `pyre`'s "Follow Windows" missed a change made in the
    ClearType Text Tuner (`SPI_SETFONTSMOOTHINGORIENTATION`); it now uses section 8's rule.
-7. Done on 2026-10-06: upstream merged into `pyre` (`ba729ad`, `7eba8f3`; see "Upstream merge (2026-10-06)"). Left: the
-   per-monitor DPI PR candidate (`per-monitor-dpi_20260925`) still predates upstream's per-monitor About, hash and
-   Shortcut Mapper dialogs; reconcile it before any discussion with the maintainers.
+7. Done on 2026-10-06: upstream merged into `pyre` (`ba729ad`, `7eba8f3`; see "Upstream merge (2026-10-06)"). The
+   per-monitor DPI PR candidate (`per-monitor-dpi_20260925`) was reconciled on 2026-10-07 (`8a455e0`, kit section 4,
+   with a comment for #14959).
 8. Done on 2026-10-06 (a reviewer's question: do the DirectWrite modes "Symmetric" and "Adaptive" differ visibly from
    "Automatic" at editor sizes?). `vm/modes.ps1` on the ARM64 build of `pyre` `7eba8f3`, VM at 150% (144 DPI),
    ClearType on: Consolas, Cascadia Mono, Courier New, Segoe UI at 9, 10, 12, 14 pt, ClearType and grayscale, each
