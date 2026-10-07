@@ -611,7 +611,10 @@ void ScintillaEditView::technologyChanged(int previousTechnology)
 	const int technology = static_cast<int>(execute(SCI_GETTECHNOLOGY));
 	if ((technology == SC_TECHNOLOGY_DEFAULT) == (previousTechnology == SC_TECHNOLOGY_DEFAULT))
 		return;
-	applyTextRenderingSettings(); // the "Follow Windows" antialiasing depends on the technology (see getWindowsFontQuality)
+	// the font quality of the Windows font smoothing depends on the technology (see getWindowsFontQuality): as on
+	// WM_SETTINGCHANGE, a view still at the one it got follows it; the other qualities don't depend on the technology
+	if ((execute(SCI_GETFONTQUALITY) == _windowsFontQuality) && (getWindowsFontQuality() != _windowsFontQuality))
+		applyWindowsFontQuality();
 	refreshStyleFonts(technology, previousTechnology); // so do the style fonts (see getScintillaFont)
 }
 

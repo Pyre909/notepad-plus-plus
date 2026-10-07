@@ -587,8 +587,8 @@ class ScintillaWin :
 	// rendering parameters for current monitor
 	HMONITOR hCurrentMonitor;
 	std::shared_ptr<RenderingParams> renderingParams;
-#endif
 	FontRenderingOverrides fontRenderingOverrides;	// N++: SCI_SETFONTRENDERINGPARAMETER (FontRenderingOverrides.h)
+#endif
 
 	explicit ScintillaWin(HWND hwnd);
 
@@ -597,6 +597,7 @@ class ScintillaWin :
 	bool UpdateRenderingParams(bool force) noexcept;
 	void SetListRenderingParams() noexcept;	// N++
 	bool UpdateMeasuringMode() noexcept;	// N++
+	void SetFontRenderingParameter(uptr_t parameter, sptr_t value);	// N++
 	HRESULT Create3D() noexcept;
 	void CreateRenderTarget();
 	HRESULT SetBackBuffer(HWND hwnd, IDXGISwapChain1 *pSwapChain);
@@ -717,7 +718,6 @@ class ScintillaWin :
 	sptr_t IMEMessage(unsigned int iMessage, uptr_t wParam, sptr_t lParam);
 	sptr_t EditMessage(unsigned int iMessage, uptr_t wParam, sptr_t lParam);
 	sptr_t IdleMessage(unsigned int iMessage, uptr_t wParam, sptr_t lParam);
-	void SetFontRenderingParameter(uptr_t parameter, sptr_t value);	// N++
 	sptr_t SciMessage(Message iMessage, uptr_t wParam, sptr_t lParam);
 
 public:
@@ -2280,14 +2280,12 @@ bool ScintillaWin::UpdateMeasuringMode() noexcept {
 	vs.extraFontFlag = extraFontFlag;
 	return true;
 }
-#endif
 
 // N++: SCI_SETFONTRENDERINGPARAMETER, kept whatever the technology and taking effect while DirectWrite is used
 void ScintillaWin::SetFontRenderingParameter(uptr_t parameter, sptr_t value) {
 	if (!fontRenderingOverrides.Set(parameter, value)) {
 		return;
 	}
-#if defined(USE_D2D)
 	if (technology != Technology::Default) {
 		UpdateRenderingParams(true);
 	}
@@ -2298,8 +2296,8 @@ void ScintillaWin::SetFontRenderingParameter(uptr_t parameter, sptr_t value) {
 		DropGraphics();
 		Redraw();
 	}
-#endif
 }
+#endif
 
 sptr_t ScintillaWin::SciMessage(Message iMessage, uptr_t wParam, sptr_t lParam) {
 	switch (iMessage) {
@@ -2449,6 +2447,7 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 		case SC_WORK_IDLE:
 			return IdleMessage(msg, wParam, lParam);
 
+#if defined(USE_D2D)
 		// N++: the DirectWrite text rendering overrides (ScintillaFontRendering.h), and the autocompletion list following
 		// the font quality (see SetListRenderingParams)
 		case SCI_SETFONTRENDERINGPARAMETER:
@@ -2460,11 +2459,10 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 
 		case static_cast<unsigned int>(Message::SetFontQuality): {
 			const sptr_t result = ScintillaBase::WndProc(iMessage, wParam, lParam);
-#if defined(USE_D2D)
 			SetListRenderingParams();
-#endif
 			return result;
 		}
+#endif
 
 		case WM_GETMINMAXINFO:
 			return ::DefWindowProc(MainHWND(), msg, wParam, lParam);

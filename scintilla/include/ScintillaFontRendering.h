@@ -10,7 +10,8 @@
 /* SCI_SETFONTRENDERINGPARAMETER(int parameter, int value) overrides a parameter of the rendering parameters DirectWrite
    draws text with (the monitor's), SC_FONTRENDERING_DEFAULT removes the override; SCI_GETFONTRENDERINGPARAMETER(int
    parameter) returns it. Kept whatever the technology, they take effect while DirectWrite is used. Aliased text
-   (SC_EFF_QUALITY_NON_ANTIALIASED) is drawn with the monitor's parameters.
+   (SC_EFF_QUALITY_NON_ANTIALIASED) is drawn with the monitor's parameters. Not handled in builds without Direct2D
+   (DISABLE_D2D).
    (5001 and 5002 are ScintillaWin's idle messages.) */
 #define SCI_SETFONTRENDERINGPARAMETER 5101
 #define SCI_GETFONTRENDERINGPARAMETER 5102

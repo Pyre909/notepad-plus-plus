@@ -509,10 +509,10 @@ size_t Printer::doPrint(bool justDoIt)
 			break;
 	}
 
+	_pSEView->refreshStyleFonts(technology, SC_TECHNOLOGY_DEFAULT); // before the line numbers are measured again
+
 	if (!nppGUI._printSettings._printLineNumber)
 		_pSEView->showMargin(ScintillaEditView::_SC_MARGE_LINENUMBER, isShown);
-
-	_pSEView->refreshStyleFonts(technology, SC_TECHNOLOGY_DEFAULT);
 
 	_pSEView->execute(SCI_FORMATRANGEFULL, FALSE, 0);
 	::EndDoc(_pdlg.hDC);

@@ -45,23 +45,17 @@ namespace
 		return TRUE;
 	}
 
-	// The fonts of a GDI family (none if it's not installed or a raster font), kept for the session as the font lists are
-	const std::vector<GdiFamilyMember>& getGdiFamilyMembers(const std::wstring& familyName)
+	// The fonts of a GDI family (none if it's not installed or a raster font)
+	std::vector<GdiFamilyMember> getGdiFamilyMembers(const std::wstring& familyName)
 	{
-		static std::map<std::wstring, std::vector<GdiFamilyMember>> families;
-		auto it = families.find(familyName);
-		if (it == families.end())
-		{
-			std::vector<GdiFamilyMember> members;
-			LOGFONT lf{};
-			familyName.copy(lf.lfFaceName, LF_FACESIZE - 1);
-			lf.lfCharSet = DEFAULT_CHARSET;
-			HDC hDC = ::GetDC(nullptr);
-			::EnumFontFamiliesEx(hDC, &lf, enumGdiFamilyMembers, reinterpret_cast<LPARAM>(&members), 0);
-			::ReleaseDC(nullptr, hDC);
-			it = families.emplace(familyName, std::move(members)).first;
-		}
-		return it->second;
+		std::vector<GdiFamilyMember> members;
+		LOGFONT lf{};
+		familyName.copy(lf.lfFaceName, LF_FACESIZE - 1);
+		lf.lfCharSet = DEFAULT_CHARSET;
+		HDC hDC = ::GetDC(nullptr);
+		::EnumFontFamiliesEx(hDC, &lf, enumGdiFamilyMembers, reinterpret_cast<LPARAM>(&members), 0);
+		::ReleaseDC(nullptr, hDC);
+		return members;
 	}
 
 	// The font of a GDI family closest to a weight, of the italic or upright ones as asked, else of all (weight 0 if none);
@@ -171,8 +165,8 @@ namespace
 			return std::nullopt;
 
 		DWriteFont dwFont{ getLocalizedString(familyNames.Get()), font->GetWeight(), font->GetStretch(), font->GetStyle() };
-		if (dwFont._family.empty())
-			return std::nullopt;
+		if (dwFont._family.empty() || (dwFont._stretch < DWRITE_FONT_STRETCH_ULTRA_CONDENSED) || (dwFont._stretch > DWRITE_FONT_STRETCH_ULTRA_EXPANDED))
+			return std::nullopt; // not a font DirectWrite can be asked for by these parameters
 		return dwFont;
 	}
 
@@ -186,9 +180,10 @@ namespace
 		return it->second;
 	}
 
-	// The weight of the DirectWrite family drawing a weight of a GDI family name, relative to the weight of its font as GDI
-	// emboldens it: bold of "Fira Code Light" is "Fira Code" SemiBold; at most extra black, the heaviest weight (DirectWrite
-	// refuses weights above 999, Scintilla bug #2520)
+	// The weight of the DirectWrite family drawing a weight of a GDI family name, relative to the weight of its font: bold
+	// is 300 heavier, as bold is to regular, about as heavy as GDI emboldens a light or medium font (bold of "Fira Code
+	// Light" is "Fira Code" SemiBold); at most extra black, the heaviest weight (DirectWrite refuses weights above 999,
+	// Scintilla bug #2520)
 	int getRelativeWeight(const DWriteFont& dwFont, int weight)
 	{
 		return std::clamp(static_cast<int>(dwFont._weight) + weight - SC_WEIGHT_NORMAL, 1, static_cast<int>(DWRITE_FONT_WEIGHT_EXTRA_BLACK));
@@ -251,7 +246,7 @@ namespace
 	{
 		ScintillaFont font = requested;
 		const bool isBold = font._weight > SC_WEIGHT_NORMAL;
-		const std::vector<GdiFamilyMember>& members = getGdiFamilyMembers(font._name);
+		const std::vector<GdiFamilyMember> members = getGdiFamilyMembers(font._name);
 		const LONG regular = getClosestMember(members, FW_NORMAL, false)._weight;
 		const bool hasHeavierFont = std::any_of(members.begin(), members.end(), [regular](const GdiFamilyMember& member) { return member._weight > regular; });
 		if ((regular <= 0) || ((regular == FW_NORMAL) && (!isBold || hasHeavierFont)))

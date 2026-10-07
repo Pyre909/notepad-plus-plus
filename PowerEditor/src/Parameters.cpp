@@ -762,10 +762,13 @@ template <typename T>
 // Pyre909 build: the Text Rendering settings (Preferences > Editing 1) of <GUIConfig name="ScintillaPrimaryView">,
 // fontAntialiasing="0" fontRenderingMode="0" fontContrast="0". smoothFont="yes" was ClearType, and a smoothFont that
 // disagrees with fontAntialiasing was changed since by a Notepad++ without these settings sharing config.xml: the newer.
+// Without smoothFont (written by hand), fontAntialiasing.
 static void readTextRenderingParams(const NppXml::Element& elem, ScintillaViewParams& svp)
 {
 	svp._textAntialiasing = getRangeDefaultAttribute(elem, "fontAntialiasing", textAntialiasingFollowWindows, textAntialiasingNone, svp._textAntialiasing);
-	if (svp._doSmoothFont != svp.isClearTypeAntialiasing())
+	if (!NppXml::attribute(elem, "smoothFont"))
+		svp._doSmoothFont = svp.isClearTypeAntialiasing();
+	else if (svp._doSmoothFont != svp.isClearTypeAntialiasing())
 		svp._textAntialiasing = svp._doSmoothFont ? textAntialiasingClearType : textAntialiasingFollowWindows;
 	svp._textRenderingMode = getRangeDefaultAttribute(elem, "fontRenderingMode", textRenderingModeAutomatic, textRenderingModeAdaptive, svp._textRenderingMode);
 	svp._textContrast = getRangeDefaultAttribute(elem, "fontContrast", textContrastFollowWindows, textContrastVeryHigh, svp._textContrast);

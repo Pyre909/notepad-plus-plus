@@ -357,7 +357,7 @@ class SurfaceD2D : public Surface, public ISetRenderingParams {
 	std::shared_ptr<RenderingParams> renderingParams;
 
 	void Clear() noexcept;
-	void SetFontQuality(FontQuality extraFontFlag, int variant=0);	// N++: variant (see FontRenderingOverrides.h)
+	void SetFontQuality(FontQuality extraFontFlag, int variant);	// N++: variant (see FontRenderingOverrides.h)
 	HRESULT GetBitmap(ID2D1Bitmap **ppBitmap);
 	void SetDeviceScaleFactor(const ID2D1RenderTarget *const pD2D1RenderTarget) noexcept;
 

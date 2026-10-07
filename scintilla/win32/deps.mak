@@ -15,7 +15,9 @@ $(DIR_O)/ListBox.o: \
 	WinTypes.h \
 	PlatWin.h \
 	ListBox.h \
-	SurfaceD2D.h
+	SurfaceD2D.h \
+	FontRenderingOverrides.h \
+	../include/ScintillaFontRendering.h
 $(DIR_O)/PlatWin.o: \
 	PlatWin.cxx \
 	../include/ScintillaTypes.h \
@@ -28,7 +30,9 @@ $(DIR_O)/PlatWin.o: \
 	WinTypes.h \
 	PlatWin.h \
 	ListBox.h \
-	SurfaceD2D.h
+	SurfaceD2D.h \
+	FontRenderingOverrides.h \
+	../include/ScintillaFontRendering.h
 $(DIR_O)/ScintillaDLL.o: \
 	ScintillaDLL.cxx \
 	../include/ScintillaTypes.h \
@@ -78,6 +82,8 @@ $(DIR_O)/ScintillaWin.o: \
 	WinTypes.h \
 	PlatWin.h \
 	SurfaceD2D.h \
+	FontRenderingOverrides.h \
+	../include/ScintillaFontRendering.h \
 	HanjaDic.h \
 	ScintillaWin.h
 $(DIR_O)/SurfaceD2D.o: \
@@ -92,7 +98,9 @@ $(DIR_O)/SurfaceD2D.o: \
 	WinTypes.h \
 	PlatWin.h \
 	SurfaceGDI.h \
-	SurfaceD2D.h
+	SurfaceD2D.h \
+	FontRenderingOverrides.h \
+	../include/ScintillaFontRendering.h
 $(DIR_O)/SurfaceGDI.o: \
 	SurfaceGDI.cxx \
 	../include/ScintillaTypes.h \
