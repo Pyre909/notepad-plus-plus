@@ -10,7 +10,8 @@ ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
-- Everything is pushed: `pyre` up to `3a2c596` (CI run 37578284905: all 13 jobs pass), `per-monitor-dpi_20260925` at
+- Everything is pushed: `pyre` up to `1b6e958` (CI run 37657379195: all 13 jobs pass; its last commit keeps upstream's
+  trailing space in `VerticalFileSwitcherListView.cpp`, as on the DPI branch), `per-monitor-dpi_20260925` at
   `8a455e0` (force-pushed 2026-10-07; CI run 37655731626: all 13 jobs pass) and this branch. Upstream `master` was 2 commits past `a69bc23` on 2026-10-07: no merge needed
   yet.
 - Done on 2026-10-06/07: upstream merged into `pyre` up to `a69bc23` ("Upstream merge (2026-10-06)" below, with a status
