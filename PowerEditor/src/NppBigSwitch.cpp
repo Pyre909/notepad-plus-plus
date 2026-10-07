@@ -3945,7 +3945,10 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 					DPIManagerV2::setPositionDpi(lParam, hwnd);
 				}
 
-				// the children receive WM_DPICHANGED_AFTERPARENT after this message (status bar, docking containers, Scintilla views...),
+				// the status bar's font and height for the DPI (its subclass handles WM_DPICHANGED only, as for the Find dialog's)
+				::SendMessage(_statusBar.getHSelf(), WM_DPICHANGED, wParam, lParam);
+
+				// the children receive WM_DPICHANGED_AFTERPARENT after this message (docking containers, Scintilla views...),
 				// the layout must be done after them
 				::PostMessage(hwnd, NPPM_INTERNAL_DPICHANGEDRELAYOUT, 0, 0);
 			}
