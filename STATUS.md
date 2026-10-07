@@ -10,11 +10,10 @@ ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
-- Everything is pushed: `pyre` up to `7eba8f3` and this branch. `pyre` has upstream up to `a69bc23` (2026-10-06, "Next"
+- Everything is pushed: `pyre` up to `3a2c596` (Adaptive dropped) and this branch. `pyre` has upstream up to `a69bc23` (2026-10-06, "Next"
   7, see "Upstream merge (2026-10-06)" below).
 - Waiting on Pyre909: open the RTL fix PR (kit section 6), the font smoothing PR (kit 8), the live switch's feature
   request (kit 7); then the font-name PR (kit 5) and the optional comment on #9951.
-- Waiting on Pyre909 too: whether to drop the DirectWrite mode "Adaptive" ("Next" 8, measured on 2026-10-06).
 - Next for Claude, one per session: the test round's open rows (Antialiasing choices at once, the DPI one, now also the
   merge's DPI checks below).
 - Reviews: `review.ps1 -Quiet` (PASS lines to the log only), then the AI review (skill `npp-review`). Keep agents to the
@@ -311,8 +310,14 @@ list (#15640, #16214), so each theme needed it set again, scrolled to.
      Automatic draws natural (the font's gasp table at small sizes): Consolas, Courier New and Segoe UI at 9 pt,
      Courier New at 10 pt (10,000 to 16,000 pixels of a 700 x 260 crop). Visible enlarged: natural snaps horizontal
      strokes crisper, symmetric is softer and lighter.
-   - Proposal: drop Adaptive (Natural gives the same text at editor sizes); keep Symmetric (the only way to get the
-     symmetric smoothing for those fonts at small sizes). Pyre909 decides. Not measured: 100% scaling, other fonts.
+   - Pyre909 chose to drop Adaptive and keep Symmetric (the only way to get the symmetric smoothing for those fonts at
+     small sizes). Not measured: 100% scaling, other fonts.
+   - Done in `pyre` `3a2c596`: Adaptive left the enum, the combo and its tooltip (english.xml, english_customizable.xml),
+     Debug Info, and the Scintilla patch (its small-text rendering parameters variant; 100 is no longer a valid
+     `SC_FONTRENDERING_RENDERINGMODE`). config.xml's `fontRenderingMode="4"` is read as Natural: the same text for 10 pt
+     up to 150% DPI, while at 175% and more Adaptive drew it as Automatic. Test `pyre-text-rendering-config` checks it
+     (fails on `7eba8f3`). AI review: nothing blocking. The old Wine harness (`harness/src/scitest.cpp`) still expects
+     100; it's unused and already used other message numbers.
 9. Later: the toolchain and the unused features below.
 
 ## Colour themes (2026-10-03, version 2)
