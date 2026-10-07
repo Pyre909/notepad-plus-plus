@@ -311,8 +311,9 @@ Scintilla version a feature addition on #2356). The issue texts drafted before a
 below.
 
 ### Comment on #9951 (optional, before the PR)
-Where the watchers are; it answers the "scintilla dependent" label first. Before posting, check the repro on official
-8.9.8.1 (the baseline font test in `STATUS.md` is still to do).
+Where the watchers are; it answers the "scintilla dependent" label first. Repro checked on 2026-10-06 with upstream
+`master` `a69bc23` built for ARM64 (the baseline row of the test round in `STATUS.md`): "Bahnschrift Light" goes to
+DirectWrite at weight 400 and is drawn in a fallback font; nothing about font names changed upstream since 8.9.8.1.
 ```
 Still happening on 8.9.8.1. And since DirectWrite is the default rendering mode now (8.6+), you don't need to touch any setting to hit it: Style Configurator > Default Style > font Bahnschrift Light (ships with Windows 10/11), and the text comes out in a fallback font. Same with Cascadia Code SemiBold, Segoe UI Light, Fira Code Light...
 
@@ -324,27 +325,32 @@ About the "scintilla dependent" label: Neil declined doing this name mapping ins
 
 ### PR — body
 ```
-The font lists show GDI family names, which name a weight or width when a family has more than regular and bold ("Fira Code Light", "Cascadia Code SemiBold", "Bahnschrift SemiBold SemiConden"). DirectWrite only knows the family ("Fira Code"), so with DirectWrite, the default rendering mode since 8.6, these fonts were drawn with a fallback font (#9951; #12393 is the same with a theme).
+The font lists show GDI family names, and those include the weight or width when a family has more than regular and bold: "Fira Code Light", "Cascadia Code SemiBold", "Bahnschrift SemiBold SemiConden". DirectWrite only knows the family ("Fira Code"), so with DirectWrite, which is the default rendering mode since 8.6, all of these get drawn in a fallback font (#9951; #12393 is the same thing coming from a theme). Easy to see: Style Configurator > Default Style > Bahnschrift Light, which ships with Windows.
 
-With DirectWrite, Notepad++ now sets each style with the family, weight, width and style DirectWrite knows the font by (new FontFamilyNames.cpp, called by ScintillaEditView::setSpecialStyle):
-- The DirectWrite font of a GDI family name comes from DirectWrite's own GDI mapping (IDWriteGdiInterop::CreateFontFromLOGFONT), asked for the family's regular font at the weight GDI knows it by, so that it's never a simulated bold. Names DirectWrite knows as a family ("Consolas", "Courier New") are left as they are.
-- Bold is 300 heavier than the font, as bold is to regular: bold of "Fira Code Light" is "Fira Code" SemiBold (SCI_STYLESETWEIGHT, SCI_STYLESETSTRETCH for the condensed ones). That's in the range of how heavy GDI emboldens a light font. GDI doesn't embolden a SemiBold font at all; with DirectWrite its bold is the family's heaviest, up to Black.
-- GDI is unchanged: it knows the GDI names.
-- Printing: Scintilla prints with GDI from the screen styles, so while printing the styles get their GDI font names back, then their DirectWrite ones (ScintillaEditView::refreshStyleFonts). A style whose font was changed by someone else (a plugin) is left as it is.
-- DirectWrite is loaded when first needed (no new link dependency), and the mapping is cached per font name for the session.
-- Styles without their own font name or font style use the ones SCI_STYLECLEARALL gave them (new clearAllStyles, one font record per view), so their bold and italic are relative to the right font.
-- Side effects, with DirectWrite only: a style reads back the DirectWrite font (SCI_STYLEGETFONT "Fira Code", SCI_STYLEGETWEIGHT 300), and so do plugins that read styles (an exporter, for example). A Medium or SemiBold font has a weight above normal, so SCI_STYLEGETBOLD reads it as bold, and a family with only italic fonts reads back as italic. Scintilla's IME composition window makes a GDI font from the style's name and weight, so it shows "Fira Code" Regular rather than Light.
+Scintilla's maintainer doesn't want this name mapping inside Scintilla (Scintilla bugs 2080 and 2356) and pointed to IDWriteGdiInterop for the app to do it, like xomx said in #14526. So this does it in Notepad++ only, nothing in Scintilla:
 
-This is done in Notepad++ rather than Scintilla: Scintilla's maintainer leaves font naming to the application and pointed to IDWriteGdiInterop for it (Scintilla bugs 2080 and 2356). No Scintilla change.
+- With DirectWrite, each style gets the family, weight, width and style DirectWrite knows the font by (new FontFamilyNames.cpp, called from ScintillaEditView::setSpecialStyle). The lookup is DirectWrite's own GDI mapping (IDWriteGdiInterop::CreateFontFromLOGFONT), so it's never a simulated bold. Names DirectWrite already knows as a family ("Consolas", "Courier New") are left as they are.
+- Bold is 300 heavier than the font, the same step as regular to bold: bold "Fira Code Light" becomes "Fira Code" SemiBold. That's in the range of how heavy GDI makes a light font bold. GDI doesn't bold a SemiBold font at all; with DirectWrite its bold is the family's heaviest, up to Black.
+- GDI isn't touched, it understands the GDI names already.
+- Printing: Scintilla prints with GDI from the screen styles, so while printing the styles get their GDI names back, then their DirectWrite ones afterwards. A style a plugin changed itself is left alone.
+- DirectWrite is only loaded when first needed (no new link dependency), and the lookup is cached per font name, about 15 ms for all 319 fonts on my machine.
+- Styles without their own font use what SCI_STYLECLEARALL gave them (one font record per view), so their bold and italic are relative to the right font.
 
-Testing (Windows 11 ARM64, Visual Studio 2026 Build Tools 18.10 with MSVC 19.51, Release builds for ARM64, x64 and Win32 without warnings in the changed files):
-- The mapping of every font-list name (319 fonts installed, regular, bold, italic) compared with an earlier version that matched the Win32 names of the whole font collection by hand: the same DirectWrite parameters for all of them, including truncated names ("Bahnschrift SemiBold SemiConden"), static families from Hairline to Black, CJK fonts and the "@" vertical names; about 15 ms for the whole list.
-- Bold against GDI's emboldening (the ink of a sample line at 15 and 24 px): for Light and Medium fonts, 300 heavier is in the range of GDI's, from about Regular to about Bold depending on the font; bold of "Cascadia Code SemiBold" is Cascadia Code Bold, not a simulated bold.
-- In Notepad++ with "Bahnschrift Light" as the Default Style font (an automated test): with DirectWrite the styles read back "Bahnschrift" weight 300, bold 600; with GDI "Bahnschrift Light" 400, bold 700, as before.
-- Printing with DirectWrite on, "Segoe UI Light" as the Default Style font, to Microsoft Print to PDF: the PDF embeds Segoe UI Light (its name table, weight class 300), as GDI prints it; the bold keywords are GDI's emboldened Light, as before.
-- GitHub Actions (this repository's CI_build workflow, on the fork): all 13 jobs pass (MSVC x64/Win32/ARM64 Release and Debug with code analysis, CMake, MinGW, Clang).
+It's bigger than the usual small PR (7 files, ~360 lines), mostly the new FontFamilyNames.cpp/.h. I don't see a smaller way that fixes it for all fonts.
 
-AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
+Side effects, DirectWrite only:
+- A style reads back the DirectWrite font (SCI_STYLEGETFONT "Fira Code", SCI_STYLEGETWEIGHT 300), and so do plugins that read styles, an exporter for example.
+- A Medium or SemiBold font has a weight above normal, so SCI_STYLEGETBOLD says bold; a family with only italic fonts reads back as italic.
+- Scintilla's IME composition window builds a GDI font from the style's name and weight, so it shows "Fira Code" Regular instead of Light.
+
+Tested on Windows 11 ARM64, Release builds for ARM64, x64 and Win32, no warnings in the changed files:
+- Every name in the font list (319 fonts, regular, bold, italic) maps to the right DirectWrite font, including truncated names like "Bahnschrift SemiBold SemiConden", families from Hairline to Black, CJK fonts and the "@" vertical names.
+- Bold measured against GDI's (ink of a sample line at 15 and 24 px): 300 heavier lands in GDI's range for Light and Medium fonts, and bold "Cascadia Code SemiBold" comes out as Cascadia Code Bold, not a fake bold.
+- In Notepad++ with "Bahnschrift Light" as the Default Style font (automated test): with DirectWrite the styles read back "Bahnschrift" 300, bold 600; with GDI "Bahnschrift Light" 400, bold 700, same as before. Current master gets the fallback font here.
+- Printing with DirectWrite on, "Segoe UI Light" to Microsoft Print to PDF: the PDF embeds Segoe UI Light (weight 300), same as GDI prints it.
+- All 13 CI jobs pass on my fork (MSVC with code analysis, CMake, MinGW, Clang).
+
+AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
@@ -365,10 +371,13 @@ Before opening:
    Cascadia Code Bold, the family's heaviest, without simulation (`inkcmp`). By eye in Notepad++ too if wanted.
 4. Optional: an exporter (NppExport, bundled with the installer) with "Bahnschrift Light" and DirectWrite, to see what
    the side effects of the body give in the exported HTML/RTF (font name, bold).
-5. Optional: the comment on #9951 above, after checking its repro on official 8.9.8.1.
+5. Optional: the comment on #9951 above (its repro checked, see there).
 6. If section 6 is merged first, this branch also has to set the style fonts again when a view's technology changes (a
    right-to-left view goes to GDI): `refreshStyleFonts(technology, previousTechnology)` is there for printing already,
    `pyre` calls it from `technologyChanged` (see Conflicts at the top).
+7. PR body rewritten in a casual voice on 2026-10-07; checked then: the branch is on `master` `a69bc23` (current),
+   #9951 and #12393 still open, no other open PR on them. The body now says why the PR is larger than the template's
+   1-4 files / ~30 lines.
 
 ---
 
