@@ -900,6 +900,8 @@ struct NppGUI final
 	std::string _shortcutsOnDiskHmac;
 
 	bool _isFawSymlinkAllowed = false; // allow to open symlink files in FaW (Folder as Workspace) panel.
+
+	WORD _fontDlgSize = 8;
 };
 
 
@@ -1049,7 +1051,7 @@ public:
 	UserLangContainer() noexcept :_name(L"new user define"), _ext(L""), _udlVersion(""), _isDarkModeTheme(false) {}
 
 	explicit UserLangContainer(const wchar_t* name, const wchar_t* ext, const char* udlVer, bool isDarkModeTheme) noexcept
-		: _name(name), _ext(ext), _udlVersion(udlVer), _isDarkModeTheme(isDarkModeTheme) {}
+		: _name(name), _ext(ext), _udlVersion(udlVer), _isDarkModeTheme(isDarkModeTheme), _isUnset(true) {}
 
 	UserLangContainer(const UserLangContainer& ulc) noexcept
 		: _styles(ulc._styles),
@@ -1061,13 +1063,14 @@ public:
 		_isCaseIgnored(ulc._isCaseIgnored),
 		_allowFoldOfComments(ulc._allowFoldOfComments),
 		_foldCompact(ulc._foldCompact),
-		_isDarkModeTheme(ulc._isDarkModeTheme)
+		_isDarkModeTheme(ulc._isDarkModeTheme),
+		_isUnset(ulc._isUnset)
 	{
 		for (Style& st : _styles)
 		{
-			if (st._bgColor == static_cast<COLORREF>(-1))
+			if (st._bgColor == static_cast<COLORREF>(STYLE_NOT_USED))
 				st._bgColor = white;
-			if (st._fgColor == static_cast<COLORREF>(-1))
+			if (st._fgColor == static_cast<COLORREF>(STYLE_NOT_USED))
 				st._fgColor = black;
 		}
 
@@ -1096,6 +1099,7 @@ public:
 			this->_allowFoldOfComments = ulc._allowFoldOfComments;
 			this->_foldCompact = ulc._foldCompact;
 			this->_isDarkModeTheme = ulc._isDarkModeTheme;
+			this->_isUnset = ulc._isUnset;
 			for (Style & st : this->_styles)
 			{
 				if (st._bgColor == static_cast<COLORREF>(-1))
@@ -1112,6 +1116,8 @@ public:
 		}
 		return *this;
 	}
+
+	void startAtTheme();
 
 	const wchar_t* getName() const { return _name.c_str(); }
 	const wchar_t* getExtention() const { return _ext.c_str(); }
@@ -1132,6 +1138,7 @@ private:
 	bool _allowFoldOfComments = false;
 	bool _foldCompact = false;
 	bool _isDarkModeTheme = false;
+	bool _isUnset = true;
 
 	// nakama zone
 	friend class Notepad_plus;
@@ -1438,6 +1445,10 @@ public:
 
 	NppGUI & getNppGUI() {
 		return _nppGUI;
+	}
+
+	WORD getDlgFontSize() const noexcept {
+		return std::clamp<WORD>(_nppGUI._fontDlgSize, 8U, 24U);
 	}
 
 	const char* getWordList(LangType langID, int typeIndex) const {

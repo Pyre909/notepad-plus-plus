@@ -105,6 +105,5 @@ private :
 	std::vector<IconList *> _pIconListVector;
 	int _iconListIndexChoice = -1;
 
-	using Window::init;
-	using TabBar::init;
+	using TabBarPlus::init;
 };

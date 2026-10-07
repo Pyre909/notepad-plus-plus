@@ -28,6 +28,7 @@
 #include "Common.h"
 #include "Notepad_plus_msgs.h"
 #include "NppDarkMode.h"
+#include "Parameters.h"
 #include "StaticDialog.h"
 #include "Window.h"
 #include "dpiManagerV2.h"
@@ -349,7 +350,13 @@ HWND StaticDialog::myCreateDialogIndirectParam(int dialogID, bool isRTL, WORD fo
 {
 	std::vector<std::byte> dlgTemplateData;
 
-	if (!modifyResource(_hInst, dialogID, dlgTemplateData, isRTL, fontSize))
+	WORD dlgFontSize = fontSize;
+	if (fontSize == 0)
+	{
+		dlgFontSize = NppParameters::getInstance().getDlgFontSize();
+	}
+
+	if (!modifyResource(_hInst, dialogID, dlgTemplateData, isRTL, dlgFontSize))
 		return ::CreateDialogParam(_hInst, MAKEINTRESOURCE(dialogID), _hParent, myDlgProc, reinterpret_cast<LPARAM>(this));
 
 	return ::CreateDialogIndirectParam(_hInst, reinterpret_cast<DLGTEMPLATE*>(dlgTemplateData.data()), _hParent, myDlgProc, reinterpret_cast<LPARAM>(this));
@@ -359,7 +366,13 @@ INT_PTR StaticDialog::myCreateDialogBoxIndirectParam(int dialogID, bool isRTL, W
 {
 	std::vector<std::byte> dlgTemplateData;
 
-	if (!modifyResource(_hInst, dialogID, dlgTemplateData, isRTL, fontSize))
+	WORD dlgFontSize = fontSize;
+	if (fontSize == 0)
+	{
+		dlgFontSize = NppParameters::getInstance().getDlgFontSize();
+	}
+
+	if (!modifyResource(_hInst, dialogID, dlgTemplateData, isRTL, dlgFontSize))
 		return ::DialogBoxParam(_hInst, MAKEINTRESOURCE(dialogID), _hParent, dlgProc, reinterpret_cast<LPARAM>(this));
 
 	return ::DialogBoxIndirectParam(_hInst, reinterpret_cast<DLGTEMPLATE*>(dlgTemplateData.data()), _hParent, dlgProc, reinterpret_cast<LPARAM>(this));
