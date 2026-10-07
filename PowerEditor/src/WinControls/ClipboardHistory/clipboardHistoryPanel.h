@@ -90,6 +90,7 @@ public:
 
 protected:
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
+	void onDpiChanged(UINT prevDpi) override;
 
 private:
 	ScintillaEditView **_ppEditView = nullptr;
@@ -97,6 +98,8 @@ private:
 	HWND _hwndNextCbViewer = nullptr;
 	CBHListView _listView;
 	bool _isTrackingClipboardOps = true; // false when we do not want to track & show some Clipboard operations
+
+	UniqueFont _hFontDpi; // per-monitor DPI awareness: the list's font for the current DPI
 
 	using DockingDlgInterface::init;
 

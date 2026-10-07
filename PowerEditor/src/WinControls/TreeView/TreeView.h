@@ -21,6 +21,7 @@
 #include "Window.h"
 #include "Common.h"
 #include "NppDarkMode.h"
+#include "dpiManagerV2.h"
 
 struct TreeStateNode {
 	std::wstring _label;
@@ -120,9 +121,17 @@ public:
 	bool setImageList(const std::vector<int>& imageIds, int imgSize = 0);
 	std::vector<int> getImageIds(std::vector<int> stdIds, std::vector<int>darkIds, std::vector<int> lightIds);
 
+	// font, item height, images (imageIds as for setImageList) and indent for the new DPI of the parent
+	void rescaleForDpi(UINT dpi, UINT prevDpi, const std::vector<int>& imageIds);
+
 protected:
 	HIMAGELIST _hImaLst = nullptr;
 	NppDarkMode::TreeViewStyle _tvStyleType = NppDarkMode::TreeViewStyle::classic;
+
+	// per-monitor DPI awareness
+	UniqueFont _hFontDpi; // font for the DPI of the parent
+	int _indentBase = 0; // indent before the first DPI change, and its DPI
+	UINT _indentBaseDpi = 0;
 
 	static LRESULT CALLBACK staticProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 

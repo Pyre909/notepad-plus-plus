@@ -70,6 +70,10 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			_hToolbarMenu = CreateWindowEx(0,TOOLBARCLASSNAME,NULL, style,
 								   0,0,0,0,_hSelf, nullptr, _hInst, nullptr);
 
+			DPIManagerV2::initIconTitleFont(_hToolbarMenu, DPIManagerV2::getDpiForWindow(_hSelf), _hToolbarFontDpi);
+			if (DPIManagerV2::isPerMonitorV2Active())
+				::SetWindowSubclass(_hToolbarMenu, ToolbarSubclass, static_cast<UINT_PTR>(SubclassID::first), reinterpret_cast<DWORD_PTR>(this));
+
 			TBBUTTON tbButtons[2]{};
 
 			NppParameters& nppParam = NppParameters::getInstance();
@@ -94,11 +98,7 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			SendMessage(_hToolbarMenu, TB_AUTOSIZE, 0, 0); 
 			ShowWindow(_hToolbarMenu, SW_SHOW);
 
-			std::vector<int> imgIds = _treeView.getImageIds(
-				{ IDI_PROJECT_WORKSPACE, IDI_PROJECT_WORKSPACEDIRTY, IDI_PROJECT_PROJECT, IDI_PROJECT_FOLDEROPEN, IDI_PROJECT_FOLDERCLOSE, IDI_PROJECT_FILE, IDI_PROJECT_FILEINVALID }
-				, { IDI_PROJECT_WORKSPACE_DM, IDI_PROJECT_WORKSPACEDIRTY_DM, IDI_PROJECT_PROJECT_DM, IDI_PROJECT_FOLDEROPEN_DM, IDI_PROJECT_FOLDERCLOSE_DM, IDI_PROJECT_FILE_DM, IDI_PROJECT_FILEINVALID_DM }
-				, { IDI_PROJECT_WORKSPACE2, IDI_PROJECT_WORKSPACEDIRTY2, IDI_PROJECT_PROJECT2, IDI_PROJECT_FOLDEROPEN2, IDI_PROJECT_FOLDERCLOSE2, IDI_PROJECT_FILE2, IDI_PROJECT_FILEINVALID2 }
-			);
+			std::vector<int> imgIds = getTreeImageIds();
 
 			_treeView.init(_hInst, _hSelf, ID_PROJECTTREEVIEW);
 			_treeView.setImageList(imgIds);
@@ -131,11 +131,7 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 				NppDarkMode::setTreeViewStyle(_treeView.getHSelf());
 			}
 
-			std::vector<int> imgIds = _treeView.getImageIds(
-				{ IDI_PROJECT_WORKSPACE, IDI_PROJECT_WORKSPACEDIRTY, IDI_PROJECT_PROJECT, IDI_PROJECT_FOLDEROPEN, IDI_PROJECT_FOLDERCLOSE, IDI_PROJECT_FILE, IDI_PROJECT_FILEINVALID }
-				, { IDI_PROJECT_WORKSPACE_DM, IDI_PROJECT_WORKSPACEDIRTY_DM, IDI_PROJECT_PROJECT_DM, IDI_PROJECT_FOLDEROPEN_DM, IDI_PROJECT_FOLDERCLOSE_DM, IDI_PROJECT_FILE_DM, IDI_PROJECT_FILEINVALID_DM }
-				, { IDI_PROJECT_WORKSPACE2, IDI_PROJECT_WORKSPACEDIRTY2, IDI_PROJECT_PROJECT2, IDI_PROJECT_FOLDEROPEN2, IDI_PROJECT_FOLDERCLOSE2, IDI_PROJECT_FILE2, IDI_PROJECT_FILEINVALID2 }
-			);
+			std::vector<int> imgIds = getTreeImageIds();
 
 			_treeView.setImageList(imgIds);
 
@@ -167,9 +163,12 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 
 			::MoveWindow(_hToolbarMenu, 0, 0, width, toolbarMenuRect.bottom, TRUE);
 
+			// gap in pixels of the system DPI
+			const int gap = DPIManagerV2::scaleFromSystemDpi(2, _dpiManager.getDpi());
+
 			HWND hwnd = _treeView.getHSelf();
 			if (hwnd)
-				::MoveWindow(hwnd, 0, toolbarMenuRect.bottom + 2, width, height - toolbarMenuRect.bottom - 2, TRUE);
+				::MoveWindow(hwnd, 0, toolbarMenuRect.bottom + gap, width, height - toolbarMenuRect.bottom - gap, TRUE);
 			break;
 		}
 
@@ -212,6 +211,7 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			_treeView.destroy();
 			destroyMenus();
 			::DestroyWindow(_hToolbarMenu);
+			_hToolbarFontDpi.reset();
 			break;
 		}
 
@@ -219,6 +219,79 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
 	}
 	return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
+}
+
+std::vector<int> ProjectPanel::getTreeImageIds()
+{
+	return _treeView.getImageIds(
+		{ IDI_PROJECT_WORKSPACE, IDI_PROJECT_WORKSPACEDIRTY, IDI_PROJECT_PROJECT, IDI_PROJECT_FOLDEROPEN, IDI_PROJECT_FOLDERCLOSE, IDI_PROJECT_FILE, IDI_PROJECT_FILEINVALID }
+		, { IDI_PROJECT_WORKSPACE_DM, IDI_PROJECT_WORKSPACEDIRTY_DM, IDI_PROJECT_PROJECT_DM, IDI_PROJECT_FOLDEROPEN_DM, IDI_PROJECT_FOLDERCLOSE_DM, IDI_PROJECT_FILE_DM, IDI_PROJECT_FILEINVALID_DM }
+		, { IDI_PROJECT_WORKSPACE2, IDI_PROJECT_WORKSPACEDIRTY2, IDI_PROJECT_PROJECT2, IDI_PROJECT_FOLDEROPEN2, IDI_PROJECT_FOLDERCLOSE2, IDI_PROJECT_FILE2, IDI_PROJECT_FILEINVALID2 }
+	);
+}
+
+// The height of the toolbar's text buttons for its font, as comctl32 computes it (text and padding): comctl32 itself makes
+// them no higher than for the DPI the toolbar was created at (a toolbar made at 150% clipped the text at 200%)
+static void fitToolbarButtonsToFont(HWND hToolbar)
+{
+	HDC hdc = ::GetDC(hToolbar);
+	const HGDIOBJ hOldFont = ::SelectObject(hdc, reinterpret_cast<HFONT>(::SendMessage(hToolbar, WM_GETFONT, 0, 0)));
+	TEXTMETRIC tm{};
+	::GetTextMetrics(hdc, &tm);
+	::SelectObject(hdc, hOldFont);
+	::ReleaseDC(hToolbar, hdc);
+
+	const auto padding = static_cast<DWORD>(::SendMessage(hToolbar, TB_GETPADDING, 0, 0));
+	::SendMessage(hToolbar, TB_SETBUTTONSIZE, 0, MAKELPARAM(0, tm.tmHeight + HIWORD(padding)));
+}
+
+// The toolbar's buttons fitted to each new font (per-monitor DPI awareness), and the panel's font set again after a theme
+// change, which Windows sends after a DPI change: comctl32 then puts its own font and its own button height back
+LRESULT CALLBACK ProjectPanel::ToolbarSubclass(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch (uMsg)
+	{
+		case WM_NCDESTROY:
+		{
+			::RemoveWindowSubclass(hWnd, ToolbarSubclass, uIdSubclass);
+			break;
+		}
+
+		case WM_SETFONT:
+		{
+			const LRESULT result = ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+			fitToolbarButtonsToFont(hWnd);
+			::SendMessage(hWnd, TB_AUTOSIZE, 0, 0);
+			return result;
+		}
+
+		case WM_THEMECHANGED:
+		{
+			const LRESULT result = ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+			const auto* pPanel = reinterpret_cast<const ProjectPanel*>(dwRefData);
+			if (pPanel->_hToolbarFontDpi)
+				::SendMessage(hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(pPanel->_hToolbarFontDpi.get()), TRUE);
+			return result;
+		}
+	}
+	return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+
+void ProjectPanel::onDpiChanged(UINT prevDpi)
+{
+	const UINT dpi = _dpiManager.getDpi();
+
+	// toolbar: text buttons, sized for their font (ToolbarSubclass)
+	DPIManagerV2::setIconTitleFont(_hToolbarMenu, dpi, _hToolbarFontDpi);
+	::SendMessage(_hToolbarMenu, TB_AUTOSIZE, 0, 0);
+
+	// tree: font, item height, images, indent
+	_treeView.rescaleForDpi(dpi, prevDpi, getTreeImageIds());
+
+	// layout for the new toolbar height (the panel isn't always resized after the DPI change)
+	RECT rc{};
+	getClientRect(rc);
+	::SendMessage(_hSelf, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rc.right - rc.left, rc.bottom - rc.top));
 }
 
 bool ProjectPanel::checkIfNeedSave()

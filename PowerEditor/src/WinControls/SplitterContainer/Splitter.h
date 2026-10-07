@@ -66,6 +66,9 @@ public:
 		return _splitterSize;
 	}
 
+	// e.g. after a DPI change, the new size is applied by the next resizeSpliter()
+	void setSplitterSize(int splitterSize);
+
 
 private:
 	RECT _rect = {};

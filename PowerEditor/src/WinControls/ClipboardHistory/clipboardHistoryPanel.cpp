@@ -316,9 +316,12 @@ intptr_t CALLBACK ClipboardHistoryPanel::run_dlgProc(UINT message, WPARAM wParam
 	{
 		case WM_INITDIALOG:
 		{
+			StaticDialog::setDpi(); // the DPI of the dialog's font
+
 			_hwndNextCbViewer = ::SetClipboardViewer(_hSelf);
 
 			_listView.init(_hInst, _hSelf);
+			DPIManagerV2::initIconTitleFont(_listView.getHSelf(), _dpiManager.getDpi(), _hFontDpi);
 			_listView.display();
 
 			return TRUE;
@@ -382,6 +385,8 @@ intptr_t CALLBACK ClipboardHistoryPanel::run_dlgProc(UINT message, WPARAM wParam
 		
 		case WM_SIZE:
 		{
+			checkDpiChange();
+
 			const int width = LOWORD(lParam);
 			const int height = HIWORD(lParam);
 			_listView.reSizeToWH(width, height);
@@ -393,3 +398,15 @@ intptr_t CALLBACK ClipboardHistoryPanel::run_dlgProc(UINT message, WPARAM wParam
 	}
 	return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
 }
+
+void ClipboardHistoryPanel::onDpiChanged(UINT /*prevDpi*/)
+{
+	HWND hList = _listView.getHSelf();
+	if (hList == nullptr)
+		return;
+
+	// the list view sizes its rows with its font
+	DPIManagerV2::setIconTitleFont(hList, _dpiManager.getDpi(), _hFontDpi);
+	::InvalidateRect(hList, nullptr, TRUE);
+}
+

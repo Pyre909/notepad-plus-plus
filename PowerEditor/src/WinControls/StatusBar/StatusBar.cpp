@@ -206,6 +206,10 @@ LRESULT CALLBACK StatusBar::StatusBarSubclass(
 			{
 				pStatusBar->setFontAndHeight();
 			}
+			else // per-monitor DPI: the control computes its height with its font (the parent relayouts it)
+			{
+				::DefSubclassProc(hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(pStatusBar->_hFont), FALSE);
+			}
 
 			break;
 		}

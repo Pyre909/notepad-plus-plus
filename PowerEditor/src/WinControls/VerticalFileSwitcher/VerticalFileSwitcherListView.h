@@ -20,6 +20,7 @@
 #include "Window.h"
 #include "TaskListDlg.h"
 #include "Buffer.h"
+#include "dpiManagerV2.h"
 
 #define SORT_DIRECTION_NONE     -1
 #define SORT_DIRECTION_UP     0
@@ -79,8 +80,12 @@ public:
 		redraw(true);
 	}
 
+	// the font and the file state icons (nullptr: kept) for dpi, the column widths are set by resizeColumns()
+	void rescaleForDpi(UINT dpi, HIMAGELIST hImaLst);
+
 protected:
 	HIMAGELIST _hImaLst = nullptr;
+	UniqueFont _hFontDpi; // font for the DPI of the panel (per-monitor DPI awareness)
 
 	int _currentIndex = 0;
 

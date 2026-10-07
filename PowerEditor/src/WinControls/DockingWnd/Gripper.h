@@ -22,6 +22,7 @@
 #include "Common.h"
 #include "Docking.h"
 #include "dockingResource.h"
+#include "dpiManagerV2.h"
 
 class DockingCont;
 class DockingManager;
@@ -97,7 +98,7 @@ protected :
 	}
 	void DoCalcGripperRect(RECT* rc, RECT rcCorr, POINT pt) {
 		if ((rc->left + rc->right) < pt.x)
-			rc->left = pt.x - 20;
+			rc->left = pt.x - DPIManagerV2::scaleFromSystemDpiForWindow(20, _hParent);
 		if ((rc->top + rc->bottom) < pt.y)
 			rc->top  += rcCorr.bottom - rc->bottom;
 	}

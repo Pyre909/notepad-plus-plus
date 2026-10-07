@@ -37,10 +37,6 @@ enum ImgIdx
 	MONITORING_IMG_INDEX,
 };
 
-static constexpr int docTabIconIDs[] = { IDI_SAVED_ICON, IDI_UNSAVED_ICON, IDI_READONLY_ICON, IDI_READONLYSYS_ICON, IDI_MONITORING_ICON };
-static constexpr int docTabIconIDs_darkMode[] = { IDI_SAVED_DM_ICON, IDI_UNSAVED_DM_ICON, IDI_READONLY_DM_ICON, IDI_READONLYSYS_DM_ICON, IDI_MONITORING_DM_ICON };
-static constexpr int docTabIconIDs_alt[] = { IDI_SAVED_ALT_ICON, IDI_UNSAVED_ALT_ICON, IDI_READONLY_ALT_ICON, IDI_READONLYSYS_ALT_ICON, IDI_MONITORING_ICON };
-
 void DocTabView::init(HINSTANCE hInst, HWND parent, ScintillaEditView* pView, unsigned char indexChoice, unsigned char buttonsStatus)
 {
 	TabBarPlus::init(hInst, parent, false, false, buttonsStatus);
