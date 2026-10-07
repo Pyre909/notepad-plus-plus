@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+<defs><linearGradient id="dark_horiz" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9AA4AE"/><stop offset="1" stop-color="#47505A"/></linearGradient><linearGradient id="dark_vert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9AA4AE"/><stop offset="1" stop-color="#47505A"/></linearGradient><linearGradient id="glass_diag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7FBFF"/><stop offset="1" stop-color="#B3D0F2"/></linearGradient></defs>
+<rect x="3.5" y="2.5" width="3" height="4" fill="url(#dark_horiz)" stroke="#22282E"/>
+<rect x="10.5" y="2.5" width="3" height="4" fill="url(#dark_horiz)" stroke="#22282E"/>
+<rect x="6.5" y="5.5" width="3" height="3" fill="url(#dark_vert)" stroke="#22282E"/>
+<rect x="1.5" y="6.5" width="5" height="8" fill="url(#dark_horiz)" stroke="#22282E"/>
+<rect x="9.5" y="6.5" width="5" height="8" fill="url(#dark_horiz)" stroke="#22282E"/>
+<rect x="2.5" y="11.5" width="3" height="2" fill="url(#glass_diag)" stroke="#4F7DB8"/>
+<rect x="10.5" y="11.5" width="3" height="2" fill="url(#glass_diag)" stroke="#4F7DB8"/>
+</svg>

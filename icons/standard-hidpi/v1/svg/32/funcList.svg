@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+<defs><linearGradient id="page_vert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E4E4E4"/></linearGradient><linearGradient id="redink_vert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF8A80"/><stop offset="1" stop-color="#D0281E"/></linearGradient></defs>
+<path d="M5.5,1.5 H21.5 L28.5,8.5 V30.5 H5.5 Z" fill="url(#page_vert)" stroke="#6A6A6A" stroke-linejoin="round"/>
+<path d="M21.5,1.5 V8.5 H28.5" fill="#E4E4E4" fill-opacity="0.55" stroke="#6A6A6A" stroke-linejoin="round"/>
+<g transform="scale(1)"><path d="M18.75,7.97 C16.12,5.34 12.84,7.31 12.19,11.25 L8.91,25.69 C8.25,28.97 5.62,29.62 3.66,28.31 M7.59,13.88 L16.78,13.88" fill="none" stroke="#8A1610" stroke-width="4.000" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="scale(1)"><path d="M18.75,7.97 C16.12,5.34 12.84,7.31 12.19,11.25 L8.91,25.69 C8.25,28.97 5.62,29.62 3.66,28.31 M7.59,13.88 L16.78,13.88" fill="none" stroke="url(#redink_vert)" stroke-width="2.800" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="scale(1)"><path d="M19.78,11.00 C17.34,11.00 17.66,12.59 17.66,14.72 L17.66,17.38 C17.66,18.76 16.70,19.50 15.00,19.50 C16.70,19.50 17.66,20.24 17.66,21.62 L17.66,24.28 C17.66,26.41 17.34,28.00 19.78,28.00 M22.44,11.00 C24.88,11.00 24.56,12.59 24.56,14.72 L24.56,17.38 C24.56,18.76 25.52,19.50 27.22,19.50 C25.52,19.50 24.56,20.24 24.56,21.62 L24.56,24.28 C24.56,26.41 24.88,28.00 22.44,28.00" fill="none" stroke="#5E5E5E" stroke-width="1.600" stroke-linecap="round"/></g>
+</svg>

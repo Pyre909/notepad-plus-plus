@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+<defs><linearGradient id="blueink_diag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8EC0F4"/><stop offset="1" stop-color="#2E6FCB"/></linearGradient></defs>
+<rect x="2.5" y="2.5" width="15" height="15" fill="none" stroke="#6E6E6E" stroke-width="1"/>
+<path d="M4.5,5.5 L10.5,10.5 L4.5,15.5 Z" fill="url(#blueink_diag)" stroke="#1C4E9C" stroke-linejoin="round"/>
+<path d="M9.5,5.5 L16.5,10.5 L9.5,15.5 Z" fill="url(#blueink_diag)" stroke="#1C4E9C" stroke-linejoin="round"/>
+</svg>

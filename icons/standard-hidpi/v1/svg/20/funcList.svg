@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+<defs><linearGradient id="page_vert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E4E4E4"/></linearGradient><linearGradient id="redink_vert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF8A80"/><stop offset="1" stop-color="#D0281E"/></linearGradient></defs>
+<path d="M3.5,1.5 H13.5 L17.5,5.5 V18.5 H3.5 Z" fill="url(#page_vert)" stroke="#6A6A6A" stroke-linejoin="round"/>
+<path d="M13.5,1.5 V5.5 H17.5" fill="#E4E4E4" fill-opacity="0.55" stroke="#6A6A6A" stroke-linejoin="round"/>
+<g transform="scale(0.625)"><path d="M18.75,7.97 C16.12,5.34 12.84,7.31 12.19,11.25 L8.91,25.69 C8.25,28.97 5.62,29.62 3.66,28.31 M7.59,13.88 L16.78,13.88" fill="none" stroke="#8A1610" stroke-width="4.720" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g transform="scale(0.625)"><path d="M18.75,7.97 C16.12,5.34 12.84,7.31 12.19,11.25 L8.91,25.69 C8.25,28.97 5.62,29.62 3.66,28.31 M7.59,13.88 L16.78,13.88" fill="none" stroke="url(#redink_vert)" stroke-width="2.800" stroke-linecap="round" stroke-linejoin="round"/></g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+<defs><linearGradient id="wood_diag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F2CF92"/><stop offset="1" stop-color="#B47E38"/></linearGradient><linearGradient id="metal_vert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6F6F6"/><stop offset="1" stop-color="#A4A4A4"/></linearGradient><linearGradient id="doc_diag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4F8FE"/><stop offset="1" stop-color="#BCD4F2"/></linearGradient></defs>
+<rect x="1.5" y="3.5" width="21" height="27" fill="url(#wood_diag)" stroke="#7A4E18"/>
+<rect x="4.5" y="6.5" width="15" height="21" fill="#FBF4E6" stroke="#7A4E18"/>
+<rect x="7.5" y="1.5" width="9" height="4" fill="url(#metal_vert)" stroke="#4A4A4A"/>
+<path d="M13.5,12.5 H25.5 L30.5,17.5 V30.5 H13.5 Z" fill="url(#doc_diag)" stroke="#2F5A9C" stroke-linejoin="round"/>
+<path d="M25.5,12.5 V17.5 H30.5" fill="#BCD4F2" fill-opacity="0.55" stroke="#2F5A9C" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<defs><linearGradient id="doc_diag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4F8FE"/><stop offset="1" stop-color="#BCD4F2"/></linearGradient><linearGradient id="metal_vert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6F6F6"/><stop offset="1" stop-color="#A4A4A4"/></linearGradient><linearGradient id="doc_vert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F4F8FE"/><stop offset="1" stop-color="#BCD4F2"/></linearGradient></defs>
+<path d="M6.5,1.5 H15.5 L18.5,4.5 V10.5 H6.5 Z" fill="url(#doc_diag)" stroke="#2F5A9C" stroke-linejoin="round"/>
+<path d="M15.5,1.5 V4.5 H18.5" fill="#BCD4F2" fill-opacity="0.55" stroke="#2F5A9C" stroke-linejoin="round"/>
+<rect x="1.5" y="10.5" width="21" height="9" fill="url(#metal_vert)" stroke="#4A4A4A"/>
+<rect x="2" y="11" width="21" height="2" fill="#FAFAFA"/>
+<rect x="2" y="14" width="20" height="1" fill="#5E5E5E"/>
+<rect x="19" y="11" width="2" height="1" fill="#4FA838"/>
+<rect x="5.5" y="19.5" width="14" height="3" fill="url(#doc_vert)" stroke="#2F5A9C"/>
+</svg>

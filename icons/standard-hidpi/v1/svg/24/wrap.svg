@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<defs><linearGradient id="blueink_diag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8EC0F4"/><stop offset="1" stop-color="#2E6FCB"/></linearGradient><linearGradient id="doc_vert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F4F8FE"/><stop offset="1" stop-color="#BCD4F2"/></linearGradient></defs>
+<rect x="1" y="2" width="16" height="3" fill="#4A4A4A"/>
+<rect x="1" y="6" width="16" height="2" fill="#4A4A4A"/>
+<rect x="1" y="10" width="10" height="2" fill="#4A4A4A"/>
+<path d="M14,15.0 H21.0 V21.0 H17" fill="none" stroke="#2F5A9C" stroke-width="2"/>
+<path d="M17.5,17 L13.5,21 L17.5,25 Z" fill="url(#blueink_diag)" stroke="#1C4E9C" stroke-linejoin="round"/>
+<rect x="1.5" y="18.5" width="11" height="4" fill="url(#doc_vert)" stroke="#2F5A9C"/>
+</svg>

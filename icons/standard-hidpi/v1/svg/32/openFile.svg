@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+<defs><linearGradient id="doc_diag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4F8FE"/><stop offset="1" stop-color="#BCD4F2"/></linearGradient><linearGradient id="folder_vert" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF3BC"/><stop offset="1" stop-color="#E9A93E"/></linearGradient></defs>
+<path d="M12.5,0.5 H24.5 L30.5,6.5 V22.5 H12.5 Z" fill="url(#doc_diag)" stroke="#2F5A9C" stroke-linejoin="round"/>
+<path d="M24.5,0.5 V6.5 H30.5" fill="#BCD4F2" fill-opacity="0.55" stroke="#2F5A9C" stroke-linejoin="round"/>
+<path d="M1.5,13.5 H8.5 L10.5,15.5 H23.5 V30.5 H1.5 Z" fill="url(#folder_vert)" stroke="#A8691A" stroke-linejoin="round"/>
+<path d="M1.5,30.5 L3.5,19.5 H25.5 L23.5,30.5 Z" fill="url(#folder_vert)" stroke="#A8691A" stroke-linejoin="round"/>
+</svg>

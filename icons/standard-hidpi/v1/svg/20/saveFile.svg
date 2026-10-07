@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+<defs><linearGradient id="disk_diag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B8CEF0"/><stop offset="1" stop-color="#5A86C6"/></linearGradient></defs>
+<path d="M1.5,1.5 H16.5 L18.5,3.5 V18.5 H1.5 Z" fill="url(#disk_diag)" stroke="#2F5A9C" stroke-linejoin="round"/>
+<rect x="5.5" y="1.5" width="9" height="6" fill="#FFFFFF" stroke="#2F5A9C"/>
+<rect x="11" y="3" width="2" height="4" fill="#4A78BE"/>
+<rect x="4.5" y="11.5" width="11" height="7" fill="#F4F7FC" stroke="#2F5A9C"/>
+<rect x="6" y="13" width="8" height="1" fill="#7DBE52"/>
+<rect x="6" y="15" width="8" height="1" fill="#7DBE52"/>
+</svg>
