@@ -362,6 +362,13 @@ struct GlobalOverride final
 	bool enableBold = false;
 	bool enableItalic = false;
 	bool enableUnderLine = false;
+
+	// Pyre909 build: the font forced for every theme (the Style Configurator's "For every theme") is in config.xml, not in
+	// the theme's "Global override" style, whose colours stay the theme's (see ScintillaEditView::setStyle)
+	std::wstring fontName;
+	int fontSize = STYLE_NOT_USED;
+	int fontStyle = FONTSTYLE_NONE; // the bold, italic and underline forced on: those forced and not in it are forced off
+	bool hasFontValues = false; // read from config.xml, else taken from the theme once (initGlobalOverrideFont)
 };
 
 struct StyleArray

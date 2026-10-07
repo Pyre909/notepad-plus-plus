@@ -1059,35 +1059,21 @@ void ScintillaEditView::setStyle(Style styleToSet) const
 						styleToSet._colorStyle &= ~COLORSTYLE_BACKGROUND;
 				}
 			}
-			if (go.enableFont && !pStyle->_fontName.empty())
-				styleToSet._fontName = pStyle->_fontName;
-			if (go.enableFontSize && (pStyle->_fontSize > 0))
-				styleToSet._fontSize = pStyle->_fontSize;
+		}
 
-			if (pStyle->_fontStyle != STYLE_NOT_USED)
-			{
-				if (go.enableBold)
-				{
-					if (pStyle->_fontStyle & FONTSTYLE_BOLD)
-						styleToSet._fontStyle |= FONTSTYLE_BOLD;
-					else
-						styleToSet._fontStyle &= ~FONTSTYLE_BOLD;
-				}
-				if (go.enableItalic)
-				{
-					if (pStyle->_fontStyle & FONTSTYLE_ITALIC)
-						styleToSet._fontStyle |= FONTSTYLE_ITALIC;
-					else
-						styleToSet._fontStyle &= ~FONTSTYLE_ITALIC;
-				}
-				if (go.enableUnderLine)
-				{
-					if (pStyle->_fontStyle & FONTSTYLE_UNDERLINE)
-						styleToSet._fontStyle |= FONTSTYLE_UNDERLINE;
-					else
-						styleToSet._fontStyle &= ~FONTSTYLE_UNDERLINE;
-				}
-			}
+		// Pyre909 build: the font forced for every theme (the Style Configurator's "For every theme") is in config.xml
+		if (go.enableFont && !go.fontName.empty())
+			styleToSet._fontName = go.fontName;
+		if (go.enableFontSize && (go.fontSize > 0))
+			styleToSet._fontSize = go.fontSize;
+		const std::pair<bool, int> forcedFontStyles[]{ { go.enableBold, FONTSTYLE_BOLD }, { go.enableItalic, FONTSTYLE_ITALIC }, { go.enableUnderLine, FONTSTYLE_UNDERLINE } };
+		for (const auto& [isForced, fontStyle] : forcedFontStyles)
+		{
+			if (!isForced)
+				continue;
+			if (styleToSet._fontStyle == STYLE_NOT_USED) // the style has no font style of its own: the forced ones only
+				styleToSet._fontStyle = FONTSTYLE_NONE;
+			styleToSet._fontStyle = (go.fontStyle & fontStyle) ? (styleToSet._fontStyle | fontStyle) : (styleToSet._fontStyle & ~fontStyle);
 		}
 	}
 	setSpecialStyle(styleToSet);

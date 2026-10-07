@@ -124,4 +124,9 @@ private :
 	void updateGlobalOverrideCtrls();
 	void showGlobalOverrideCtrls(bool show);
 	void applyCurrentSelectedThemeAndUpdateUI();
+
+	// Pyre909 build: the font of every theme (config.xml), the row under the theme selector
+	void initFontForEveryThemeCtrls() const;
+	void updateFontForEveryThemeCtrls() const;
+	void fontForEveryThemeChanged(int ctrlID);
 };

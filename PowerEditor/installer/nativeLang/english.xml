@@ -659,6 +659,12 @@ Translation note:
 					<Item id="2234" name="Go to settings"/>
 					<!-- Don't translate "Global override" -->
 					<Item id="2235" name="What is Global override?"/>
+					<Item id="2280" name="For every theme:"/>
+					<Item id="2282" name="Size"/>
+					<Item id="2284" name="Bold"/>
+					<Item id="2286" name="Italic"/>
+					<Item id="2288" name="Underline"/>
+					<Item id="2290" name="The font, size, bold, italic and underline forced for all styles are the same in every theme: &quot;For every theme&quot;, at the top."/>
 				</SubDialog>
 			</StyleConfig>
 

@@ -784,6 +784,50 @@ static void writeTextRenderingParams(NppXml::Element& elem, const ScintillaViewP
 		elem.remove_attribute(name);
 }
 
+// Pyre909 build: the font forced for every theme (the Style Configurator's "For every theme") with the force flags of
+// <GUIConfig name="globalOverride">: forcedFontName="Consolas" forcedFontSize="11" forcedFontStyle="0", the bold, italic
+// and underline forced on (FONTSTYLE_*). A config.xml without them (another Notepad++'s) gets them from the theme once.
+static constexpr int forcedFontStyles = FONTSTYLE_BOLD | FONTSTYLE_ITALIC | FONTSTYLE_UNDERLINE;
+
+static void readGlobalOverrideFont(const NppXml::Element& elem, GlobalOverride& go)
+{
+	const char* fontName = NppXml::attribute(elem, "forcedFontName");
+	go.hasFontValues = (fontName != nullptr);
+	if (!go.hasFontValues)
+		return;
+	go.fontName = string2wstring(fontName);
+	go.fontSize = NppXml::intAttribute(elem, "forcedFontSize", STYLE_NOT_USED);
+	go.fontStyle = NppXml::intAttribute(elem, "forcedFontStyle", FONTSTYLE_NONE) & forcedFontStyles;
+}
+
+static void writeGlobalOverrideFont(NppXml::Element& elem, const GlobalOverride& go)
+{
+	NppXml::setAttribute(elem, "forcedFontName", go.fontName);
+	NppXml::setAttribute(elem, "forcedFontSize", go.fontSize);
+	NppXml::setAttribute(elem, "forcedFontStyle", go.fontStyle);
+}
+
+// What another Notepad++ forced: the values of the theme's "Global override" style, which it forces only when set
+static void initGlobalOverrideFont(GlobalOverride& go, StyleArray& globalStyles)
+{
+	if (go.hasFontValues)
+		return;
+	go.hasFontValues = true;
+	const Style* pStyle = globalStyles.findByName(L"Global override");
+	const bool hasFontStyle = pStyle && (pStyle->_fontStyle != STYLE_NOT_USED);
+	if (pStyle)
+	{
+		go.fontName = pStyle->_fontName;
+		go.fontSize = pStyle->_fontSize;
+	}
+	go.fontStyle = hasFontStyle ? (pStyle->_fontStyle & forcedFontStyles) : FONTSTYLE_NONE;
+	go.enableFont = go.enableFont && !go.fontName.empty();
+	go.enableFontSize = go.enableFontSize && (go.fontSize > 0);
+	go.enableBold = go.enableBold && hasFontStyle;
+	go.enableItalic = go.enableItalic && hasFontStyle;
+	go.enableUnderLine = go.enableUnderLine && hasFontStyle;
+}
+
 static void setBoolAttribute(NppXml::Element& elem, const char* name, bool isTrue, const std::array<const char*, 2>& strs2set = STR_BOOL_YESNO)
 {
 	NppXml::setAttribute(elem, name, isTrue ? strs2set[0] : strs2set[1]);
@@ -1579,6 +1623,7 @@ bool NppParameters::load()
 	}
 	else
 		getUserStylersFromXmlTree();
+	initGlobalOverrideFont(_nppGUI._globalOverride, _widgetStyleArray); // Pyre909 build: if config.xml hasn't it
 
 	_themeSwitcher._stylesXmlPath = _stylerPath;
 	// Firstly, add the default theme
@@ -6773,6 +6818,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			_nppGUI._globalOverride.enableBold = getBoolAttribute(childNode, "bold");
 			_nppGUI._globalOverride.enableItalic = getBoolAttribute(childNode, "italic");
 			_nppGUI._globalOverride.enableUnderLine = getBoolAttribute(childNode, "underline");
+			readGlobalOverrideFont(childNode, _nppGUI._globalOverride); // Pyre909 build
 		}
 		// <GUIConfig name="auto-completion" autoCAction="3" triggerFromNbChar="1" autoCIgnoreNumbers="yes" insertSelectedItemUseENTER="yes"
 		// insertSelectedItemUseTAB="yes" autoCBrief="no" funcParams="yes" />
@@ -7994,6 +8040,7 @@ void NppParameters::createXmlTreeFromGUIParams()
 		setBoolAttribute(GUIConfigElement, "bold", _nppGUI._globalOverride.enableBold);
 		setBoolAttribute(GUIConfigElement, "italic", _nppGUI._globalOverride.enableItalic);
 		setBoolAttribute(GUIConfigElement, "underline", _nppGUI._globalOverride.enableUnderLine);
+		writeGlobalOverrideFont(GUIConfigElement, _nppGUI._globalOverride); // Pyre909 build
 	}
 
 	// <GUIConfig name="auto-completion" autoCAction="3" triggerFromNbChar="1" autoCIgnoreNumbers="yes" insertSelectedItemUseENTER="yes"

@@ -15,6 +15,9 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **Fonts of a weight draw correctly with DirectWrite**: "Fira Code Light", "Cascadia Code SemiBold" or
   "Bahnschrift Light" are drawn with their own font instead of a fallback font, and bold is a heavier font of the
   family: SemiBold for a Light font, the heaviest up to Black for a SemiBold one (which GDI alone doesn't embolden).
+- **A font for every theme** (Settings > Style Configurator, the row under "Select theme"): the font, size, bold,
+  italic and underline forced for all styles, which Global override's check boxes did per theme, are set once and kept
+  when switching themes (saved in config.xml, not in the theme). The Global override style keeps its colours.
 - **Per-monitor DPI awareness** (Preferences > MISC., experimental, restart required).
 - **Font sizes 1 to 4 pt** in the font size lists.
 - **A crash guard** for DirectWrite fonts with an out-of-range weight (Scintilla bug #2520).
