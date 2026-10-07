@@ -10,11 +10,11 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   DirectWrite mode, moved here from MISC.), antialiasing (Follow Windows, ClearType, ClearType with less color
   fringing, Grayscale, None), the DirectWrite mode (Automatic, Natural for sharper small text, Symmetric, GDI
   classic, Adaptive) and the text contrast. "Follow Windows" follows the Windows font smoothing with DirectWrite
-  too (official issue #17461).
+  too (official issue #17461), and a change of it at once, the ClearType Text Tuner's included.
 - **The rendering mode applies at once**, without restarting Notepad++.
 - **Fonts of a weight draw correctly with DirectWrite**: "Fira Code Light", "Cascadia Code SemiBold" or
-  "Bahnschrift Light" are drawn with their own font instead of a fallback font, and bold is the family's next
-  heavier font.
+  "Bahnschrift Light" are drawn with their own font instead of a fallback font, and bold is a heavier font of the
+  family: SemiBold for a Light font, the heaviest up to Black for a SemiBold one (which GDI alone doesn't embolden).
 - **Per-monitor DPI awareness** (Preferences > MISC., experimental, restart required).
 - **Font sizes 1 to 4 pt** in the font size lists.
 - **A crash guard** for DirectWrite fonts with an out-of-range weight (Scintilla bug #2520).

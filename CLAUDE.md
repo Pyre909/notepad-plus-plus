@@ -31,8 +31,8 @@ branch, read it with `git show origin/pyre:CLAUDE.md`.
 | `text-rendering-translations_20260925` | Follow-up of the closed #18418: on hold. |
 | `rtl-views-gdi_20261006` | Right-to-left views drawn with GDI (DirectWrite ignores the mirroring `WS_EX_LAYOUTRTL`; fixes #17865, #17518 and the RTL UI languages, drawn left-to-right in a mirrored window by default upstream), one commit on upstream `master` (`53d0026`, CI: all 13 jobs pass); PR texts in kit section 6. `pyre` has the same design since 2026-10-06. |
 | `live-rendering-switch_20261005` | The rendering mode applied without restarting (MISC. box), one commit on top of `rtl-views-gdi_20261006` (`d50fb3b`, CI: all 13 jobs pass; rebased on `master` once that one is merged); feature request + PR texts in kit section 7, the PR once the request is Accepted. Amend freely until the PR is opened, then new commits only (upstream CONTRIBUTING rule 10). Supersedes `live-rendering-switch_20260930` (stacked on #18418). Its first version (`305ff13`, pushed 2026-10-05), which refused DirectWrite while right-to-left documents were shown, is kept as `archive/live-rendering-switch-refusal_20261005`: the fallback if `rtl-views-gdi_20261006` is turned down. |
-| `directwrite-font-smoothing_20261006` | DirectWrite following the Windows font smoothing (fixes #14954: with DirectWrite, turning the Windows font smoothing off, or to Standard, changed nothing), one commit on upstream `master` (`76b3210`, CI: all 13 jobs pass); PR texts in kit section 8. `pyre` has it as the "Follow Windows" antialiasing of its Text Rendering settings, which misses a change made in the ClearType Text Tuner until a restart (to fix, `STATUS.md` Next). |
-| `directwrite-font-names_20260930`, `per-monitor-dpi_20260925` | PR candidates (font names: a bug fix of #12393, PR texts ready, what's left in kit section 5; DPI: discuss with maintainers first). |
+| `directwrite-font-smoothing_20261006` | DirectWrite following the Windows font smoothing (fixes #14954: with DirectWrite, turning the Windows font smoothing off, or to Standard, changed nothing), one commit on upstream `master` (`76b3210`, CI: all 13 jobs pass); PR texts in kit section 8. `pyre` has its code as the "Follow Windows" antialiasing of its Text Rendering settings (since 2026-10-06). |
+| `directwrite-font-names_20260930`, `per-monitor-dpi_20260925` | PR candidates (font names: a bug fix of #9951 and #12393, rewritten on 2026-10-06 as `9f605be`, PR texts ready, what's left in kit section 5; DPI: discuss with maintainers first). |
 | `font-size-1pt_20260925`, `font-weight-names_20260925`, the other `archive/*` | History: a closed PR, a superseded version, early drafts. Don't build on them. |
 | `scintilla-upstream_20260930` | Tooling branch (no Notepad++ history): test tools, PR kit, status notes. |
 
@@ -65,6 +65,9 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
   `msbuild PowerEditor\visual.net\notepadPlus.sln /m /p:configuration=Release /p:platform=x64`
   gives `PowerEditor\bin64\Notepad++.exe`; `/p:platform=ARM64` gives `PowerEditor\binarm64\Notepad++.exe` (native on
   the VM; needs Visual Studio's MSVC ARM64 build tools component, which the setup script adds).
+- After a change of a class layout in a header many files include (a member of `ScintillaEditView.h`, `Parameters.h`,
+  `SurfaceD2D.h`), rebuild clean (`/t:Rebuild`) before testing: an incremental build left stale objects once, and the
+  exe crashed at startup (0xC000041D, 2026-10-06).
 - To run a build without touching the real settings (PowerShell; the folder must exist, else Notepad++ says
   "Invalid directory" and uses the normal settings):
   `Start-Process "C:\Program Files\Notepad++\notepad++.exe" -ArgumentList '-multiInst', '-nosession', '-settingsDir=C:\npp-test'`
@@ -81,10 +84,13 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
 
 ## Code conventions
 
-- Match the file's line endings: most `PowerEditor` sources are CRLF, Scintilla sources LF. Tabs, Notepad++'s
-  own style (`_member` names, braces on new lines).
+- Match the file's line endings: most `PowerEditor` sources are CRLF, most Scintilla sources LF (not
+  `ScintillaWin.cxx`, `Scintilla.h`, `deps.mak`: check with `git ls-files --eol`). Tabs, Notepad++'s own style
+  (`_member` names, braces on new lines).
 - A new source file must be listed in `PowerEditor/src/CMakeLists.txt` and
-  `PowerEditor/visual.net/notepadPlus.vcxproj` (the GCC makefile finds files by itself).
+  `PowerEditor/visual.net/notepadPlus.vcxproj` (the GCC makefile finds files by itself). A new Scintilla header: run
+  `python DepGen.py` in `scintilla/win32` so that `deps.mak` (the MinGW build) and `nmdeps.mak` list it, keep only its
+  lines (it also adds a `BoostRegexSearch.h` upstream doesn't list), and put `nmdeps.mak` back to LF (it writes CRLF).
 - New UI strings go in `PowerEditor/installer/nativeLang/english.xml`; other languages get them from
   translators (or a separate `[xml]` PR).
 - Don't change the version line in `PowerEditor/src/resource.h` (upstream edits it each release; merges would
@@ -95,11 +101,11 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
 
 | Feature | Main places |
 |---|---|
-| Text rendering settings (Editing 1 > Text Rendering) | `ScintillaEditView::applyTextRenderingSettings` / `applyTextRenderingSettingsToAll`, `EditingSubDlg` in `preferenceDlg.cpp`, enums in `NppConstants.h`, config.xml `fontAntialiasing` / `fontRenderingMode` / `fontContrast` (`Parameters.cpp`) |
-| DirectWrite rendering parameters (Scintilla, local patch) | `scintilla/win32/SurfaceD2D.cxx`, `ScintillaWin.cxx`, `ListBox.cxx`; private messages `SCI_SETFONTRENDERINGPARAMETER` 5101 / `SCI_GETFONTRENDERINGPARAMETER` 5102 |
-| Rendering mode applied without restart | `ScintillaEditView::setTechnologyToAll` (all views in `_liveViews`), the handler in `preferenceDlg.cpp` |
+| Text rendering settings (Editing 1 > Text Rendering) | `ScintillaEditView::applyTextRenderingSettings` / `applyTextRenderingSettingsToAll` (tables), "Follow Windows" = kit 8's `getWindowsFontQuality` / `applyWindowsFontQuality` and the `WM_SETTINGCHANGE` case of `ScintillaProc`, `EditingSubDlg` in `preferenceDlg.cpp`, enums in `NppConstants.h`, config.xml `fontAntialiasing` / `fontRenderingMode` / `fontContrast` (`readTextRenderingParams` / `writeTextRenderingParams` in `Parameters.cpp`; upstream's `smoothFont` kept in sync) |
+| DirectWrite rendering parameters (Scintilla, local patch) | API in `scintilla/include/ScintillaFontRendering.h` (private messages `SCI_SETFONTRENDERINGPARAMETER` 5101 / `SCI_GETFONTRENDERINGPARAMETER` 5102), logic in `scintilla/win32/FontRenderingOverrides.h` (header only), applied at the end of upstream's `ScintillaWin::UpdateRenderingParams`; the messages in `WndProc`'s first switch (Direct2D builds only); `SurfaceD2D::SetFontQuality` (variants), `LayoutCreateMeasured` (GDI classic); `ListBox.cxx` |
+| Rendering mode applied without restart | `ScintillaEditView::setTechnologyToAll` (as on its PR branch, all views in `_liveViews`); pyre's `switchTechnologyOfAll` calls it, then `technologyChanged` on each view that switched (antialiasing, style fonts); the handler in `preferenceDlg.cpp` |
 | Right-to-left views drawn with GDI (DirectWrite ignores `WS_EX_LAYOUTRTL`) | `ScintillaEditView::changeTextDirection`, `init` (a view mirrored at creation), `setTechnologyToAll` (skips mirrored views), the startup direction sync in `Notepad_plus::init` |
-| Fonts of a weight under DirectWrite ("Fira Code Light") | `ScintillaComponent/FontFamilyNames.cpp/.h`, `ScintillaEditView::setSpecialStyle` and `clearAllStyles`; `refreshStyleFonts` maps them again when a view's technology changes |
+| Fonts of a weight under DirectWrite ("Fira Code Light") | `ScintillaComponent/FontFamilyNames.cpp/.h` (as on its PR branch, plus pyre's GDI block), `ScintillaEditView::setSpecialStyle` and `clearAllStyles` (one record per view, `_styleFonts`); `refreshStyleFonts(technology, previousTechnology)` maps them again when a view's technology changes (`technologyChanged`) and for printing (`Printer.cpp`), leaving the fonts a plugin set |
 | Per-monitor DPI (MISC., `perMonitorDpiAwareness`) | `dpiManagerV2`, `StaticDialog`, docking (`DockingCont`, `DockingManager`, `Gripper`), panels |
 | Font sizes 1-4 pt | `fontSizeStrs` in `NppConstants.h` |
 | Crash guard (Scintilla bug #2520) | `FontDirectWrite::HFont` in `SurfaceD2D.cxx` |
@@ -131,7 +137,8 @@ and can't run 32-bit NSIS installers):
    DirectWrite mode changes the text at once.
 3. Fonts: Default Style "Bahnschrift Light" with DirectWrite draws Light, bold keywords SemiBold (**pass**,
    2026-10-01: weights 300 and 600, ink and width per line within 2.4% and 3 px of GDI; readings in `STATUS.md`).
-   Still to check: "Cascadia Code SemiBold" bold draws Bold (needed before opening the font-name PR).
+   "Cascadia Code SemiBold" bold: DirectWrite draws it with Cascadia Code Bold, not a simulated bold (**pass**,
+   2026-10-06, the face DirectWrite matches to the bold weight; GDI doesn't embolden a SemiBold font at all).
 4. Per-monitor DPI with monitors at different scales.
 
 ## Where the rest is
