@@ -32,7 +32,7 @@ branch, read it with `git show origin/pyre:CLAUDE.md`.
 | `rtl-views-gdi_20261006` | Right-to-left views drawn with GDI (DirectWrite ignores the mirroring `WS_EX_LAYOUTRTL`; fixes #17865, #17518 and the RTL UI languages, drawn left-to-right in a mirrored window by default upstream), one commit on upstream `master` (`53d0026`, CI: all 13 jobs pass); PR texts in kit section 6. `pyre` has the same design since 2026-10-06. |
 | `live-rendering-switch_20261005` | The rendering mode applied without restarting (MISC. box), one commit on top of `rtl-views-gdi_20261006` (`d50fb3b`, CI: all 13 jobs pass; rebased on `master` once that one is merged); feature request + PR texts in kit section 7, the PR once the request is Accepted. Amend freely until the PR is opened, then new commits only (upstream CONTRIBUTING rule 10). Supersedes `live-rendering-switch_20260930` (stacked on #18418). Its first version (`305ff13`, pushed 2026-10-05), which refused DirectWrite while right-to-left documents were shown, is kept as `archive/live-rendering-switch-refusal_20261005`: the fallback if `rtl-views-gdi_20261006` is turned down. |
 | `directwrite-font-smoothing_20261006` | DirectWrite following the Windows font smoothing (fixes #14954: with DirectWrite, turning the Windows font smoothing off, or to Standard, changed nothing), one commit on upstream `master` (`76b3210`, CI: all 13 jobs pass); PR texts in kit section 8. `pyre` has its code as the "Follow Windows" antialiasing of its Text Rendering settings (since 2026-10-06). |
-| `directwrite-font-names_20260930`, `per-monitor-dpi_20260925` | PR candidates (font names: a bug fix of #9951 and #12393, rewritten on 2026-10-06 as `9f605be`, PR texts ready, what's left in kit section 5; DPI: discuss with maintainers first). |
+| `directwrite-font-names_20260930`, `per-monitor-dpi_20260925` | PR candidates (font names: a bug fix of #9951 and #12393, rewritten on 2026-10-06 as `9f605be`, PR texts ready, what's left in kit section 5; DPI: reconciled with upstream's per-monitor dialogs on 2026-10-07 as `8a455e0`, CI: all 13 jobs pass; discuss with maintainers first, through the comment for #14959 in kit section 4). |
 | `font-size-1pt_20260925`, `font-weight-names_20260925`, the other `archive/*` | History: a closed PR, a superseded version, early drafts. Don't build on them. |
 | `scintilla-upstream_20260930` | Tooling branch (no Notepad++ history): test tools, PR kit, status notes. |
 
@@ -134,13 +134,14 @@ and can't run 32-bit NSIS installers):
    back to official Notepad++).
 2. DirectWrite in Notepad++: the rendering mode switches GDI <-> DirectWrite without restart, the text redraws
    at once (**pass**, 2026-10-01, ARM64 install on the VM), and the font stays the same, no fallback font
-   (**pass**, 2026-10-01, Bahnschrift Light). Still to check: with DirectWrite each Antialiasing choice and
-   DirectWrite mode changes the text at once.
+   (**pass**, 2026-10-01, Bahnschrift Light). With DirectWrite each Antialiasing choice and DirectWrite mode changes
+   the text at once (**pass**, 2026-10-06, test `pyre-text-rendering-live`).
 3. Fonts: Default Style "Bahnschrift Light" with DirectWrite draws Light, bold keywords SemiBold (**pass**,
    2026-10-01: weights 300 and 600, ink and width per line within 2.4% and 3 px of GDI; readings in `STATUS.md`).
    "Cascadia Code SemiBold" bold: DirectWrite draws it with Cascadia Code Bold, not a simulated bold (**pass**,
    2026-10-06, the face DirectWrite matches to the bold weight; GDI doesn't embolden a SemiBold font at all).
-4. Per-monitor DPI with monitors at different scales.
+4. Per-monitor DPI with monitors at different scales: still to do (needs a second display or a change of Windows'
+   scale, made by Pyre909).
 
 ## Where the rest is
 
