@@ -612,29 +612,36 @@ Before opening:
    and passed when re-run).
 2. With section 6 or 7 merged first: a view whose technology changes at run time (6: a right-to-left view goes to GDI
    and back; 7: the live switch) calls `applyWindowsFontQuality` after the switch, see Conflicts at the top.
-3. Attach `vm/shots/font-smoothing-before-after.png` to the PR.
+3. Attach `vm/shots/font-smoothing-before-after.png` to the PR, in place of "(screenshot...)".
+4. PR body rewritten in a casual voice on 2026-10-07; checked then: the branch is on `master` `a69bc23` (current),
+   #14954 still open, no other open PR on it.
 
 ### PR — title
 `Follow the Windows font smoothing with DirectWrite`
 
 ### PR — body
 ```
-With DirectWrite (the default rendering mode since 8.6), Notepad++ smooths text whatever the Windows font smoothing: turning off "Smooth edges of screen fonts", or using Standard smoothing instead of ClearType, changes nothing, so unticking "Enable smooth font" doesn't give unsmoothed text anymore either (#14954). GDI follows the setting.
+Since 8.6 made DirectWrite the default, Notepad++ smooths text no matter what the Windows font smoothing is set to. Turn off "Smooth edges of screen fonts", or pick Standard instead of ClearType, and nothing changes, so unticking "Enable smooth font" doesn't give you unsmoothed text anymore either (#14954). With GDI it still follows the Windows setting like it always did.
 
-Scintilla turns its font quality into DirectWrite's antialias mode, and with the default quality Direct2D smooths anyway. So a view on DirectWrite now gets the quality that matches Windows:
-- smoothing off: SC_EFF_QUALITY_NON_ANTIALIASED (unsmoothed text)
+What happens: Scintilla maps its font quality onto DirectWrite's antialias mode, and with the default quality Direct2D just smooths anyway. So now a view on DirectWrite gets the quality that matches Windows:
+- smoothing off: SC_EFF_QUALITY_NON_ANTIALIASED (unsmoothed)
 - Standard: SC_EFF_QUALITY_ANTIALIASED (grayscale)
-- ClearType: SC_EFF_QUALITY_DEFAULT, as before
+- ClearType: SC_EFF_QUALITY_DEFAULT, same as before
 
-It's set when a view is created and when "Enable smooth font" is turned off. When Windows announces a setting change (WM_SETTINGCHANGE), a view still at the quality it got from Windows follows it, so "Enable smooth font" and a quality set by a plugin are kept. GDI views keep the default quality.
+That gets set when a view is created and when "Enable smooth font" is turned off. When Windows announces a setting change (WM_SETTINGCHANGE), a view that's still on the quality it got from Windows follows the change, so "Enable smooth font" and anything a plugin set itself are left alone. GDI views keep the default quality.
 
-4 files, no new setting, no Scintilla change.
+4 files, no new setting, nothing in Scintilla.
 
-Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build too), with the Windows font smoothing off, Standard and ClearType: both views and the Document Map get the matching quality, and the text is drawn unsmoothed, grayscale and ClearType (screenshot: master left, this PR right). Changing the setting while Notepad++ runs, in Performance Options and in the ClearType Text Tuner, updates the views right away. Also "Enable smooth font" on and off, a plugin's own quality kept, GDI unchanged.
+(screenshot: master on the left, this PR on the right)
 
-Known: people with the Windows font smoothing off or on Standard get unsmoothed or grayscale text after updating, as Windows is set ("Enable smooth font" brings ClearType back). The Document Map, the tab preview, extra search results windows and plugins' views follow a change of the Windows setting only after a restart, since Notepad++ doesn't pass WM_SETTINGCHANGE on to them. The autocompletion list stays smoothed (Scintilla draws it without the font quality).
+Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build fine too), with the Windows font smoothing off, on Standard and on ClearType: both views and the Document Map get the matching quality, and the text comes out unsmoothed, grayscale and ClearType. Changing the setting while Notepad++ is running, both in Performance Options and in the ClearType Text Tuner, updates the views right away. Also checked "Enable smooth font" on and off, a plugin's own quality being kept, and GDI not changing.
 
-AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
+Things to know:
+- If your Windows font smoothing is off or on Standard, you'll get unsmoothed or grayscale text after updating, because that's what Windows is set to. Ticking "Enable smooth font" brings ClearType back.
+- The Document Map, the tab preview, extra search results windows and plugins' views only pick up a change of the Windows setting after a restart, since Notepad++ doesn't pass WM_SETTINGCHANGE on to them.
+- The autocompletion list stays smoothed (Scintilla draws it without the font quality).
+
+AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
