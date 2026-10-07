@@ -518,25 +518,34 @@ https://github.com/notepad-plus-plus/notepad-plus-plus/compare/master...Pyre909:
 ### Issue — title
 `[Feature request] Apply the rendering mode without restarting Notepad++`
 
+### Issue — existing issue
+Tick "I have searched the existing issues". #18414 (Pyre909's, open) covers the Text Rendering settings and keeps the
+restart ("Restart required, as before"), so this isn't a duplicate.
+
 ### Issue — Description of the Issue
 ```
-Changing the rendering mode in Preferences > MISC. (GDI or one of the DirectWrite modes) only takes effect after restarting Notepad++, and the tooltip says so. That makes it a hassle to compare how text looks in GDI vs DirectWrite.
+Changing the rendering mode in Preferences > MISC. (GDI or one of the DirectWrite modes) only kicks in after you restart Notepad++, and the tooltip says so. Its own tooltip suggests trying another mode when something renders wrong ("May improve rendering of special characters or resolve some graphics issues"), but to actually try that you have to close everything, restart, look, and restart again if it didn't help. Same thing if you just want to compare how your font looks in GDI vs DirectWrite.
 ```
 
 ### Issue — Describe the solution you'd like
 ```
-Apply the new rendering mode right away to everything that's open: both views, the Document Map, search results and so on.
+Apply the new rendering mode right away to everything that's open: both views, the Document Map, search results, and Scintilla views created by plugins. A view whose mode a plugin set itself would be left alone.
 
-I have a small patch for this (no Scintilla changes) that I tested on Windows 11, and I'll open a PR for it.
+I've got a small patch for this already (5 files, nothing in Scintilla), tested on Windows 11, and I'll open a PR once this is OK'd.
 ```
 
 ### Issue — Debug Information
-? > Debug Info... > Copy debug info into clipboard, then paste.
+From the official Notepad++ (8.9.8.1, as in #18414), not the Pyre909 build, whose Debug Info names the build and has
+text rendering lines: ? > Debug Info... > Copy debug info into clipboard, then paste.
 
 ### Issue — Anything else?
 ```
-Related to #18418 (closed), but this one is small and doesn't need any Scintilla change.
+Related to #18414 / #18418, which asked for more text rendering options and kept the restart. This is just the restart part, on its own and much smaller.
+
+One thing it relies on: right-to-left documents have to stay on GDI, since DirectWrite can't draw a mirrored window (#17865). I've got a separate fix PR for that, and the live switch keeps RTL views on GDI too.
 ```
+Once section 6's PR is open, its number can replace "a separate fix PR". Drafted in a casual voice on 2026-10-07; the
+quoted tooltip is upstream's (`scintillaRenderingTechnology-tip`, `master` `a69bc23`).
 
 ### PR — title
 `Apply the rendering mode at once, without restarting`
