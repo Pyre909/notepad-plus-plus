@@ -135,6 +135,24 @@ keep the light-text gamma as it is.
   build and on pyre (whose bold keywords print in Segoe UI Semibold, as its screen shows them). Tools in `vm/`:
   `print-pdf.ps1`, `pdf-fonts.ps1`, and `inkcmp.cpp` for the bold weights.
 
+## Font for every theme (2026-10-06, pyre only)
+
+Pyre909 forces a font, one size and no bold for all styles with Global override. Only its check boxes were in
+config.xml; the values were the theme's Global override style, and upstream moved that entry to the bottom of the style
+list (#15640, #16214), so each theme needed it set again, scrolled to.
+
+- The Style Configurator has a row under "Select theme": "For every theme:" Font, Size, Bold, Italic, Underline, each
+  "(Theme)" or the value forced (Bold, Italic, Underline: Always / Never). Saved in config.xml next to upstream's force
+  flags (`forcedFontName`, `forcedFontSize`, `forcedFontStyle`), applied by `ScintillaEditView::setStyle`, kept when
+  switching themes, restored by Cancel. The theme's Global override keeps its colours; its entry shows a note in place
+  of its font controls and font check boxes.
+- A config.xml without these values (official Notepad++'s, which drops them when it saves config.xml) takes the theme's
+  Global override values once, as that Notepad++ forced them: nothing changes on screen.
+- Not for upstream: it de-emphasises Global override, and the 2015 report of the per-theme values (#1053) was closed as
+  stale.
+- pyre `d594e8a`. Test `pyre-font-every-theme` (16 checks; the build before fails them); the dialog checked in light and dark mode
+  (screenshots: "(Theme)" fits every box).
+
 ## Branches of Pyre909/notepad-plus-plus
 
 | Branch | Head | What |
