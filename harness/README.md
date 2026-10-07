@@ -4,6 +4,13 @@ Runtime checks for the private Scintilla API `SCI_SETFONTRENDERINGPARAMETER` (50
 `SCI_GETFONTRENDERINGPARAMETER` (5002) and the Notepad++ "Text rendering" preferences group
 (Editing 1 page, IDs 6280-6286). Everything runs headless under Wine 9.0 on Xvfb.
 
+**History: written for the first version of the API.** pyre's API has changed since: the messages
+are 5101/5102 (5001 and 5002 are Scintilla's idle messages), and since 2026-10-06 the gamma and pixel
+geometry parameters are gone and the others are renumbered (`scintilla/include/ScintillaFontRendering.h`
+on `pyre`). `scitest` doesn't build against pyre's `Scintilla.h` any more, and its fallback values
+would send the wrong messages; `nppdrive` reads parameters 0-5 of 5002. The current checks are the
+Windows ones in `review/tests/`.
+
 The harness never writes to the repository or a worktree: it reads a build's `libscintilla.a` or
 `notepad++.exe` and works on copies in `out/`.
 

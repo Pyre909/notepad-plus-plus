@@ -2,7 +2,8 @@
 # font of the font lists for the technology in use ("Bahnschrift Light" is "Bahnschrift" at weight 300 for DirectWrite,
 # see FontFamilyNames.cpp). A view that switches technology, with its text direction (right-to-left views are drawn
 # with GDI) or with the rendering mode, gets its style fonts mapped again (ScintillaEditView::refreshStyleFonts); else
-# DirectWrite would draw a GDI name with a fallback font, and GDI a DirectWrite family at the wrong weight.
+# DirectWrite would draw a GDI name with a fallback font, and GDI a DirectWrite family at the wrong weight. Fonts and
+# font qualities a plugin set are kept (ScintillaEditView::technologyChanged).
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
 param([Parameter(Mandatory)] [string] $Exe)
 $ErrorActionPreference = 'Stop'
@@ -29,7 +30,21 @@ public delegate bool EnumProc(IntPtr h, IntPtr l);
 [DllImport("kernel32.dll")] static extern IntPtr VirtualAllocEx(IntPtr h, IntPtr addr, UIntPtr size, uint type, uint protect);
 [DllImport("kernel32.dll")] static extern bool VirtualFreeEx(IntPtr h, IntPtr addr, UIntPtr size, uint type);
 [DllImport("kernel32.dll")] static extern bool ReadProcessMemory(IntPtr h, IntPtr addr, byte[] buf, UIntPtr size, out UIntPtr read);
+[DllImport("kernel32.dll")] static extern bool WriteProcessMemory(IntPtr h, IntPtr addr, byte[] buf, UIntPtr size, out UIntPtr written);
 [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+// SCI_STYLESETFONT as a plugin does it: the name is written into a buffer of the Scintilla's process
+public static void SetStyleFont(IntPtr view, uint pid, int style, string font) {
+  IntPtr proc = OpenProcess(0x0008 | 0x0010 | 0x0020, false, pid);
+  if (proc == IntPtr.Zero) return;
+  byte[] name = System.Text.Encoding.UTF8.GetBytes(font + "\0");
+  IntPtr mem = VirtualAllocEx(proc, IntPtr.Zero, (UIntPtr)name.Length, 0x3000, 0x04);
+  if (mem != IntPtr.Zero) {
+    UIntPtr n; IntPtr r;
+    if (WriteProcessMemory(proc, mem, name, (UIntPtr)name.Length, out n)) SendMessageTimeout(view, 2056, (IntPtr)style, mem, 2, 3000, out r); // SCI_STYLESETFONT
+    VirtualFreeEx(proc, mem, UIntPtr.Zero, 0x8000);
+  }
+  CloseHandle(proc);
+}
 // SCI_STYLEGETFONT writes the name into a buffer of the Scintilla's process: one is allocated there, then read back
 public static string StyleFont(IntPtr view, uint pid, int style) {
   IntPtr proc = OpenProcess(0x0008 | 0x0010 | 0x0020, false, pid); // PROCESS_VM_OPERATION | VM_READ | VM_WRITE
@@ -47,7 +62,7 @@ public static string StyleFont(IntPtr view, uint pid, int style) {
   return name;
 }
 '@
-$WM_CLOSE = 0x0010; $WM_COMMAND = 0x0111; $CB_SETCURSEL = 0x014E
+$WM_CLOSE = 0x0010; $WM_COMMAND = 0x0111; $CB_SETCURSEL = 0x014E; $NPPM_CREATESCINTILLAHANDLE = 2044
 $IDM_FILE_NEW = 41001; $IDM_EDIT_RTL = 42026; $IDM_EDIT_LTR = 42027; $IDM_VIEW_TAB1 = 44086; $IDM_VIEW_TAB2 = 44087; $IDM_SETTING_PREFERENCE = 48011
 $STYLE_DEFAULT = 32; $STYLE_LINENUMBER = 33
 
@@ -71,6 +86,11 @@ function Check-Fonts([string] $name, [string] $expected) {
 	$fonts = @($STYLE_DEFAULT, $STYLE_LINENUMBER, 0 | ForEach-Object { [PF.U]::StyleFont($script:view, $script:npid, $_) })
 	$state = "technology {0}, {1}" -f (Send $script:view 2631), $(if (([PF.U]::GetWindowLong($script:view, -20) -band 0x00400000) -ne 0) { 'RTL' } else { 'LTR' })
 	Check $name (@($fonts | Where-Object { $_ -cne $expected }).Count -eq 0) ("{0}: {1}" -f $state, ($fonts -join ' / '))
+}
+# the Scintilla of a plugin: style 0 has the font the plugin set, the Default Style the one Notepad++ set
+function Check-PluginFonts([string] $name, [string] $expectedOwn, [string] $expectedDefault) {
+	$own = [PF.U]::StyleFont($script:plugin, $script:npid, 0); $default = [PF.U]::StyleFont($script:plugin, $script:npid, $STYLE_DEFAULT)
+	Check $name (($own -ceq $expectedOwn) -and ($default -ceq $expectedDefault)) ("technology {0}: style 0 {1}, Default Style {2}" -f (Send $script:plugin 2631), $own, $default)
 }
 
 # a settings folder of its own, its Default Style in "Bahnschrift Light"
@@ -100,8 +120,18 @@ try {
 	}
 	$script:combo = [PF.U]::GetDlgItem($script:misc, 6362)
 	Check 'rendering mode box found' ($script:combo -ne [IntPtr]::Zero)
+
+	# a Scintilla created for a plugin (NPPM_CREATESCINTILLAHANDLE) is styled by Notepad++; a font the plugin sets itself
+	# is kept when the rendering mode changes, the other styles follow it
+	$script:plugin = [IntPtr](Send $script:main $NPPM_CREATESCINTILLAHANDLE 0 0)
+	Check 'plugin Scintilla created' ($script:plugin -ne [IntPtr]::Zero)
+	[PF.U]::SetStyleFont($script:plugin, $script:npid, 0, 'Consolas')
+	Check-PluginFonts 'plugin Scintilla: its own font, and the DirectWrite family' 'Consolas' 'Bahnschrift'
+
 	Select-Mode 0; Check-Fonts 'switch to GDI: the GDI name' 'Bahnschrift Light'
+	Check-PluginFonts 'plugin Scintilla on GDI: its own font kept, the GDI name' 'Consolas' 'Bahnschrift Light'
 	Select-Mode 4; Check-Fonts 'switch to DX11: the DirectWrite family' 'Bahnschrift'
+	Check-PluginFonts 'plugin Scintilla on DX11: its own font kept, the DirectWrite family' 'Consolas' 'Bahnschrift'
 	Select-Mode 1
 
 	# an RTL document in another tab: its view switches technology, and fonts, with the tabs
@@ -110,6 +140,13 @@ try {
 	Cmd $IDM_VIEW_TAB2; Check-Fonts 'the RTL tab again: the GDI name' 'Bahnschrift Light'
 	Select-Mode 0; Select-Mode 1; Check-Fonts 'GDI and back to DirectWrite, the RTL tab shown: still the GDI name' 'Bahnschrift Light'
 	Cmd $IDM_VIEW_TAB1; Check-Fonts 'then its LTR neighbour: the DirectWrite family' 'Bahnschrift'
+
+	# a font quality a plugin set (LCD optimized, as NPPM_SETSMOOTHFONT does) is kept when the view crosses GDI and
+	# DirectWrite with the tabs: only a view still at the quality it got from Windows ("Follow Windows") follows it
+	[void](Send $script:view 2611 3) # SCI_SETFONTQUALITY SC_EFF_QUALITY_LCD_OPTIMIZED
+	Cmd $IDM_VIEW_TAB2; $rtlQuality = Send $script:view 2612 # SCI_GETFONTQUALITY
+	Cmd $IDM_VIEW_TAB1; $ltrQuality = Send $script:view 2612
+	Check 'a font quality set by a plugin: kept on the RTL tab (GDI) and back (DirectWrite)' (($rtlQuality -eq 3) -and ($ltrQuality -eq 3)) ("RTL tab {0}, LTR tab {1}" -f $rtlQuality, $ltrQuality)
 
 	# no message on exit; a "Save file?" means a document was modified (maybe by input typed into the test window): answered No
 	[void][PF.U]::PostMessage($script:main, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero)

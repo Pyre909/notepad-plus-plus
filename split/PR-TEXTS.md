@@ -10,12 +10,12 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 2 | `text-rendering_20260925` | `a485acc` + `bb32194` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 closed** (2026-10-02: too large a change) |
 | 3 | `text-rendering-translations_20260925` | `1aa8b0e` | 29 xml | – | Label capitalisation (stacked on 2) | no (`[xml]`); on hold, 2 is closed |
 | 4 | `per-monitor-dpi_20260925` | `8a0ff70` | 63 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
-| 5 | `directwrite-font-names_20260930` | `6e8579e` | 6 (Notepad++ only) | +16 KB | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | no: bug fix of #12393 (open since 2022). Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
+| 5 | `directwrite-font-names_20260930` | `9f605be` | 7 (Notepad++ only) | not measured | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | no: bug fix of #9951 (open since 2021) and #12393. Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
 | 6 | `rtl-views-gdi_20261006` | `53d0026` | 4 | small | Right-to-left views drawn with GDI (DirectWrite can't mirror them) | no: bug fix of #17865 and #17518 (both open); open it first |
 | 7 | `live-rendering-switch_20261005` | `53d0026` + `d50fb3b` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
 | 8 | `directwrite-font-smoothing_20261006` | `76b3210` | 4 | small | DirectWrite following the Windows font smoothing | no: bug fix of #14954 (open since 2024) |
 
-Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs, 2026-09-30; 6, 7 and 8: 13/13, 2026-10-06). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
+Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs for its first version, 2026-09-30, the rewritten `9f605be` not pushed yet; 6, 7 and 8: 13/13, 2026-10-06). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
 
 **How the split was checked.** Each branch was built and tested on its own (results in each
 PR's Testing section). Recombined, branches 1 to 5 and the first live switch (`live-rendering-switch_20260930`) give
@@ -27,7 +27,8 @@ the "Follow Windows" antialiasing of its Text Rendering settings).
 hold. Open 4 after a maintainer agrees on the approach: upstream already has DPI work in progress, so link or comment
 on their existing per-monitor DPI issue first. 5 was first offered to Scintilla (bug #2519), but Scintilla's
 maintainer has twice declined font-name mapping in Scintilla (bugs #2080, #2356: "leave implementation choice to the
-application"), so it is now a Notepad++-only change, and a bug fix of #12393: its PR after the checks of section 5.
+application"), so it is now a Notepad++-only change, and a bug fix of #9951 and #12393: its PR after the checks of
+section 5.
 6 is a bug fix: open it first. 7 is
 an enhancement on top of 6: its feature request now, its PR once the request is Accepted and 6 is merged. 8 is a bug
 fix too: its PR after the checks of section 8. No code goes
@@ -38,25 +39,27 @@ to Scintilla: its maintainer takes no LLM-generated contributions (2026-09-30).
 - 5 with 6 and 7: 5's font names depend on the technology ("Bahnschrift Light" is "Bahnschrift" at weight 300 for
   DirectWrite, not for GDI), and 6 (a right-to-left view gets GDI, and the setting's technology back once
   left-to-right) and 7 (the live switch) change a view's technology at run time. Whichever lands second sets the style
-  fonts again when a view's technology changes: `pyre` does it with `ScintillaEditView::refreshStyleFonts` (called from
-  `changeTextDirection` and `setTechnologyToAll`; test `pyre-rtl-style-fonts`). The combined branch's one line for the
-  first live switch (`WM_UPDATESCINTILLAS` from the Rendering mode handler, `6317b19`) doesn't cover 6;
+  fonts again when a view's technology changes, with 5's `ScintillaEditView::refreshStyleFonts(technology,
+  previousTechnology)` (which also leaves the fonts a plugin set): `pyre` calls it from `technologyChanged`, after
+  `changeTextDirection` and `setTechnologyToAll` (test `pyre-rtl-style-fonts`);
 - 8 with 6 and 7: a view whose technology changes at run time (6: a right-to-left view goes to GDI and back; 7: the
-  live switch) needs its font quality set again (`applyWindowsFontQuality`), whichever lands second;
+  live switch) needs the font quality of the Windows font smoothing for its new technology, whichever lands second:
+  with 8's `WM_SETTINGCHANGE` rule, only a view still at the quality it got from Windows (a plugin's is kept), as
+  `pyre`'s `technologyChanged` does;
 - 7 contains 6's commit until 6 is merged.
 
 Whichever lands second needs a quick rebase. The combined branch
 `claude/awesome-darwin-bsud9v` shows the resolved result for 1 to 5, `pyre` for 5 with 6 and 7.
 
 **Before opening.** CONTRIBUTING.md asks you to test each PR at least once. All branches pass the
-repository's CI on the fork (official MSVC toolchain). The functional tests of 1 to 5 ran under Wine,
-so run those branches' CI exe on real Windows before opening their PR (6 and 7 were tested on the Windows VM). The
+repository's CI on the fork (official MSVC toolchain). The functional tests of 1 to 4 ran under Wine,
+so run those branches' CI exe on real Windows before opening their PR (5 to 8 were tested on the Windows VM). The
 exe is the `Notepad++.MSVC.x64.Release` artifact of the branch's run in the fork's Actions tab.
 
 **Screenshot for PR 2.** Its body says "screenshot attached": take one of Preferences > Editing 1
 on Windows. The Wine test setup greys out the Rendering mode box, so its captures aren't usable.
 
-**`fix #NNNNN`.** Replace it with the issue number. Done for 1 (#18412, PR closed without merging), 2 (#18414, PR #18418 closed), 5 (#12393), 6 (#17865, #17518) and 8 (#14954); 4 and 7 still need their issues.
+**`fix #NNNNN`.** Replace it with the issue number. Done for 1 (#18412, PR closed without merging), 2 (#18414, PR #18418 closed), 5 (#9951, #12393), 6 (#17865, #17518) and 8 (#14954); 4 and 7 still need their issues.
 
 **AI.** The template asks to say when AI was used. The texts below say so.
 
@@ -259,28 +262,61 @@ fix #NNNNN
 
 ## 5. Fonts of a weight ("Fira Code Light") under DirectWrite, done by Notepad++
 
-Branch `directwrite-font-names_20260930`, commit `6e8579e` on master `37f76d4`, 6 files (+491 −18): the new
+Branch `directwrite-font-names_20260930`, commit `9f605be` on master `a69bc23` (rewritten 2026-10-06 after a review of
+the first version, `6e8579e`, and corrected after a second review), 7 files (+361 −19): the new
 `ScintillaComponent/FontFamilyNames.cpp/.h` (listed in CMakeLists.txt and notepadPlus.vcxproj; the GCC makefile finds
-it by itself) and `ScintillaEditView::setSpecialStyle`. No Scintilla change.
+it by itself), `ScintillaEditView` (`setSpecialStyle`, one font record per view, `refreshStyleFonts`) and `Printer.cpp`.
+No Scintilla change. Authored by Pyre909 like 6 to 8, with the Co-Authored-By line (the first version's author was the
+cloud session's "Claude").
+
+What the rewrite changed: the mapping is DirectWrite's own GDI mapping (`IDWriteGdiInterop::CreateFontFromLOGFONT`)
+instead of a matcher of the Win32 names of the whole font collection (tuned under Wine, where Notepad++ uses GDI
+anyway): the same result for the 319 fonts of the Windows 11 VM, 3 times faster (about 15 ms for all of them, against
+45). GDI is left as upstream draws it (the first version also mapped GDI's bold, and, under GDI, made non-bold SemiBold
+styles read back as bold). Printing was broken by the first version: Scintilla prints with GDI from the screen styles,
+so "Fira Code" Light printed as Regular; the styles now get their GDI names back while printing, and their DirectWrite
+ones back before the line number margin is measured again.
+
+Bold is 300 heavier than the font, as bold is to regular. Checked against GDI on 2026-10-06 (the ink of a sample line
+at 15 and 24 px, every font drawn by GDI, `fontmap\inkcmp.cpp` in the session's scratchpad):
+- GDI emboldens a Light, SemiLight or Medium font, and how heavy that gets depends on the font and the size: from about
+  the Regular (Segoe UI Light) to about the Bold (Bahnschrift Light at 15 px). 300 heavier is in that range, and the
+  closest weight for MonoLisa Light, and at 24 px for Bahnschrift Light and MonoLisa Medium. A cap at Bold, as a
+  reviewer suggested, would make Medium fonts lighter than GDI's (MonoLisa Medium: GDI 1.42-1.44 times the ink of its
+  regular, Bold 1.00-1.28, ExtraBold 1.32-1.36).
+- GDI doesn't embolden a SemiBold or heavier font at all: its bold is the regular, pixel for pixel (Segoe UI,
+  Bahnschrift, Cascadia Code, MonoLisa, Noto Serif JP). With DirectWrite their bold is new: the family's heaviest up to
+  Black ("Cascadia Code SemiBold": Cascadia Code Bold, a real font, not a simulated bold; "Segoe UI Semibold": Segoe UI
+  Black).
 
 Why not Scintilla: its maintainer declined this twice (bug #2080 in 2019, bug #2356 with merge request 36 in 2022:
 "encodes a particular policy for font naming", "the application can adjust these parameters itself using
 IDWriteGdiInterop"). Scintilla bug #2519 (our ticket) points there; this branch is that application-side fix.
 
-Upstream already has the bug report: #12393 (2022-10-24, open, no reply yet), a theme whose styles use fonts of other
-weights than Regular and Bold ("hardcoded font faces"), drawn wrong once DirectWrite is on (for ligatures). So this is a
-bug fix, `fix #12393`: no new issue, no Accepted label to wait for (found 2026-10-06). The issue texts drafted before
-are replaced by the optional comment below.
+The upstream issues (checked 2026-10-06):
+- The main one is **#9951** "Inability to display some fonts" (2021-06, open, label "scintilla dependent", 29
+  comments). #14526 (2023, closed by its reporter after "switch DirectWrite off") and #16666 (2025, closed as a
+  duplicate) point to it.
+- In #14526 the collaborator xomx wrote that, Scintilla's patch being refused, Notepad++ would have to map its GDI fonts
+  to DirectWrite's weight/stretch/style families: what this branch does.
+- A 2024 comment on #9951 says the maintainer turned down a Notepad3-style workaround as a hack (no source given, none
+  found). So the PR says up front that this is the application-side mapping Scintilla's maintainer pointed to, with no
+  Scintilla patch.
+- #12393 (2022, open, no reply) is the same bug from a theme whose styles use fonts of other weights.
+- DirectWrite is the default rendering mode since 8.6 (upstream `975d29b`, 2023-11-18), so everyone who picks such a
+  font gets the fallback font, without changing any setting.
 
-### Comment on #12393 (optional, before the PR)
-Gives the maintainers a repro without the reporter's theme. Before posting, check it on official 8.9.8.1 (the
-baseline font test in `STATUS.md` is still to do).
+So it's a bug fix, `fix #9951` and `fix #12393`: no new issue, no Accepted label to wait for (though Neil called the
+Scintilla version a feature addition on #2356). The issue texts drafted before are replaced by the optional comment
+below.
+
+### Comment on #9951 (optional, before the PR)
+Where the watchers are; it answers the "scintilla dependent" label first. Before posting, check the repro on official
+8.9.8.1 (the baseline font test in `STATUS.md` is still to do).
 ```
-Ran into this too, and it's not only themes: any font whose name in the font list includes a weight (Bahnschrift Light, Cascadia Code SemiBold, Fira Code Light...) gets swapped for a fallback font once DirectWrite is on. GDI lists every weight as its own family, but DirectWrite only knows "Bahnschrift" with a Light weight, so the name matches nothing.
+Still happening on 8.9.8.1. And since DirectWrite is the default rendering mode now (8.6+), you don't need to touch any setting to hit it: Style Configurator > Default Style > font Bahnschrift Light (ships with Windows 10/11), and the text comes out in a fallback font. Same with Cascadia Code SemiBold, Segoe UI Light, Fira Code Light...
 
-Repro without installing anything: Style Configurator > Default Style, font Bahnschrift Light (comes with Windows 10/11), then Preferences > MISC. > Rendering mode DirectWrite.
-
-I have a fix that maps these names to the DirectWrite family + weight in Notepad++ itself (Scintilla's maintainer leaves font naming to the app), PR coming.
+About the "scintilla dependent" label: Neil declined doing this name mapping inside Scintilla (bugs 2080 and 2356, the merge request mentioned above) and said the app can do it itself with IDWriteGdiInterop. Like xomx said in #14526, that means Notepad++ turning its GDI font names into the DirectWrite family + weight before handing them to Scintilla. I've got a PR that does just that, in Notepad++ only, no Scintilla patch, and GDI stays exactly as it is. PR coming.
 ```
 
 ### PR — title
@@ -288,41 +324,50 @@ I have a fix that maps these names to the DirectWrite family + weight in Notepad
 
 ### PR — body
 ```
-The font lists show GDI family names, which name a weight or width when a family has more than regular and bold ("Fira Code Light", "Cascadia Code SemiBold", "Bahnschrift SemiBold SemiConden"). DirectWrite only knows the family ("Fira Code"), so with a DirectWrite rendering mode these fonts were drawn with a fallback font (#12393: a theme using fonts of such weights).
+The font lists show GDI family names, which name a weight or width when a family has more than regular and bold ("Fira Code Light", "Cascadia Code SemiBold", "Bahnschrift SemiBold SemiConden"). DirectWrite only knows the family ("Fira Code"), so with DirectWrite, the default rendering mode since 8.6, these fonts were drawn with a fallback font (#9951; #12393 is the same with a theme).
 
-Notepad++ now sets each style with the font parameters of the rendering technology in use (new FontFamilyNames.cpp, called by ScintillaEditView::setSpecialStyle):
-- DirectWrite: the font's DirectWrite family, weight, width and style (SCI_STYLESETWEIGHT, SCI_STYLESETSTRETCH). Bold is relative to the font's weight, as GDI emboldens it: bold of "Fira Code Light" is "Fira Code" SemiBold.
-- GDI: the GDI family name with the weight GDI knows its font by. Bold uses the same font as DirectWrite when the family has one (bold of "Fira Code Light" is "Fira Code SemiBold" instead of a fake bold).
-- The usual fonts ("Consolas", "Courier New") are unchanged: same Scintilla calls as before.
-- DirectWrite is loaded when first needed (no new link dependency). Results are cached per font name for the session. Raster fonts are left as they are.
-- Styles without their own font name or font style use the ones SCI_STYLECLEARALL gave them (new clearAllStyles), so their bold and italic are relative to the right font.
+With DirectWrite, Notepad++ now sets each style with the family, weight, width and style DirectWrite knows the font by (new FontFamilyNames.cpp, called by ScintillaEditView::setSpecialStyle):
+- The DirectWrite font of a GDI family name comes from DirectWrite's own GDI mapping (IDWriteGdiInterop::CreateFontFromLOGFONT), asked for the family's regular font at the weight GDI knows it by, so that it's never a simulated bold. Names DirectWrite knows as a family ("Consolas", "Courier New") are left as they are.
+- Bold is 300 heavier than the font, as bold is to regular: bold of "Fira Code Light" is "Fira Code" SemiBold (SCI_STYLESETWEIGHT, SCI_STYLESETSTRETCH for the condensed ones). That's in the range of how heavy GDI emboldens a light font. GDI doesn't embolden a SemiBold font at all; with DirectWrite its bold is the family's heaviest, up to Black.
+- GDI is unchanged: it knows the GDI names.
+- Printing: Scintilla prints with GDI from the screen styles, so while printing the styles get their GDI font names back, then their DirectWrite ones (ScintillaEditView::refreshStyleFonts). A style whose font was changed by someone else (a plugin) is left as it is.
+- DirectWrite is loaded when first needed (no new link dependency), and the mapping is cached per font name for the session.
+- Styles without their own font name or font style use the ones SCI_STYLECLEARALL gave them (new clearAllStyles, one font record per view), so their bold and italic are relative to the right font.
+- Side effects, with DirectWrite only: a style reads back the DirectWrite font (SCI_STYLEGETFONT "Fira Code", SCI_STYLEGETWEIGHT 300), and so do plugins that read styles (an exporter, for example). A Medium or SemiBold font has a weight above normal, so SCI_STYLEGETBOLD reads it as bold, and a family with only italic fonts reads back as italic. Scintilla's IME composition window makes a GDI font from the style's name and weight, so it shows "Fira Code" Regular rather than Light.
 
-This is done in Notepad++ rather than Scintilla: Scintilla's maintainer leaves font naming to the application (Scintilla bugs #2080, #2356).
+This is done in Notepad++ rather than Scintilla: Scintilla's maintainer leaves font naming to the application and pointed to IDWriteGdiInterop for it (Scintilla bugs 2080 and 2356). No Scintilla change.
 
-Testing (MinGW-w64 GCC 13 x64 build, run under Wine 9):
-- Font check: every font-list name, regular, bold and italic, drawn by unmodified Scintilla 5.6.6 with the parameters this code gives, compared with the font Windows maps the name to. Test fonts: static families (31-character truncated names, duplicate weights, a legacy family, heavy-only and semibold-only families) and Fira Code. 35 names: 0 failures with DirectWrite and GDI (before: 51 failures). The 7 warnings are bold of families with no heavier font.
-- In Notepad++, with "Fira Code Light" as the Default Style font: the styles read back "Fira Code" weight 300 (bold 600) with DirectWrite, and "Fira Code Light" weight 300 (bold "Fira Code SemiBold") with GDI. DirectWrite was tested with a build whose Wine check (ScintillaEditView::init) was disabled; that change is not in this PR.
-- Default theme: screenshots of the main window and a docked panel at 96 and 144 DPI are pixel-identical to master.
-- No new warnings with the repository's GCC flags (-Wpedantic -Wall -Wextra -Wconversion).
-- GitHub Actions (this repository's CI_build workflow, on the fork): all 13 jobs pass: MSVC x64/Win32/ARM64 Release and Debug, the CMake build, the MinGW and Clang builds. MSVC x64 exe +16 KB.
-- Not tested: a real Windows font collection. Please try Bahnschrift Light or Cascadia Code SemiBold with DirectWrite.
+Testing (Windows 11 ARM64, Visual Studio 2026 Build Tools 18.10 with MSVC 19.51, Release builds for ARM64, x64 and Win32 without warnings in the changed files):
+- The mapping of every font-list name (319 fonts installed, regular, bold, italic) compared with an earlier version that matched the Win32 names of the whole font collection by hand: the same DirectWrite parameters for all of them, including truncated names ("Bahnschrift SemiBold SemiConden"), static families from Hairline to Black, CJK fonts and the "@" vertical names; about 15 ms for the whole list.
+- Bold against GDI's emboldening (the ink of a sample line at 15 and 24 px): for Light and Medium fonts, 300 heavier is in the range of GDI's, from about Regular to about Bold depending on the font; bold of "Cascadia Code SemiBold" is Cascadia Code Bold, not a simulated bold.
+- In Notepad++ with "Bahnschrift Light" as the Default Style font (an automated test): with DirectWrite the styles read back "Bahnschrift" weight 300, bold 600; with GDI "Bahnschrift Light" 400, bold 700, as before.
+- Printing to PDF with DirectWrite on: TODO.
+- GitHub Actions (this repository's CI_build workflow, on the fork): TODO.
 
 AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
 
 - [x] I have read contributing guidelines
 
+fix #9951
 fix #12393
 ```
 
 Before opening:
-1. Rebase on `master` (10 commits behind on 2026-10-06, merges cleanly), then the review harness and CI again.
-2. On Windows with this branch's build (the CI exe, `Notepad++.MSVC.x64.Release` artifact of its run in the fork's
-   Actions tab, or a local build), Rendering mode DirectWrite: Default Style font "Bahnschrift Light" drawn in
-   Bahnschrift Light, bold keywords in Bahnschrift SemiBold (passed in the Pyre909 build on 2026-10-01: weights 300 and
-   600, `STATUS.md`); "Cascadia Code SemiBold" with its bold drawn Bold (to do). Then replace the body's "Not tested"
-   line with the results.
-3. If section 6 is merged first, this branch also has to set the style fonts again when a view's technology changes (a
-   right-to-left view goes to GDI), as `pyre`'s `refreshStyleFonts` does (see Conflicts at the top).
+1. Push the rewritten branch (a force push: it was rebased on `a69bc23` and amended) and check its CI, then fill the
+   body's CI line. The MSVC code analysis runs only in CI's Debug x64 job, and GCC and Clang compile `9f605be` there
+   for the first time: wait for all 13 jobs.
+2. Printing, by hand on Windows: Default Style font "Segoe UI Light" (or "Bahnschrift Light"), Rendering mode
+   DirectWrite, File > Print to "Microsoft Print to PDF": the PDF's fonts (File > Properties > Fonts in a PDF reader)
+   should list Segoe UI Light, not Segoe UI. Not automated: the VM's default printer is a real one, and Windows manages
+   it (printing to PDF once makes the PDF printer the default). Then fill the body's printing line.
+3. "Cascadia Code SemiBold" with its bold drawn Bold: done (2026-10-06): DirectWrite matches its bold weight (900) to
+   Cascadia Code Bold, the family's heaviest, without simulation (`inkcmp`). By eye in Notepad++ too if wanted.
+4. Optional: an exporter (NppExport, bundled with the installer) with "Bahnschrift Light" and DirectWrite, to see what
+   the side effects of the body give in the exported HTML/RTF (font name, bold).
+5. Optional: the comment on #9951 above, after checking its repro on official 8.9.8.1.
+6. If section 6 is merged first, this branch also has to set the style fonts again when a view's technology changes (a
+   right-to-left view goes to GDI): `refreshStyleFonts(technology, previousTechnology)` is there for printing already,
+   `pyre` calls it from `technologyChanged` (see Conflicts at the top).
 
 ---
 

@@ -29,7 +29,7 @@ Fonts folder, for the static-font weight tests.
 | Path | What |
 |---|---|
 | `scintilla/` | The Scintilla submissions: `SCINTILLA-UPSTREAM.md` (ticket texts, plan and status), the patches against Scintilla 5.6.7 (the weight-names one is withdrawn; `…-hfont-null-text-format.diff` is the crash fix, reproduced by `hfontcrash.cpp`), `setup-trees.sh` (downloads 5.6.7, checks its SHA-256, builds pristine and patched trees), `test.sh` (font-weight test and scitest against one tree) |
-| `harness/` | Scintilla and Notepad++ checks under Wine + Xvfb: `scitest` (Scintilla test program), `nppshot.sh` (Preferences > Editing 1 checks, 41 checks), `build_scilib.sh`, `link_npp.sh`. See `harness/README.md` |
+| `harness/` | Scintilla and Notepad++ checks under Wine + Xvfb: `scitest` (Scintilla test program), `nppshot.sh` (Preferences > Editing 1 checks, 41 checks), `build_scilib.sh`, `link_npp.sh`. Written for the first version of pyre's Scintilla API, history now. See `harness/README.md` |
 | `harness-dpi/` | Screen captures at 96/144 DPI (`dpirun.sh`, `src/dpidrive.cpp`), pixel comparison (`cmp.sh`), per-monitor DPI on/off runs (`split.sh`) |
 | `split/` | Splitting the combined branch into single-commit PR branches (`spec.py`, `sub.py`, `hunks.py`, `mk.py`), the PR kit `PR-TEXTS.md`, and targeted checks: `sizecheck` (font size list), `smoothcheck` (#17461, Windows font smoothing, with a helper plugin `smoothplugin.cpp`), `techswitch` (Rendering mode applied without restart, 9 checks), `stylefont` (font parameters of the styles for a "Fira Code Light" theme, optionally across a live switch), `bmpstat.py`, `retest-*.sh` |
 | `fonttest/` | GDI weight family names ("Fira Code Light") under GDI and DirectWrite: width and ink |

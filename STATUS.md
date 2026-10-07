@@ -68,12 +68,75 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
 3. #18418 was closed on 2026-10-02 (see "Upstream Notepad++"); the live switch goes upstream on its own (kit
    section 6). Waiting on others: Scintilla #2520 (keep the guard).
 
+## The DirectWrite review and its refactoring (2026-10-06)
+
+Three independent reviews of the DirectWrite work (the Scintilla rendering parameters patch, the Text Rendering
+settings, the font-name mapping), each finding checked against the code, then the changes below. Pyre909's choices:
+keep the DirectWrite "GDI classic" mode (crisp ClearType with ligatures and colour emoji) with its code isolated, drop
+the six hidden config.xml overrides, keep the Rendering mode combo in Editing 1, keep pyre's GDI font mapping (fixed),
+keep the light-text gamma as it is.
+
+- `directwrite-font-names_20260930`: rewritten as `9f605be` on master `a69bc23` (kit section 5): DirectWrite's own GDI
+  mapping (`CreateFontFromLOGFONT`) instead of the hand matcher (the same mapping for the VM's 319 fonts, 3 times faster),
+  GDI as upstream, one font record per view, the styles printed with their GDI names (a DirectWrite "Fira Code" Light
+  printed Regular), `refreshStyleFonts` leaving the fonts a plugin set.
+- `pyre`, four commits: `6e78e65` the font names as on the PR (plus pyre's GDI mapping, cached, non-bold styles at
+  weight 400 at most: the 132 changed GDI mappings draw the same pixels); `84dc7f8` "Follow Windows" from kit section 8
+  (fixes the ClearType Text Tuner gap, Next 6) and the code of kits 6, 7 and 8 placed as on their branches (each kit's
+  diff reverse-applies to pyre, but for the one header spot kits 7 and 8 share), so an upstream merge of them can't add
+  definitions twice silently; `409cc09` the settings as tables, the font quality sent only when it changes (it re-wrapped
+  every view), the overrides gone, upstream's lines of Parameters.cpp and Notepad_plus.cpp back, Preferences cleaned;
+  `0296a87` the Scintilla patch on top of upstream's `UpdateRenderingParams` in two headers of its own
+  (`ScintillaFontRendering.h`, `FontRenderingOverrides.h`), the API trimmed and renumbered, upstream lines rewritten
+  38 -> 23, rendering pixel-identical before and after (8 settings, light and dark themes).
+- Bugs fixed on the way: printing (above), a rendering mode switch replacing the fonts of plugins' Scintillas, the
+  Tuner gap, and the aliased-text rule of the settings going stale when Windows' smoothing changed.
+- Tests: `directwrite-font-names` and `pyre-text-rendering-config` (new), `pyre-rtl-style-fonts` (the plugin case); all
+  10 app tests pass on pyre (154 checks, 157 after the second review below), the PR branch passes its own. Builds:
+  ARM64, x64, Win32, no warning.
+- Found on the way: an incremental MSVC build after a class layout change left stale objects (a crash at startup with
+  0xC000041D); a clean rebuild fixed it (`CLAUDE.md`, Building).
+- A second review of the result, by two independent reviewers (the font-name branch with its kit text, pyre's four
+  commits), each finding checked against the code. Fixed (the font-name branch amended as `9f605be`; pyre's `9dcdc53`,
+  then `fcbbb30` its docs; the new checks fail on the build before the fixes and pass after):
+  - Scintilla didn't compile with `DISABLE_D2D` any more (shown with `cl` before and after): the overrides are in its
+    Direct2D code now, the messages not handled without it. `deps.mak` and `nmdeps.mak` list the two new headers
+    (`DepGen.py`; the MinGW build uses `deps.mak`), so incremental builds recompile what includes them.
+  - `technologyChanged` set the whole text rendering again on a GDI/DirectWrite crossing (an RTL tab switch), which
+    replaced a font quality a plugin set: it now follows Windows with the `WM_SETTINGCHANGE` rule, for a view still at
+    the quality it got from it (test `pyre-rtl-style-fonts`, 18 checks).
+  - A config.xml without `smoothFont` (written by hand) read as "no": ClearType became Follow Windows. Now
+    `fontAntialiasing` is kept and `smoothFont` set from it (test `pyre-text-rendering-config`, 11 checks).
+  - After printing, the style fonts were restored after the line number margin was measured again, which measured it
+    with the GDI name (the fallback font under DirectWrite) until the next paint: the fonts first now.
+  - Smaller: the GDI family list cache that never got a hit removed, a stretch out of range not used, an unused
+    default argument, the author of the font-name commit (Pyre909, as on 6 to 8).
+  - Kit section 5: the main upstream issue is #9951 (2021, 29 comments, "scintilla dependent"; #14526 and #16666 point
+    to it), not only #12393; DirectWrite is the default since 8.6; the side effects (a style reads back the DirectWrite
+    font, also for plugins; the IME composition window's GDI font); the testing claims (MSVC 19.51, code analysis and
+    GCC/Clang in CI only).
+- Checked and kept:
+  - Bold 300 heavier than the font, rather than a cap at Bold. Measured (ink of a sample line through GDI, 15 and
+    24 px): GDI emboldens Light, SemiLight and Medium fonts from about Regular to about Bold depending on the font, and
+    300 heavier is in that range (closest for MonoLisa Light; a cap at Bold would make Medium lighter than GDI's); GDI
+    doesn't embolden SemiBold or heavier fonts at all, their bold is the regular pixel for pixel. Bold of "Cascadia Code
+    SemiBold" is Cascadia Code Bold, not simulated: that check of kit section 5 is done.
+  - Aliased text with the "GDI classic" mode is measured like GDI since `84dc7f8` (the app's rule for aliased text is
+    gone): one pixel tighter lines with Courier New, the same columns, clean text; the layout then doesn't change with
+    the antialiasing.
+- Gaps left, as upstream and the kits have them: a plugin's own `SCI_SETTECHNOLOGY` doesn't reach `technologyChanged`
+  (a plugin that switches a view manages it, as kit 7 has it); `NPPM_SETSMOOTHFONT(FALSE)` follows Windows even with an
+  explicit antialiasing chosen (kit 8's meaning, plugins only). The Linux/Wine harness (`harness/`) is history: written
+  for the first API.
+- Not done yet: the push (pyre, the font-name branch by force, this branch) and CI; the printing check by hand (kit
+  section 5, Before opening: the VM's default printer is real and managed by Windows).
+
 ## Branches of Pyre909/notepad-plus-plus
 
 | Branch | Head | What |
 |---|---|---|
 | `master` | `37f76d4` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
-| `pyre` | `328f690` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
+| `pyre` | `328f690` (pushed; six commits up to `fcbbb30` local, see the review above) | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
 | `claude/awesome-darwin-bsud9v` | `357fec9` | The cloud session's branch: the combined development branch, all the features (pyre is built on it) |
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418, closed by donho on 2026-10-02: Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (on hold: #18418 closed) |
@@ -81,7 +144,7 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
 | `rtl-views-gdi_20261006` | `53d0026` | Right-to-left views drawn with GDI, the startup direction sync (bug fix: #17865, #17518, the RTL UI languages on DirectWrite), on upstream `master`: PR to open (kit section 6) |
 | `live-rendering-switch_20261005` | `d50fb3b` | Rendering mode applied without restart (MISC. box), one commit on `rtl-views-gdi_20261006`: feature request to open, PR after it's Accepted and section 6 is merged (kit section 7). Its refusal version is kept as `archive/live-rendering-switch-refusal_20261005`, the fallback |
 | `directwrite-font-smoothing_20261006` | `76b3210` | DirectWrite following the Windows font smoothing (bug fix: #14954), on upstream `master`: PR to open (kit section 8). CI: all 13 jobs pass (its ARM64 Debug job hung on GitHub's runner once, passed when re-run) |
-| `directwrite-font-names_20260930` | `6e8579e` | Fonts such as "Fira Code Light" drawn by DirectWrite (Notepad++-only change; a bug fix of #12393, PR after the checks of kit section 5) |
+| `directwrite-font-names_20260930` | `9f605be` | Fonts such as "Fira Code Light" drawn by DirectWrite (Notepad++-only change; a bug fix of #9951 and #12393, PR after the checks of kit section 5). Rewritten and rebased on 2026-10-06 (the first version, `6e8579e`, is the pushed one until the force push) |
 | `per-monitor-dpi_20260925` | `8a0ff70` | Opt-in per-monitor DPI awareness (discuss with maintainers before a PR) |
 | `font-size-1pt_20260925` | `faaeb59` | Font sizes 1-4 pt: PR #18412 closed upstream (not wanted); kept in the fork |
 | `font-weight-names_20260925` | `47341a4` | Superseded: the Scintilla version of the font-name fix |
@@ -106,8 +169,9 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
   turning the Windows font smoothing off, or to Standard, changes nothing (#14954, open since 2024). A bug fix PR, 4
   files, no new setting, made from pyre's "Follow Windows" antialiasing: ready to open. Tested with the Windows setting
   off, Standard and ClearType (Pyre909 changed it) and live; CI: all 13 jobs pass (`76b3210`).
-- Fonts of a weight under DirectWrite (kit section 5): upstream already has the bug report, #12393 (2022), so it's a
-  bug fix PR, no feature request to wait for. Before opening: a rebase and the Cascadia Code SemiBold check.
+- Fonts of a weight under DirectWrite (kit section 5): upstream has the bug reports, #9951 (2021, open, 29 comments,
+  labelled "scintilla dependent") and #12393 (2022), so it's a bug fix PR, no feature request to wait for. Rewritten and
+  rebased on 2026-10-06 (`9f605be`). Before opening: its CI and the printing check by hand.
 - PR #18412 (font sizes 1-4 pt): closed, not wanted.
 - Next PRs from the fork only when a feature looks worthwhile to upstream.
 
@@ -158,20 +222,22 @@ lines about 1.57x the regular lines' ink per letter (`courier-new-dw`).
    the build, its releases and updating).
 4. Pyre909 opens the RTL fix PR (kit section 6), the font smoothing PR (kit section 8) and the live switch's feature
    request (kit section 7); the live switch PR follows once both allow it. Then the font-name PR (kit section 5, a bug
-   fix of #12393), which will need pyre's `refreshStyleFonts` once the technology can change at run time (the live
-   switch, the RTL views).
+   fix of #9951 and #12393), which will need pyre's `refreshStyleFonts` once the technology can change at run time (the
+   live switch, the RTL views).
 5. Before pushing any branch: the review harness in `review/` (`review.ps1`, then the AI review of `checklist.md`;
    the skill `npp-review` does both). After pushing, check CI, which picks its jobs from the push's last commit alone
    (`git diff --name-only HEAD~1` in `CI_build.yml`): if it changes only `.md` or `.txt` files nothing is built, if
    only XML files just the XML check runs. So a push ending with a CLAUDE.md commit after code commits needs
    `[force all]` in that commit's title, as `CLAUDE.md` says (found on 2026-10-06 when `pyre`'s RTL commit wasn't
    built: see "Later").
-6. `pyre`: its "Follow Windows" antialiasing follows a change of the Windows font smoothing only on `SPI_SETFONTSMOOTHING`
-   and `SPI_SETFONTSMOOTHINGTYPE` (`NppBigSwitch.cpp`), but the ClearType Text Tuner announces its change as
-   `SPI_SETFONTSMOOTHINGORIENTATION`, so a change made there needs a restart (found 2026-10-06 with the live check of
-   kit section 8). Take section 8's rule: on any `WM_SETTINGCHANGE`, the views still at the quality they got from
-   Windows follow it.
-7. Later: the toolchain and the unused features below.
+6. Done on 2026-10-06 (`84dc7f8`, see the review above): `pyre`'s "Follow Windows" missed a change made in the
+   ClearType Text Tuner (`SPI_SETFONTSMOOTHINGORIENTATION`); it now uses section 8's rule.
+7. Merge upstream into `pyre`: 13 commits behind on 2026-10-06. A trial merge conflicts in `AboutDlg.cpp/.h` and
+   `dpiManagerV2.cpp`: upstream added per-monitor DPI support to the About, hash and Shortcut Mapper dialogs, which
+   overlaps pyre's own per-monitor DPI work; reconcile them (and the per-monitor DPI PR candidate) then.
+8. Optional: check with screenshots whether the DirectWrite modes "Symmetric" and "Adaptive" differ visibly from
+   "Automatic" at editor sizes (a reviewer's question); if not, fewer choices.
+9. Later: the toolchain and the unused features below.
 
 ## Colour themes (2026-10-03, version 2)
 

@@ -63,13 +63,20 @@ DirectWrite following the Windows font smoothing (`directwrite-font-smoothing_20
 
 | Test | What it proves |
 |---|---|
-| `directwrite-font-smoothing.ps1` | With DirectWrite, both views and the Document Map get the font quality of the Windows font smoothing, which the test reads and never changes (off 1, Standard 2, ClearType 0); "Enable smooth font" (`NPPM_SETSMOOTHFONT`) gives 3, and turned off the Windows one again; setting changes (`WM_SETTINGCHANGE`) leave smooth font, a plugin's quality and an unchanged Windows setting alone; with GDI after a restart, 0 (16 checks). With ClearType it can't tell the fix from upstream: change the Windows setting yourself to off or Standard and run it again (upstream fails 4). Following a real change of the setting was checked by hand (kit section 8) |
+| `directwrite-font-smoothing.ps1` | With DirectWrite, both views and the Document Map get the font quality of the Windows font smoothing, which the test reads and never changes (off 1, Standard 2, ClearType 0); "Enable smooth font" (`NPPM_SETSMOOTHFONT`) gives 3, and turned off the Windows one again; setting changes (`WM_SETTINGCHANGE`) leave smooth font, a plugin's quality and an unchanged Windows setting alone; with GDI after a restart, 0 (16 checks). With ClearType it can't tell the fix from upstream: change the Windows setting yourself to off or Standard and run it again (upstream fails 4). Following a real change of the setting was checked by hand (kit section 8). pyre passes it too (its "Follow Windows" is this code) |
+
+The fonts of a weight drawn with DirectWrite (`directwrite-font-names_20260930`, kit section 5; also in pyre):
+
+| Test | What it proves |
+|---|---|
+| `directwrite-font-names.ps1` | With "Bahnschrift Light" as the Default Style font and DirectWrite (fresh settings): the Default Style, a style without its own font and the line numbers get "Bahnschrift" weight 300, a bold C++ keyword 600; restarted with GDI (`writeTechnologyEngine="0"`), "Bahnschrift Light" 400 and bold 700 as upstream (pyre: weight 300, bold in "Bahnschrift SemiBold" 600); no message on exit (13 checks). Printing isn't tested: the VM's default printer is a real one (kit section 5, Before opening) |
 
 pyre only (skipped on other builds):
 
 | Test | What it proves |
 |---|---|
-| `pyre-rtl-style-fonts.ps1` | pyre maps the fonts of the font lists for the technology in use ("Bahnschrift Light" is "Bahnschrift" at weight 300 for DirectWrite): a view switching technology, with its text direction, its tabs or the rendering mode, gets its style fonts mapped again (13 checks) |
+| `pyre-rtl-style-fonts.ps1` | pyre maps the fonts of the font lists for the technology in use ("Bahnschrift Light" is "Bahnschrift" at weight 300 for DirectWrite): a view switching technology, with its text direction, its tabs or the rendering mode, gets its style fonts mapped again; a Scintilla created for a plugin (`NPPM_CREATESCINTILLAHANDLE`) keeps the font the plugin set on a style while its other styles follow the switches; a font quality a plugin set survives the view's switches between GDI and DirectWrite with an RTL tab (18 checks; pyre before 2026-10-06 fails the 3 plugin ones) |
+| `pyre-text-rendering-config.ps1` | The antialiasing of config.xml: `fontAntialiasing` with a `smoothFont` that agrees (ClearType, Grayscale), a `smoothFont` turned off by another Notepad++ sharing config.xml (Follow Windows wins), a config.xml without `fontAntialiasing` (`smoothFont="yes"` is ClearType), one without `smoothFont`, written by hand (`fontAntialiasing` kept); what is saved, and the attributes of the former advanced overrides (`fontGamma`...) dropped (11 checks) |
 
 Driving Notepad++ from a test: menu commands are `WM_COMMAND` with the ids of `menuCmdID.h`; a combo box is
 `CB_SETCURSEL` then `WM_COMMAND` with `MAKEWPARAM(id, CBN_SELCHANGE)` to its dialog (what a click sends); Scintilla
