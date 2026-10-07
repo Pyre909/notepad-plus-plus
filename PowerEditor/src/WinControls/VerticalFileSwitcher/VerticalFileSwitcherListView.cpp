@@ -95,7 +95,7 @@ void VerticalFileSwitcherListView::destroy()
 		::DeleteObject(_hFontDpi);
 		_hFontDpi = nullptr;
 	}
-}
+} 
 
 void VerticalFileSwitcherListView::initList()
 {
