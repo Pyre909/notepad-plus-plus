@@ -17,6 +17,13 @@ Used for the test round in `STATUS.md` (handoff section), on Pyre909's Windows 1
   to the regular). Build from a Developer prompt: `cl /EHsc /std:c++20 /O2 /DUNICODE /D_UNICODE /DNOMINMAX inkcmp.cpp
   user32.lib gdi32.lib`; run `inkcmp.exe <pixel height> <GDI family name>...` (TSV). Used for the bold weight of the
   font-name PR (kit section 5, 2026-10-06).
+- `modes.ps1`: the DirectWrite rendering modes of Text Rendering compared at editor sizes ("Next" 8 in `STATUS.md`).
+  Starts a build (default: the ARM64 dev build) with its own settings folder (`C:\npp-modetest`), sets each font
+  through config.xml's Global override (restart), then for each zoom and quality (ClearType, grayscale) sets each mode
+  on the edit view with `SCI_SETFONTRENDERINGPARAMETER`, screenshots it (caret hidden) and counts the pixels that
+  differ from Automatic (Adaptive also from Natural). Writes `shots\modes\` (PNGs, `modes.csv`); `modes.csv` here is
+  the 2026-10-06 run, `shots\rendering-modes-zoom.png` its Courier New 10 pt Automatic / Symmetric and Cascadia Mono
+  10 pt Automatic / Adaptive at 3x. Windows PowerShell 5.1, like `measure.ps1`.
 - `print-pdf.ps1`: prints a document of a build, its Default Style in a font of a weight, to Microsoft Print to PDF
   through the Windows 11 print dialog, in steps (open, inspect, select, print, cancel, close; see its header), then
   lists the PDF's fonts with `pdf-fonts.ps1`. Windows manages the VM's default printer: printing to PDF makes the PDF

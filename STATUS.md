@@ -14,8 +14,9 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
   7, see "Upstream merge (2026-10-06)" below).
 - Waiting on Pyre909: open the RTL fix PR (kit section 6), the font smoothing PR (kit 8), the live switch's feature
   request (kit 7); then the font-name PR (kit 5) and the optional comment on #9951.
-- Next for Claude, one per session: the Symmetric / Adaptive check ("Next" 8); the test round's open rows (Antialiasing
-  choices at once, the DPI one, now also the merge's DPI checks below).
+- Waiting on Pyre909 too: whether to drop the DirectWrite mode "Adaptive" ("Next" 8, measured on 2026-10-06).
+- Next for Claude, one per session: the test round's open rows (Antialiasing choices at once, the DPI one, now also the
+  merge's DPI checks below).
 - Reviews: `review.ps1 -Quiet` (PASS lines to the log only), then the AI review (skill `npp-review`). Keep agents to the
   harness; no ad hoc fan-out.
 
@@ -300,8 +301,18 @@ list (#15640, #16214), so each theme needed it set again, scrolled to.
 7. Done on 2026-10-06: upstream merged into `pyre` (`ba729ad`, `7eba8f3`; see "Upstream merge (2026-10-06)"). Left: the
    per-monitor DPI PR candidate (`per-monitor-dpi_20260925`) still predates upstream's per-monitor About, hash and
    Shortcut Mapper dialogs; reconcile it before any discussion with the maintainers.
-8. Optional: check with screenshots whether the DirectWrite modes "Symmetric" and "Adaptive" differ visibly from
-   "Automatic" at editor sizes (a reviewer's question); if not, fewer choices.
+8. Done on 2026-10-06 (a reviewer's question: do the DirectWrite modes "Symmetric" and "Adaptive" differ visibly from
+   "Automatic" at editor sizes?). `vm/modes.ps1` on the ARM64 build of `pyre` `7eba8f3`, VM at 150% (144 DPI),
+   ClearType on: Consolas, Cascadia Mono, Courier New, Segoe UI at 9, 10, 12, 14 pt, ClearType and grayscale, each
+   mode's screenshot diffed against Automatic (`vm/modes.csv`, `vm/shots/rendering-modes-zoom.png`).
+   - Adaptive is never a rendering of its own: pixel-identical to Natural at 9 and 10 pt (up to 20 px) and to Automatic
+     at 12 and 14 pt in all 32 cases. At 100% every usual editor size is under 20 px, so there it is Natural.
+   - Symmetric equals Automatic at 12 and 14 pt for every font, and for Cascadia Mono at every size. It differs where
+     Automatic draws natural (the font's gasp table at small sizes): Consolas, Courier New and Segoe UI at 9 pt,
+     Courier New at 10 pt (10,000 to 16,000 pixels of a 700 x 260 crop). Visible enlarged: natural snaps horizontal
+     strokes crisper, symmetric is softer and lighter.
+   - Proposal: drop Adaptive (Natural gives the same text at editor sizes); keep Symmetric (the only way to get the
+     symmetric smoothing for those fonts at small sizes). Pyre909 decides. Not measured: 100% scaling, other fonts.
 9. Later: the toolchain and the unused features below.
 
 ## Colour themes (2026-10-03, version 2)
