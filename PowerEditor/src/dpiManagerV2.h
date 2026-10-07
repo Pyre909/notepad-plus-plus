@@ -18,6 +18,10 @@
 #pragma once
 #include <windows.h>
 
+#include <memory>
+#include <type_traits>
+#include <utility>
+
 #ifndef WM_DPICHANGED
 #define WM_DPICHANGED 0x02E0
 #endif
@@ -33,6 +37,13 @@
 #ifndef WM_GETDPISCALEDSIZE
 #define WM_GETDPISCALEDSIZE 0x02E4
 #endif
+
+// a font owned by the window it's set to, deleted with it or when replaced
+struct FontDeleter
+{
+	void operator()(HFONT hFont) const noexcept { ::DeleteObject(hFont); }
+};
+using UniqueFont = std::unique_ptr<std::remove_pointer_t<HFONT>, FontDeleter>;
 
 class DPIManagerV2
 {
@@ -51,10 +62,17 @@ public:
 		return getSystemMetricsForDpi(nIndex, _dpi);
 	}
 
+	// the metric for the DPI of hWnd with the per-monitor DPI awareness, ::GetSystemMetrics() otherwise
+	static int getSystemMetricsForWindow(int nIndex, HWND hWnd);
+
 	[[nodiscard]] static bool isValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT value);
 	// includes check for `DPI_AWARENESS_CONTEXT dpiContext` via `isValidDpiAwarenessContext`
 	static DPI_AWARENESS_CONTEXT setThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT dpiContext);
 	static DPI_AWARENESS_CONTEXT getWindowDpiAwarenessContext(HWND hWnd);
+
+	// opt-in per-monitor v2 DPI awareness of the GUI thread, set before any window is created (Windows 10 1703+)
+	static bool enablePerMonitorV2ForThread();
+	[[nodiscard]] static bool isPerMonitorV2Active();
 
 	static bool adjustWindowRectExForDpi(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi);
 
@@ -111,6 +129,16 @@ public:
 		return scale(x, USER_DEFAULT_SCREEN_DPI, getDpiForWindow(hWnd));
 	}
 
+	// for the legacy sizes in pixels of the system DPI (not scaled from 96 DPI)
+	static int scaleFromSystemDpi(int x, UINT dpi) {
+		return scale(x, dpi, getDpiForSystem());
+	}
+
+	// x unchanged without the per-monitor DPI awareness (even in a per-monitor DPI aware dialog)
+	static int scaleFromSystemDpiForWindow(int x, HWND hWnd) {
+		return isPerMonitorV2Active() ? scaleFromSystemDpi(x, getDpiForWindow(hWnd)) : x;
+	}
+
 	int scale(int x) const {
 		return scale(x, _dpi);
 	}
@@ -142,6 +170,24 @@ public:
 
 	LOGFONT getDefaultGUIFontForDpi(FontType type = FontType::message) const {
 		return getDefaultGUIFontForDpi(_dpi, type);
+	}
+
+	// default font of the list view, tree view and toolbar controls
+	static LOGFONT getIconTitleFontForDpi(UINT dpi);
+	// sets a font created from lf to hWnd, then replaces font (the previous one, deleted) with it
+	static void replaceWindowFont(HWND hWnd, const LOGFONT& lf, UniqueFont& font);
+	static void replaceWindowFont(HWND hWnd, const LOGFONT& lf, HFONT& hFont) {
+		UniqueFont font{ std::exchange(hFont, nullptr) };
+		replaceWindowFont(hWnd, lf, font);
+		hFont = font.release();
+	}
+	static void setIconTitleFont(HWND hWnd, UINT dpi, UniqueFont& font) {
+		replaceWindowFont(hWnd, getIconTitleFontForDpi(dpi), font);
+	}
+	// a control just created: its default font is for the system DPI
+	static void initIconTitleFont(HWND hWnd, UINT dpi, UniqueFont& font) {
+		if (isPerMonitorV2Active() && (dpi != getDpiForSystem()))
+			setIconTitleFont(hWnd, dpi, font);
 	}
 
 	static void loadIcon(HINSTANCE hinst, const wchar_t* pszName, int cx, int cy, HICON* phico, UINT fuLoad = LR_DEFAULTCOLOR);

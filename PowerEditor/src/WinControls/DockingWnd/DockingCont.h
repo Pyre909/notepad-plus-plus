@@ -96,6 +96,9 @@ public:
 
 	void doDialog(bool willBeShown = true, bool isFloating = false);
 
+	// places the floating container at its saved rectangle, whose size is kept (see WM_DPICHANGED)
+	void setFloatingRect(RECT& rcFloat);
+
 	bool isFloating() {
 		return _isFloating;
 	}
@@ -175,6 +178,14 @@ protected:
 	bool updateCaption();
 	LPARAM NotifyParent(UINT message);
 
+	// caption and close button sizes for the DPI of _dpiManager
+	void setDpiDynamicalSizes();
+
+	// legacy size in pixels of the system DPI, for the container's DPI
+	int scaleFromSystemDpi(int x) const {
+		return DPIManagerV2::isPerMonitorV2Active() ? DPIManagerV2::scaleFromSystemDpi(x, _dpiManager.getDpi()) : x;
+	}
+
 private:
 	// handles
 	BOOL _isActive = FALSE;
@@ -186,6 +197,8 @@ private:
 	// horizontal font for caption and tab
 	HFONT _hFont = nullptr;
 	HFONT _hFontCaption = nullptr;
+
+	bool _isFloatingRectPlacement = false;
 
 	// caption params
 	BOOL _isTopCaption = CAPTION_TOP;

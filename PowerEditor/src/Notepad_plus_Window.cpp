@@ -126,6 +126,10 @@ void Notepad_plus_Window::init(HINSTANCE hInst, HWND parent, const wchar_t *cmdL
 
 	gNppHWND = _hSelf;
 
+	// With the per-monitor DPI awareness, placing the window (created on the primary monitor) on a monitor of another DPI
+	// sends WM_DPICHANGED with a rescaled size: the saved size must be kept (see WM_DPICHANGED)
+	_notepad_plus_plus_core._isStartupPlacement = true;
+
 	if (cmdLineParams->isPointValid())
 	{
 		::MoveWindow(_hSelf, cmdLineParams->_point.x, cmdLineParams->_point.y, nppGUI._appPos.right, nppGUI._appPos.bottom, TRUE);
@@ -155,6 +159,8 @@ void Notepad_plus_Window::init(HINSTANCE hInst, HWND parent, const wchar_t *cmdL
 		if (NppDarkMode::isEnabled())
 			setStartupBgColor(NppDarkMode::getDlgBackgroundColor()); //draw dark background when opening Npp without position data
 	}
+
+	_notepad_plus_plus_core._isStartupPlacement = false;
 
 	if ((nppGUI._tabStatus & TAB_MULTILINE) != 0)
 		::SendMessage(_hSelf, NPPM_INTERNAL_MULTILINETABBAR, 0, 0);

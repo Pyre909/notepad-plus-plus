@@ -97,8 +97,9 @@ RECT TaskList::adjustSize()
 	ListView_GetItemRect(_hSelf, 0, &rc, LVIR_ICON);
 	const int imgWidth = rc.right - rc.left;
 	const int aSpaceWidth = ListView_GetStringWidth(_hSelf, L" ");
-	const int paddedBorder = ::GetSystemMetrics(SM_CXPADDEDBORDER);
-	const int leftMarge = (::GetSystemMetrics(SM_CXFRAME) + paddedBorder) * 2 + aSpaceWidth * 4;
+	// frame metrics of the Task List dialog (_hParent), for its DPI with the per-monitor DPI awareness
+	const int paddedBorder = DPIManagerV2::getSystemMetricsForWindow(SM_CXPADDEDBORDER, _hParent);
+	const int leftMarge = (DPIManagerV2::getSystemMetricsForWindow(SM_CXFRAME, _hParent) + paddedBorder) * 2 + aSpaceWidth * 4;
 
 	// Temporary set "selected" font to get the worst case widths
 	::SendMessage(_hSelf, WM_SETFONT, reinterpret_cast<WPARAM>(_hFontSelected), 0);
@@ -120,7 +121,7 @@ RECT TaskList::adjustSize()
 	::SendMessage(_hSelf, WM_SETFONT, reinterpret_cast<WPARAM>(_hFont), 0);
 
 	//if the tasklist exceeds the height of the display, leave some space at the bottom
-	const LONG maxHeight = ::GetSystemMetrics(SM_CYSCREEN) - 120L;
+	const LONG maxHeight = ::GetSystemMetrics(SM_CYSCREEN) - DPIManagerV2::scaleFromSystemDpiForWindow(120, _hParent);
 	if (_rc.bottom > maxHeight)
 	{
 		_rc.bottom = maxHeight;
@@ -128,7 +129,7 @@ RECT TaskList::adjustSize()
 	reSizeToWH(_rc);
 
 	// Task List's border is 1px smaller than ::GetSystemMetrics(SM_CYFRAME) returns
-	_rc.bottom += (::GetSystemMetrics(SM_CYFRAME) + paddedBorder - 1) * 2;
+	_rc.bottom += (DPIManagerV2::getSystemMetricsForWindow(SM_CYFRAME, _hParent) + paddedBorder - 1) * 2;
 	return _rc;
 }
 

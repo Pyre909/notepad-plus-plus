@@ -58,8 +58,10 @@ public:
 
 protected:
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
+	void onDpiChanged(UINT prevDpi) override;
 
 private:
 	ScintillaEditView **_ppEditView = nullptr;
 	AsciiListView _listView;
+	UniqueFont _hFontDpi; // font of the list for its DPI (per-monitor DPI awareness)
 };

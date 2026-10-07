@@ -21,6 +21,7 @@
 #include "ToolTip.h"
 #include "Parameters.h"
 #include "localization.h"
+#include "resource.h"
 
 using namespace std;
 
@@ -55,10 +56,28 @@ static LRESULT CALLBACK hookProcMouse(int nCode, WPARAM wParam, LPARAM lParam)
 	return ::CallNextHookEx(hookMouse, nCode, wParam, lParam);
 }
 
+static BOOL CALLBACK notifyDpiChangedAfterParentProc(HWND hWnd, [[maybe_unused]] LPARAM lParam)
+{
+	::SendMessage(hWnd, WM_DPICHANGED_AFTERPARENT, 0, 0);
+	return TRUE;
+}
+
+// sends WM_DPICHANGED_AFTERPARENT to a window and its descendants, a parent before its children
+static void notifyDpiChangedAfterParent(HWND hWnd)
+{
+	::SendMessage(hWnd, WM_DPICHANGED_AFTERPARENT, 0, 0);
+	::EnumChildWindows(hWnd, notifyDpiChangedAfterParentProc, 0);
+}
+
 
 DockingCont::DockingCont()
 {
 	setDpi();
+	setDpiDynamicalSizes();
+}
+
+void DockingCont::setDpiDynamicalSizes()
+{
 	_captionHeightDynamic = _dpiManager.scale(HIGH_CAPTION);
 	_captionGapDynamic = _dpiManager.scale(CAPTION_GAP);
 	_closeButtonPosLeftDynamic = _dpiManager.scale(CLOSEBTN_POS_LEFT);
@@ -107,6 +126,15 @@ void DockingCont::doDialog(bool willBeShown, bool isFloating)
 	display(willBeShown);
 }
 
+void DockingCont::setFloatingRect(RECT& rcFloat)
+{
+	// With the per-monitor DPI awareness, the rectangle is saved in the pixels of its monitor:
+	// a move to a monitor of another DPI sends WM_DPICHANGED, whose suggested size must not be applied
+	_isFloatingRectPlacement = true;
+	reSizeToWH(rcFloat);
+	_isFloatingRectPlacement = false;
+}
+
 
 DockedWidgetData* DockingCont::createDockedWidget(const DockedWidgetData& data)
 {
@@ -121,11 +149,17 @@ DockedWidgetData* DockingCont::createDockedWidget(const DockedWidgetData& data)
 	// restore position if plugin is in floating state
 	if ((_isFloating) && (::SendMessage(_hContTab, TCM_GETITEMCOUNT, 0, 0) == 0))
 	{
-		reSizeToWH(pTbData->rcFloat);
+		setFloatingRect(pTbData->rcFloat);
 	}
 
 	// set attached child window
 	::SetParent(pTbData->hClient, ::GetDlgItem(_hSelf, IDC_CLIENT_TAB));
+
+	// a panel moved from a container of another DPI gets no DPI message (unchanged DPIs ignore this one)
+	if (DPIManagerV2::isPerMonitorV2Active())
+	{
+		notifyDpiChangedAfterParent(pTbData->hClient);
+	}
 
 	// set names for captions and view toolbar
 	viewDockedWidget(pTbData);
@@ -414,13 +448,13 @@ LRESULT DockingCont::runProcCaption(HWND hwnd, UINT Message, WPARAM wParam, LPAR
 			toolTip.init(_hInst, hwnd);
 			if (_hoverMPos == posCaption)
 			{
-				toolTip.Show(rc, _pszCaption.c_str(), pt.x, pt.y + 20);
+				toolTip.Show(rc, _pszCaption.c_str(), pt.x, pt.y + scaleFromSystemDpi(20));
 			}
 			else
 			{
 				NativeLangSpeaker *pNativeSpeaker = (NppParameters::getInstance()).getNativeLangSpeaker();
 				wstring tip = pNativeSpeaker->getLocalizedStrFromID("close-panel-tip", L"Close");
-				toolTip.Show(rc, tip.c_str(), pt.x, pt.y + 20);
+				toolTip.Show(rc, tip.c_str(), pt.x, pt.y + scaleFromSystemDpi(20));
 			}
 			return 0;
 		}
@@ -529,9 +563,9 @@ void DockingCont::drawCaptionItem(DRAWITEMSTRUCT *pDrawItemStruct)
 		}
 
 		// draw text
-		rc.left		+= 2;
-		rc.top		+= 1;
-		rc.right	-= 16;
+		rc.left		+= scaleFromSystemDpi(2);
+		rc.top		+= scaleFromSystemDpi(1);
+		rc.right	-= scaleFromSystemDpi(16);
 		hOldFont = static_cast<HFONT>(::SelectObject(hDc, _hFontCaption));
 		::DrawText(hDc, _pszCaption.c_str(), length, &rc, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX);
 
@@ -570,11 +604,11 @@ void DockingCont::drawCaptionItem(DRAWITEMSTRUCT *pDrawItemStruct)
 		}
 
 		// draw text
-		rc.left		+= 1;
+		rc.left		+= scaleFromSystemDpi(1);
 		rc.top += _captionHeightDynamic;
 		// to make ellipsis working
 		rc.right	= rc.bottom - rc.top;
-		rc.bottom	+= 14;
+		rc.bottom	+= scaleFromSystemDpi(14);
 
 		LOGFONT lf{ DPIManagerV2::getDefaultGUIFontForDpi(_hParent, DPIManagerV2::FontType::smcaption) };
 		lf.lfEscapement = 900;
@@ -940,7 +974,7 @@ LRESULT DockingCont::runProcTab(HWND hwnd, UINT Message, WPARAM wParam, LPARAM l
 						toolTip.destroy();
 
 						toolTip.init(_hInst, hwnd);
-						toolTip.Show(rc, dwData->pszName, info.pt.x, info.pt.y + 20);
+						toolTip.Show(rc, dwData->pszName, info.pt.x, info.pt.y + scaleFromSystemDpi(20));
 					}
 				}
 
@@ -974,7 +1008,7 @@ LRESULT DockingCont::runProcTab(HWND hwnd, UINT Message, WPARAM wParam, LPARAM l
 				break;
 
 			toolTip.init(_hInst, hwnd);
-			toolTip.Show(rc, reinterpret_cast<DockedWidgetData*>(tcItem.lParam)->pszName, info.pt.x, info.pt.y + 20);
+			toolTip.Show(rc, reinterpret_cast<DockedWidgetData*>(tcItem.lParam)->pszName, info.pt.x, info.pt.y + scaleFromSystemDpi(20));
 			return 0;
 		}
 
@@ -1147,6 +1181,13 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			_hContTab = ::GetDlgItem(_hSelf, IDC_TAB_CONT);
 			_hCaption = ::GetDlgItem(_hSelf, IDC_BTN_CAPTION);
 
+			// the DPI of the main window (like the fonts), not always the system DPI set by the constructor
+			if (DPIManagerV2::isPerMonitorV2Active())
+			{
+				_dpiManager.setDpi(_hParent);
+				setDpiDynamicalSizes();
+			}
+
 			// intial subclassing of caption
 			::SetWindowSubclass(_hCaption, DockingCaptionSubclass, static_cast<UINT_PTR>(SubclassID::first), reinterpret_cast<DWORD_PTR>(this));
 
@@ -1187,8 +1228,10 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			RECT rc{};
 			getClientRect(rc);
 
+			// a hidden tab control (single panel) can have a stale rectangle after a DPI change
 			RECT rcTab{};
-			getMappedChildRect(_hContTab, rcTab);
+			if (!DPIManagerV2::isPerMonitorV2Active() || ::IsWindowVisible(_hContTab))
+				getMappedChildRect(_hContTab, rcTab);
 
 			RECT rcClientTab{};
 			getMappedChildRect(IDC_CLIENT_TAB, rcClientTab);
@@ -1273,20 +1316,15 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			{
 				_dpiManager.setDpi(_hParent);
 			}
-			_captionHeightDynamic = _dpiManager.scale(HIGH_CAPTION);
-			_captionGapDynamic = _dpiManager.scale(CAPTION_GAP);
-			_closeButtonPosLeftDynamic = _dpiManager.scale(CLOSEBTN_POS_LEFT);
-			_closeButtonPosTopDynamic = _dpiManager.scale(CLOSEBTN_POS_TOP);
-
-			_closeButtonWidth = _dpiManager.scale(g_dockingContCloseBtnSize);
-			_closeButtonHeight = _dpiManager.scale(g_dockingContCloseBtnSize);
+			setDpiDynamicalSizes();
 
 			const int tabDpiPadding = _dpiManager.scale(g_dockingContTabIconSize + g_dockingContTabIconPadding * 2);
 			::SendMessage(_hContTab, TCM_SETMINTABWIDTH, 0, tabDpiPadding);
 			TabCtrl_SetPadding(_hContTab, tabDpiPadding / 2, 0);
 			TabCtrl_SetItemSize(_hContTab, 2 * tabDpiPadding, tabDpiPadding);
 
-			destroyFonts();
+			HFONT hPrevFont = _hFont;
+			HFONT hPrevFontCaption = _hFontCaption;
 
 			LOGFONT lfTab{ _dpiManager.getDefaultGUIFontForDpi() };
 			_hFont = ::CreateFontIndirect(&lfTab);
@@ -1294,7 +1332,21 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			LOGFONT lfCaption{ _dpiManager.getDefaultGUIFontForDpi(DPIManagerV2::FontType::smcaption) };
 			_hFontCaption = ::CreateFontIndirect(&lfCaption);
 
+			// the tab control sizes the tabs with its font, the texts are cut otherwise when the DPI increases
+			::SendMessage(_hContTab, WM_SETFONT, reinterpret_cast<WPARAM>(_hFont), TRUE);
+
+			if (hPrevFont != nullptr)
+				::DeleteObject(hPrevFont);
+			if (hPrevFontCaption != nullptr)
+				::DeleteObject(hPrevFontCaption);
+
 			if (Message == WM_DPICHANGED)
+			{
+				// a floating container: the main window reloads the tab icons for the new DPI
+				::PostMessage(::GetParent(_hParent), NPPM_INTERNAL_DPICHANGEDRELAYOUT, 0, 0);
+			}
+
+			if ((Message == WM_DPICHANGED) && !_isFloatingRectPlacement)
 			{
 				_dpiManager.setPositionDpi(lParam, _hSelf);
 			}

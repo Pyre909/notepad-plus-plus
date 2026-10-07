@@ -991,6 +991,37 @@ void UserDefineDialog::changeStyle()
         restorePosSize();
 
     ::SetParent(_hSelf, (_status == DOCK)?_hParent:NULL);
+
+    // docked, the dialog has the DPI of the main window (it can have been floating on a monitor of another DPI)
+    if ((_status == DOCK) && _dpiLayout.isSaved())
+        updateDockedDpi();
+}
+
+void UserDefineDialog::updateDockedDpi()
+{
+    const UINT prevDpi = _dpiManager.getDpi();
+    setDpi();
+    const UINT dpi = _dpiManager.getDpi();
+    if (dpi == prevDpi)
+        return;
+
+    // the docked width (the splitter keeps getWidth()) and the height of the scrollable content
+    _dlgPos.right = DPIManagerV2::scale(_dlgPos.right, dpi, prevDpi);
+    _dlgPos.bottom = DPIManagerV2::scale(_dlgPos.bottom, dpi, prevDpi);
+
+    // the controls are laid out again for the DPI, not scrolled (the scroll range follows with the WM_SIZE of the relayout)
+    _yScrollPos = 0;
+    ::SetScrollPos(_hSelf, SB_VERT, 0, FALSE);
+    _dpiLayout.apply(dpi);
+
+    // the tabs are laid out again for the height of their header with the new font
+    _ctrlTab.dpiManager().setDpi(dpi);
+    RECT rcTab{};
+    ::GetWindowRect(_ctrlTab.getHSelf(), &rcTab);
+    ::MapWindowPoints(nullptr, _hSelf, reinterpret_cast<LPPOINT>(&rcTab), 2);
+    _ctrlTab.reSizeToWH(rcTab);
+
+    ::RedrawWindow(_hSelf, nullptr, nullptr, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
 }
 
 void UserDefineDialog::enableLangAndControlsBy(size_t index)
@@ -1109,6 +1140,17 @@ intptr_t CALLBACK UserDefineDialog::run_dlgProc(UINT message, WPARAM wParam, LPA
             NppDarkMode::autoSubclassAndThemeWindowNotify(_hSelf);
             ::SetWindowPos(_ctrlTab.getHSelf(), HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOREDRAW | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
 
+            // layout of the dialog and of its tabs (not scrolled) for its DPI
+            if (DPIManagerV2::isPerMonitorV2Active())
+            {
+                const UINT dpi = DPIManagerV2::getDpiForWindow(_hSelf);
+                _dpiLayout.save(_hSelf, dpi);
+                for (const auto& tab : _wVector)
+                {
+                    _dpiLayout.save(tab._dlg->getHSelf(), dpi);
+                }
+            }
+
             return TRUE;
         }
 
@@ -1173,6 +1215,16 @@ intptr_t CALLBACK UserDefineDialog::run_dlgProc(UINT message, WPARAM wParam, LPA
             _dpiManager.setDpiWP(wParam);
             setPositionDpi(lParam);
 
+            return TRUE;
+        }
+
+        case WM_DPICHANGED_AFTERPARENT:
+        {
+            // docked, the dialog is a child of the main window, whose DPI has changed
+            if (!_dpiLayout.isSaved())
+                break;
+
+            updateDockedDpi();
             return TRUE;
         }
 

@@ -292,6 +292,7 @@
 #define IDC_COMBO_AUTOUPDATE                           6364
 #define IDC_AUTOUPDATE_STATIC                          6365
 #define IDC_CHECK_ALOOWSIMLINKFAW                      6366
+#define IDC_CHECK_PERMONITORDPIAWARENESS               6367
 
 #define IDD_PREFERENCE_SUB_NEWDOCUMENT                 6400
 #define IDC_FORMAT_GB_STATIC                           6401

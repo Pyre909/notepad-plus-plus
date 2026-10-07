@@ -869,6 +869,14 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstance
         }
 	}
 
+	// Opt-in per-monitor v2 DPI awareness (the manifest declares the system DPI awareness), for the whole session:
+	// a window must have the DPI awareness of its parent to be (re)parented (panels, plugins' dialogs...)
+	if (nppGui._perMonitorDpiAwareness && DPIManagerV2::enablePerMonitorV2ForThread())
+	{
+		// load() has validated them in system DPI aware coordinates
+		nppParameters.validateFloatingWindowsPositions();
+	}
+
 	auto upNotepadWindow = std::make_unique<Notepad_plus_Window>();
 	Notepad_plus_Window & notepad_plus_plus = *upNotepadWindow.get();
 
