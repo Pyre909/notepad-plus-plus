@@ -5,7 +5,20 @@ build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` 
 `scintilla/SCINTILLA-UPSTREAM.md`, and how Scintilla's maintainer decides (a survey of 792 tickets, compared with
 ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md`.
 
-## Handoff: the work continues on the Windows VM (2026-10-01)
+## Handoff (2026-10-06): read this first
+
+This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
+session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
+
+- Everything is pushed: `pyre` up to `d594e8a` (font for every theme) and this branch.
+- Waiting on Pyre909: open the RTL fix PR (kit section 6), the font smoothing PR (kit 8), the live switch's feature
+  request (kit 7); then the font-name PR (kit 5) and the optional comment on #9951.
+- Next for Claude, one per session: merge upstream into `pyre` ("Next" 7: conflicts in `AboutDlg`, `dpiManagerV2`);
+  the Symmetric / Adaptive check ("Next" 8); the test round's open rows (Antialiasing choices at once, the DPI one).
+- Reviews: `review.ps1 -Quiet` (PASS lines to the log only), then the AI review (skill `npp-review`). Keep agents to the
+  harness; no ad hoc fan-out.
+
+## The move to the Windows VM (2026-10-01, history)
 
 The cloud session (claude.ai/code: Linux, testing under Wine) hands over to Claude Code on Pyre909's
 **Windows 11 ARM64 VM** (Parallels on an Apple Silicon Mac). Clone `%USERPROFILE%\src\npp` on `pyre` (remote

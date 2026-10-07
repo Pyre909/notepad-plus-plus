@@ -14,8 +14,11 @@ The harness is on the tooling branch, in `%USERPROFILE%\src\npp.worktrees\scinti
 2. **Harness.** From PowerShell 7:
 
    ```powershell
-   pwsh -File <review>\review.ps1 -Path <worktree> -Build ARM64,x64,Win32 -Test <name>|All
+   pwsh -File <review>\review.ps1 -Path <worktree> -Build ARM64,x64,Win32 -Test <name>|All -Quiet
    ```
+
+   `-Quiet` prints only FAIL, WARN, INFO and the summary; read the log it names (`review.log`, `test-<name>.log`)
+   only for a failure's details.
 
    Every FAIL gets fixed. Every WARN gets fixed or explained. If the change has behaviour that a test can prove,
    add or extend a test in `<review>\tests\` (contract in the README) and run it with `-Test`.

@@ -13,6 +13,9 @@
 	What the branch is compared with. Default: upstream/master, or origin/pyre when the branch is pyre.
 .PARAMETER Build
 	MSVC Release builds to make: ARM64, x64, Win32 (default ARM64). -NoBuild skips them.
+.PARAMETER Quiet
+	Prints the FAIL, WARN and INFO lines and the summary only, not the PASS lines. Every line, and each test's own
+	output, is still written to the log folder (%TEMP%\npp-review), whose paths the summary prints.
 .PARAMETER Test
 	App-level tests to run, by name (file name in review\tests without .ps1), or All. They use the exe of the
 	ARM64 build on an ARM64 machine, else the x64 one.
@@ -26,6 +29,7 @@ param(
 	[switch] $NoBuild,
 	[string[]] $Test = @(),
 	[switch] $NoFetch,
+	[switch] $Quiet,
 	[switch] $SelfTest
 )
 $ErrorActionPreference = 'Stop'
@@ -40,14 +44,24 @@ if ($badBuild.Count) { throw "-Build takes ARM64, x64, Win32 (not $($badBuild -j
 # ---------------------------------------------------------------------------------------------------------------- output
 
 $script:counts = [ordered]@{ FAIL = 0; WARN = 0; PASS = 0; INFO = 0 }
+$logDir = Join-Path ([IO.Path]::GetTempPath()) 'npp-review'; New-Item -ItemType Directory -Force $logDir | Out-Null
+$script:reviewLog = Join-Path $logDir 'review.log'
+Set-Content -Path $script:reviewLog -Value "review.ps1 $(Get-Date -Format s)" -Encoding utf8
+# every line goes to review.log; with -Quiet the PASS lines go there only (fewer tokens for an agent reading the output)
+function Out-Line([string] $Text, [string] $Color = '', [switch] $LogOnly) {
+	Add-Content -Path $script:reviewLog -Value $Text -Encoding utf8
+	if ($LogOnly) { return }
+	if ($Color) { Write-Host $Text -ForegroundColor $Color } else { Write-Host $Text }
+}
 function Report([ValidateSet('FAIL', 'WARN', 'PASS', 'INFO')] [string] $Level, [string] $Message, [string[]] $Details = @()) {
 	$script:counts[$Level]++
 	$color = @{ FAIL = 'Red'; WARN = 'Yellow'; PASS = 'Green'; INFO = 'DarkGray' }[$Level]
-	Write-Host ('{0,-4}  {1}' -f $Level, $Message) -ForegroundColor $color
-	foreach ($d in ($Details | Select-Object -First 15)) { Write-Host "      $d" }
-	if ($Details.Count -gt 15) { Write-Host ('      ... {0} more' -f ($Details.Count - 15)) }
+	$hide = $Quiet -and ($Level -eq 'PASS')
+	Out-Line ('{0,-4}  {1}' -f $Level, $Message) $color -LogOnly:$hide
+	foreach ($d in ($Details | Select-Object -First 15)) { Out-Line "      $d" -LogOnly:$hide }
+	if ($Details.Count -gt 15) { Out-Line ('      ... {0} more' -f ($Details.Count - 15)) -LogOnly:$hide }
 }
-function Section([string] $Title) { Write-Host ''; Write-Host "== $Title" -ForegroundColor Cyan }
+function Section([string] $Title) { Out-Line '' -LogOnly:$Quiet; Out-Line "== $Title" 'Cyan' -LogOnly:$Quiet }
 
 # ------------------------------------------------------------------------------------------------------------------- git
 
@@ -70,7 +84,7 @@ $rules = @(
 	@{ Rx = '^\s*(?:\}\s*)?(?:if|else|for|while|switch|do|try|catch)\b[^{}]*\{\s*$'; Msg = 'brace on its own line (style 1)' }
 	@{ Rx = '^[A-Za-z_][^;{}]*\)\s*(?:const\s*)?(?:noexcept\s*)?(?:override\s*)?\{\s*$'; CppOnly = $true; Msg = 'function body brace on its own line (style 1)' }
 	@{ Rx = '\b(?:if|for|while|switch|catch)\('; Msg = 'one space between the keyword and its parenthesis (style 6)' }
-	@{ Rx = '\b(?!(?:if|for|while|switch|catch|return|sizeof|alignof|decltype|throw|case|new|delete|and|or|not|noexcept|operator|static_assert|L|TEXT)\b)[A-Za-z_]\w*\s+\((?!\*)'; Msg = 'no space between a function name and its parenthesis (style 5)' }
+	@{ Rx = '\b(?!(?:if|for|while|switch|catch|return|sizeof|alignof|decltype|throw|case|new|delete|and|or|not|noexcept|operator|static_assert|L|TEXT)\b)[A-Za-z_]\w*\s+\((?!\*)'; NotRx = '^\s*#\s*define\s+\w+\s'; Msg = 'no space between a function name and its parenthesis (style 5)' }
 	@{ Rx = '(?<![\w>\])])\((?:const\s+)?(?:unsigned\s+|signed\s+)?(?:int|long|short|char|bool|float|double|size_t|ptrdiff_t|u?intptr_t|DWORD|WORD|BYTE|UINT|INT|LONG|ULONG|HWND|HANDLE|LPARAM|WPARAM|LRESULT|wchar_t|TCHAR|LPC?W?STR|LPC?TSTR)\s*\**\s*\)\s*[\w(&*~-]'; Msg = 'C++ cast instead of a C-style cast (style 12)' }
 	@{ Rx = '(?:^|[\s(])(?:not|and|or)\s+[\w(!]'; Msg = 'use !, && and || (style 13)' }
 	@{ Rx = '[!=]=\s*L?""|L?""\s*[!=]='; Msg = 'empty() to test a string (style 11)' }
@@ -86,6 +100,7 @@ function Get-StyleHits([string] $text, [bool] $isCpp) {
 	$clean = Strip-Noise $text
 	foreach ($r in $rules) {
 		if (($r.CppOnly -and -not $isCpp) -or ($r.HOnly -and $isCpp)) { continue }
+		if ($r.NotRx -and ($clean -match $r.NotRx)) { continue } # #define NAME (value): the value, not a call
 		if ($(if ($r.Raw) { $text } else { $clean }) -match $r.Rx) { $r.Msg }
 	}
 }
@@ -119,6 +134,7 @@ if ($SelfTest) {
 		@{ Code = $t + 'for (size_t i = 0; i < n; ++i)'; Expect = '' }
 		@{ Code = $t + $t + 'MB_OK | MB_APPLMODAL);'; Expect = '' }
 		@{ Code = '~View() override {'; Header = $true; Expect = '' }
+		@{ Code = '#define IDC_X' + $t + '(IDD_DLG + 1)'; Header = $true; Expect = '' }
 	)
 	foreach ($s in $samples) {
 		$hits = @(Get-StyleHits $s.Code (-not $s.Header))
@@ -138,8 +154,8 @@ $toUpstream = $Base -like 'upstream/*'
 if (-not $NoFetch) { $remote, $ref = $Base.Split('/', 2); GTry fetch --quiet $remote $ref | Out-Null }
 $mb = G merge-base $Base HEAD
 
-Write-Host "Review of $branch in $script:repo" -ForegroundColor Cyan
-Write-Host ("Base: {0} (merge base {1}){2}" -f $Base, $mb.Substring(0, 9), $(if ($toUpstream) { ', an upstream pull request' } else { '' }))
+Out-Line "Review of $branch in $script:repo" 'Cyan'
+Out-Line ("Base: {0} (merge base {1}){2}" -f $Base, $mb.Substring(0, 9), $(if ($toUpstream) { ', an upstream pull request' } else { '' }))
 
 # every changed path, committed or not, compared with the merge base
 $changes = @(foreach ($l in (G diff --name-status -M $mb)) { $p = $l -split "`t"; [pscustomobject]@{ Status = $p[0].Substring(0, 1); Path = $p[-1] } })
@@ -340,7 +356,6 @@ if (-not $NoBuild) {
 	$all = @(& $vswhere -latest -products * -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\**\MSBuild.exe')
 	$msbuild = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { $all | Where-Object { $_ -match '\\arm64\\' } | Select-Object -First 1 } else { $all | Where-Object { $_ -match '\\amd64\\' } | Select-Object -First 1 }
 	if (-not $msbuild) { $msbuild = $all | Select-Object -First 1 }
-	$logDir = Join-Path ([IO.Path]::GetTempPath()) 'npp-review'; New-Item -ItemType Directory -Force $logDir | Out-Null
 	$leaves = @($changed | Where-Object { & $isCode $_ } | ForEach-Object { [regex]::Escape((Split-Path $_ -Leaf)) })
 	foreach ($plat in $Build) {
 		$log = Join-Path $logDir "build-$($branch -replace '[^\w.-]', '_')-$plat.log"; $start = Get-Date
@@ -368,6 +383,7 @@ if ($Test.Count) {
 	foreach ($s in $scripts) {
 		if (-not (Test-Path $testExe)) { break }
 		$out = @(& pwsh -NoProfile -File $s.FullName -Exe $testExe 2>&1 | ForEach-Object { "$_" })
+		Set-Content -Path (Join-Path $logDir "test-$($s.BaseName).log") -Value $out -Encoding utf8
 		$summary = $out | Where-Object { $_ -match '^(\d+) checks?, (\d+) failed' } | Select-Object -Last 1
 		$checks = -1; $failed = -1
 		if ($summary -match '^(\d+) checks?, (\d+) failed') { $checks = [int]$Matches[1]; $failed = [int]$Matches[2] }
@@ -381,6 +397,7 @@ if ($Test.Count) {
 # --------------------------------------------------------------------------------------------------------------- summary
 
 Section 'Summary'
-Write-Host ('{0} FAIL, {1} WARN, {2} PASS, {3} INFO' -f $script:counts.FAIL, $script:counts.WARN, $script:counts.PASS, $script:counts.INFO) -ForegroundColor $(if ($script:counts.FAIL) { 'Red' } elseif ($script:counts.WARN) { 'Yellow' } else { 'Green' })
-Write-Host 'Fix every FAIL; fix or explain every WARN. Then the AI review: review\checklist.md (skill npp-review).'
+Out-Line ('{0} FAIL, {1} WARN, {2} PASS, {3} INFO' -f $script:counts.FAIL, $script:counts.WARN, $script:counts.PASS, $script:counts.INFO) $(if ($script:counts.FAIL) { 'Red' } elseif ($script:counts.WARN) { 'Yellow' } else { 'Green' })
+Out-Line "Full output: $script:reviewLog; each test's own output: test-<name>.log next to it"
+Out-Line 'Fix every FAIL; fix or explain every WARN. Then the AI review: review\checklist.md (skill npp-review).'
 exit [int]($script:counts.FAIL -gt 0)

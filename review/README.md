@@ -14,8 +14,12 @@ the pull request. The style checks are heuristics on the added lines: read the d
 PowerShell 7, from anywhere:
 
 ```powershell
-pwsh -File review.ps1 -Path <worktree> [-Base <ref>] [-Build ARM64,x64,Win32 | -NoBuild] [-Test All | <name>] [-NoFetch]
+pwsh -File review.ps1 -Path <worktree> [-Base <ref>] [-Build ARM64,x64,Win32 | -NoBuild] [-Test All | <name>] [-NoFetch] [-Quiet]
 ```
+
+`-Quiet` leaves out the PASS lines (use it when an agent reads the output: fewer tokens). Everything is still written to
+`%TEMP%\npp-review\review.log`, each test's own output to `test-<name>.log` and each build's to `build-<branch>-<platform>.log`
+there.
 
 It reviews the branch's commits and any uncommitted changes against the merge base with `-Base`: by default
 `upstream/master` for a pull request branch and `origin/pyre` for `pyre`. It prints FAIL / WARN / PASS / INFO lines and
