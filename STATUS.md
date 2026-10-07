@@ -5,17 +5,24 @@ build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` 
 `scintilla/SCINTILLA-UPSTREAM.md`, and how Scintilla's maintainer decides (a survey of 792 tickets, compared with
 ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md`.
 
-## Handoff (2026-10-06): read this first
+## Handoff (2026-10-07): read this first
 
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
-- Everything is pushed: `pyre` up to `3a2c596` (Adaptive dropped; CI run 37578284905: all 13 jobs pass) and this branch. `pyre` has upstream up to `a69bc23` (2026-10-06, "Next"
-  7, see "Upstream merge (2026-10-06)" below).
-- Waiting on Pyre909: open the RTL fix PR (kit section 6), the font smoothing PR (kit 8), the live switch's feature
-  request (kit 7); then the font-name PR (kit 5) and the optional comment on #9951.
+- Everything is pushed: `pyre` up to `3a2c596` (CI run 37578284905: all 13 jobs pass) and this branch.
+- Done on 2026-10-06/07: upstream merged into `pyre` up to `a69bc23` ("Upstream merge (2026-10-06)" below, with a status
+  bar DPI fix the merge needed); the DirectWrite mode Adaptive dropped ("Next" 8); the test round's open rows but DPI
+  (new test `pyre-text-rendering-live`, upstream baseline of the font tests); the four upstream texts of the kit
+  rewritten in a casual voice (sections 5 to 8, each with its date check).
+- Waiting on Pyre909, in this order: open the RTL fix PR (kit section 6), the font smoothing PR (kit 8), the live
+  switch's feature request (kit 7); then the font-name PR (kit 5) and the optional comment on #9951. Each section's
+  "Before opening" says what changes if section 6 is merged first.
 - Waiting on Pyre909 too: the test round's per-monitor DPI row and the merge's DPI checks ("Upstream merge" below) need
-  a second display or a change of Windows' scale, which Claude doesn't make. The other open rows were done on 2026-10-06.
+  a second display or a change of Windows' scale, which Claude doesn't make.
+- Next for Claude, once asked: replies on the PRs once they're open (casual voice, Pyre909 posts them); the next
+  upstream merge (Sync fork, then merge `master` into `pyre`, as on 2026-10-06); the per-monitor DPI PR candidate
+  (`per-monitor-dpi_20260925`) reconciled with upstream's per-monitor dialogs ("Next" 7); "Later" items.
 - Reviews: `review.ps1 -Quiet` (PASS lines to the log only), then the AI review (skill `npp-review`). Keep agents to the
   harness; no ad hoc fan-out.
 
