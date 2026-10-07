@@ -10,11 +10,12 @@ ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
-- Everything is pushed: `pyre` up to `d594e8a` (font for every theme) and this branch.
+- Everything is pushed: `pyre` up to `7eba8f3` and this branch. `pyre` has upstream up to `a69bc23` (2026-10-06, "Next"
+  7, see "Upstream merge (2026-10-06)" below).
 - Waiting on Pyre909: open the RTL fix PR (kit section 6), the font smoothing PR (kit 8), the live switch's feature
   request (kit 7); then the font-name PR (kit 5) and the optional comment on #9951.
-- Next for Claude, one per session: merge upstream into `pyre` ("Next" 7: conflicts in `AboutDlg`, `dpiManagerV2`);
-  the Symmetric / Adaptive check ("Next" 8); the test round's open rows (Antialiasing choices at once, the DPI one).
+- Next for Claude, one per session: the Symmetric / Adaptive check ("Next" 8); the test round's open rows (Antialiasing
+  choices at once, the DPI one, now also the merge's DPI checks below).
 - Reviews: `review.ps1 -Quiet` (PASS lines to the log only), then the AI review (skill `npp-review`). Keep agents to the
   harness; no ad hoc fan-out.
 
@@ -166,6 +167,34 @@ list (#15640, #16214), so each theme needed it set again, scrolled to.
 - pyre `d594e8a`. Test `pyre-font-every-theme` (16 checks; the build before fails them); the dialog checked in light and dark mode
   (screenshots: "(Theme)" fits every box).
 
+## Upstream merge (2026-10-06)
+
+`master` synced with upstream (`gh repo sync`, 13 commits up to `a69bc23`), merged into `pyre` as `ba729ad`, plus a fix
+`7eba8f3` (CI run 37574517585: all 13 jobs pass).
+
+- Conflicts: `AboutDlg.cpp/.h`, where upstream's `CmdLineArgsDlg::setFont` / `destroyFont` (per-monitor DPI, dialog
+  font size) replace pyre's `setEditFont` (same job), so AboutDlg now differs from upstream only by `PYRE_BUILD_TAG` and
+  the text rendering debug info; and `dpiManagerV2.cpp`, where both sides' new functions are kept (pyre's
+  `getIconTitleFontForDpi` / `replaceWindowFont` serve its panels).
+- Found by the AI review, not by git: upstream's `e083cef9f` dropped `WM_DPICHANGED_AFTERPARENT` from the status bar
+  subclass (it was unused upstream). Pyre's per-monitor main window relied on it, so after a DPI change the status bar
+  kept its old font and height. Fixed in `7eba8f3`: pyre's `WM_DPICHANGED` handler in `NppBigSwitch.cpp` sends it
+  `WM_DPICHANGED`, as upstream does for the Find dialog's status bar.
+- Harness: clean ARM64 rebuild; `review.ps1 -Build ARM64,x64,Win32 -Test All`: 0 FAIL, 23 PASS. The 4 WARNs are all in
+  upstream's own code (Find in Files, Buffer, Find dialog, UDL), left as they are.
+- Review findings not acted on:
+  - Upstream now creates the About, hash and Shortcut Mapper dialogs per-monitor aware even with pyre's option off,
+    and pyre's `getSystemMetricsForWindow` follows the global flag. So in those dialogs, with the option off, it gives
+    system-DPI metrics, same as upstream. A candidate fix: base it on the window's DPI awareness.
+  - Pyre's `getDialogBaseUnits` (`StaticDialog.cpp`) duplicates upstream's new `DPIManagerV2::getFontAvgAlphaWidth`;
+    it could use it.
+  - Upstream as-is items: font deleted before its replacement in the new `setFont`s, and the font-size statics in
+    Find, TabBar and TaskList.
+- To check on Windows with two monitors at different scales (per-monitor DPI on, then off): the main window's status bar
+  across monitors; About, Debug info, Command line args, MD5/SHA and Shortcut Mapper dragged across (fonts, grid
+  scrollbar); the Find dialog (minimum size, status bar); the dialog font size (Preferences > MISC.) 8 / 12 / 24 with
+  the Find bar and docked UDL.
+
 ## Branches of Pyre909/notepad-plus-plus
 
 | Branch | Head | What |
@@ -268,9 +297,9 @@ list (#15640, #16214), so each theme needed it set again, scrolled to.
    built: see "Later").
 6. Done on 2026-10-06 (`84dc7f8`, see the review above): `pyre`'s "Follow Windows" missed a change made in the
    ClearType Text Tuner (`SPI_SETFONTSMOOTHINGORIENTATION`); it now uses section 8's rule.
-7. Merge upstream into `pyre`: 13 commits behind on 2026-10-06. A trial merge conflicts in `AboutDlg.cpp/.h` and
-   `dpiManagerV2.cpp`: upstream added per-monitor DPI support to the About, hash and Shortcut Mapper dialogs, which
-   overlaps pyre's own per-monitor DPI work; reconcile them (and the per-monitor DPI PR candidate) then.
+7. Done on 2026-10-06: upstream merged into `pyre` (`ba729ad`, `7eba8f3`; see "Upstream merge (2026-10-06)"). Left: the
+   per-monitor DPI PR candidate (`per-monitor-dpi_20260925`) still predates upstream's per-monitor About, hash and
+   Shortcut Mapper dialogs; reconcile it before any discussion with the maintainers.
 8. Optional: check with screenshots whether the DirectWrite modes "Symmetric" and "Adaptive" differ visibly from
    "Automatic" at editor sizes (a reviewer's question); if not, fewer choices.
 9. Later: the toolchain and the unused features below.
