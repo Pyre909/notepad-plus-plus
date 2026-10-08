@@ -1,4 +1,4 @@
-# Status (2026-10-06)
+# Status (2026-10-07)
 
 Where the Notepad++ text rendering, DPI and font work stands: branches, upstream PRs and tickets, the Pyre909
 build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` (rules, build, code map). The PR kit with every issue/PR/ticket text is `split/PR-TEXTS.md`; the Scintilla side is
@@ -10,10 +10,15 @@ ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
-- Everything is pushed: `pyre` up to `b7d32ba` (CLAUDE.md brought up to date; the last code commit, `1b6e958`, which
-  keeps upstream's trailing space in `VerticalFileSwitcherListView.cpp` as on the DPI branch: CI run 37657379195, all
-  13 jobs pass), `per-monitor-dpi_20260925` at `8a455e0` (force-pushed 2026-10-07; CI run 37655731626: all 13 jobs
-  pass) and this branch. Upstream `master` was 2 commits past `a69bc23` on 2026-10-07: no merge needed yet.
+- Pushed: `pyre` up to `5771464` (the redrawn standard toolbar icons in place of the bitmaps, the "not official" note
+  in the README: CI run 37723372296, all 13 jobs pass), `standard-icons-hidpi_20261007` (the icons alone, offered on
+  #16110) and `per-monitor-dpi_20260925` at `8a455e0`. **This branch is not pushed**: Pyre909 keeps it local since
+  2026-10-07 (the v1 and v2 icon backups and this handoff; push only when they say). Upstream `master` was 2 commits
+  past `a69bc23` on 2026-10-07: no merge needed yet.
+- Released 2026-10-07: **`pyre-8.9.8.1-5771464`, the first published (public) release**, marked Latest ("The Pyre909
+  build" below). Its ARM64 installer is installed on the VM. The repository's description and website link now say it
+  is an unofficial fork (set with `gh repo edit`).
+- Done on 2026-10-07: the 32 standard toolbar icons redrawn ("Standard toolbar icons redrawn" below).
 - Done on 2026-10-06/07: upstream merged into `pyre` up to `a69bc23` ("Upstream merge (2026-10-06)" below, with a status
   bar DPI fix the merge needed); the DirectWrite mode Adaptive dropped ("Next" 8); the test round's open rows but DPI
   (new test `pyre-text-rendering-live`, upstream baseline of the font tests); the four upstream texts of the kit
@@ -25,6 +30,7 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
   per-monitor DPI branch (kit 4, reconciled with upstream on 2026-10-07).
 - Waiting on Pyre909 too: the test round's per-monitor DPI row and the merge's DPI checks ("Upstream merge" below) need
   a second display or a change of Windows' scale, which Claude doesn't make.
+- Waiting on the maintainers: replies to the icons comment on #16110 (Pyre909's, 2026-10-07).
 - Next for Claude, once asked: replies on the PRs once they're open (casual voice, Pyre909 posts them); the next
   upstream merge (Sync fork, then merge `master` into `pyre`, as on 2026-10-06); "Later" items.
 - Reviews: `review.ps1 -Quiet` (PASS lines to the log only), then the AI review (skill `npp-review`). Keep agents to the
@@ -210,12 +216,32 @@ list (#15640, #16214), so each theme needed it set again, scrolled to.
   scrollbar); the Find dialog (minimum size, status bar); the dialog font size (Preferences > MISC.) 8 / 12 / 24 with
   the Find bar and docked UDL.
 
+## Standard toolbar icons redrawn (2026-10-07)
+
+Issue #16110 (open, a feature request): the "Standard icons" toolbar set is 32 16x16 bitmaps, stretched and jagged
+above 100%. They were redrawn as flat vector art, with an SVG per pixel grid (16, 20, 24, 32; 40 and 48 are the 20 and 24
+grids doubled) and an ICO per icon (PNG-compressed 16 to 48 px) plus a greyed `_dis.ico`: 140 KB for 64 ICOs.
+The generator, the scripts and the review sheets of both versions are in `icons/standard-hidpi/v1` (gradients) and
+`v2` (flat, final), each with a README (design rules, how to rebuild).
+
+- `standard-icons-hidpi_20261007` (`bc2e60f`, on upstream `master`, pushed): the icons alone, no code. Pyre909's
+  comment on #16110 (2026-10-07, with two pictures) offers them and leaves how to use them to the maintainers; it
+  mentions the toolbar code without a PR.
+- `pyre`: `4a86f5e` (the same icons) and `5d5cf9b` (the toolbar takes them at every scale through image lists, like the
+  Fluent icons; the 32 bitmaps and their code path removed; a plugin's button shows its toolbar bitmap, opaque, sized
+  to the icons; disabled plugin buttons aren't greyed, as with the Fluent icons). The exe grows by about 100 KB
+  (+142.6 KB of ICOs, -38.5 KB of bitmaps). Not tested: a plugin that adds toolbar buttons (the bundled plugins add
+  none).
+- Local only: `standard-icons-hidpi-preview_20261007` (`90bedb0`, the preview build with the bitmaps kept as a
+  fallback), superseded by `pyre`. Tags (local): `icons-hidpi-v1`, `icons-hidpi-v1-preview`, `icons-hidpi-v2`,
+  `icons-hidpi-v2-preview`.
+
 ## Branches of Pyre909/notepad-plus-plus
 
 | Branch | Head | What |
 |---|---|---|
 | `master` | `37f76d4` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
-| `pyre` | `fcbbb30` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
+| `pyre` | `5771464` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
 | `claude/awesome-darwin-bsud9v` | `357fec9` | The cloud session's branch: the combined development branch, all the features (pyre is built on it) |
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418, closed by donho on 2026-10-02: Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (on hold: #18418 closed) |
@@ -224,6 +250,7 @@ list (#15640, #16214), so each theme needed it set again, scrolled to.
 | `live-rendering-switch_20261005` | `d50fb3b` | Rendering mode applied without restart (MISC. box), one commit on `rtl-views-gdi_20261006`: feature request to open, PR after it's Accepted and section 6 is merged (kit section 7). Its refusal version is kept as `archive/live-rendering-switch-refusal_20261005`, the fallback |
 | `directwrite-font-smoothing_20261006` | `76b3210` | DirectWrite following the Windows font smoothing (bug fix: #14954), on upstream `master`: PR to open (kit section 8). CI: all 13 jobs pass (its ARM64 Debug job hung on GitHub's runner once, passed when re-run) |
 | `directwrite-font-names_20260930` | `9f605be` | Fonts such as "Fira Code Light" drawn by DirectWrite (Notepad++-only change; a bug fix of #9951 and #12393, PR after the checks of kit section 5). Rewritten, rebased and force-pushed on 2026-10-06 (the first version was `6e8579e`) |
+| `standard-icons-hidpi_20261007` | `bc2e60f` | The redrawn standard toolbar icons alone (ICOs and SVGs, no code), on upstream `master`: offered on #16110 (a comment, no PR) |
 | `per-monitor-dpi_20260925` | `8a455e0` | Opt-in per-monitor DPI awareness (discuss with maintainers before a PR) |
 | `font-size-1pt_20260925` | `faaeb59` | Font sizes 1-4 pt: PR #18412 closed upstream (not wanted); kept in the fork |
 | `font-weight-names_20260925` | `47341a4` | Superseded: the Scintilla version of the font-name fix |
@@ -293,6 +320,12 @@ list (#15640, #16214), so each theme needed it set again, scrolled to.
   (Parallels on an Apple Silicon Mac): About shows "(ARM 64-bit, Pyre909 build)", the Explorer menu and Plugins
   Admin work, auto-update is off (no "Update Notepad++" in the ? menu). Uninstall not checked (it would remove the
   working install). The x64-only draft `pyre-8.9.8.1-ea151ae` is superseded.
+- Release `pyre-8.9.8.1-5771464` (run 37723373098, 2026-10-07): **published** (public, Latest) at Pyre909's request,
+  with notes on the unofficial build, the new icons and SmartScreen (unsigned: More info, Run anyway; Unblock the
+  zip). Publishing creates the tag `pyre-*`, whose push starts the workflow and CI again on the same commit: both
+  runs were cancelled. To avoid it, the workflow could skip a tag that already has a release (not done). Its ARM64
+  installer is installed on the VM (silent install, exit 0; the standard toolbar at 150% shows the new icons, greyed
+  when disabled). The drafts `aee7bbf` and `ea151ae` are still there.
 
 ## Next
 
