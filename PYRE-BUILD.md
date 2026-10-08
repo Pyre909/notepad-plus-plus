@@ -18,6 +18,9 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **A font for every theme** (Settings > Style Configurator, the row under "Select theme"): the font, size, bold,
   italic and underline forced for all styles, which Global override's check boxes did per theme, are set once and kept
   when switching themes (saved in config.xml, not in the theme). The Global override style keeps its colours.
+- **Redrawn "Standard icons"** (Preferences > General > Toolbar): the 32 standard toolbar icons drawn again as
+  flat vector art, sharp at every scale from 100% to 300% instead of 16x16 bitmaps stretched (official issue
+  #16110, where the icons alone are offered).
 - **Per-monitor DPI awareness** (Preferences > MISC., experimental, restart required).
 - **Font sizes 1 to 4 pt** in the font size lists.
 - **A crash guard** for DirectWrite fonts with an out-of-range weight (Scintilla bug #2520).

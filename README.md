@@ -1,3 +1,9 @@
+> [!IMPORTANT]
+> **This is not the official Notepad++ repository.** It is Pyre909's personal fork, whose default branch `pyre`
+> is an unofficial build of Notepad++ ([what's different](PYRE-BUILD.md)). For official Notepad++, its
+> releases and its issues, go to [notepad-plus-plus/notepad-plus-plus](https://github.com/notepad-plus-plus/notepad-plus-plus)
+> and [notepad-plus-plus.org](https://notepad-plus-plus.org/). The text below is the official README, kept as it is.
+
 What is Notepad++ ?
 ===================
 
