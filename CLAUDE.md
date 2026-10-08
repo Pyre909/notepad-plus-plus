@@ -34,6 +34,7 @@ branch, read it with `git show origin/pyre:CLAUDE.md`.
 | `directwrite-font-smoothing_20261006` | DirectWrite following the Windows font smoothing (fixes #14954: with DirectWrite, turning the Windows font smoothing off, or to Standard, changed nothing), one commit on upstream `master` (`76b3210`, CI: all 13 jobs pass); PR texts in kit section 8. `pyre` has its code as the "Follow Windows" antialiasing of its Text Rendering settings (since 2026-10-06). |
 | `directwrite-font-names_20260930`, `per-monitor-dpi_20260925` | PR candidates (font names: a bug fix of #9951 and #12393, rewritten on 2026-10-06 as `9f605be`, PR texts ready, what's left in kit section 5; DPI: reconciled with upstream's per-monitor dialogs on 2026-10-07 as `8a455e0`, CI: all 13 jobs pass; discuss with maintainers first, through the comment for #14959 in kit section 4). |
 | `font-size-1pt_20260925`, `font-weight-names_20260925`, the other `archive/*` | History: a closed PR, a superseded version, early drafts. Don't build on them. |
+| `standard-icons-hidpi_20261007` | The 32 "Standard icons" of the toolbar redrawn (ICOs 16-48 px and their SVGs, no code), one commit on upstream `master` (`bc2e60f`): offered by a comment on #16110 (2026-10-07), no PR; the maintainers decide how to use them. `pyre` has the same icons in place of the bitmaps. |
 | `scintilla-upstream_20260930` | Tooling branch (no Notepad++ history): test tools, PR kit, status notes. |
 
 PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
@@ -110,6 +111,7 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
 | Per-monitor DPI (MISC., `perMonitorDpiAwareness`) | `dpiManagerV2`, `StaticDialog`, docking (`DockingCont`, `DockingManager`, `Gripper`), panels |
 | Font sizes 1-4 pt | `fontSizeStrs` in `NppConstants.h` |
 | Crash guard (Scintilla bug #2520) | `FontDirectWrite::HFont` in `SurfaceD2D.cxx` |
+| Standard toolbar icons (redrawn, in place of the 16x16 bitmaps) | `icons/standard/toolbar-hidpi/` (ICOs: the button's `IDR_` + 4000, disabled + 4100, `IDI_STDHD_*` in `resource.h`; sources and generator in the tooling branch's `icons/standard-hidpi/v2`), the image lists `HLIST_STD_HIDPI` / `HLIST_DISABLE_STD_HIDPI` in `ImageListSet` (plugin buttons: their toolbar bitmap), the standard branch of `ToolBar::reset` |
 | Build name | `AboutDlg.cpp` |
 | Releases | `.github/workflows/pyre-release.yml`, `.github/pyre/package.ps1`, `.github/pyre/installer.ps1`, installer tweaks in `PowerEditor/installer/nsisInclude/` |
 
@@ -119,7 +121,10 @@ Actions > **Pyre909 release** > Run workflow (or push a tag `pyre-*`; or `gh wor
 pyre`). It builds x64 and ARM64 with MSBuild, then for each a portable zip and an installer (official
 `nppSetup.nsi`), with the official release's plugins, updater and Explorer context menu of the same architecture,
 and auto-update off (`disableNppAutoUpdate.xml`). The result is a **draft release**, private to people with push
-access. Locally: run `package.ps1` then `installer.ps1`, each with `-Arch x64` or `-Arch arm64` and the same
+access. Publishing a draft (Pyre909 published `pyre-8.9.8.1-5771464` on 2026-10-07, the first public one) creates its
+`pyre-*` tag, whose push runs the workflow and CI again on the same commit: cancel those runs (`gh run cancel`), or a
+duplicate draft appears. The files are unsigned: SmartScreen warns on other machines (More info > Run anyway); the
+release notes say so. Locally: run `package.ps1` then `installer.ps1`, each with `-Arch x64` or `-Arch arm64` and the same
 `-OutDir` (PowerShell 7; the installer also needs NSIS and 7-Zip).
 
 ## What still needs real Windows
