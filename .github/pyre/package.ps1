@@ -104,10 +104,29 @@ Plugins Admin still works. To update, unzip a newer build over this folder: your
 # the release notes: a header, then a line per file (installer.ps1 adds its own)
 $notes = Join-Path $OutDir 'notes.md'
 if (-not (Test-Path $notes)) {
+	# what's different from official Notepad++: PYRE-BUILD.md's list, its issue numbers made links (in the release
+	# notes, a bare #NNNNN would point at this fork)
+	$changes = ((Get-Content (Join-Path $root 'PYRE-BUILD.md') -Raw -Encoding utf8) -split '(?m)^## ')[1] -replace '^.*\r?\n', ''
+	if (-not $changes.Trim()) { throw "PYRE-BUILD.md has no list of what's different" }
+	$changes = $changes.Trim() -replace 'official issue\s+#(\d+)', '[official issue #$1](https://github.com/notepad-plus-plus/notepad-plus-plus/issues/$1)' -replace 'Scintilla bug\s+#(\d+)', '[Scintilla bug #$1](https://sourceforge.net/p/scintilla/bugs/$1/)'
 	@"
 Notepad++ $version, Pyre909 build: an unofficial build of the pyre branch. Source: $commitLink
 
+Not official Notepad++: for that, see https://notepad-plus-plus.org/. More about this build: [PYRE-BUILD.md](https://github.com/Pyre909/notepad-plus-plus/blob/pyre/PYRE-BUILD.md).
+
+These files aren't code-signed, so Windows SmartScreen may say "Windows protected your PC": choose More info > Run anyway. For the portable zip, you can right-click it > Properties > Unblock before extracting.
+
 ARM64 is for Windows on ARM, including Windows in Parallels on an Apple Silicon Mac. In all of these, auto-update is off (disableNppAutoUpdate.xml), so the official updater won't replace this build; Plugins Admin still works.
+
+## What's different from official Notepad++
+
+$changes
+
+## License
+
+Licensed under the GPL v3, like official Notepad++ (license.txt in each file). The plugins, the updater and the Explorer menu are unmodified files from the official release. Their source: [mimeTools](https://github.com/npp-plugins/mimetools), [NppConverter](https://github.com/npp-plugins/converter), [NppExport](https://github.com/chcg/NPP_ExportPlugin), the updater [WinGUp](https://github.com/gup4win/wingup), the Explorer menu [NppShell](https://github.com/notepad-plus-plus/nppShell).
+
+## Files
 
 "@ | Set-Content -Path $notes -Encoding utf8
 }

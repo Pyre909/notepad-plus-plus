@@ -44,7 +44,10 @@ On Windows on ARM, take the ARM64 files: the x64 ones run there too (emulated), 
 of an x64 installation doesn't load in the ARM64 Explorer.
 
 The plugins, the updater and the Explorer context menu come from the official release of the same version and
-architecture. Auto-update is off in all of them (`disableNppAutoUpdate.xml`), so the official updater can't replace this build;
+architecture, unmodified. Their source: [mimeTools](https://github.com/npp-plugins/mimetools),
+[NppConverter](https://github.com/npp-plugins/converter), [NppExport](https://github.com/chcg/NPP_ExportPlugin), the
+updater [WinGUp](https://github.com/gup4win/wingup), the Explorer menu [NppShell](https://github.com/notepad-plus-plus/nppShell).
+Auto-update is off in all of them (`disableNppAutoUpdate.xml`), so the official updater can't replace this build;
 Plugins Admin still works. To go back to official Notepad++, uninstall this build first (its uninstaller removes
 `disableNppAutoUpdate.xml`), or delete that file from the Notepad++ folder after installing the official one.
 
@@ -60,3 +63,9 @@ The workflow and its scripts: `.github/workflows/pyre-release.yml`, `.github/pyr
 
 The changes here touch few lines that upstream edits often. The version number is left as upstream has it,
 and the release scripts read it from `PowerEditor/src/resource.h`.
+
+## License
+
+Like official Notepad++, this build is under the GPL version 3 with Notepad++'s clarifications ([LICENSE](LICENSE),
+`license.txt` in every zip and installation). Its source is this repository: each release links to the commit it was
+built from. It is not made or endorsed by the Notepad++ project.
