@@ -76,12 +76,15 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
   `doLocalConf.xml`. Quote the path (it has a space). From Git Bash, which Claude Code uses for shell commands
   on Windows, don't start the exe directly: the command waits until Notepad++ closes, and an unquoted
   `C:\npp-test` loses its backslash. Use `powershell -Command "Start-Process ..."` instead.
-- CI (`.github/workflows/CI_build.yml`) runs on every push: 13 jobs (MSVC x64/Win32/ARM64 Release and Debug,
-  CMake, MinGW, Clang). MSVC catches things GCC doesn't; check it after pushing. The jobs depend on the push's
-  **last commit** alone: if it changes only `.md` or `.txt` files nothing is built, if only XML files just the XML
-  check runs. So when code commits come before such a commit (CLAUDE.md last), put `[force all]` in its title.
-  That happened on 2026-10-06: `pyre`'s `e3f08a8` (RTL views drawn with GDI) went unbuilt under `999c593`, until
-  `76552d9` forced all the jobs (all 13 pass).
+- CI runs **only when started by hand** (since 2026-10-16): Actions > **Pyre909 CI** > Run workflow, or
+  `gh workflow run pyre-ci.yml --ref pyre -f ref=<branch, tag or commit>` (`-f jobs=auto` for upstream's filtering).
+  It's upstream's `CI_build.yml` (13 jobs: MSVC x64/Win32/ARM64 Release and Debug, CMake, MinGW, Clang), turned into
+  `.github/workflows/pyre-ci.yml` by `.github/pyre/make-ci.ps1`: run that script again after an upstream merge that
+  changes `CI_build.yml`. Upstream's own `CI_build` and `release-notifier` workflows are disabled on the fork
+  (`gh workflow disable`, a repository setting, not a file change), so pushes build nothing. Run CI before pushing a
+  PR branch for review, and after an upstream merge into `pyre`; MSVC catches things GCC doesn't and vice versa. By
+  default every job runs: upstream's filter (only `.md`/`.txt` changed: nothing built; `[force all]` in the title)
+  applies with `jobs=auto` only.
 
 ## Code conventions
 
@@ -117,13 +120,11 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
 
 ## Releases
 
-Actions > **Pyre909 release** > Run workflow (or push a tag `pyre-*`; or `gh workflow run pyre-release.yml --ref
-pyre`). It builds x64 and ARM64 with MSBuild, then for each a portable zip and an installer (official
+Actions > **Pyre909 release** > Run workflow (or `gh workflow run pyre-release.yml --ref pyre`). It builds x64 and ARM64 with MSBuild, then for each a portable zip and an installer (official
 `nppSetup.nsi`), with the official release's plugins, updater and Explorer context menu of the same architecture,
 and auto-update off (`disableNppAutoUpdate.xml`). The result is a **draft release**, private to people with push
-access. Publishing a draft (Pyre909 published `pyre-8.9.8.1-5771464` on 2026-10-07, the first public one) creates its
-`pyre-*` tag, whose push runs the workflow and CI again on the same commit: cancel those runs (`gh run cancel`), or a
-duplicate draft appears. The files are unsigned: SmartScreen warns on other machines (More info > Run anyway); the
+access. Publishing a draft creates its `pyre-*` tag; since 2026-10-16 that starts nothing (the workflow has no tag
+trigger any more; before, it ran the release and CI again and made a duplicate draft). The files are unsigned: SmartScreen warns on other machines (More info > Run anyway); the
 release notes say so. Locally: run `package.ps1` then `installer.ps1`, each with `-Arch x64` or `-Arch arm64` and the same
 `-OutDir` (PowerShell 7; the installer also needs NSIS and 7-Zip).
 

@@ -30,7 +30,7 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 ## Getting a build
 
 Builds are made by the **Pyre909 release** workflow (Actions tab > Pyre909 release > Run workflow, with `pyre`
-as the fork's default branch; or push a tag named `pyre-*`). It creates a **draft release**, visible only to
+as the fork's default branch). It creates a **draft release**, visible only to
 people with push access to the fork, with, for x64 and for ARM64 (Windows on ARM, including Windows in Parallels
 on an Apple Silicon Mac):
 

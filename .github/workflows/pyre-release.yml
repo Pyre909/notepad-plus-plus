@@ -2,11 +2,9 @@ name: Pyre909 release
 
 # Private builds of the pyre branch: x64 and ARM64 installers and portable zips in a DRAFT release, which only people
 # with push access to this repository can see. Run it from the Actions tab (Run workflow, with pyre as the default
-# branch) or push a tag named pyre-*. Publishing the draft makes it public.
+# branch). Publishing the draft makes it public; it creates the release's tag, which starts nothing (no push trigger).
 
 on:
-  push:
-    tags: ['pyre-*']
   workflow_dispatch:
 
 permissions:
