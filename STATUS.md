@@ -32,6 +32,12 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
 - Waiting on the maintainers: #16110 (icons): softmgr wrote "I'll take them" on 2026-10-13; no maintainer reply.
 - The VM after the 2026-10-16 print check: "Microsoft Print to PDF" is the default printer (Windows manages it):
   Pyre909 sets the Brother back. Windows font smoothing is on again.
+- Memory checks (2026-10-16, the Valgrind counterparts on Windows ARM64; see `review/README.md`): `review/asan.ps1 -Ref <branch>`
+  (AddressSanitizer build in `npp.worktrees\asan`, the app tests on it: no memory error on `pyre` and the four PR
+  branches) and `leaks.ps1` with UMDH (heap growth with its stacks, file and line: none on `pyre` and the four PRs, a
+  one-time 33 KB on the font smoothing build at 300 tab switches gone at 2000). Debugging Tools for Windows installed
+  (ARM64: cdb, umdh, gflags); the stack recording is on for the test builds only (`review/umdh-scope.ps1`, admin;
+  `-Remove` undoes it); symbols cached in `C:\symbols`.
 - Reviews: `review.ps1 -Quiet`, then the AI review (skill `npp-review`). After a change of a class layout in a header
   (a member added), delete the worktree's `PowerEditor\visual.net\<arch>` folders first: the harness builds
   incrementally, and stale objects gave 5 false failures on 2026-10-15. New test `leaks.ps1` (any branch).
