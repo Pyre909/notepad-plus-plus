@@ -291,7 +291,22 @@ fix #NNNNN (or "ref #14959")
 
 ## 5. Fonts of a weight ("Fira Code Light") under DirectWrite, done by Notepad++
 
-Branch `directwrite-font-names_20260930`, commit `9f605be` on master `a69bc23` (rewritten 2026-10-06 after a review of
+**Rewritten again on 2026-10-15, smaller (`801cb36`, on `master` `a660d79`): 3 files, +161 −2**, at Pyre909's request
+(size was the likeliest reason to be closed, like #18418). What changed: no new files (the DirectWrite lookup is in
+`ScintillaEditView.cpp`, so no CMakeLists/vcxproj edits); upstream's lines in `setSpecialStyle` untouched (GDI gets
+exactly the same messages), a block after them records the style's font (`_styleFonts`: name, bold, italic) and, with
+DirectWrite, sets the DirectWrite family/weight/stretch/italic; no GDI family enumeration: `CreateFontFromLOGFONT` asked
+at `FW_DONTCARE` gives the same font as the 2026-10-06 version for all 228 families of the VM (107 remapped, 0
+differences; asking `FW_NORMAL` fails for Thin/ExtraLight/Hairline, a bold simulation); printing and any later
+technology change go through one `setStyleFontsFor(technology)` (no `refreshStyleFonts`/`hasScintillaFont`: a font a
+plugin set on a remapped style of Notepad++'s views is replaced when printing ends, as every buffer switch already does).
+Reviewed by three independent AI reviews (the old version twice, split by checklist area; the new one once): fixed on
+the way, a DirectWrite family name of 32+ characters (Scintilla throws copying it into a LOGFONT) and a style switching
+from a remapped font to a usual one (it kept the light weight). Test `directwrite-font-names` 17 checks (a style in
+"Bahnschrift SemiLight SemiConde", stretch 4; one in Consolas, 400). The previous version is tagged
+`prev/directwrite-font-names_20261015` (local).
+
+Previous state, kept for the record: commit `9f605be` on master `a69bc23` (rewritten 2026-10-06 after a review of
 the first version, `6e8579e`, and corrected after a second review), 7 files (+361 −19): the new
 `ScintillaComponent/FontFamilyNames.cpp/.h` (listed in CMakeLists.txt and notepadPlus.vcxproj; the GCC makefile finds
 it by itself), `ScintillaEditView` (`setSpecialStyle`, one font record per view, `refreshStyleFonts`) and `Printer.cpp`.
@@ -358,26 +373,27 @@ The font lists show GDI family names, and those include the weight or width when
 
 Scintilla's maintainer doesn't want this name mapping inside Scintilla (Scintilla bugs 2080 and 2356) and pointed to IDWriteGdiInterop for the app to do it, like xomx said in #14526. So this does it in Notepad++ only, nothing in Scintilla:
 
-- With DirectWrite, each style gets the family, weight, width and style DirectWrite knows the font by (new FontFamilyNames.cpp, called from ScintillaEditView::setSpecialStyle). The lookup is DirectWrite's own GDI mapping (IDWriteGdiInterop::CreateFontFromLOGFONT), so it's never a simulated bold. Names DirectWrite already knows as a family ("Consolas", "Courier New") are left as they are.
+- With DirectWrite, each style gets the family, weight, width and style DirectWrite knows the font by (ScintillaEditView::setSpecialStyle, after the existing code, which is unchanged). The lookup is DirectWrite's own GDI mapping (IDWriteGdiInterop::CreateFontFromLOGFONT), so it's never a simulated bold. Names DirectWrite already knows as a family ("Consolas", "Courier New") are left as they are.
 - Bold is 300 heavier than the font, the same step as regular to bold: bold "Fira Code Light" becomes "Fira Code" SemiBold. That's in the range of how heavy GDI makes a light font bold. GDI doesn't bold a SemiBold font at all; with DirectWrite its bold is the family's heaviest, up to Black.
 - GDI isn't touched, it understands the GDI names already.
-- Printing: Scintilla prints with GDI from the screen styles, so while printing the styles get their GDI names back, then their DirectWrite ones afterwards. A style a plugin changed itself is left alone.
-- DirectWrite is only loaded when first needed (no new link dependency), and the lookup is cached per font name, about 15 ms for all 319 fonts on my machine.
-- Styles without their own font use what SCI_STYLECLEARALL gave them (one font record per view), so their bold and italic are relative to the right font.
+- Printing: Scintilla prints with GDI from the screen styles, so while printing the remapped styles get their GDI names back, then their DirectWrite ones afterwards (setStyleFontsFor, which also works for any later change of a view's technology).
+- DirectWrite is only loaded when first needed (no new link dependency), and the lookup is cached per font name.
+- Styles without their own font use what SCI_STYLECLEARALL gave them (one small font record per view), so their bold and italic are relative to the right font.
 
-It's bigger than the usual small PR (7 files, ~360 lines), mostly the new FontFamilyNames.cpp/.h. I don't see a smaller way that fixes it for all fonts.
+3 files, ~160 lines. Bigger than the usual small PR, but I cut it down as far as I could while still fixing it for every font.
 
 Side effects, DirectWrite only:
 - A style reads back the DirectWrite font (SCI_STYLEGETFONT "Fira Code", SCI_STYLEGETWEIGHT 300), and so do plugins that read styles, an exporter for example.
 - A Medium or SemiBold font has a weight above normal, so SCI_STYLEGETBOLD says bold; a family with only italic fonts reads back as italic.
-- Scintilla's IME composition window builds a GDI font from the style's name and weight, so it shows "Fira Code" Regular instead of Light.
+- Scintilla's IME composition window and the autocompletion list's window font are built with GDI from the style's name and weight, so they show "Fira Code" Regular instead of Light (the list items themselves are drawn right).
+- If a plugin set its own font on one of these styles, printing puts the theme's font back (switching tabs already does that).
 
 Tested on Windows 11 ARM64, Release builds for ARM64, x64 and Win32, no warnings in the changed files:
 - Every name in the font list (319 fonts, regular, bold, italic) maps to the right DirectWrite font, including truncated names like "Bahnschrift SemiBold SemiConden", families from Hairline to Black, CJK fonts and the "@" vertical names.
 - Bold measured against GDI's (ink of a sample line at 15 and 24 px): 300 heavier lands in GDI's range for Light and Medium fonts, and bold "Cascadia Code SemiBold" comes out as Cascadia Code Bold, not a fake bold.
-- In Notepad++ with "Bahnschrift Light" as the Default Style font (automated test): with DirectWrite the styles read back "Bahnschrift" 300, bold 600; with GDI "Bahnschrift Light" 400, bold 700, same as before. Current master gets the fallback font here.
+- In Notepad++ with "Bahnschrift Light" as the Default Style font (automated test): with DirectWrite the styles read back "Bahnschrift" 300, bold 600, a style in "Bahnschrift SemiLight SemiConde" "Bahnschrift" 350 semi-condensed, one in Consolas stays Consolas 400; with GDI "Bahnschrift Light" 400, bold 700, same as before. Current master gets the fallback font here.
 - Printing with DirectWrite on, "Segoe UI Light" to Microsoft Print to PDF: the PDF embeds Segoe UI Light (weight 300), same as GDI prints it.
-- All 13 CI jobs pass on my fork (MSVC with code analysis, CMake, MinGW, Clang).
+- (CI line: to fill once the fork's CI runs again.)
 
 AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
 
@@ -401,9 +417,12 @@ Before opening:
 4. Optional: an exporter (NppExport, bundled with the installer) with "Bahnschrift Light" and DirectWrite, to see what
    the side effects of the body give in the exported HTML/RTF (font name, bold).
 5. Optional: the comment on #9951 above (its repro checked, see there).
-6. If section 6 is merged first, this branch also has to set the style fonts again when a view's technology changes (a
-   right-to-left view goes to GDI): `refreshStyleFonts(technology, previousTechnology)` is there for printing already,
-   `pyre` calls it from `technologyChanged` (see Conflicts at the top).
+6. Whichever of this and section 6 is merged second calls `setStyleFontsFor(execute(SCI_GETTECHNOLOGY))` in
+   `changeTextDirection` after each `SCI_SETTECHNOLOGY` (a right-to-left view goes to GDI and back): else an RTL view
+   draws "Fira Code" 300 with GDI (Regular), and an LTR view styled while GDI keeps the fallback font. Same for
+   section 7's `setTechnologyToAll`.
+8. Redo for the 2026-10-15 version: the printing check of item 2 (it needs "Microsoft Print to PDF" as the default
+   printer, Pyre909's call), and push + CI once Actions runs again on the fork.
 7. PR body rewritten in a casual voice on 2026-10-07; checked then: the branch is on `master` `a69bc23` (current),
    #9951 and #12393 still open, no other open PR on them. The body now says why the PR is larger than the template's
    1-4 files / ~30 lines.
