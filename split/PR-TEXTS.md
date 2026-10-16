@@ -413,7 +413,7 @@ Before opening:
 ## 6. Right-to-left views drawn with GDI (bug fix, first)
 
 Branch `rtl-views-gdi_20261006` (worktree `npp.worktrees\rtl-views-gdi_20261006`), one commit on upstream `master`,
-4 files, +18 −21, no Scintilla change. Split from the live switch on 2026-10-06 (Pyre909's choice, after the
+5 files, +15 −22, no Scintilla change. Split from the live switch on 2026-10-06 (Pyre909's choice, after the
 independent review): CONTRIBUTING wants a single feature or bug fix per PR, and this part fixes two open issues, while
 the live switch (section 7) is an enhancement that needs its issue Accepted first.
 
@@ -431,8 +431,9 @@ creation; 2724e0d (2023-11-30, per-document RTL) removed that check and added th
 Urdu, Uyghur; `editZoneRTL` defaults to yes) documents start RTL and every view is mirrored from creation, so with
 DirectWrite, the default of a fresh config, the editor is drawn left-to-right in a mirrored window without a warning
 (official 8.9.8.1 and master 697f46b: `vm/shots/rtl-ui-before-after.png`). The fix restores 9bc790b's intent per view:
-a mirrored view uses GDI (`init` for a view mirrored at creation; `changeTextDirection`: GDI before mirroring, the
-setting's technology back after unmirroring, so a view switching between RTL and LTR tabs switches technology too). The
+a mirrored view uses GDI (`init` for a view mirrored at creation, which gets the setting's technology once LTR;
+`changeTextDirection`: GDI while RTL, then the technology the view had before, kept in `_technologyIfLTR`, so a view
+switching between RTL and LTR tabs switches technology too). The
 refusal and its `RTLvsDirectWrite` entry are removed. Startup: the first documents are activated while already
 current (`activateBuffer` returns early), so with `editZoneRTL="no"` the views stayed mirrored (#17518, reproduced on
 master with `-nosession` and no file; it would have shown under DirectWrite too with the GDI rule): two lines in
@@ -444,14 +445,22 @@ out of DX11, back, RTL under DX11, all drawn right, with this VM's default "Opti
 casts and braces (fixed); a reply on #17865 is from a user, not a maintainer (its claim was wrong). App-level tests,
 ARM64 build on the VM: `rtl-views-gdi` (16 checks), `rtl-ui-gdi` (10, Hebrew UI) and `rtl-ui-editzone-no` (7);
 unmodified upstream fails the RTL UI and #17518 ones. The fork's CI: all 13 jobs pass (`53d0026`, run 37431213095).
-Known, not changed (disclosed in the PR): a plugin that set its own technology on one of Notepad++'s views gets the
-setting's after an RTL round trip; a plugin's `SCI_SETBIDIRECTIONAL` is cleared when its view goes to GDI (Scintilla
+Second review on 2026-10-15 (rebased on `master` `a660d79`, independent AI review against the checklist): going back to
+LTR applied the live setting, so a rendering mode picked in Preferences reached that one view before the restart its tip
+asks for, and a technology a plugin had set was replaced. Fixed: the view gets back the technology it had
+(`_technologyIfLTR`, one header line), the technology switch moved into the existing RTL/LTR block, comments shortened,
+`Fix #17865, fix #17518` in the commit message; test `rtl-views-gdi` now 17 checks (a plugin's technology kept). The
+header change needs a clean build: an incremental one gave stale objects and 5 false failures. Rejected: removing
+`RTLvsDirectWrite` from the other languages (upstream's usual way leaves it to translators). ARM64, x64 and Win32
+builds and the three tests pass (`9fdd356`); the fork's CI didn't run (Actions blocked on the fork since 2026-10-15).
+Known, not changed (disclosed in the PR): in an RTL UI a Scintilla a plugin creates is mirrored from creation like the
+others, so it starts on GDI; a plugin's `SCI_SETBIDIRECTIONAL` is cleared when its view goes to GDI (Scintilla
 does that); session documents saved RTL now show RTL under DirectWrite too (intended).
 
 Order: Pyre909 opens the bug report below if they want a record of the RTL UI case (optional: #17865 and #17518 are
 open), then the PR with the numbers and `vm/shots/rtl-ui-before-after.png` (in place of "(screenshot)"). PR body
 rewritten in a casual voice on 2026-10-07; checked then: the branch merges cleanly with `master` `a69bc23`, #17865 and
-#17518 still open, no other open PR on it. The commit can be amended until the PR is
+#17518 still open, no other open PR on it. Rebased on `a660d79` on 2026-10-15 (no conflict); both issues still open then. The commit can be amended until the PR is
 opened, then new commits only. The PR is opened from
 https://github.com/notepad-plus-plus/notepad-plus-plus/compare/master...Pyre909:notepad-plus-plus:rtl-views-gdi_20261006
 
@@ -505,17 +514,17 @@ What that looks like right now:
 - With DirectWrite on, View > Text Direction RTL pops up "RTL is not compatible with DirectWrite mode" once, then just does nothing after that (#17865).
 - With an RTL UI language (Hebrew, Arabic, Farsi, Kurdish, Urdu, Uyghur), documents start RTL and every view is mirrored from the start. DirectWrite is the default rendering mode, so out of the box the editor is drawn left-to-right inside a mirrored window, no warning at all. Screenshot below: 8.9.8.1 on the left, this PR on the right. 9bc790b used to turn DirectWrite off for that case, but the per-document RTL change (2724e0d) took that check out.
 
-So this PR just draws a mirrored view with GDI, whatever the rendering mode is, and gives it its rendering mode back once it's LTR again (that includes switching between RTL and LTR tabs). A view that starts mirrored never gets DirectWrite in the first place. The refusal and its message are gone.
+So this PR just draws a mirrored view with GDI, whatever the rendering mode is, and gives it back whatever it was using once it's LTR again (that includes switching between RTL and LTR tabs, and a technology a plugin set on the view). A view that starts mirrored never gets DirectWrite in the first place. The refusal and its message are gone.
 
 While I was in there: at startup the first document gets activated while it's already the current one, so the views never got their direction set, and with editZoneRTL="no" they stayed mirrored anyway (#17518). Two lines in Notepad_plus::init fix that.
 
-4 files, nothing in Scintilla.
+5 files, nothing in Scintilla.
 
 (screenshot)
 
 Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build fine too), fresh config so DirectWrite is on: RTL/LTR back and forth, RTL and LTR tabs, an RTL doc cloned to the other view, the Document Map following along, a long wrapped doc keeping its scroll position through all of it, and the Hebrew UI from startup to exit, also with editZoneRTL="no" and no session. No messages anywhere, and LTR documents stay on DirectWrite.
 
-Two things I know about and left alone: if a plugin set its own technology on one of Notepad++'s views, it gets the rendering mode back after an RTL round trip, and a plugin's SCI_SETBIDIRECTIONAL gets cleared when its view switches to GDI (that's Scintilla's doing).
+Two things I know about and left alone: with an RTL UI, a Scintilla a plugin creates is mirrored from the start like the others, so it starts on GDI too, and a plugin's SCI_SETBIDIRECTIONAL gets cleared when its view switches to GDI (that's Scintilla's doing).
 
 AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
 
