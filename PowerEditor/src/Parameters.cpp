@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -38,14 +39,18 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include <SciLexer.h>
 #include <Scintilla.h>
 
+#include "AboutDlg.h"
 #include "Common.h"
 #include "ContextMenu.h"
+#include "Notepad_plus.h"
 #include "Notepad_plus_Window.h"
 #include "Notepad_plus_msgs.h"
 #include "NppConstants.h"
@@ -2197,7 +2202,12 @@ void NppParameters::setFontList(HWND hWnd)
 	lf.lfFaceName[0]='\0';
 	lf.lfPitchAndFamily = 0;
 	HDC hDC = ::GetDC(hWnd);
-	::EnumFontFamiliesEx(hDC, &lf, EnumFontFamExProc, reinterpret_cast<LPARAM>(&_fontlist), 0);
+	if (hDC)
+	{
+		::EnumFontFamiliesEx(hDC, &lf, EnumFontFamExProc, reinterpret_cast<LPARAM>(&_fontlist), 0);
+		::ReleaseDC(hWnd, hDC);
+	}
+	_fontlist.push_back(DEFAULT_DLG_FONT);
 }
 
 bool NppParameters::isInFontList(const std::wstring& fontName2Search) const
@@ -3371,7 +3381,7 @@ bool NppParameters::makeDefaultServerWhiteList(bool bSave2File)
 {
 	if (_pXmlServerWhiteListDoc)
 	{
-		_pXmlServerWhiteListDoc->reset();
+		NppXml::reset(_pXmlServerWhiteListDoc);
 	}
 	else
 	{
@@ -3386,9 +3396,7 @@ bool NppParameters::makeDefaultServerWhiteList(bool bSave2File)
 	NppXml::Element childElement = NppXml::createChildElement(root, "NetworkPathsAlwaysAction");
 	NppXml::setAttribute(childElement, "value", "?"); // default (networkPathAlwaysAsk)
 
-	return bSave2File ?
-		_pXmlServerWhiteListDoc->save_file(_serverWhiteListPath.c_str(), "    ", pugi::format_indent | pugi::format_no_declaration | pugi::format_save_file_text) 
-		: true;
+	return bSave2File ? NppXml::saveServerWhiteList(_pXmlServerWhiteListDoc, _serverWhiteListPath) : true;
 }
 
 bool NppParameters::addServerToWhiteList(const char* netpath, bool bCaseSensitive)
@@ -3430,9 +3438,9 @@ bool NppParameters::addServerToWhiteList(const char* netpath, bool bCaseSensitiv
 
 	// add new record
 	NppXml::Element elementServerAllowed = NppXml::createChildElement(root, "ServerAllowed");
-	NppXml::setAttribute(elementServerAllowed, "name", netpathServerName.c_str());
+	NppXml::setAttribute(elementServerAllowed, "name", netpathServerName);
 
-	return _pXmlServerWhiteListDoc->save_file(_serverWhiteListPath.c_str(), "    ", pugi::format_indent | pugi::format_no_declaration | pugi::format_save_file_text);
+	return NppXml::saveServerWhiteList(_pXmlServerWhiteListDoc, _serverWhiteListPath);
 }
 
 bool NppParameters::setNetworkPathAlwaysActionInServerWhitelist(NetworkPathAlwaysAction mode)
@@ -3467,7 +3475,7 @@ bool NppParameters::setNetworkPathAlwaysActionInServerWhitelist(NetworkPathAlway
 
 			_networkPathAlwaysAction = mode;
 
-			return _pXmlServerWhiteListDoc->save_file(_serverWhiteListPath.c_str(), "    ", pugi::format_indent | pugi::format_no_declaration | pugi::format_save_file_text);
+			return NppXml::saveServerWhiteList(_pXmlServerWhiteListDoc, _serverWhiteListPath);
 		}
 	}
 
@@ -3554,14 +3562,14 @@ bool NppParameters::getSessionFromXmlTree(const NppXml::Document& pSessionDoc, S
 									// otherwise any subsequent indirect Notepad++ app launching (e.g. via the NppShell context menu)
 									// causes this getSessionFromXmlTree will check old out-of-date session.xml content
 									bNeedsSessionXmlFileUpdateAfter = true;
-									viewRoots[k].remove_child(childNode);
+									NppXml::deleteChild(viewRoots[k], childNode);
 									continue;
 								}
 							}
 							else if (_networkPathAlwaysAction == networkPathAlwaysSkip)
 							{
 								bNeedsSessionXmlFileUpdateAfter = true;
-								viewRoots[k].remove_child(childNode);
+								NppXml::deleteChild(viewRoots[k], childNode);
 								continue;
 							}
 							else if (_networkPathAlwaysAction == networkPathAlwaysLoad)
@@ -3616,14 +3624,14 @@ bool NppParameters::getSessionFromXmlTree(const NppXml::Document& pSessionDoc, S
 								if (buttonID == IDCANCEL || buttonID == IDNO) // Skip once or Always skip
 								{
 									bNeedsSessionXmlFileUpdateAfter = true;
-									viewRoots[k].remove_child(childNode);
+									NppXml::deleteChild(viewRoots[k], childNode);
 									continue;
 								}
 							}
 							else if (_networkPathAlwaysAction == networkPathAlwaysSkip)
 							{
 								bNeedsSessionXmlFileUpdateAfter = true;
-								viewRoots[k].remove_child(childNode);
+								NppXml::deleteChild(viewRoots[k], childNode);
 								continue;
 							}
 							else if (_networkPathAlwaysAction == networkPathAlwaysLoad)
@@ -3645,24 +3653,24 @@ bool NppParameters::getSessionFromXmlTree(const NppXml::Document& pSessionDoc, S
 					}
 					else if (!wstrBackupFilePath.empty())
 					{
-						wchar_t* fn = ::PathFindFileNameW(wstrBackupFilePath.c_str());
-						::StringCchCopyW(normalizedBackupFilePath, MAX_PATH, fn);
+						const wchar_t* fn = ::PathFindFileNameW(wstrBackupFilePath.c_str());
+						static_cast<void>(::StringCchCopyW(normalizedBackupFilePath, MAX_PATH, fn));
 					}
 
 					std::wstring currentBackupFilePath = NppParameters::getInstance().getUserPath() + L"\\backup\\";
 
 					wchar_t normalizedBackupDir[MAX_PATH]{};
 					if (::GetFullPathNameW(currentBackupFilePath.c_str(), MAX_PATH, normalizedBackupDir, NULL) == 0)
-						::StringCchCopyW(normalizedBackupDir, MAX_PATH, currentBackupFilePath.c_str());
+						static_cast<void>(::StringCchCopyW(normalizedBackupDir, MAX_PATH, currentBackupFilePath.c_str()));
 
 					if (normalizedBackupFilePath[0])
 					{
-						std::wstring backupFilePath = normalizedBackupFilePath;
+						const std::wstring backupFilePathW = normalizedBackupFilePath;
 						bool isConfined = false;
 						size_t normalizedBackupDirLen = wcslen(normalizedBackupDir);
-						if (backupFilePath.size() >= normalizedBackupDirLen)
+						if (backupFilePathW.size() >= normalizedBackupDirLen)
 						{
-							int res = ::CompareStringOrdinal(backupFilePath.c_str(), static_cast<int>(normalizedBackupDirLen), normalizedBackupDir, static_cast<int>(normalizedBackupDirLen), TRUE);
+							int res = ::CompareStringOrdinal(backupFilePathW.c_str(), static_cast<int>(normalizedBackupDirLen), normalizedBackupDir, static_cast<int>(normalizedBackupDirLen), TRUE);
 							isConfined = res == CSTR_EQUAL;
 						}
 
@@ -3673,7 +3681,7 @@ bool NppParameters::getSessionFromXmlTree(const NppXml::Document& pSessionDoc, S
 
 							std::wstring safePath = normalizedBackupDir;
 							safePath += fn;
-							::StringCchCopyW(normalizedBackupFilePath, MAX_PATH, safePath.c_str());
+							static_cast<void>(::StringCchCopyW(normalizedBackupFilePath, MAX_PATH, safePath.c_str()));
 						}
 					}
 
@@ -3762,14 +3770,14 @@ bool NppParameters::getSessionFromXmlTree(const NppXml::Document& pSessionDoc, S
 							if (buttonID == IDCANCEL || buttonID == IDNO) // Skip once or Always skip
 							{
 								bNeedsSessionXmlFileUpdateAfter = true;
-								fileBrowserRoot.remove_child(childNode);
+								NppXml::deleteChild(fileBrowserRoot, childNode);
 								continue;
 							}
 						}
 						else if (_networkPathAlwaysAction == networkPathAlwaysSkip)
 						{
 							bNeedsSessionXmlFileUpdateAfter = true;
-							fileBrowserRoot.remove_child(childNode);
+							NppXml::deleteChild(fileBrowserRoot, childNode);
 							continue;
 						}
 						else if (_networkPathAlwaysAction == networkPathAlwaysLoad)
@@ -3810,7 +3818,7 @@ bool NppParameters::getSessionFromXmlTree(const NppXml::Document& pSessionDoc, S
 	}
 
 	if (bNeedsSessionXmlFileUpdateAfter && !sessionDocFileName.empty())
-		pSessionDoc->save_file(sessionDocFileName.c_str());
+		static_cast<void>(NppXml::saveFile(pSessionDoc, sessionDocFileName));
 
 	return true;
 }
@@ -6158,10 +6166,11 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		{
 			_nppGUI._menuBarShow = getBoolChildTextNode(childNode, _nppGUI._menuBarShow, STR_BOOL_SHOWHIDE);
 		}
-		// <GUIConfig name="DialogFont" size="8"/>
+		// <GUIConfig name="DialogFont" size="8" fontName="MS Shell Dlg" />
 		else if (std::strcmp(nm, "DialogFont") == 0)
 		{
 			_nppGUI._fontDlgSize = static_cast<WORD>(NppXml::uintAttribute(childNode, "size", _nppGUI._fontDlgSize));
+			_nppGUI._fontDlgName = NppXml::attributeW(childNode, "fontName", "MS Shell Dlg");
 		}
 		// <GUIConfig name="TabBar" dragAndDrop="yes" drawTopBar="yes" drawInactiveTab="yes" reduce="yes" closeButton="yes"
 		// pinButton="yes" showOnlyPinnedButton="no" buttonsOninactiveTabs="no" doubleClick2Close="no"
@@ -6229,22 +6238,22 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 				const char* val = NppXml::getValue(n);
 				if (val)
 				{
-					if (std::strcmp(val, "yesOld") == 0)
-						_nppGUI._fileAutoDetection = cdEnabledOld;
+					if (std::strcmp(val, "yesOld") == 0) // Enable auto-detection for all files (old default behavior)
+						_nppGUI._fileAutoDetection = cdEnabled4AllFiles;
 					else if (std::strcmp(val, "autoOld") == 0)
-						_nppGUI._fileAutoDetection = (cdEnabledOld | cdAutoUpdate);
+						_nppGUI._fileAutoDetection = (cdEnabled4AllFiles | cdAutoUpdate);
 					else if (std::strcmp(val, "Update2EndOld") == 0)
-						_nppGUI._fileAutoDetection = (cdEnabledOld | cdGo2end);
+						_nppGUI._fileAutoDetection = (cdEnabled4AllFiles | cdGo2end);
 					else if (std::strcmp(val, "autoUpdate2EndOld") == 0)
-						_nppGUI._fileAutoDetection = (cdEnabledOld | cdAutoUpdate | cdGo2end);
-					else if (std::strcmp(val, "yes") == 0)
-						_nppGUI._fileAutoDetection = cdEnabledNew;
+						_nppGUI._fileAutoDetection = (cdEnabled4AllFiles | cdAutoUpdate | cdGo2end);
+					else if (std::strcmp(val, "yes") == 0) // Enable auto-detection for the current file only (new default behavior)
+						_nppGUI._fileAutoDetection = cdEnabled4CurrentFile;
 					else if (std::strcmp(val, "auto") == 0)
-						_nppGUI._fileAutoDetection = (cdEnabledNew | cdAutoUpdate);
+						_nppGUI._fileAutoDetection = (cdEnabled4CurrentFile | cdAutoUpdate);
 					else if (std::strcmp(val, "Update2End") == 0)
-						_nppGUI._fileAutoDetection = (cdEnabledNew | cdGo2end);
+						_nppGUI._fileAutoDetection = (cdEnabled4CurrentFile | cdGo2end);
 					else if (std::strcmp(val, "autoUpdate2End") == 0)
-						_nppGUI._fileAutoDetection = (cdEnabledNew | cdAutoUpdate | cdGo2end);
+						_nppGUI._fileAutoDetection = (cdEnabled4CurrentFile | cdAutoUpdate | cdGo2end);
 					else //(std::strcmp(val, "no") == 0)
 						_nppGUI._fileAutoDetection = cdDisabled;
 				}
@@ -7879,7 +7888,7 @@ void NppParameters::createXmlTreeFromGUIParams()
 	{
 		const char* pStr = nullptr;
 
-		if (_nppGUI._fileAutoDetection & cdEnabledOld)
+		if (_nppGUI._fileAutoDetection & cdEnabled4AllFiles)
 		{
 			if ((_nppGUI._fileAutoDetection & cdAutoUpdate) && (_nppGUI._fileAutoDetection & cdGo2end))
 			{
@@ -7898,7 +7907,7 @@ void NppParameters::createXmlTreeFromGUIParams()
 				pStr = "yesOld";
 			}
 		}
-		else if (_nppGUI._fileAutoDetection & cdEnabledNew)
+		else if (_nppGUI._fileAutoDetection & cdEnabled4CurrentFile)
 		{
 			if ((_nppGUI._fileAutoDetection & cdAutoUpdate) && (_nppGUI._fileAutoDetection & cdGo2end))
 			{
@@ -8112,11 +8121,12 @@ void NppParameters::createXmlTreeFromGUIParams()
 		NppXml::createChildText(GUIConfigElement, _nppGUI._menuBarShow ? "show" : "hide");
 	}
 
-	// <GUIConfig name="DialogFont" size="8"/>
+	// <GUIConfig name="DialogFont" size="8" fontName="MS Shell Dlg" />
 	{
 		NppXml::Element GUIConfigElement = NppXml::createChildElement(newGUIRoot, "GUIConfig");
 		NppXml::setAttribute(GUIConfigElement, "name", "DialogFont");
 		NppXml::setAttribute(GUIConfigElement, "size", _nppGUI._fontDlgSize);
+		NppXml::setAttribute(GUIConfigElement, "fontName", _nppGUI._fontDlgName);
 	}
 
 	// <GUIConfig name="Caret" width="1" blinkRate="600" />
@@ -9065,6 +9075,10 @@ void NppParameters::writeStyle2Element(const Style& style2Write, Style& style2Sy
 	{
 		NppXml::setAttribute(element, "colorStyle", style2Write._colorStyle);
 	}
+	else
+	{
+		NppXml::removeAttribute(element, "colorStyle");
+	}
 
 	if (!style2Write._fontName.empty())
 	{
@@ -9166,6 +9180,10 @@ void NppParameters::insertUserLang2Tree(NppXml::Element& node, const UserLangCon
 		if (style2Write._colorStyle != COLORSTYLE_ALL)
 		{
 			NppXml::setAttribute(styleElement, "colorStyle", style2Write._colorStyle);
+		}
+		else
+		{
+			NppXml::removeAttribute(styleElement, "colorStyle");
 		}
 
 		if (!style2Write._fontName.empty())
