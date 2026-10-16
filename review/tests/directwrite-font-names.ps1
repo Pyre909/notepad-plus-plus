@@ -1,5 +1,5 @@
 # App-level test (review harness): the fonts of a weight, such as "Bahnschrift Light", drawn by DirectWrite with their
-# own font (#12393, FontFamilyNames.cpp). The font lists name them by their GDI family name, which DirectWrite only
+# own font (#12393, getDirectWriteFont in ScintillaEditView.cpp). The font lists name them by their GDI family name, which DirectWrite only
 # knows as the Light weight of "Bahnschrift": with DirectWrite a style gets "Bahnschrift" at weight 300 (its bold at
 # SemiBold, 600), with GDI the name as it is (bold at 700). Run twice: DirectWrite (the default of fresh settings), then
 # GDI (writeTechnologyEngine="0" in the config.xml the first run wrote).
@@ -92,6 +92,9 @@ New-Item -ItemType Directory -Force $settings | Out-Null
 $model = Join-Path (Split-Path $Exe) 'stylers.model.xml'
 $bytes = [IO.File]::ReadAllBytes($model); $hasBom = ($bytes.Length -ge 3) -and ($bytes[0] -eq 0xEF) -and ($bytes[1] -eq 0xBB) -and ($bytes[2] -eq 0xBF)
 $stylers = [IO.File]::ReadAllText($model) -replace '(<WidgetStyle name="Default Style" styleID="32"[^>]*?)fontName="[^"]*"', '$1fontName="Bahnschrift Light"'
+# two C++ styles with a font of their own: a usual family name, and one of another weight and stretch
+$stylers = $stylers -replace '(?s)(<LexerType name="cpp".*?<WordsStyle name="COMMENT" styleID="1"[^>]*?)fontName="[^"]*"', '$1fontName="Bahnschrift SemiLight SemiConde"'
+$stylers = $stylers -replace '(?s)(<LexerType name="cpp".*?<WordsStyle name="COMMENT LINE" styleID="2"[^>]*?)fontName="[^"]*"', '$1fontName="Consolas"'
 [IO.File]::WriteAllText((Join-Path $settings 'stylers.xml'), $stylers, [Text.UTF8Encoding]::new($hasBom))
 $file = Join-Path $settings 'test.cpp'; [IO.File]::WriteAllLines($file, [string[]]@('int main() { return 0; } // Bahnschrift Light'))
 try {
@@ -101,6 +104,8 @@ try {
 	Check-Font 'a style without a font of its own: the same' 0 'Bahnschrift/300/5/0'
 	Check-Font 'line numbers: the same' $STYLE_LINENUMBER 'Bahnschrift/300/5/0'
 	Check-Font 'a bold style: bold relative to Light, SemiBold' $SCE_C_WORD 'Bahnschrift/600/5/0'
+	Check-Font 'a style in Bahnschrift SemiLight SemiConde: weight 350, stretch semi-condensed' 1 'Bahnschrift/350/4/0'
+	Check-Font 'a style in Consolas (a usual family name): as it is, not the weight of the Default Style' 2 'Consolas/400/5/0'
 	Stop-Npp 'DirectWrite run'
 
 	$config = Join-Path $settings 'config.xml'
@@ -118,6 +123,8 @@ try {
 	else {
 		Check-Font 'Default Style: the GDI name as it is' $STYLE_DEFAULT 'Bahnschrift Light/400/5/0'
 		Check-Font 'a bold style: the GDI name, bold' $SCE_C_WORD 'Bahnschrift Light/700/5/0'
+		Check-Font 'a style in Bahnschrift SemiLight SemiConde: the GDI name as it is' 1 'Bahnschrift SemiLight SemiConde/400/5/0'
+		Check-Font 'a style in Consolas: as it is' 2 'Consolas/400/5/0'
 	}
 	Stop-Npp 'GDI run'
 }
