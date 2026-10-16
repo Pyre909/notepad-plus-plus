@@ -625,7 +625,7 @@ Translations: the other languages' tooltip still mentions the restart until tran
 ## 8. DirectWrite following the Windows font smoothing (bug fix)
 
 Branch `directwrite-font-smoothing_20261006` (worktree `npp.worktrees\directwrite-font-smoothing_20261006`), one commit
-(`76b3210`) on upstream `master` `a69bc23`, 4 files, +52 −4, no Scintilla change, no new setting or UI text. Made on
+(`ca26d19`) on upstream `master` `a660d79`, 4 files, +48 −4, no Scintilla change, no new setting or UI text. Made on
 2026-10-06 from the "Follow Windows" antialiasing of the fork's Text Rendering settings (#18418, rejected), without the
 setting.
 
@@ -655,6 +655,15 @@ upstream fails 4 with off and with Standard (its views and Document Map stay at 
 branch aliased (2 colors); Standard, master ClearType and this branch grayscale (no colored pixel); ClearType, both the
 same. Live, both builds running: the Tuner (Standard to ClearType) and Performance Options (off, then on) changed this
 branch's views at once (quality 2 to 0, 0 to 1, 1 to 0); master's stayed at the default.
+
+Second review on 2026-10-15 (rebased on `master` `a660d79`, no conflict; independent AI review against the checklist):
+no bug. Taken: the `WM_SETTINGCHANGE` handler re-applies whenever a view is still at its Windows quality (the second
+comparison only saved work Scintilla repeats anyway: it restyles on every `WM_SETTINGCHANGE`), the plugin-API comment in
+`Notepad_plus_msgs.h` shortened, the commit message cut to upstream's length. Left: a plugin quality equal to the Windows
+one can't be told apart (it follows Windows then; rare); about 48 lines, over the template's 30 for new contributors,
+but each part is needed. Harness 0 FAIL, 0 WARN, ARM64, x64 and Win32 builds; `directwrite-font-smoothing` 16 checks
+with ClearType (the off and Standard runs of 2026-10-06 cover the same logic); fork CI not run (Actions blocked on the
+fork since 2026-10-15). #14954 still open, no other PR on it.
 
 Known, not changed (disclosed in the PR): people whose Windows font smoothing is off or Standard ("Adjust for best
 performance", some Remote Desktop and VM setups) get unsmoothed or grayscale text after updating, as Windows is set;
