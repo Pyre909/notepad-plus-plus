@@ -393,7 +393,7 @@ Tested on Windows 11 ARM64, Release builds for ARM64, x64 and Win32, no warnings
 - Bold measured against GDI's (ink of a sample line at 15 and 24 px): 300 heavier lands in GDI's range for Light and Medium fonts, and bold "Cascadia Code SemiBold" comes out as Cascadia Code Bold, not a fake bold.
 - In Notepad++ with "Bahnschrift Light" as the Default Style font (automated test): with DirectWrite the styles read back "Bahnschrift" 300, bold 600, a style in "Bahnschrift SemiLight SemiConde" "Bahnschrift" 350 semi-condensed, one in Consolas stays Consolas 400; with GDI "Bahnschrift Light" 400, bold 700, same as before. Current master gets the fallback font here.
 - Printing with DirectWrite on, "Segoe UI Light" to Microsoft Print to PDF: the PDF embeds Segoe UI Light (weight 300), same as GDI prints it.
-- (CI line: to fill once the fork's CI runs again.)
+- All 13 CI jobs pass on my fork (MSVC x64, Win32 and ARM64 Release and Debug, CMake, MinGW, Clang).
 
 AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
 
@@ -422,8 +422,8 @@ Before opening:
    draws "Fira Code" 300 with GDI (Regular), and an LTR view styled while GDI keeps the fallback font. Same for
    section 7's `setTechnologyToAll`.
 8. Redo for the 2026-10-15 version: the printing check of item 2: done 2026-10-16 (`801cb36`'s ARM64 build, Pyre909's
-   OK): the PDF embeds Segoe UI Light, weight 300, and the styles are "Segoe UI" 300 / 600 again afterwards. Left:
-   push + CI once Actions runs again on the fork.
+   OK): the PDF embeds Segoe UI Light, weight 300, and the styles are "Segoe UI" 300 / 600 again afterwards. Pushed
+   2026-10-16 and Pyre909 CI 13/13 (run 38918159312).
 7. PR body rewritten in a casual voice on 2026-10-07; checked then: the branch is on `master` `a69bc23` (current),
    #9951 and #12393 still open, no other open PR on them. The body now says why the PR is larger than the template's
    1-4 files / ~30 lines.
@@ -472,7 +472,7 @@ asks for, and a technology a plugin had set was replaced. Fixed: the view gets b
 `Fix #17865, fix #17518` in the commit message; test `rtl-views-gdi` now 17 checks (a plugin's technology kept). The
 header change needs a clean build: an incremental one gave stale objects and 5 false failures. Rejected: removing
 `RTLvsDirectWrite` from the other languages (upstream's usual way leaves it to translators). ARM64, x64 and Win32
-builds and the three tests pass (`9fdd356`); the fork's CI didn't run (Actions blocked on the fork since 2026-10-15).
+builds and the three tests pass (`9fdd356`); pushed 2026-10-16, Pyre909 CI 13/13 (run 38918129214).
 Known, not changed (disclosed in the PR): in an RTL UI a Scintilla a plugin creates is mirrored from creation like the
 others, so it starts on GDI; a plugin's `SCI_SETBIDIRECTIONAL` is cleared when its view goes to GDI (Scintilla
 does that); session documents saved RTL now show RTL under DirectWrite too (intended).
@@ -542,7 +542,7 @@ While I was in there: at startup the first document gets activated while it's al
 
 (screenshot)
 
-Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build fine too), fresh config so DirectWrite is on: RTL/LTR back and forth, RTL and LTR tabs, an RTL doc cloned to the other view, the Document Map following along, a long wrapped doc keeping its scroll position through all of it, and the Hebrew UI from startup to exit, also with editZoneRTL="no" and no session. No messages anywhere, and LTR documents stay on DirectWrite.
+Tested on Windows 11 ARM64 with Release builds of this branch (all 13 CI jobs pass on my fork (MSVC x64, Win32 and ARM64 Release and Debug, CMake, MinGW, Clang)), fresh config so DirectWrite is on: RTL/LTR back and forth, RTL and LTR tabs, an RTL doc cloned to the other view, the Document Map following along, a long wrapped doc keeping its scroll position through all of it, and the Hebrew UI from startup to exit, also with editZoneRTL="no" and no session. No messages anywhere, and LTR documents stay on DirectWrite.
 
 Two things I know about and left alone: with an RTL UI, a Scintilla a plugin creates is mirrored from the start like the others, so it starts on GDI too, and a plugin's SCI_SETBIDIRECTIONAL gets cleared when its view switches to GDI (that's Scintilla's doing).
 
@@ -584,8 +584,8 @@ would have got the old mode back once LTR; fixed in `setTechnologyToAll` (its re
 too), with a new check in `live-rendering-switch` (now 41). Comments shortened. Not changed, now in the PR text: a
 switch to GDI clears a plugin's `SCI_SETBIDIRECTIONAL` (Scintilla does that); a plugin view on the previous setting's
 technology is switched too; arrow keys or the wheel on the closed combo switch at each step (cheap: tested with 50
-switches). Harness 0 FAIL, 0 WARN; ARM64, x64, Win32 builds; the six RTL and live-switch tests pass (`6a8a339`). Fork
-CI not run (Actions blocked since 2026-10-15). Later: the user manual (npp-usermanual) says the setting needs a restart.
+switches). Harness 0 FAIL, 0 WARN; ARM64, x64, Win32 builds; the six RTL and live-switch tests pass (`6a8a339`). Pushed
+2026-10-16, Pyre909 CI 13/13 (run 38918149207). Later: the user manual (npp-usermanual) says the setting needs a restart.
 
 Order: Pyre909 opens the feature request below. Since upstream's CONTRIBUTING.md of 2026-10-08 a PR no longer waits for
 the issue to be Accepted, but this one needs section 6's PR merged first (it builds on its `_technologyIfLTR`): then
@@ -637,7 +637,7 @@ Picking a rendering mode in Preferences > MISC. now applies right away to every 
 
 5 files (english_customizable.xml mirrors english.xml), no Scintilla changes.
 
-Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build too): I went through all five modes many times with both views, the Document Map, search results and plugin-created Scintillas open. Every view switched together and redrew right away; a view a plugin had switched itself stayed as it was, and RTL documents stayed on GDI. The chosen mode is saved in config.xml.
+Tested on Windows 11 ARM64 with Release builds of this branch (all 13 CI jobs pass on my fork (MSVC x64, Win32 and ARM64 Release and Debug, CMake, MinGW, Clang)): I went through all five modes many times with both views, the Document Map, search results and plugin-created Scintillas open. Every view switched together and redrew right away; a view a plugin had switched itself stayed as it was, and RTL documents stayed on GDI. The chosen mode is saved in config.xml.
 
 Known: a plugin view set to the same mode as the previous setting is switched too, plugins get no notification, and switching to GDI clears a plugin's SCI_SETBIDIRECTIONAL (Scintilla does that).
 
@@ -693,8 +693,8 @@ comparison only saved work Scintilla repeats anyway: it restyles on every `WM_SE
 `applyWindowsFontQuality` (its only caller): +40. Left: a plugin quality equal to the Windows
 one can't be told apart (it follows Windows then; rare); about 48 lines, over the template's 30 for new contributors,
 but each part is needed. Harness 0 FAIL, 0 WARN, ARM64, x64 and Win32 builds; `directwrite-font-smoothing` 16 checks
-with ClearType (the off and Standard runs of 2026-10-06 cover the same logic); fork CI not run (Actions blocked on the
-fork since 2026-10-15). #14954 still open, no other PR on it.
+with ClearType (the off and Standard runs of 2026-10-06 cover the same logic); pushed 2026-10-16, Pyre909 CI 13/13 (run
+38918139663). #14954 still open, no other PR on it.
 
 Known, not changed (disclosed in the PR): people whose Windows font smoothing is off or Standard ("Adjust for best
 performance", some Remote Desktop and VM setups) get unsmoothed or grayscale text after updating, as Windows is set;
@@ -730,7 +730,7 @@ That gets set when a view is created and when "Enable smooth font" is turned off
 
 (screenshot: master on the left, this PR on the right)
 
-Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build fine too), with the Windows font smoothing off, on Standard and on ClearType: both views and the Document Map get the matching quality, and the text comes out unsmoothed, grayscale and ClearType. Changing the setting while Notepad++ is running, both in Performance Options and in the ClearType Text Tuner, updates the views right away. Also checked "Enable smooth font" on and off, a plugin's own quality being kept, and GDI not changing.
+Tested on Windows 11 ARM64 with Release builds of this branch (all 13 CI jobs pass on my fork (MSVC x64, Win32 and ARM64 Release and Debug, CMake, MinGW, Clang)), with the Windows font smoothing off, on Standard and on ClearType: both views and the Document Map get the matching quality, and the text comes out unsmoothed, grayscale and ClearType. Changing the setting while Notepad++ is running, both in Performance Options and in the ClearType Text Tuner, updates the views right away. Also checked "Enable smooth font" on and off, a plugin's own quality being kept, and GDI not changing.
 
 Things to know:
 - If your Windows font smoothing is off or on Standard, you'll get unsmoothed or grayscale text after updating, because that's what Windows is set to. Ticking "Enable smooth font" brings ClearType back.
