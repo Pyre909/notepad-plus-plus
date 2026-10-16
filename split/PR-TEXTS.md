@@ -541,7 +541,7 @@ Translations: the other languages' `RTLvsDirectWrite` entry is no longer used (l
 ## 7. Rendering mode applied at once, without restarting (enhancement, after section 6)
 
 Branch `live-rendering-switch_20261005` (worktree `npp.worktrees\live-rendering-switch_20261005`): section 6's commit,
-then one commit for the live switch (5 files on top of it, +34 −5; `english_customizable.xml` mirrors `english.xml`).
+then one commit for the live switch (5 files on top of it, +37 −5; `english_customizable.xml` mirrors `english.xml`).
 #18418 was closed by donho on 2026-10-02 (the large modification could bring regressions; he'll look again once
 Scintilla accepts its part, which it won't: see the appendix), so the live switch was rebuilt on upstream `master` on
 its own; the old follow-up branch `live-rendering-switch_20260930` (stacked on #18418) is superseded. Its first
@@ -558,8 +558,18 @@ changed: smart highlighting and link styling of lines newly in view after a swit
 move (as after a font change in the Style Configurator); plugins get no notification of the switch; a plugin view set
 to the same technology as the previous setting is switched too (nothing tells it apart).
 
-Order: Pyre909 opens the feature request below; once it's Accepted and section 6's PR is merged, the branch is rebased
-on `master` (one commit) and the PR is opened from
+Third review on 2026-10-15 (moved onto section 6's reworked commit `9fdd356`, independent AI review against the
+checklist): with section 6 now giving a view back its own technology (`_technologyIfLTR`), a view RTL during a switch
+would have got the old mode back once LTR; fixed in `setTechnologyToAll` (its remembered technology follows the switch
+too), with a new check in `live-rendering-switch` (now 41). Comments shortened. Not changed, now in the PR text: a
+switch to GDI clears a plugin's `SCI_SETBIDIRECTIONAL` (Scintilla does that); a plugin view on the previous setting's
+technology is switched too; arrow keys or the wheel on the closed combo switch at each step (cheap: tested with 50
+switches). Harness 0 FAIL, 0 WARN; ARM64, x64, Win32 builds; the six RTL and live-switch tests pass (`6a8a339`). Fork
+CI not run (Actions blocked since 2026-10-15). Later: the user manual (npp-usermanual) says the setting needs a restart.
+
+Order: Pyre909 opens the feature request below. Since upstream's CONTRIBUTING.md of 2026-10-08 a PR no longer waits for
+the issue to be Accepted, but this one needs section 6's PR merged first (it builds on its `_technologyIfLTR`): then
+the branch is rebased on `master` (one commit) and the PR is opened from
 https://github.com/notepad-plus-plus/notepad-plus-plus/compare/master...Pyre909:notepad-plus-plus:live-rendering-switch_20261005
 
 ### Issue — title
@@ -609,7 +619,7 @@ Picking a rendering mode in Preferences > MISC. now applies right away to every 
 
 Tested on Windows 11 ARM64 with Release builds of this branch (x64 and Win32 build too): I went through all five modes many times with both views, the Document Map, search results and plugin-created Scintillas open. Every view switched together and redrew right away; a view a plugin had switched itself stayed as it was, and RTL documents stayed on GDI. The chosen mode is saved in config.xml.
 
-Known: a plugin view set to the same mode as the previous setting is switched too, and plugins get no notification.
+Known: a plugin view set to the same mode as the previous setting is switched too, plugins get no notification, and switching to GDI clears a plugin's SCI_SETBIDIRECTIONAL (Scintilla does that).
 
 AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
 
