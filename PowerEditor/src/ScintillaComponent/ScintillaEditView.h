@@ -19,6 +19,7 @@
 
 #include <windows.h>
 
+#include <array>
 #include <ios>
 #include <sstream>
 #include <string>
@@ -665,6 +666,7 @@ public:
 	}
 
 	void defineDocType(LangType typeDoc);	//setup stylers for active document
+	void setStyleFontsFor(int technology) const; // GDI and DirectWrite may name a font differently (printing uses GDI)
 
 	void addCustomWordChars() const;
 	void restoreDefaultWordChars() const;
@@ -733,6 +735,17 @@ protected:
 	void makeStyle(LangType langType, const char** keywordArray = nullptr) const;
 	void setStyle(Style styleToSet) const; //NOT by reference (style edited)
 	void setSpecialStyle(const Style& styleToSet) const; //by reference
+	void clearAllStyles(); // SCI_STYLECLEARALL: every style gets the font of STYLE_DEFAULT
+
+	struct StyleFont // a style's font as the font lists name it, for DirectWrite (see setSpecialStyle)
+	{
+		std::wstring _name;
+		bool _isBold = false;
+		bool _isItalic = false;
+	};
+	mutable std::array<StyleFont, STYLE_MAX + 1> _styleFonts;
+	void setStyleFont(int styleID, const StyleFont& styleFont, int technology) const;
+
 	void setSpecialIndicator(const Style& styleToSet) const {
 		execute(SCI_INDICSETFORE, styleToSet._styleID, styleToSet._bgColor);
 	}

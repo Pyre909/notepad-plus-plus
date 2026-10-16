@@ -20,7 +20,9 @@
 #include <windows.h>
 
 #include <commctrl.h>
+#include <dwrite.h>
 #include <windowsx.h>
+#include <wrl/client.h>
 
 #include <algorithm>
 #include <array>
@@ -32,7 +34,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <cwchar>
+#include <map>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -858,6 +862,83 @@ LRESULT CALLBACK ScintillaEditView::ScintillaProc(
 	return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 
+namespace
+{
+	// DirectWrite, loaded when first needed (as Scintilla does): no system fonts if it's unavailable
+	struct DirectWrite
+	{
+		Microsoft::WRL::ComPtr<IDWriteFontCollection> _systemFonts;
+		Microsoft::WRL::ComPtr<IDWriteGdiInterop> _gdiInterop;
+	};
+
+	const DirectWrite& getDirectWrite()
+	{
+		static const DirectWrite directWrite = []()
+		{
+			DirectWrite dw{};
+			using PFN_DWRITECREATEFACTORY = HRESULT(WINAPI*)(DWRITE_FACTORY_TYPE, REFIID, IUnknown**);
+			HMODULE hDWrite = ::LoadLibraryEx(L"dwrite.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+			auto pfnCreateFactory = hDWrite ?
+				reinterpret_cast<PFN_DWRITECREATEFACTORY>(::GetProcAddress(hDWrite, "DWriteCreateFactory")) : nullptr;
+			Microsoft::WRL::ComPtr<IDWriteFactory> factory;
+			if (!pfnCreateFactory
+				|| FAILED(pfnCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(factory.GetAddressOf())))
+				|| FAILED(factory->GetSystemFontCollection(dw._systemFonts.GetAddressOf(), FALSE))
+				|| FAILED(factory->GetGdiInterop(dw._gdiInterop.GetAddressOf())))
+			{
+				dw._systemFonts.Reset();
+			}
+			return dw;
+		}();
+		return directWrite;
+	}
+
+	struct DirectWriteFont
+	{
+		std::wstring _family;
+		int _weight = SC_WEIGHT_NORMAL;
+		int _stretch = SC_STRETCH_NORMAL;
+		bool _isItalic = false;
+	};
+
+	// The font lists use GDI family names, and DirectWrite knows "Fira Code Light" as "Fira Code" of weight 300.
+	// None for a name DirectWrite knows as a family, or of no installed font; kept for the session.
+	const std::optional<DirectWriteFont>& getDirectWriteFont(const std::wstring& fontName)
+	{
+		static std::map<std::wstring, std::optional<DirectWriteFont>> fonts;
+		auto [it, isNew] = fonts.try_emplace(fontName);
+		const DirectWrite& dw = getDirectWrite();
+		UINT32 index = 0;
+		BOOL exists = TRUE;
+		if (!isNew || !dw._systemFonts || fontName.empty() || (fontName.length() >= LF_FACESIZE)
+			|| FAILED(dw._systemFonts->FindFamilyName(fontName.c_str(), &index, &exists)) || exists)
+			return it->second;
+
+		// the font GDI draws for the name, asked at no weight (FW_DONTCARE) so that it's not a bold simulation
+		LOGFONT lf{};
+		fontName.copy(lf.lfFaceName, LF_FACESIZE - 1);
+		lf.lfCharSet = DEFAULT_CHARSET;
+		Microsoft::WRL::ComPtr<IDWriteFont> font;
+		Microsoft::WRL::ComPtr<IDWriteFontFamily> family;
+		Microsoft::WRL::ComPtr<IDWriteLocalizedStrings> familyNames;
+		if (FAILED(dw._gdiInterop->CreateFontFromLOGFONT(&lf, font.GetAddressOf()))
+			|| FAILED(font->GetFontFamily(family.GetAddressOf())) || FAILED(family->GetFamilyNames(familyNames.GetAddressOf())))
+			return it->second;
+
+		if (FAILED(familyNames->FindLocaleName(L"en-us", &index, &exists)) || !exists)
+			index = 0;
+		UINT32 length = 0;
+		wchar_t familyName[LF_FACESIZE]{}; // Scintilla copies the name into a LOGFONT too
+		if (FAILED(familyNames->GetStringLength(index, &length)) || (length == 0) || (length >= LF_FACESIZE)
+			|| FAILED(familyNames->GetString(index, familyName, LF_FACESIZE)))
+			return it->second;
+
+		it->second = DirectWriteFont{ familyName, static_cast<int>(font->GetWeight()), static_cast<int>(font->GetStretch()),
+			font->GetStyle() != DWRITE_FONT_STYLE_NORMAL };
+		return it->second;
+	}
+}
+
 #define DEFAULT_FONT_NAME "Courier New"
 
 void ScintillaEditView::setSpecialStyle(const Style& styleToSet) const
@@ -889,8 +970,60 @@ void ScintillaEditView::setSpecialStyle(const Style& styleToSet) const
         execute(SCI_STYLESETUNDERLINE,	styleID, fontStyle & FONTSTYLE_UNDERLINE);
     }
 
+	// DirectWrite may know a font of the font lists by another name, weight and stretch (see getDirectWriteFont)
+	if ((styleID >= 0) && (styleID <= STYLE_MAX)) // the styles of stylers.xml can have any id
+	{
+		StyleFont& styleFont = _styleFonts[styleID];
+		if (!styleToSet._fontName.empty())
+		{
+			const bool isInFontList = NppParameters::getInstance().isInFontList(styleToSet._fontName);
+			styleFont._name = isInFontList ? styleToSet._fontName : L"";
+		}
+		if (fontStyle != STYLE_NOT_USED)
+		{
+			styleFont._isBold = (fontStyle & FONTSTYLE_BOLD) != 0;
+			styleFont._isItalic = (fontStyle & FONTSTYLE_ITALIC) != 0;
+		}
+		const int technology = static_cast<int>(execute(SCI_GETTECHNOLOGY));
+		if ((!styleToSet._fontName.empty() || (fontStyle != STYLE_NOT_USED)) && (technology != SC_TECHNOLOGY_DEFAULT))
+			setStyleFont(styleID, styleFont, technology);
+	}
+
 	if (styleToSet._fontSize > 0)
 		execute(SCI_STYLESETSIZE, styleID, styleToSet._fontSize);
+}
+
+void ScintillaEditView::clearAllStyles()
+{
+	execute(SCI_STYLECLEARALL);
+	_styleFonts.fill(_styleFonts[STYLE_DEFAULT]);
+}
+
+void ScintillaEditView::setStyleFont(int styleID, const StyleFont& styleFont, int technology) const
+{
+	// DirectWrite: the family, weight, stretch and style of the font; GDI knows it by the name of the font lists. Both set the
+	// weight, stretch and style: the style may have had those of another font (see clearAllStyles)
+	const std::optional<DirectWriteFont>& font = getDirectWriteFont(styleFont._name);
+	const bool isMapped = font && (technology != SC_TECHNOLOGY_DEFAULT);
+	if (font)
+	{
+		const std::string nameA = wstring2string(isMapped ? font->_family : styleFont._name, CP_UTF8);
+		execute(SCI_STYLESETFONT, styleID, reinterpret_cast<LPARAM>(nameA.c_str()));
+	}
+	// bold is as much heavier as bold is than regular: bold of "Fira Code Light" is "Fira Code" SemiBold
+	const int weight = (isMapped ? font->_weight : SC_WEIGHT_NORMAL) + (styleFont._isBold ? SC_WEIGHT_BOLD - SC_WEIGHT_NORMAL : 0);
+	execute(SCI_STYLESETWEIGHT, styleID, std::clamp(weight, 1, static_cast<int>(DWRITE_FONT_WEIGHT_EXTRA_BLACK)));
+	execute(SCI_STYLESETSTRETCH, styleID, isMapped ? font->_stretch : SC_STRETCH_NORMAL);
+	execute(SCI_STYLESETITALIC, styleID, styleFont._isItalic || (isMapped && font->_isItalic));
+}
+
+void ScintillaEditView::setStyleFontsFor(int technology) const
+{
+	for (int styleID = 0; styleID <= STYLE_MAX; ++styleID)
+	{
+		if (getDirectWriteFont(_styleFonts[styleID]._name)) // else the same font for both
+			setStyleFont(styleID, _styleFonts[styleID], technology);
+	}
 }
 
 void ScintillaEditView::setStyle(Style styleToSet) const
@@ -1757,7 +1890,7 @@ void ScintillaEditView::defineDocType(LangType typeDoc)
 		setStyle(*pStyleDefault);
 	}
 
-	execute(SCI_STYLECLEARALL);
+	clearAllStyles();
 
 	Style defaultIndicatorStyle;
 	const Style * pStyle;
@@ -1920,7 +2053,7 @@ void ScintillaEditView::defineDocType(LangType typeDoc)
 				}
 			}
 			setSpecialStyle(nfoStyle);
-			execute(SCI_STYLECLEARALL);
+			clearAllStyles();
 
 			Buffer* buf = MainFileManager.getBufferByID(_currentBufferID);
 
