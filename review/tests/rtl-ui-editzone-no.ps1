@@ -41,35 +41,46 @@ New-Item -ItemType Directory -Force $settings | Out-Null
 $xml = [IO.File]::ReadAllText($LangXml) -replace '(<Native-Langue name="Hebrew" RTL="yes")', '$1 editZoneRTL="no"'
 if ($xml -notmatch 'editZoneRTL="no" filename') { "FAIL  could not set editZoneRTL in $LangXml"; '1 checks, 1 failed'; exit }
 [IO.File]::WriteAllText((Join-Path $settings 'nativeLang.xml'), $xml, [Text.UTF8Encoding]::new($false))
-$proc = Start-Process $Exe -ArgumentList '-multiInst', '-nosession', "-settingsDir=$settings", '-titleAdd=REVIEW-TEST' -PassThru
-$script:npid = $proc.Id
-try {
-	for ($i = 0; $i -lt 100; $i++) { $proc.Refresh(); if ($proc.MainWindowHandle -ne 0) { break }; Start-Sleep -Milliseconds 100 }
-	$script:main = $proc.MainWindowHandle; Start-Sleep -Milliseconds 1000
+# a run: DirectWrite (the default of fresh settings), then GDI (the issue's case: writeTechnologyEngine="0" in the
+# config.xml the first run wrote)
+function Test-Run([string] $run, [int] $technology) {
+	$script:proc = Start-Process $Exe -ArgumentList '-multiInst', '-nosession', "-settingsDir=$settings", '-titleAdd=REVIEW-TEST' -PassThru
+	$script:npid = $script:proc.Id
+	for ($i = 0; $i -lt 100; $i++) { $script:proc.Refresh(); if ($script:proc.MainWindowHandle -ne 0) { break }; Start-Sleep -Milliseconds 100 }
+	$script:main = $script:proc.MainWindowHandle; Start-Sleep -Milliseconds 1000
 	$view = Get-Kids $script:main | Where-Object { (Get-Cls $_) -eq 'Scintilla' -and [EZ.U]::IsWindowVisible($_) -and [EZ.U]::GetParent($_) -eq $script:main } | Select-Object -First 1
-	Check 'RTL UI: the Notepad++ window is mirrored' (Test-RTL $script:main)
-	Check 'editZoneRTL="no", no session, no file: the first document is LTR' (-not (Test-RTL $view))
-	Check 'and drawn with the rendering mode, DirectWrite (fresh settings default)' ((Send $view 2631) -eq 1) ("technology " + (Send $view 2631))
+	Check "${run}: RTL UI, the Notepad++ window is mirrored" (Test-RTL $script:main)
+	Check "${run}: editZoneRTL=""no"", no session, no file: the first document is LTR" (-not (Test-RTL $view))
+	Check "${run}: and drawn with the rendering mode ($technology)" ((Send $view 2631) -eq $technology) ("technology " + (Send $view 2631))
 	[void](Send $script:main $WM_COMMAND $IDM_FILE_NEW); Start-Sleep -Milliseconds 400
-	Check 'File > New: LTR too, on DirectWrite' ((-not (Test-RTL $view)) -and ((Send $view 2631) -eq 1))
+	Check "${run}: File > New, LTR too, in the rendering mode" ((-not (Test-RTL $view)) -and ((Send $view 2631) -eq $technology))
 	$boxes = Get-Boxes
-	Check 'no message' ($boxes.Count -eq 0) ($boxes -join '; ')
+	Check "${run}: no message" ($boxes.Count -eq 0) ($boxes -join '; ')
 
 	[void][EZ.U]::PostMessage($script:main, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero)
 	$boxes = @()
-	for ($i = 0; $i -lt 60 -and -not $proc.HasExited; $i++) {
+	for ($i = 0; $i -lt 60 -and -not $script:proc.HasExited; $i++) {
 		Start-Sleep -Milliseconds 250
 		foreach ($b in @(Get-Tops | Where-Object { (Get-Cls $_) -eq '#32770' -and [EZ.U]::IsWindowVisible($_) })) {
 			$boxes += (Get-Txt $b) + ': ' + ((Get-Kids $b | ForEach-Object { Get-Txt $_ } | Where-Object { $_ }) -join ' | ')
 			$no = [EZ.U]::GetDlgItem($b, 7); if ($no -ne [IntPtr]::Zero) { [void][EZ.U]::PostMessage($b, $WM_COMMAND, [IntPtr]7, $no) } else { [void][EZ.U]::PostMessage($b, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero) }
 		}
 	}
-	Check 'exit: no message' ($boxes.Count -eq 0) ($boxes -join '; ')
-	$exited = $proc.WaitForExit(15000)
-	Check 'Notepad++ closes normally' ($exited -and $proc.ExitCode -eq 0) $(if ($exited) { "exit code $($proc.ExitCode)" } else { 'still running' })
+	Check "${run}: exit, no message" ($boxes.Count -eq 0) ($boxes -join '; ')
+	$exited = $script:proc.WaitForExit(15000)
+	Check "${run}: Notepad++ closes normally" ($exited -and $script:proc.ExitCode -eq 0) $(if ($exited) { "exit code $($script:proc.ExitCode)" } else { 'still running' })
+}
+
+try {
+	Test-Run 'DirectWrite run' 1
+	$config = Join-Path $settings 'config.xml'
+	$configText = [IO.File]::ReadAllText($config)
+	Check 'config.xml names the rendering technology' ($configText -match 'writeTechnologyEngine="\d"')
+	[IO.File]::WriteAllText($config, ($configText -replace 'writeTechnologyEngine="\d"', 'writeTechnologyEngine="0"'), [Text.UTF8Encoding]::new($false))
+	Test-Run 'GDI run (the issue''s case)' 0
 }
 finally {
-	if (-not $proc.HasExited) { [void][EZ.U]::PostMessage($script:main, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero); if (-not $proc.WaitForExit(10000)) { Stop-Process -Id $proc.Id -Force } }
+	if ($script:proc -and -not $script:proc.HasExited) { [void][EZ.U]::PostMessage($script:main, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero); if (-not $script:proc.WaitForExit(10000)) { Stop-Process -Id $script:proc.Id -Force } }
 	$script:results
 	"settings folder: $settings"
 	"{0} checks, {1} failed" -f $script:results.Count, $script:fails

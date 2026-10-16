@@ -389,7 +389,7 @@ Side effects, DirectWrite only:
 - If a plugin set its own font on one of these styles, printing puts the theme's font back (switching tabs already does that).
 
 Tested on Windows 11 ARM64, Release builds for ARM64, x64 and Win32, no warnings in the changed files:
-- Every name in the font list (319 fonts, regular, bold, italic) maps to the right DirectWrite font, including truncated names like "Bahnschrift SemiBold SemiConden", families from Hairline to Black, CJK fonts and the "@" vertical names.
+- Every font family installed here (228, of which 107 have a GDI name DirectWrite doesn't know) maps to the right DirectWrite font, including truncated names like "Bahnschrift SemiBold SemiConden", families from Hairline to Black and CJK fonts.
 - Bold measured against GDI's (ink of a sample line at 15 and 24 px): 300 heavier lands in GDI's range for Light and Medium fonts, and bold "Cascadia Code SemiBold" comes out as Cascadia Code Bold, not a fake bold.
 - In Notepad++ with "Bahnschrift Light" as the Default Style font (automated test): with DirectWrite the styles read back "Bahnschrift" 300, bold 600, a style in "Bahnschrift SemiLight SemiConde" "Bahnschrift" 350 semi-condensed, one in Consolas stays Consolas 400; with GDI "Bahnschrift Light" 400, bold 700, same as before. Current master gets the fallback font here.
 - Printing with DirectWrite on, "Segoe UI Light" to Microsoft Print to PDF: the PDF embeds Segoe UI Light (weight 300), same as GDI prints it.

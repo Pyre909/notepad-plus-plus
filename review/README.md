@@ -59,7 +59,7 @@ Right-to-left views drawn with GDI (`rtl-views-gdi_20261006`, kit section 6; als
 |---|---|
 | `rtl-views-gdi.ps1` | With DirectWrite (fresh settings): View > Text Direction RTL allowed without a message; the view and the Document Map mirrored on GDI, the other views on DirectWrite, back on DirectWrite once LTR; a technology set by a plugin given back after RTL; an RTL tab and an LTR tab switching the view's technology while a long wrapped document keeps its scroll position; an RTL document cloned to the other view on GDI there too; no message on exit (17 checks) |
 | `rtl-ui-gdi.ps1` | With a right-to-left UI language (hebrew.xml): every view mirrored from the start and drawn with GDI under DirectWrite, the default; no message at start, on RTL or on exit; an LTR document getting DirectWrite, the hidden mirrored views keeping GDI (10 checks). Unmodified upstream fails the start ones |
-| `rtl-ui-editzone-no.ps1` | Issue #17518: with `editZoneRTL="no"`, started without a session or a file, the first document is LTR, on DirectWrite (7 checks). Unmodified upstream fails it |
+| `rtl-ui-editzone-no.ps1` | Issue #17518: with `editZoneRTL="no"`, started without a session or a file, the first document is LTR, with DirectWrite and with GDI (the issue's case) (15 checks). Unmodified upstream fails it |
 
 The rendering mode applied at once (`live-rendering-switch_20261005`, kit section 7; skipped on builds without it):
 
