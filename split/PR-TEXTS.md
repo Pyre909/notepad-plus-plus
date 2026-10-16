@@ -432,6 +432,8 @@ Before opening:
 
 ## 6. Right-to-left views drawn with GDI (bug fix, first)
 
+**Opened 2026-10-16 as [#18503](https://github.com/notepad-plus-plus/notepad-plus-plus/pull/18503)** (by Claude Code at Pyre909's request, from `9fdd356`; the screenshot uploaded through the PR page). The body below is the one posted. From now on: new commits only, no amend (CONTRIBUTING rule 10 once a PR is open).
+
 Branch `rtl-views-gdi_20261006` (worktree `npp.worktrees\rtl-views-gdi_20261006`), one commit on upstream `master`,
 5 files, +15 −22, no Scintilla change. Split from the live switch on 2026-10-06 (Pyre909's choice, after the
 independent review): CONTRIBUTING wants a single feature or bug fix per PR, and this part fixes two open issues, while
@@ -540,9 +542,9 @@ While I was in there: at startup the first document gets activated while it's al
 
 5 files, nothing in Scintilla.
 
-(screenshot)
+<img width="1270" height="444" alt="Hebrew UI with DirectWrite: 8.9.8.1 on the left, this PR on the right" src="https://github.com/user-attachments/assets/80bcddc2-9526-49b4-9674-39edc38169cb" />
 
-Tested on Windows 11 ARM64 with Release builds of this branch (all 13 CI jobs pass on my fork (MSVC x64, Win32 and ARM64 Release and Debug, CMake, MinGW, Clang)), fresh config so DirectWrite is on: RTL/LTR back and forth, RTL and LTR tabs, an RTL doc cloned to the other view, the Document Map following along, a long wrapped doc keeping its scroll position through all of it, and the Hebrew UI from startup to exit, also with editZoneRTL="no" and no session. No messages anywhere, and LTR documents stay on DirectWrite.
+Tested on Windows 11 ARM64 with Release builds of this branch, fresh config so DirectWrite is on (all 13 CI jobs pass on my fork too: MSVC x64, Win32 and ARM64 Release and Debug, CMake, MinGW, Clang): RTL/LTR back and forth, RTL and LTR tabs, an RTL doc cloned to the other view, the Document Map following along, a long wrapped doc keeping its scroll position through all of it, and the Hebrew UI from startup to exit, also with editZoneRTL="no" and no session, in both GDI (the case in #17518) and DirectWrite. No messages anywhere, and LTR documents stay on DirectWrite.
 
 Two things I know about and left alone: with an RTL UI, a Scintilla a plugin creates is mirrored from the start like the others, so it starts on GDI too, and a plugin's SCI_SETBIDIRECTIONAL gets cleared when its view switches to GDI (that's Scintilla's doing).
 
@@ -619,9 +621,9 @@ text rendering lines: ? > Debug Info... > Copy debug info into clipboard, then p
 ```
 Related to #18414 / #18418, which asked for more text rendering options and kept the restart. This is just the restart part, on its own and much smaller.
 
-One thing it relies on: right-to-left documents have to stay on GDI, since DirectWrite can't draw a mirrored window (#17865). I've got a separate fix PR for that, and the live switch keeps RTL views on GDI too.
+One thing it relies on: right-to-left documents have to stay on GDI, since DirectWrite can't draw a mirrored window (#17865). I've got a fix PR for that, #18503, and the live switch keeps RTL views on GDI too.
 ```
-Once section 6's PR is open, its number can replace "a separate fix PR". Drafted in a casual voice on 2026-10-07; the
+Section 6's PR is #18503 (opened 2026-10-16). Drafted in a casual voice on 2026-10-07; the
 quoted tooltip is upstream's (`scintillaRenderingTechnology-tip`, `master` `a69bc23`).
 
 ### PR — title
@@ -632,7 +634,7 @@ quoted tooltip is upstream's (`scintillaRenderingTechnology-tip`, `master` `a69b
 Picking a rendering mode in Preferences > MISC. now applies right away to every Notepad++ view that follows the setting (both views, Document Map, search results, plugins' views) instead of after a restart.
 
 - A view whose technology a plugin changed itself is left alone: only the views still on the old setting follow.
-- Right-to-left views keep GDI, the only technology that follows their mirroring (#<section 6's PR>): they get the new mode once they're left-to-right.
+- Right-to-left views keep GDI, the only technology that follows their mirroring (#18503): they get the new mode once they're left-to-right.
 - The tooltip no longer says to restart.
 
 5 files (english_customizable.xml mirrors english.xml), no Scintilla changes.
