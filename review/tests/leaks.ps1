@@ -47,11 +47,35 @@ function Get-Counters {
 		Handles = $script:proc.HandleCount; PrivateMB = [math]::Round($script:proc.PrivateMemorySize64 / 1MB, 1)
 	}
 }
-# an operation $Count times after 50 for the warm-up (caches, lazily loaded DLLs); growth per 1000 operations allowed:
-# 10 GDI and USER objects, 50 handles (the system's own fluctuation), 8 MB of private memory
+# UMDH (Debugging Tools for Windows), where the build records allocation stacks (umdh-scope.ps1): a heap snapshot
+# before and after each operation's repetitions, the growth with the stack that allocated it
+$script:umdh = 'C:\Program Files (x86)\Windows Kits\10\Debuggers\arm64\umdh.exe'
+$script:useUmdh = (Test-Path $script:umdh) -and -not $env:ASAN_OPTIONS
+function Save-Heap([string] $file) { & $script:umdh "-p:$($script:proc.Id)" "-f:$file" 2>&1 | Out-String }
+# the growth between two snapshots: total bytes, and the largest entries with their stacks (Notepad++'s frames first)
+function Get-HeapGrowth([string] $before, [string] $after, [string] $diff) {
+	& $script:umdh -d $before $after "-f:$diff" 2>&1 | Out-Null
+	$text = Get-Content $diff
+	$total = 0
+	foreach ($l in $text) { if ($l -match '^Total increase ==\s+(\d+) requested') { $total = [long]$Matches[1] } }
+	$entries = [Collections.Generic.List[string]]::new(); $current = $null
+	foreach ($l in $text) {
+		if (($l -match '^\+\s+[0-9A-F]+ \(') -and ($l -notmatch 'allocations$')) { if ($current) { $entries.Add($current) }; $current = $l.Trim() }
+		elseif ($current -and ($l -match '^\s+\S+!\S+')) { if (($current -split ' <- ').Count -lt 6) { $current += ' <- ' + $l.Trim() } }
+		elseif ($current -and -not $l.Trim()) { $entries.Add($current); $current = $null }
+	}
+	if ($current) { $entries.Add($current) }
+	[pscustomobject]@{ Bytes = $total; Top = @($entries | Select-Object -First 3) }
+}
+
+# an operation $Count times after 200 for the warm-up (caches, lazily loaded DLLs: a few GDI objects were still
+# created in the first few hundred tab switches); growth per 1000 operations allowed: 10 GDI and USER objects, 50
+# handles (the system's own fluctuation), 8 MB of private memory, and with UMDH 256 KB of heap
 function Measure-Op([string] $name, [scriptblock] $op) {
-	for ($i = 0; $i -lt 50; $i++) { & $op }
+	for ($i = 0; $i -lt 200; $i++) { & $op }
 	$before = Get-Counters
+	$heapBefore = Join-Path $settings 'heap-before.txt'; $heapAfter = Join-Path $settings 'heap-after.txt'
+	if ($script:useUmdh) { [void](Save-Heap $heapBefore) }
 	for ($i = 0; $i -lt $Count; $i++) { & $op }
 	$after = Get-Counters
 	$per1000 = 1000 / $Count
@@ -60,6 +84,14 @@ function Measure-Op([string] $name, [scriptblock] $op) {
 	$detail = "per 1000: GDI {0:+0;-0;0}, USER {1:+0;-0;0}, handles {2:+0;-0;0}, private {3:+0.0;-0.0;0} MB (GDI {4}, USER {5}, handles {6}, {7} MB)" -f $gdi, $user, $handles, $mb, $after.Gdi, $after.User, $after.Handles, $after.PrivateMB
 	# under AddressSanitizer (asan.ps1) freed memory stays in its quarantine: then objects and handles only
 	$memoryOk = ($mb -le 8) -or [bool]$env:ASAN_OPTIONS
+	if ($script:useUmdh) {
+		[void](Save-Heap $heapAfter)
+		$growth = Get-HeapGrowth $heapBefore $heapAfter (Join-Path $settings ("heap-diff-{0}.txt" -f ($name -replace '\W+', '-').Substring(0, [Math]::Min(30, $name.Length))))
+		$heapKB = $growth.Bytes * $per1000 / 1KB
+		$detail += "; heap {0:+0.0;-0.0;0} KB per 1000 (UMDH)" -f $heapKB
+		$memoryOk = $memoryOk -and ($heapKB -le 256)
+		if ($heapKB -gt 16) { foreach ($e in $growth.Top) { $script:results.Add("INFO    heap growth: $e") } }
+	}
 	Check "${name}: no leak over $Count" (($gdi -le 10) -and ($user -le 10) -and ($handles -le 50) -and $memoryOk) $detail
 }
 
@@ -80,6 +112,16 @@ try {
 	$script:main = $script:proc.MainWindowHandle; Start-Sleep -Milliseconds 1500
 	$start = Get-Counters
 	$script:results.Add("INFO  at start: GDI $($start.Gdi), USER $($start.User), handles $($start.Handles), private $($start.PrivateMB) MB")
+	if ($script:useUmdh) {
+		# Notepad++'s frames named from the build's .pdb, Windows' from Microsoft's symbol server
+		$env:_NT_SYMBOL_PATH = "srv*C:\symbols*https://msdl.microsoft.com/download/symbols;$(Split-Path $Exe)"
+		$probe = Save-Heap (Join-Path $settings 'heap-probe.txt')
+		if ($probe -match 'Stack Trace Database|didn''t find any allocations') {
+			$script:useUmdh = $false
+			$script:results.Add('INFO  UMDH: this build records no allocation stacks (review\umdh-scope.ps1 sets that up): skipped')
+		}
+		else { $script:results.Add('INFO  UMDH: heap snapshots before and after each operation') }
+	}
 
 	Measure-Op 'tab switches (each styles the view again, the Default Style font of a weight)' { Invoke-Cmd $IDM_VIEW_TAB1; Invoke-Cmd $IDM_VIEW_TAB2 }
 	Measure-Op 'Windows setting changes (WM_SETTINGCHANGE to Notepad++, passed on to its views)' {

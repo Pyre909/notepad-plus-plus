@@ -56,7 +56,8 @@ Leaks (any branch):
 
 | Test | What it proves |
 |---|---|
-| `leaks.ps1` | Each repeated operation of the fork's changes, 300 times after a warm-up: tab switches restyling with a font of a weight, Windows setting changes, right-to-left and back, the rendering mode switched through every mode (the last two skipped where the build lacks them): GDI and USER objects, handles and private memory don't grow (at most 10, 10, 50 and 8 MB per 1000) |
+| `leaks.ps1` | Each repeated operation of the fork's changes, 300 times after a warm-up of 200: tab switches restyling with a font of a weight, Windows setting changes, right-to-left and back, the rendering mode switched through every mode (the last two skipped where the build lacks them): GDI and USER objects, handles and private memory don't grow (at most 10, 10, 50 and 8 MB per 1000). Where the build records allocation stacks (`umdh-scope.ps1`), UMDH heap snapshots before and after: at most 256 KB of heap per 1000, the largest growths listed with their stacks (file and line, from the build's `npp.pdb`, which `review.ps1` makes with `/DEBUG`) |
+| `../umdh-scope.ps1` | Run as administrator: Windows records allocation stacks for the test builds only (Image File Execution Options filtered by full path; the installed Notepad++ isn't touched), with a 512 MB database and the NT heap (on Windows 11 ARM64 Notepad++ gets the segment heap, which records none). `-List` shows it, `-Remove` undoes it |
 
 Right-to-left views drawn with GDI (`rtl-views-gdi_20261006`, kit section 6; also in the live switch branch and pyre):
 

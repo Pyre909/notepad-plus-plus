@@ -359,8 +359,11 @@ if (-not $NoBuild) {
 	$leaves = @($changed | Where-Object { & $isCode $_ } | ForEach-Object { [regex]::Escape((Split-Path $_ -Leaf)) })
 	foreach ($plat in $Build) {
 		$log = Join-Path $logDir "build-$($branch -replace '[^\w.-]', '_')-$plat.log"; $start = Get-Date
+		# a .pdb beside the exe (the linker's /DEBUG, added through _LINK_): Notepad++'s frames named in UMDH's leak reports
+		$env:_LINK_ = '/DEBUG'
 		& $msbuild (Join-Path $script:repo 'PowerEditor\visual.net\notepadPlus.sln') /m /p:configuration=Release "/p:platform=$plat" /v:quiet /nologo "/flp:logfile=$log;verbosity=normal" | Out-Null
 		$code = $LASTEXITCODE; $secs = [int]((Get-Date) - $start).TotalSeconds
+		Remove-Item Env:_LINK_
 		$errors = @(Select-String -Path $log -Pattern ': (fatal )?error ' | ForEach-Object { $_.Line.Trim() } | Select-Object -Unique)
 		$warnings = @(if ($leaves.Count) { Select-String -Path $log -Pattern ('(' + ($leaves -join '|') + ')\(\d+.*: warning ') | ForEach-Object { $_.Line.Trim() } | Select-Object -Unique })
 		if ($code -ne 0 -or $errors.Count) { Report FAIL "$plat build failed ($secs s, log $log)" $errors }

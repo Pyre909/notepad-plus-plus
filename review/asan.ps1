@@ -30,14 +30,19 @@ $exe = Join-Path $bin 'Notepad++.exe'
 if (Test-Path $exe) { [IO.File]::Delete($exe) }  # relinked with _LINK_ even when nothing else changed
 $env:_LINK_ = '/DEPENDENTLOADFLAG:0x0 /DEBUG'
 $log = Join-Path ([IO.Path]::GetTempPath()) 'npp-asan-build.log'
-& msbuild (Join-Path $Worktree 'PowerEditor\visual.net\notepadPlus.sln') /m /nologo /v:m /p:Configuration=Release /p:Platform=ARM64 /p:EnableASAN=true *> $log
+# another commit than the last build: a full rebuild (objects of another class layout fail to link, or crash)
+$commit = (& git -C $Worktree rev-parse HEAD).Trim()
+$stamp = Join-Path $Worktree '.asan-built'
+$target = if ((Test-Path $stamp) -and ((Get-Content $stamp -Raw).Trim() -eq $commit)) { 'Build' } else { 'Rebuild' }
+& msbuild (Join-Path $Worktree 'PowerEditor\visual.net\notepadPlus.sln') /m /nologo /v:m /t:$target /p:Configuration=Release /p:Platform=ARM64 /p:EnableASAN=true *> $log
 $built = ($LASTEXITCODE -eq 0) -and (Test-Path $exe)
 Remove-Item Env:_LINK_
 if (-not $built) { Select-String -Path $log -Pattern ' error ' | Select-Object -First 10 | ForEach-Object { $_.Line.Trim() }; throw "the build failed, see $log" }
 $runtime = Get-ChildItem (Split-Path (Get-Command cl).Source) -Filter 'clang_rt.asan_dynamic-aarch64.dll' | Select-Object -First 1
 if (-not $runtime) { throw 'no clang_rt.asan_dynamic-aarch64.dll beside cl.exe' }
 Copy-Item $runtime.FullName $bin -Force
-'built with AddressSanitizer'
+Set-Content -Path $stamp -Value $commit
+"built with AddressSanitizer ($target)"
 
 # the tests, every sanitizer report in a log file of its own
 $reports = Join-Path ([IO.Path]::GetTempPath()) 'npp-asan-logs'
