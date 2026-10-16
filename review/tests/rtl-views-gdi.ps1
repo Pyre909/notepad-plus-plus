@@ -24,7 +24,7 @@ $WM_CLOSE = 0x0010; $WM_COMMAND = 0x0111
 $IDM_FILE_NEW = 41001; $IDM_EDIT_RTL = 42026; $IDM_EDIT_LTR = 42027; $IDM_VIEW_WRAP = 44022; $IDM_VIEW_DOC_MAP = 44080
 $IDM_VIEW_TAB1 = 44086; $IDM_VIEW_TAB2 = 44087; $IDM_VIEW_CLONE_TO_ANOTHER_VIEW = 10002
 $SCI_GOTOLINE = 2024; $SCI_GETFIRSTVISIBLELINE = 2152; $SCI_VISIBLEFROMDOCLINE = 2220; $SCI_DOCLINEFROMVISIBLE = 2221
-$SCI_WRAPCOUNT = 2235; $SCI_SETFIRSTVISIBLELINE = 2613; $SCI_GETTECHNOLOGY = 2631
+$SCI_WRAPCOUNT = 2235; $SCI_SETFIRSTVISIBLELINE = 2613; $SCI_GETTECHNOLOGY = 2631; $SCI_SETTECHNOLOGY = 2630
 
 function Get-Cls([IntPtr] $h) { $sb = [Text.StringBuilder]::new(64); [void][RG.U]::GetClassName($h, $sb, 64); $sb.ToString() }
 function Get-Txt([IntPtr] $h) { $sb = [Text.StringBuilder]::new(512); [void][RG.U]::GetWindowText($h, $sb, 512); $sb.ToString() }
@@ -88,6 +88,11 @@ try {
 	Check-Split 'RTL: every mirrored view on GDI, the others on DirectWrite'
 	Cmd $IDM_EDIT_LTR
 	Check 'LTR again: the view and the map back on DirectWrite' ((-not (Test-RTL $view)) -and ((Get-Tech $view) -eq 1) -and ($null -ne $map) -and (-not (Test-RTL $map)) -and ((Get-Tech $map) -eq 1))
+
+	# a technology a plugin set on the view (a DirectWrite variant other than the setting) is given back after RTL, not the setting
+	[void](Send $view $SCI_SETTECHNOLOGY 2); Cmd $IDM_EDIT_RTL; $rtlTech = Get-Tech $view; Cmd $IDM_EDIT_LTR; $ltrTech = Get-Tech $view
+	Check 'a plugin''s technology (2): GDI while RTL, 2 again once LTR' (($rtlTech -eq 0) -and ($ltrTech -eq 2)) "RTL $rtlTech, LTR $ltrTech"
+	[void](Send $view $SCI_SETTECHNOLOGY 1)
 
 	# a long wrapped document keeps its scroll position while its view switches technology with the tabs
 	Cmd $IDM_VIEW_WRAP
