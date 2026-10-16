@@ -165,7 +165,8 @@ namespace
 			return std::nullopt;
 
 		DWriteFont dwFont{ getLocalizedString(familyNames.Get()), font->GetWeight(), font->GetStretch(), font->GetStyle() };
-		if (dwFont._family.empty() || (dwFont._stretch < DWRITE_FONT_STRETCH_ULTRA_CONDENSED) || (dwFont._stretch > DWRITE_FONT_STRETCH_ULTRA_EXPANDED))
+		if (dwFont._family.empty() || (dwFont._family.length() >= LF_FACESIZE) // Scintilla copies the name into a LOGFONT too
+			|| (dwFont._stretch < DWRITE_FONT_STRETCH_ULTRA_CONDENSED) || (dwFont._stretch > DWRITE_FONT_STRETCH_ULTRA_EXPANDED))
 			return std::nullopt; // not a font DirectWrite can be asked for by these parameters
 		return dwFont;
 	}

@@ -481,10 +481,12 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 			nppGui._writeTechnologyEngine = defaultTechnology;
 	}
 
-	if ((nppGui._writeTechnologyEngine > defaultTechnology) && (nppGui._writeTechnologyEngine < directWriteTechnologyUnavailable)
-		&& !isTextDirectionRTL()) // a view mirrored like its window (RTL UI language) keeps GDI, see changeTextDirection
+	if ((nppGui._writeTechnologyEngine > defaultTechnology) && (nppGui._writeTechnologyEngine < directWriteTechnologyUnavailable))
 	{
-		execute(SCI_SETTECHNOLOGY, nppGui._writeTechnologyEngine);
+		if (isTextDirectionRTL()) // mirrored like its window (RTL UI language): GDI until LTR, see changeTextDirection
+			_technologyIfLTR = nppGui._writeTechnologyEngine;
+		else
+			execute(SCI_SETTECHNOLOGY, nppGui._writeTechnologyEngine);
 		// If useDirectWrite is turned off, leave the technology setting untouched,
 		// so that existing plugins using SCI_SETTECHNOLOGY behave like before
 	}
@@ -612,7 +614,7 @@ void ScintillaEditView::technologyChanged(int previousTechnology)
 		return;
 	// the font quality of the Windows font smoothing depends on the technology (see getWindowsFontQuality): as on
 	// WM_SETTINGCHANGE, a view still at the one it got follows it; the other qualities don't depend on the technology
-	if ((execute(SCI_GETFONTQUALITY) == _windowsFontQuality) && (getWindowsFontQuality() != _windowsFontQuality))
+	if (execute(SCI_GETFONTQUALITY) == _windowsFontQuality)
 		applyWindowsFontQuality();
 	refreshStyleFonts(technology, previousTechnology); // so do the style fonts (see getScintillaFont)
 }
@@ -646,13 +648,9 @@ LRESULT CALLBACK ScintillaEditView::ScintillaProc(
 
 		case WM_SETTINGCHANGE:
 		{
-			// the Windows font smoothing may have changed: a view still at the quality it got from it follows it
-			// ("Enable smooth font", or a quality set by a plugin, is kept)
-			if ((pScint->execute(SCI_GETFONTQUALITY) == pScint->_windowsFontQuality)
-				&& (pScint->getWindowsFontQuality() != pScint->_windowsFontQuality))
-			{
+			// a view still at the quality it got from the Windows font smoothing follows it ("Enable smooth font" is kept)
+			if (pScint->execute(SCI_GETFONTQUALITY) == pScint->_windowsFontQuality)
 				pScint->applyWindowsFontQuality();
-			}
 			break;
 		}
 
@@ -4767,12 +4765,18 @@ void ScintillaEditView::setTechnologyToAll(writeTechnologyEngine technology)
 
 	nppGui._writeTechnologyEngine = technology;
 
-	// the views using the technology of the setting follow it, those a plugin switched itself are left as they are,
-	// and the right-to-left ones keep GDI (see changeTextDirection)
+	// the views on the previous setting follow it (not those a plugin switched); RTL ones keep GDI until LTR
 	for (ScintillaEditView* pView : _liveViews)
 	{
-		if (!pView->isTextDirectionRTL() && (pView->execute(SCI_GETTECHNOLOGY) == static_cast<LRESULT>(previous)))
+		if (pView->isTextDirectionRTL())
+		{
+			if (pView->_technologyIfLTR == static_cast<int>(previous))
+				pView->_technologyIfLTR = technology;
+		}
+		else if (pView->execute(SCI_GETTECHNOLOGY) == static_cast<LRESULT>(previous))
+		{
 			pView->execute(SCI_SETTECHNOLOGY, technology);
+		}
 	}
 }
 
@@ -4812,24 +4816,16 @@ void ScintillaEditView::changeTextDirection(bool isRTL)
 		return;
 	const int previousTechnology = static_cast<int>(execute(SCI_GETTECHNOLOGY)); // Pyre909 build: see technologyChanged
 
-	// DirectWrite doesn't follow the mirroring of the window (WS_EX_LAYOUTRTL), only GDI does: a right-to-left view is
-	// drawn with GDI, and gets the rendering mode of the setting back once left-to-right
-	if (isRTL && (execute(SCI_GETTECHNOLOGY) != SC_TECHNOLOGY_DEFAULT))
-		execute(SCI_SETTECHNOLOGY, SC_TECHNOLOGY_DEFAULT);
-
 	long exStyle = static_cast<long>(::GetWindowLongPtr(_hSelf, GWL_EXSTYLE));
 	exStyle = isRTL ? (exStyle | WS_EX_LAYOUTRTL) : (exStyle & (~WS_EX_LAYOUTRTL));
 	::SetWindowLongPtr(_hSelf, GWL_EXSTYLE, exStyle);
 
-	const writeTechnologyEngine technology = NppParameters::getInstance().getNppGUI()._writeTechnologyEngine;
-	if (!isRTL && (technology > defaultTechnology) && (technology < directWriteTechnologyUnavailable)
-		&& (execute(SCI_GETTECHNOLOGY) == SC_TECHNOLOGY_DEFAULT))
-	{
-		execute(SCI_SETTECHNOLOGY, technology);
-	}
-
+	// DirectWrite ignores WS_EX_LAYOUTRTL: an RTL view is drawn with GDI, then gets its own technology back
 	if (isRTL)
 	{
+		_technologyIfLTR = static_cast<int>(execute(SCI_GETTECHNOLOGY));
+		execute(SCI_SETTECHNOLOGY, SC_TECHNOLOGY_DEFAULT);
+
 		execute(SCI_ASSIGNCMDKEY, SCK_RIGHT, SCI_CHARLEFT);
 		execute(SCI_ASSIGNCMDKEY, SCK_RIGHT + (SCMOD_SHIFT << 16), SCI_CHARLEFTEXTEND);
 		execute(SCI_ASSIGNCMDKEY, SCK_RIGHT + ((SCMOD_SHIFT + SCMOD_ALT) << 16), SCI_CHARLEFTRECTEXTEND);
@@ -4844,6 +4840,8 @@ void ScintillaEditView::changeTextDirection(bool isRTL)
 	}
 	else
 	{
+		execute(SCI_SETTECHNOLOGY, _technologyIfLTR);
+
 		execute(SCI_ASSIGNCMDKEY, SCK_RIGHT, SCI_CHARRIGHT);
 		execute(SCI_ASSIGNCMDKEY, SCK_RIGHT + (SCMOD_SHIFT << 16), SCI_CHARRIGHTEXTEND);
 		execute(SCI_ASSIGNCMDKEY, SCK_RIGHT + ((SCMOD_SHIFT + SCMOD_ALT) << 16), SCI_CHARRIGHTRECTEXTEND);
