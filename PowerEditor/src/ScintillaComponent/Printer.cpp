@@ -327,6 +327,9 @@ size_t Printer::doPrint(bool justDoIt)
 	if (!nppGUI._printSettings._printLineNumber)
 		_pSEView->showMargin(ScintillaEditView::_SC_MARGE_LINENUMBER, false);
 
+	const int technology = static_cast<int>(_pSEView->execute(SCI_GETTECHNOLOGY));
+	_pSEView->setStyleFontsFor(SC_TECHNOLOGY_DEFAULT); // Scintilla prints with GDI
+
 	int pageNum = 1;
 	const wchar_t pageVar[] = L"$(CURRENT_PRINTING_PAGE)";
 
@@ -503,6 +506,8 @@ size_t Printer::doPrint(bool justDoIt)
 		if ((_pdlg.Flags & PD_PAGENUMS) && (pageNum > _pdlg.nToPage))
 			break;
 	}
+
+	_pSEView->setStyleFontsFor(technology); // before the line numbers are measured again
 
 	if (!nppGUI._printSettings._printLineNumber)
 		_pSEView->showMargin(ScintillaEditView::_SC_MARGE_LINENUMBER, isShown);
