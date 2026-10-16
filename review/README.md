@@ -47,6 +47,11 @@ A test drives a built Notepad++ the way a user would and checks the result. Cont
   test on a build without it): `review.ps1` reports it as INFO, skipped, not as a pass;
 - closes Notepad++ at the end.
 
+Memory errors (any branch): `asan.ps1 -Ref <branch, tag or commit> [-Test All]` builds the ref with AddressSanitizer
+(MSVC, ARM64) in `npp.worktreessan` and runs the app-level tests on it; any sanitizer report (use after free, buffer
+overflow, double free) is a FAIL with its stack. The script's header says what it takes on Windows (the DLL search flag
+of Notepad++'s link, the runtime DLL, a quoted log path). `pyre` on 2026-10-16: 12 test sets, no report.
+
 Leaks (any branch):
 
 | Test | What it proves |

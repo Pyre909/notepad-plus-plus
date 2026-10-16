@@ -58,7 +58,9 @@ function Measure-Op([string] $name, [scriptblock] $op) {
 	$gdi = ($after.Gdi - $before.Gdi) * $per1000; $user = ($after.User - $before.User) * $per1000
 	$handles = ($after.Handles - $before.Handles) * $per1000; $mb = ($after.PrivateMB - $before.PrivateMB) * $per1000
 	$detail = "per 1000: GDI {0:+0;-0;0}, USER {1:+0;-0;0}, handles {2:+0;-0;0}, private {3:+0.0;-0.0;0} MB (GDI {4}, USER {5}, handles {6}, {7} MB)" -f $gdi, $user, $handles, $mb, $after.Gdi, $after.User, $after.Handles, $after.PrivateMB
-	Check "${name}: no leak over $Count" (($gdi -le 10) -and ($user -le 10) -and ($handles -le 50) -and ($mb -le 8)) $detail
+	# under AddressSanitizer (asan.ps1) freed memory stays in its quarantine: then objects and handles only
+	$memoryOk = ($mb -le 8) -or [bool]$env:ASAN_OPTIONS
+	Check "${name}: no leak over $Count" (($gdi -le 10) -and ($user -le 10) -and ($handles -le 50) -and $memoryOk) $detail
 }
 
 # a settings folder of its own: the Default Style in "Bahnschrift Light", a C++ and a Python file
