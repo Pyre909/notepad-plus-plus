@@ -170,6 +170,9 @@ try {
 		Check 'the RTL tab again, after a switch to DX11: mirrored, on GDI' ((Test-RTL $v[0]) -and ((Get-Tech $v[0]) -eq 0))
 		Invoke-Cmd $IDM_VIEW_TAB1
 		Check 'its LTR neighbour on DX11' ((-not (Test-RTL $v[0])) -and ((Get-Tech $v[0]) -eq 4))
+		# a switch while the RTL tab is shown: the view keeps GDI, and gets the new mode once LTR, not the one it had
+		Invoke-Cmd $IDM_VIEW_TAB2; Select-Mode 2; $rtlTech = Get-Tech $v[0]; Invoke-Cmd $IDM_VIEW_TAB1
+		Check 'a switch to DirectWrite retain (2) while the RTL tab is shown: GDI there, its LTR neighbour on it' (((Get-Tech $v[0]) -eq 2) -and ($rtlTech -eq 0)) ("RTL $rtlTech, LTR $(Get-Tech $v[0])")
 		Invoke-Cmd $IDM_VIEW_TAB2 # the RTL document stays shown for the quick switches
 	}
 

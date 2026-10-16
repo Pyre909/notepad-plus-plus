@@ -59,7 +59,7 @@ The rendering mode applied at once (`live-rendering-switch_20261005`, kit sectio
 
 | Test | What it proves |
 |---|---|
-| `live-rendering-switch.ps1` | The rendering mode of Preferences > MISC. applies at once to every view (Notepad++'s, plugins'), leaves a view a plugin switched itself alone, survives a view destroyed at run time; right-to-left views (the document, the Document Map) kept on GDI in every mode without a message, the others following; an RTL tab and an LTR tab switching the view between GDI and the mode; 50 quick switches; no message on exit; the choice saved on exit (40 checks) |
+| `live-rendering-switch.ps1` | The rendering mode of Preferences > MISC. applies at once to every view (Notepad++'s, plugins'), leaves a view a plugin switched itself alone, survives a view destroyed at run time; right-to-left views (the document, the Document Map) kept on GDI in every mode without a message, the others following; an RTL tab and an LTR tab switching the view between GDI and the mode, a switch while the RTL tab is shown reaching its LTR neighbour; 50 quick switches; no message on exit; the choice saved on exit (41 checks) |
 | `live-rendering-switch-rtl-ui.ps1` | With a right-to-left UI language (hebrew.xml): the mirrored views keep GDI through the switches, an LTR document follows them (15 checks) |
 | `live-rendering-switch-scroll.ps1` | A long wrapped document keeps its scroll position when its view switches technology with the tabs, with the DirectWrite setting and with GDI set at run time; no message on exit (11 checks) |
 
