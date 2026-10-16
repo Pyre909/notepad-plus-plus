@@ -47,10 +47,10 @@ function Get-Counters {
 		Handles = $script:proc.HandleCount; PrivateMB = [math]::Round($script:proc.PrivateMemorySize64 / 1MB, 1)
 	}
 }
-# an operation $Count times after 20 for the warm-up (caches, lazily loaded DLLs); growth per 1000 operations allowed:
+# an operation $Count times after 50 for the warm-up (caches, lazily loaded DLLs); growth per 1000 operations allowed:
 # 10 GDI and USER objects, 50 handles (the system's own fluctuation), 8 MB of private memory
 function Measure-Op([string] $name, [scriptblock] $op) {
-	for ($i = 0; $i -lt 20; $i++) { & $op }
+	for ($i = 0; $i -lt 50; $i++) { & $op }
 	$before = Get-Counters
 	for ($i = 0; $i -lt $Count; $i++) { & $op }
 	$after = Get-Counters
