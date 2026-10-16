@@ -421,8 +421,9 @@ Before opening:
    `changeTextDirection` after each `SCI_SETTECHNOLOGY` (a right-to-left view goes to GDI and back): else an RTL view
    draws "Fira Code" 300 with GDI (Regular), and an LTR view styled while GDI keeps the fallback font. Same for
    section 7's `setTechnologyToAll`.
-8. Redo for the 2026-10-15 version: the printing check of item 2 (it needs "Microsoft Print to PDF" as the default
-   printer, Pyre909's call), and push + CI once Actions runs again on the fork.
+8. Redo for the 2026-10-15 version: the printing check of item 2: done 2026-10-16 (`801cb36`'s ARM64 build, Pyre909's
+   OK): the PDF embeds Segoe UI Light, weight 300, and the styles are "Segoe UI" 300 / 600 again afterwards. Left:
+   push + CI once Actions runs again on the fork.
 7. PR body rewritten in a casual voice on 2026-10-07; checked then: the branch is on `master` `a69bc23` (current),
    #9951 and #12393 still open, no other open PR on them. The body now says why the PR is larger than the template's
    1-4 files / ~30 lines.
@@ -654,7 +655,7 @@ Translations: the other languages' tooltip still mentions the restart until tran
 ## 8. DirectWrite following the Windows font smoothing (bug fix)
 
 Branch `directwrite-font-smoothing_20261006` (worktree `npp.worktrees\directwrite-font-smoothing_20261006`), one commit
-(`ca26d19`) on upstream `master` `a660d79`, 4 files, +48 −4, no Scintilla change, no new setting or UI text. Made on
+(`5dff07b`) on upstream `master` `a660d79`, 4 files, +40 −4, no Scintilla change, no new setting or UI text. Made on
 2026-10-06 from the "Follow Windows" antialiasing of the fork's Text Rendering settings (#18418, rejected), without the
 setting.
 
@@ -688,7 +689,8 @@ branch's views at once (quality 2 to 0, 0 to 1, 1 to 0); master's stayed at the 
 Second review on 2026-10-15 (rebased on `master` `a660d79`, no conflict; independent AI review against the checklist):
 no bug. Taken: the `WM_SETTINGCHANGE` handler re-applies whenever a view is still at its Windows quality (the second
 comparison only saved work Scintilla repeats anyway: it restyles on every `WM_SETTINGCHANGE`), the plugin-API comment in
-`Notepad_plus_msgs.h` shortened, the commit message cut to upstream's length. Left: a plugin quality equal to the Windows
+`Notepad_plus_msgs.h` shortened, the commit message cut to upstream's length. On 2026-10-16 `getWindowsFontQuality` folded into
+`applyWindowsFontQuality` (its only caller): +40. Left: a plugin quality equal to the Windows
 one can't be told apart (it follows Windows then; rare); about 48 lines, over the template's 30 for new contributors,
 but each part is needed. Harness 0 FAIL, 0 WARN, ARM64, x64 and Win32 builds; `directwrite-font-smoothing` 16 checks
 with ClearType (the off and Standard runs of 2026-10-06 cover the same logic); fork CI not run (Actions blocked on the

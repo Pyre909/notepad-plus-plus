@@ -5,39 +5,65 @@ build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` 
 `scintilla/SCINTILLA-UPSTREAM.md`, and how Scintilla's maintainer decides (a survey of 792 tickets, compared with
 ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md`.
 
-## Handoff (2026-10-07): read this first
+## Handoff (2026-10-16): read this first
 
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
-- Pushed: `pyre` up to `5771464` (the redrawn standard toolbar icons in place of the bitmaps, the "not official" note
-  in the README: CI run 37723372296, all 13 jobs pass), `standard-icons-hidpi_20261007` (the icons alone, offered on
-  #16110) and `per-monitor-dpi_20260925` at `8a455e0`. **This branch is not pushed**: Pyre909 keeps it local since
-  2026-10-07 (the v1 and v2 icon backups and this handoff; push only when they say). Upstream `master` was 2 commits
-  past `a69bc23` on 2026-10-07: no merge needed yet.
-- Released 2026-10-07: **`pyre-8.9.8.1-5771464`, the first published (public) release**, marked Latest ("The Pyre909
-  build" below). Its ARM64 installer is installed on the VM. The repository's description and website link now say it
-  is an unofficial fork (set with `gh repo edit`).
-- Done on 2026-10-07: the 32 standard toolbar icons redrawn ("Standard toolbar icons redrawn" below).
-- Done on 2026-10-06/07: upstream merged into `pyre` up to `a69bc23` ("Upstream merge (2026-10-06)" below, with a status
-  bar DPI fix the merge needed); the DirectWrite mode Adaptive dropped ("Next" 8); the test round's open rows but DPI
-  (new test `pyre-text-rendering-live`, upstream baseline of the font tests); the four upstream texts of the kit
-  rewritten in a casual voice (sections 5 to 8, each with its date check); the per-monitor DPI candidate reconciled with
-  upstream's per-monitor dialogs (kit 4, with a comment for #14959).
-- Waiting on Pyre909, in this order: open the RTL fix PR (kit section 6), the font smoothing PR (kit 8), the live
-  switch's feature request (kit 7); then the font-name PR (kit 5) and the optional comment on #9951. Each section's
-  "Before opening" says what changes if section 6 is merged first. Also, any time: the comment on #14959 for the
-  per-monitor DPI branch (kit 4, reconciled with upstream on 2026-10-07).
-- Waiting on Pyre909 too: the test round's per-monitor DPI row and the merge's DPI checks ("Upstream merge" below) need
-  a second display or a change of Windows' scale, which Claude doesn't make.
-- Waiting on the maintainers: replies to the icons comment on #16110 (Pyre909's, 2026-10-07).
-- Next for Claude, once asked: replies on the PRs once they're open (casual voice, Pyre909 posts them); the next
-  upstream merge (Sync fork, then merge `master` into `pyre`, as on 2026-10-06); "Later" items.
-- Reviews: `review.ps1 -Quiet` (PASS lines to the log only), then the AI review (skill `npp-review`). Keep agents to the
-  harness; no ad hoc fan-out. On a pull request branch, `-Test All` also runs the other PRs' tests, which fail as on
-  upstream (font names, RTL): only the branch's own tests count.
-- Pushes: GitHub answered "Internal Server Error" to a force push three times on 2026-10-07 (status page: operational);
-  it went through a few minutes later. Retry later rather than changing the push.
+- **GitHub Actions refuses every run on the fork since about 2026-10-15** ("Actions has been disabled for this
+  repository", though the API says enabled; the last run is of 2026-10-08). The cause is on GitHub's side or the
+  account's: Pyre909 checks the Actions page's banner. Nothing below that needs CI is done until then.
+- **CI is manual since 2026-10-16** (pushed, `pyre` `12acf40`): workflow **Pyre909 CI** (`pyre-ci.yml`, generated from
+  upstream's `CI_build.yml` by `.github/pyre/make-ci.ps1`), started by hand on any ref; upstream's `CI_build` and
+  `release-notifier` are disabled on the fork (`gh workflow disable`); the release workflow lost its tag trigger.
+- `pyre`, local and **24 commits ahead** of `origin/pyre` (not pushed: Pyre909 reviews first): upstream merged up to
+  `a660d79` (`6033da5`, 5 conflicts, see "PR review round and upstream merge" below) and the PR reviews' improvements
+  (`b0ae0e6`). Fork `master` synced to `a660d79` on GitHub (Sync fork). All 13 test sets pass on the ARM64 build, the
+  three builds too. Push it, then a release (the license note and full release notes are in since `9a8f534`).
+- The four PR branches: rebased on `a660d79` on 2026-10-15, reviewed again (harness, independent AI reviews, leaks),
+  local and **not pushed** (their GitHub copies are the old ones; a force push replaces them):
+  `rtl-views-gdi_20261006` `9fdd356` (5 files, +15 -22), `directwrite-font-smoothing_20261006` `5dff07b` (4 files,
+  +40 -4), `live-rendering-switch_20261005` `6a8a339` (on the RTL fix, +35), `directwrite-font-names_20260930`
+  `801cb36` (rewritten smaller: 3 files, +161, from 361 in 7). Their texts: kit sections 5 to 8, updated.
+- Waiting on Pyre909: open the RTL fix and font smoothing PRs (ready), the live switch's feature request (any time;
+  upstream's CONTRIBUTING of 2026-10-08 no longer makes a PR wait for Accepted, but this PR needs the RTL fix merged
+  first), the font-name PR (ready: its print check passed on 2026-10-16). Whichever of the RTL fix and the font-name
+  PR is merged second calls `setStyleFontsFor` after a technology switch (kit 5, before opening, item 6).
+- Waiting on the maintainers: #16110 (icons): softmgr wrote "I'll take them" on 2026-10-13; no maintainer reply.
+- The VM after the 2026-10-16 print check: "Microsoft Print to PDF" is the default printer (Windows manages it):
+  Pyre909 sets the Brother back. Windows font smoothing is on again.
+- Reviews: `review.ps1 -Quiet`, then the AI review (skill `npp-review`). After a change of a class layout in a header
+  (a member added), delete the worktree's `PowerEditor\visual.net\<arch>` folders first: the harness builds
+  incrementally, and stale objects gave 5 false failures on 2026-10-15. New test `leaks.ps1` (any branch).
+
+## PR review round and upstream merge (2026-10-15/16)
+
+Asked by Pyre909: every planned PR checked for quality, one at a time, "true to the maintainers' standards", then
+refactored for fewer lines with what C++ and Notepad++ already offer, then tested for leaks.
+- RTL fix: the view now gets back the technology it had (`_technologyIfLTR`), not the live setting: a rendering mode
+  picked in Preferences reached that view before the restart its tip asks for, and a plugin's technology was replaced
+  (new check in `rtl-views-gdi`, 17). Rejected: removing `RTLvsDirectWrite` from the other languages (upstream's usual
+  way leaves it to translators, 6 of 8 removals).
+- Font smoothing: the `WM_SETTINGCHANGE` handler re-applies without a second comparison (Scintilla restyles on every
+  `WM_SETTINGCHANGE`), `getWindowsFontQuality` folded into `applyWindowsFontQuality`, a short commit message. Tested
+  with the Windows font smoothing ClearType and off.
+- Live switch: an RTL view's remembered technology follows a switch (new check in `live-rendering-switch`, 41).
+- Font names: rewritten (see kit 5): no GDI family enumeration (`FW_DONTCARE` gives the same font as before for all 228
+  families of the VM, checked by a throwaway program), no new files, upstream's lines of
+  `setSpecialStyle` untouched, one `setStyleFontsFor(technology)` for printing and technology switches. Fixed: a family
+  name of 32+ characters (Scintilla throws copying it), a style moving from a remapped font to a usual one. Print
+  check (2026-10-16, `vm/print-pdf.ps1`, Pyre909's OK): the PDF embeds Segoe UI Light, weight 300; afterwards the
+  styles are "Segoe UI" 300 / 600 again.
+- Leaks (`leaks.ps1`, 300 repetitions; 2000 on `pyre`): tab switches restyling with a font of a weight, Windows setting
+  changes, RTL and back, the rendering mode through every mode: GDI, USER, handles flat. A few GDI objects in the first
+  few hundred tab switches are caches filling (flat over 2000), so the warm-up is 50.
+- Upstream merge into `pyre` (`6033da5`): `WordStyleDlg.rc` (upstream's label alignment applied at pyre's positions,
+  the font row's labels too), `DockingManager.cpp` (upstream's bounds checks, pyre's `setFloatingRect`),
+  `StaticDialog.h` (both includes), `StatusBar.cpp` (upstream moved the subclass state into `StatusBar` and handles
+  `WM_DPICHANGED` itself; pyre keeps one branch: the main status bar gets the new font, for its height under
+  per-monitor DPI), `dpiManagerV2.cpp` (both sides' functions, upstream's `getDefaultGUIFontForDpi(UINT dpi, WORD ...)`).
+  Upstream's own per-monitor work (Find dialog) was disabled again by them for a status bar regression (#18462).
+  `pyre` keeps its larger font-name code (its GDI block), with the length fix.
 
 ## The move to the Windows VM (2026-10-01, history)
 
