@@ -47,6 +47,12 @@ A test drives a built Notepad++ the way a user would and checks the result. Cont
   test on a build without it): `review.ps1` reports it as INFO, skipped, not as a pass;
 - closes Notepad++ at the end.
 
+Leaks (any branch):
+
+| Test | What it proves |
+|---|---|
+| `leaks.ps1` | Each repeated operation of the fork's changes, 300 times after a warm-up: tab switches restyling with a font of a weight, Windows setting changes, right-to-left and back, the rendering mode switched through every mode (the last two skipped where the build lacks them): GDI and USER objects, handles and private memory don't grow (at most 10, 10, 50 and 8 MB per 1000) |
+
 Right-to-left views drawn with GDI (`rtl-views-gdi_20261006`, kit section 6; also in the live switch branch and pyre):
 
 | Test | What it proves |
