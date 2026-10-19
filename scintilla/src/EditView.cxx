@@ -341,12 +341,21 @@ void LayoutSegments(IPositionCache *pCache,
 	std::atomic<uint32_t> &nextIndex,
 	const bool textUnicode,
 	const bool multiThreaded) {
+	// N++: the segments are taken in blocks. Taken one by one, the threads contended for nextIndex and wrote the
+	// positions of neighbouring segments, sharing cache lines: with cheap measuring (monospaced ASCII text), a wide
+	// line was laid out slower with threads than without.
+	constexpr uint32_t segmentsPerBlock = 64;
+	uint32_t i = 0;
+	uint32_t blockEnd = 0;
 	while (true) {
-		const uint32_t i = nextIndex.fetch_add(1, std::memory_order_acq_rel);
+		if (i == blockEnd) {
+			i = nextIndex.fetch_add(segmentsPerBlock, std::memory_order_acq_rel);
+			blockEnd = i + segmentsPerBlock;
+		}
 		if (i >= segments.size()) {
 			break;
 		}
-		const TextSegment &ts = segments[i];
+		const TextSegment &ts = segments[i++];
 		const unsigned int styleSegment = ll->styles[ts.start];
 		XYPOSITION *positions = &ll->positions[ts.start + 1];
 		if (vstyle.styles[styleSegment].visible) {
