@@ -397,23 +397,20 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 
 	execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF);
 	execute(SCI_SETIDLESTYLING, SC_IDLESTYLING_ALL, 0);
-	// Pyre909 build: the layouts of all the shown lines kept from paint to paint, not only the caret line's. With long
-	// lines (tests of 2026-10-19, 250 KB lines), repainting and moving the caret are 2 to 30 times faster, typing 1.4 to 5
-	execute(SCI_SETLAYOUTCACHE, SC_CACHE_PAGE);
-	// Pyre909 build: lines laid out on all the processor's threads (DirectWrite only): wrapping a 1,000,000-line file is
-	// 1.8 to 2.5 times faster with 6 threads, laying out long lines 1.1 to 1.25 times (with Scintilla's segments taken in
-	// blocks, see LayoutSegments in EditView.cxx: one by one, the threads contended and it was slower)
-	execute(SCI_SETLAYOUTTHREADS, std::thread::hardware_concurrency());
+	applyLayoutCache(); // Pyre909 build
+	// Pyre909 build: lines laid out on the processor's threads, 8 at most (measured with 6): wrapping a 1,000,000-line
+	// file is 1.8 to 2.5 times faster with 6 threads, laying out long lines 1.1 to 1.25 times (DirectWrite only; with
+	// Scintilla's segments taken in blocks, see LayoutSegments in EditView.cxx: one by one, the threads contended)
+	execute(SCI_SETLAYOUTTHREADS, std::min(std::thread::hardware_concurrency(), 8U));
 	// Pyre909 build: DirectWrite draws the characters whose forms differ between languages (Han characters in Chinese
-	// and Japanese) and picks fallback fonts after the font locale, en-US unless set: the user's locale (#15265)
+	// and Japanese) and picks fallback fonts after the font locale, en-US unless set: the user's locale (#15265), without
+	// its sort order ("zh-TW_radstr" isn't a language tag)
 	wchar_t userLocale[LOCALE_NAME_MAX_LENGTH]{};
 	if (::GetUserDefaultLocaleName(userLocale, LOCALE_NAME_MAX_LENGTH) > 0)
-		execute(SCI_SETFONTLOCALE, 0, reinterpret_cast<LPARAM>(wstring2string(userLocale).c_str()));
-	// Pyre909 build: the text drawn over the backgrounds of all the lines, not line by line clipped to its line, so that
-	// the parts of glyphs taller than a line (stacked diacritics, Burmese, Thai) aren't cut off (#12446, #16259). Slower
-	// than two phases, but not much with the page layout cache. DirectWrite only: drawn through a buffer, as with GDI,
-	// it acts as SC_PHASES_TWO
-	execute(SCI_SETPHASESDRAW, SC_PHASES_MULTIPLE);
+	{
+		const std::wstring locale(userLocale);
+		execute(SCI_SETFONTLOCALE, 0, reinterpret_cast<LPARAM>(wstring2string(locale.substr(0, locale.find(L'_'))).c_str()));
+	}
 	execute(SCI_SETMARGINMASKN, _SC_MARGE_FOLDER, SC_MASK_FOLDERS);
 	showMargin(_SC_MARGE_FOLDER, true);
 
@@ -612,18 +609,40 @@ void ScintillaEditView::applyTextRenderingSettings()
 }
 
 // Pyre909 build: the line spacing of Preferences > Editing 1, for the edit views only (not the Finders, Document Map or
-// plugins' Scintillas): pixels at 96 DPI scaled to the view's DPI, the extra space split above and below the text
+// plugins' Scintillas): pixels at 96 DPI scaled to the view's DPI, the extra space split above and below the text.
+// Without line spacing, an extra ascent or descent a plugin set is left as it is.
 void ScintillaEditView::applyLineSpacing()
 {
 	if (!_isMainEditZone)
 		return;
 
 	const int extra = DPIManagerV2::scale(NppParameters::getInstance().getSVP()._lineSpacing, _viewDpi);
+	if ((extra == 0) && !_hasLineSpacing)
+		return;
+	_hasLineSpacing = (extra != 0);
 	const int extraAscent = extra / 2;
 	if (execute(SCI_GETEXTRAASCENT) != extraAscent)
 		execute(SCI_SETEXTRAASCENT, extraAscent);
 	if (execute(SCI_GETEXTRADESCENT) != extra - extraAscent)
 		execute(SCI_SETEXTRADESCENT, extra - extraAscent);
+}
+
+// Pyre909 build: an edit view keeps the layouts of all the lines shown from paint to paint, not only the caret line's:
+// with long lines (tests of 2026-10-19, 250 KB lines), repainting and moving the caret are 2 to 30 times faster, typing
+// 1.4 to 5 times. And its text is drawn over the backgrounds of all the lines, not line by line clipped to its line, so
+// that the parts of glyphs taller than a line (stacked diacritics, Burmese, Thai) aren't cut off (#12446, #16259):
+// slower than two phases, but not much with the layouts kept (else each phase would lay out the lines again). DirectWrite
+// only: drawn through a buffer, as with GDI, it acts as SC_PHASES_TWO. A kept layout takes about 10 bytes per character:
+// not for a large file (Preferences > Performance), whose lines can be of megabytes, nor for the other views (Finders,
+// Document Map, Peeker, plugins' Scintillas), which show more lines.
+void ScintillaEditView::applyLayoutCache()
+{
+	if (!_isMainEditZone)
+		return;
+
+	const bool isLargeFile = _currentBuffer && _currentBuffer->isLargeFile();
+	execute(SCI_SETLAYOUTCACHE, isLargeFile ? SC_CACHE_CARET : SC_CACHE_PAGE);
+	execute(SCI_SETPHASESDRAW, isLargeFile ? SC_PHASES_TWO : SC_PHASES_MULTIPLE);
 }
 
 void ScintillaEditView::applyTextRenderingSettingsToAll()
@@ -660,6 +679,32 @@ void ScintillaEditView::sendMessageToAll(UINT Msg, WPARAM wParam, LPARAM lParam)
 	// index based loop: the list must not be invalidated if a view is created or destroyed meanwhile
 	for (size_t i = 0; i < _liveViews.size(); ++i)
 		::SendMessage(_liveViews[i]->getHSelf(), Msg, wParam, lParam);
+}
+
+ScintillaEditView::RedrawOff::RedrawOff(const ScintillaEditView& view)
+{
+	const LRESULT document = view.execute(SCI_GETDOCPOINTER);
+	for (size_t i = 0; i < _liveViews.size(); ++i)
+	{
+		const HWND hView = _liveViews[i]->getHSelf();
+		if ((::GetWindowLongPtr(hView, GWL_STYLE) & WS_VISIBLE) && (_liveViews[i]->execute(SCI_GETDOCPOINTER) == document))
+		{
+			::SendMessage(hView, WM_SETREDRAW, FALSE, 0);
+			_views.push_back(hView);
+		}
+	}
+}
+
+ScintillaEditView::RedrawOff::~RedrawOff()
+{
+	for (const HWND hView : _views)
+	{
+		if (::IsWindow(hView))
+		{
+			::SendMessage(hView, WM_SETREDRAW, TRUE, 0);
+			::InvalidateRect(hView, nullptr, TRUE);
+		}
+	}
 }
 
 LRESULT CALLBACK ScintillaEditView::ScintillaProc(
@@ -2572,6 +2617,7 @@ void ScintillaEditView::activateBuffer(BufferID buffer, bool force)
 	execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF);
 	execute(SCI_SETDOCPOINTER, 0, _currentBuffer->getDocument());
 	execute(SCI_SETMODEVENTMASK, MODEVENTMASK_ON);
+	applyLayoutCache(); // Pyre909 build: for a large file or not
 
 	defineDocType(_currentBuffer->getLangType());
 

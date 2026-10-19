@@ -286,6 +286,21 @@ public:
 	// Pyre909 build: sends a message to every live Notepad++ Scintilla window
 	static void sendMessageToAll(UINT Msg, WPARAM wParam = 0, LPARAM lParam = 0);
 
+	// Pyre909 build: while it lives, the redraw of every shown view of the view's document is off. Scintilla updates the
+	// scroll bars after each line added or removed, which is slow (upstream #10301): with the redraw off, once at the end.
+	// A hidden view is left alone (WM_SETREDRAW TRUE would show it), so is a view whose redraw is already off.
+	class RedrawOff final
+	{
+	public:
+		explicit RedrawOff(const ScintillaEditView& view);
+		~RedrawOff();
+		RedrawOff(const RedrawOff&) = delete;
+		RedrawOff& operator=(const RedrawOff&) = delete;
+
+	private:
+		std::vector<HWND> _views;
+	};
+
 	LRESULT execute(UINT Msg, WPARAM wParam=0, LPARAM lParam=0) const {
 		try {
 			return (_pScintillaFunc) ? _pScintillaFunc(_pScintillaPtr, Msg, wParam, lParam) : -1;
@@ -739,6 +754,8 @@ protected:
 	void setMarkerImagesForDpi(UINT dpi);
 	void updateForDpi(); // after WM_DPICHANGED_AFTERPARENT: the Notepad++ pixel sizes (margins, markers) for the new DPI
 	void applyLineSpacing(); // Pyre909 build: see applyTextRenderingSettings
+	void applyLayoutCache(); // Pyre909 build: the layout cache and drawing phases of an edit view for its document
+	bool _hasLineSpacing = false; // Pyre909 build: applyLineSpacing gave the view extra ascent or descent
 
 	bool _isMainEditZone = false;
 	SCINTILLA_FUNC _pScintillaFunc = nullptr;

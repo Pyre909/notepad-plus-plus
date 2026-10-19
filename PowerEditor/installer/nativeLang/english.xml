@@ -1085,6 +1085,19 @@ Translation note:
 						<Element name="High"/>
 						<Element name="Very high"/>
 					</ComboBox>
+					<ComboBox id="6288">
+						<Element name="Normal"/>
+						<Element name="+1 px"/>
+						<Element name="+2 px"/>
+						<Element name="+3 px"/>
+						<Element name="+4 px"/>
+						<Element name="+5 px"/>
+						<Element name="+6 px"/>
+						<Element name="+7 px"/>
+						<Element name="+8 px"/>
+						<Element name="+9 px"/>
+						<Element name="+10 px"/>
+					</ComboBox>
 				</Scintillas>
 
 				<Scintillas2 title="Editing 2">

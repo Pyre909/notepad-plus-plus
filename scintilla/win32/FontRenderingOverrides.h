@@ -112,6 +112,7 @@ public:
 	}
 
 	// Whether a rendering parameter is overridden (the font features are not rendering parameters)
+	static_assert(SC_FONTRENDERING_LIGATURES == SC_FONTRENDERING_PARAMETERS - 1, "the rendering parameters come first");
 	[[nodiscard]] bool Any() const noexcept {
 		return std::any_of(values.cbegin(), values.cbegin() + SC_FONTRENDERING_LIGATURES, [](int value) noexcept { return value != SC_FONTRENDERING_DEFAULT; });
 	}

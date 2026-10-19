@@ -1788,6 +1788,8 @@ void Notepad_plus::removeDuplicateLines()
 	if (startLine == endLine)
 		return;
 
+	const ScintillaEditView::RedrawOff redrawOff(*_pEditView); // Pyre909 build: the scroll bars updated once
+
 	intptr_t firstMatchLineNr = 0;
 	intptr_t lastMatchLineNr = 0;
 	wstring firstMatchLineStr;
@@ -3010,6 +3012,7 @@ void Notepad_plus::cutMarkedLines()
 
 	intptr_t lastLine = _pEditView->lastZeroBasedLineNumber();
 	wstring globalStr = L"";
+	const ScintillaEditView::RedrawOff redrawOff(*_pEditView); // Pyre909 build: the scroll bars updated once
 
 	_pEditView->execute(SCI_BEGINUNDOACTION);
 	for (intptr_t i = lastLine ; i >= 0 ; i--)
@@ -3031,9 +3034,8 @@ void Notepad_plus::deleteMarkedLines(bool isMarked)
 	std::lock_guard<std::mutex> lock(mark_mutex);
 
 	intptr_t lastLine = _pEditView->lastZeroBasedLineNumber();
+	const ScintillaEditView::RedrawOff redrawOff(*_pEditView); // Pyre909 build: the scroll bars updated once
 
-	// the scroll bars updated once, not after each line removed (see FindReplaceDlg::processAll)
-	::SendMessage(_pEditView->getHSelf(), WM_SETREDRAW, FALSE, 0);
 	_pEditView->execute(SCI_BEGINUNDOACTION);
 	for (intptr_t i = lastLine ; i >= 0 ; i--)
 	{
@@ -3041,8 +3043,6 @@ void Notepad_plus::deleteMarkedLines(bool isMarked)
 			deleteMarkedline(i);
 	}
 	_pEditView->execute(SCI_ENDUNDOACTION);
-	::SendMessage(_pEditView->getHSelf(), WM_SETREDRAW, TRUE, 0);
-	::InvalidateRect(_pEditView->getHSelf(), nullptr, TRUE);
 }
 
 void Notepad_plus::pasteToMarkedLines()

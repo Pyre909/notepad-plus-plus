@@ -2823,6 +2823,7 @@ void Editor::NotifyModified(Document *, DocModification mh, void *) {
 		}
 	}
 	if (FlagSet(mh.modificationType, ModificationFlags::ChangeTabStops)) {
+		view.llc.Invalidate(LineLayout::ValidLevel::invalid);	// N++: kept layouts have the former tab stops
 		Redraw();
 	}
 	if (FlagSet(mh.modificationType, ModificationFlags::LexerState)) {
@@ -8619,6 +8620,7 @@ sptr_t Editor::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 
 	case Message::SetRepresentation:
 		reprs->SetRepresentation(ConstCharPtrFromUPtr(wParam), ConstCharPtrFromSPtr(lParam));
+		view.llc.Invalidate(LineLayout::ValidLevel::invalid);	// N++: kept layouts have the former widths
 		break;
 
 	case Message::GetRepresentation: {
@@ -8632,14 +8634,17 @@ sptr_t Editor::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 
 	case Message::ClearRepresentation:
 		reprs->ClearRepresentation(ConstCharPtrFromUPtr(wParam));
+		view.llc.Invalidate(LineLayout::ValidLevel::invalid);	// N++
 		break;
 
 	case Message::ClearAllRepresentations:
 		SetRepresentations();
+		view.llc.Invalidate(LineLayout::ValidLevel::invalid);	// N++
 		break;
 
 	case Message::SetRepresentationAppearance:
 		reprs->SetRepresentationAppearance(ConstCharPtrFromUPtr(wParam), static_cast<RepresentationAppearance>(lParam));
+		view.llc.Invalidate(LineLayout::ValidLevel::invalid);	// N++: a blob's padding changes widths
 		break;
 
 	case Message::GetRepresentationAppearance: {

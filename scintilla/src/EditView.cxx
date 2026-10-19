@@ -340,11 +340,11 @@ void LayoutSegments(IPositionCache *pCache,
 	const std::vector<TextSegment> &segments,
 	std::atomic<uint32_t> &nextIndex,
 	const bool textUnicode,
-	const bool multiThreaded) {
-	// N++: the segments are taken in blocks. Taken one by one, the threads contended for nextIndex and wrote the
-	// positions of neighbouring segments, sharing cache lines: with cheap measuring (monospaced ASCII text), a wide
-	// line was laid out slower with threads than without.
-	constexpr uint32_t segmentsPerBlock = 64;
+	const bool multiThreaded,
+	const uint32_t segmentsPerBlock) {
+	// N++: the segments are taken in blocks (see LayoutLine). Taken one by one, the threads contended for nextIndex and
+	// wrote the positions of neighbouring segments, sharing cache lines: with cheap measuring (monospaced ASCII text), a
+	// wide line was laid out slower with threads than without.
 	uint32_t i = 0;
 	uint32_t blockEnd = 0;
 	while (true) {
@@ -508,9 +508,13 @@ void EditView::LayoutLine(const EditModel &model, Surface *surface, const ViewSt
 			const bool multiThreadedContext = (threads > 1) || callerMultiThreaded;
 			IPositionCache *pCache = posCache.get();
 
+			// N++: blocks of up to 64 segments, about 4 blocks or more per thread: a line of a few long segments (prose,
+			// a comment) still keeps every thread busy
+			const uint32_t segmentsPerBlock = static_cast<uint32_t>(std::clamp<size_t>(segments.size() / (threads * 4), 1, 64));
+
 			// If only 1 thread needed then use the main thread, else spin up multiple
-			RunThreads(threads, [pCache, surface, &vstyle, ll, &segments, &nextIndex, textUnicode, multiThreadedContext]() {
-				LayoutSegments(pCache, surface, vstyle, ll, segments, nextIndex, textUnicode, multiThreadedContext);
+			RunThreads(threads, [pCache, surface, &vstyle, ll, &segments, &nextIndex, textUnicode, multiThreadedContext, segmentsPerBlock]() {
+				LayoutSegments(pCache, surface, vstyle, ll, segments, nextIndex, textUnicode, multiThreadedContext, segmentsPerBlock);
 				});
 		}
 

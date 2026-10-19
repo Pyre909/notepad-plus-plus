@@ -29,6 +29,7 @@ intptr_t CALLBACK DocumentPeeker::run_dlgProc(UINT message, WPARAM /*wParam*/, L
 			HWND hwndScintilla = reinterpret_cast<HWND>(::SendMessage(_hParent, NPPM_CREATESCINTILLAHANDLE, 0, reinterpret_cast<LPARAM>(_hSelf)));
 			_pPeekerView = reinterpret_cast<ScintillaEditView *>(::SendMessage(_hParent, NPPM_INTERNAL_GETSCINTEDTVIEW, 0, reinterpret_cast<LPARAM>(hwndScintilla)));
 			_pPeekerView->execute(SCI_SETZOOM, static_cast<WPARAM>(-10), 0);
+			_pPeekerView->execute(SCI_SETTABMINIMUMWIDTH, 0); // Pyre909 build: as the Document Map's (see documentMap.cpp)
 			_pPeekerView->execute(SCI_SETVSCROLLBAR, FALSE, 0);
 			_pPeekerView->execute(SCI_SETHSCROLLBAR, FALSE, 0);
 			_pPeekerView->execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF); // Turn off the modification event
