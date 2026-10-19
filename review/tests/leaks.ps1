@@ -3,7 +3,9 @@
 # before and after; a leak grows with the count. Operations: right-to-left and back (rtl-views-gdi: the technology
 # switches), Windows setting changes (directwrite-font-smoothing: WM_SETTINGCHANGE), tab switches between a C++ and a
 # Python file with a font of a weight as the Default Style font (directwrite-font-names: each switch styles the view
-# again), the rendering mode switched through every mode (live-rendering-switch; skipped if the build has no live switch).
+# again), the rendering mode switched through every mode (live-rendering-switch; skipped if the build has no live switch),
+# Pyre909's font ligatures and line spacing turned off and on with DirectWrite (each turn realises the fonts again, with
+# or without their DirectWrite typography; skipped if the build has no such option).
 # Any build runs every operation; what a build doesn't have costs nothing, so its growth is the baseline.
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
 param([Parameter(Mandatory)] [string] $Exe, [int] $Count = 300)
@@ -25,6 +27,7 @@ public delegate bool EnumProc(IntPtr h, IntPtr l);
 $WM_CLOSE = 0x0010; $WM_COMMAND = 0x0111; $WM_SETTINGCHANGE = 0x001A; $SPI_SETFONTSMOOTHING = 0x004B
 $CB_SETCURSEL = 0x014E; $IDC_COMBO_SC_TECHNOLOGY_CHOICE = 6362; $SELCHANGE = [IntPtr]((1 -shl 16) -bor 6362)
 $IDM_SETTING_PREFERENCE = 48011; $IDM_EDIT_RTL = 42026; $IDM_EDIT_LTR = 42027; $IDM_VIEW_TAB1 = 44086; $IDM_VIEW_TAB2 = 44087
+$BM_SETCHECK = 0x00F1; $IDC_COMBO_LINESPACING = 6288; $IDC_CHECK_FONTLIGATURES = 6289
 
 $script:results = [Collections.Generic.List[string]]::new(); $script:fails = 0
 function Check([string] $name, [bool] $ok, [string] $detail = '') {
@@ -160,6 +163,19 @@ try {
 				[void](Send-Sync $misc $WM_COMMAND $SELCHANGE $combo)
 			}
 			[void][LK.U]::SendMessage($combo, $CB_SETCURSEL, [IntPtr]1, [IntPtr]::Zero); [void](Send-Sync $misc $WM_COMMAND $SELCHANGE $combo)
+			# Pyre909 build, on the same page, with DirectWrite again: the ligatures and the line spacing
+			$ligatures = [LK.U]::GetDlgItem($misc, $IDC_CHECK_FONTLIGATURES); $spacing = [LK.U]::GetDlgItem($misc, $IDC_COMBO_LINESPACING)
+			if (($ligatures -ne [IntPtr]::Zero) -and ($spacing -ne [IntPtr]::Zero)) {
+				$script:on = $true
+				Measure-Op 'font ligatures and line spacing off and on (the fonts realised again each time)' {
+					$script:on = -not $script:on
+					[void][LK.U]::SendMessage($ligatures, $BM_SETCHECK, [IntPtr][int]$script:on, [IntPtr]::Zero)
+					[void](Send-Sync $misc $WM_COMMAND ([IntPtr]$IDC_CHECK_FONTLIGATURES) $ligatures)   # BN_CLICKED
+					[void][LK.U]::SendMessage($spacing, $CB_SETCURSEL, [IntPtr]$(if ($script:on) { 0 } else { 3 }), [IntPtr]::Zero)
+					[void](Send-Sync $misc $WM_COMMAND ([IntPtr]((1 -shl 16) -bor $IDC_COMBO_LINESPACING)) $spacing)   # CBN_SELCHANGE
+				}
+			}
+			else { $script:results.Add('INFO  no font ligatures or line spacing option in this build: skipped') }
 			[void][LK.U]::PostMessage($pref, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero); Start-Sleep -Milliseconds 300
 		}
 	}

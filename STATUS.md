@@ -1,46 +1,88 @@
-# Status (2026-10-07)
+# Status (2026-10-19)
 
 Where the Notepad++ text rendering, DPI and font work stands: branches, upstream PRs and tickets, the Pyre909
 build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` (rules, build, code map). The PR kit with every issue/PR/ticket text is `split/PR-TEXTS.md`; the Scintilla side is
 `scintilla/SCINTILLA-UPSTREAM.md`, and how Scintilla's maintainer decides (a survey of 792 tickets, compared with
 ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md`.
 
-## Handoff (2026-10-16): read this first
+## Handoff (2026-10-19): read this first
 
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
-- **GitHub Actions refuses every run on the fork since about 2026-10-15** ("Actions has been disabled for this
-  repository", though the API says enabled; the last run is of 2026-10-08). The cause is on GitHub's side or the
-  account's: Pyre909 checks the Actions page's banner. Nothing below that needs CI is done until then.
-- **CI is manual since 2026-10-16** (pushed, `pyre` `12acf40`): workflow **Pyre909 CI** (`pyre-ci.yml`, generated from
-  upstream's `CI_build.yml` by `.github/pyre/make-ci.ps1`), started by hand on any ref; upstream's `CI_build` and
-  `release-notifier` are disabled on the fork (`gh workflow disable`); the release workflow lost its tag trigger.
-- `pyre`, local and **24 commits ahead** of `origin/pyre` (not pushed: Pyre909 reviews first): upstream merged up to
-  `a660d79` (`6033da5`, 5 conflicts, see "PR review round and upstream merge" below) and the PR reviews' improvements
-  (`b0ae0e6`). Fork `master` synced to `a660d79` on GitHub (Sync fork). All 13 test sets pass on the ARM64 build, the
-  three builds too. Push it, then a release (the license note and full release notes are in since `9a8f534`).
-- The four PR branches: rebased on `a660d79` on 2026-10-15, reviewed again (harness, independent AI reviews, leaks),
-  local and **not pushed** (their GitHub copies are the old ones; a force push replaces them):
-  `rtl-views-gdi_20261006` `9fdd356` (5 files, +15 -22), `directwrite-font-smoothing_20261006` `5dff07b` (4 files,
-  +40 -4), `live-rendering-switch_20261005` `6a8a339` (on the RTL fix, +35), `directwrite-font-names_20260930`
-  `801cb36` (rewritten smaller: 3 files, +161, from 361 in 7). Their texts: kit sections 5 to 8, updated.
-- Waiting on Pyre909: open the RTL fix and font smoothing PRs (ready), the live switch's feature request (any time;
-  upstream's CONTRIBUTING of 2026-10-08 no longer makes a PR wait for Accepted, but this PR needs the RTL fix merged
-  first), the font-name PR (ready: its print check passed on 2026-10-16). Whichever of the RTL fix and the font-name
-  PR is merged second calls `setStyleFontsFor` after a technology switch (kit 5, before opening, item 6).
-- Waiting on the maintainers: #16110 (icons): softmgr wrote "I'll take them" on 2026-10-13; no maintainer reply.
-- The VM after the 2026-10-16 print check: "Microsoft Print to PDF" is the default printer (Windows manages it):
-  Pyre909 sets the Brother back. Windows font smoothing is on again.
-- Memory checks (2026-10-16, the Valgrind counterparts on Windows ARM64; see `review/README.md`): `review/asan.ps1 -Ref <branch>`
-  (AddressSanitizer build in `npp.worktrees\asan`, the app tests on it: no memory error on `pyre` and the four PR
-  branches) and `leaks.ps1` with UMDH (heap growth with its stacks, file and line: none on `pyre` and the four PRs, a
-  one-time 33 KB on the font smoothing build at 300 tab switches gone at 2000). Debugging Tools for Windows installed
-  (ARM64: cdb, umdh, gflags); the stack recording is on for the test builds only (`review/umdh-scope.ps1`, admin;
-  `-Remove` undoes it); symbols cached in `C:\symbols`.
+- `pyre` pushed on 2026-10-19 (`a52ca6a`): the speed, glyph and Text Rendering work of that day (section "Speed,
+  glyphs and Text Rendering options" below) on top of `b0ae0e6` (pushed 2026-10-16: upstream merged up to `a660d79`,
+  the PR reviews' improvements). Pyre909 CI not run yet on `a52ca6a`: run it (`gh workflow run pyre-ci.yml --ref pyre
+  -f ref=pyre`; MinGW and Clang catch what MSVC doesn't). No release built since: Pyre909 said "Don't build for now"
+  (2026-10-16); then Actions > Pyre909 release.
+- CI is manual since 2026-10-16 (workflow **Pyre909 CI**, `pyre-ci.yml`, generated from upstream's `CI_build.yml` by
+  `.github/pyre/make-ci.ps1`); upstream's `CI_build` and `release-notifier` are disabled on the fork. Actions works
+  again (the refusals of 2026-10-15 are over): the four PR branches passed all 13 jobs on 2026-10-16.
+- Upstream: **PR #18503** (the RTL fix, `rtl-views-gdi_20261006` `9fdd356`) open since 2026-10-16, no review yet,
+  upstream's CI waiting for a maintainer's approval; new commits only from now on. Waiting on Pyre909: the font
+  smoothing PR (kit 8, ready), the live switch's feature request (kit 7; its PR after #18503 is merged), a comment on
+  #9951 then the font-name PR (kit 5). Whichever of #18503 and the font-name PR is merged second calls
+  `setStyleFontsFor` after a technology switch (kit 5, item 6). #16110 (icons): no maintainer reply.
+- New upstream candidates (2026-10-19, small, each with an open issue): Replace All with the views' redraw off
+  (#10301: `ScintillaEditView::RedrawOff`), the font locale (#15265), multiple phases (#12446, #16259, needs the page
+  cache). The page cache itself (#5267) needs the Scintilla fix of its stale layouts (`Editor.cxx`, tab stops and
+  representations): never as our code there (Scintilla's LLM policy); a bug report from Pyre909 is fine (draft below).
+- The VM's display is at 175% (Notepad++'s windows report 168 DPI): a DPI-unaware script reads 96.
+- Memory checks: `review/asan.ps1 -Ref <branch>` (AddressSanitizer) and `leaks.ps1` with UMDH (heap growth with
+  stacks; the stack recording is on for the test build paths only, `review/umdh-scope.ps1`, which also makes those
+  paths slower: time copies of the builds in plain folders). Debugging Tools installed, symbols in `C:\symbols`.
 - Reviews: `review.ps1 -Quiet`, then the AI review (skill `npp-review`). After a change of a class layout in a header
-  (a member added), delete the worktree's `PowerEditor\visual.net\<arch>` folders first: the harness builds
-  incrementally, and stale objects gave 5 false failures on 2026-10-15. New test `leaks.ps1` (any branch).
+  (a member added), rebuild clean: the harness builds incrementally (5 false failures on 2026-10-15).
+
+## Speed, glyphs and Text Rendering options (2026-10-19)
+
+Asked by Pyre909: "Is there anything we can do to improve font rendering and quality? Also anything to improve the
+GUI? What about performance? Anything is on the table", then measure the layout cache and threads, check the
+SourceForge tickets ("a mention about GDI being deprecated"), add what helps even if only in the fork, and the
+ligature and line spacing options.
+- **GDI**: Neil Hodgson on #2519 (2026-09-30): DirectWrite is the default to think of, GDI a legacy API, "Eventually
+  GDI will be deprecated" (no timeline; nothing is deprecated in the docs or the API, GDI is still Scintilla's
+  default). Since 2024 DirectWrite is "the focus of development effort" (scintilla-interest). Scintilla 5.6.7 and
+  Lexilla 5.5.4 are out (2026-09-28: positions as floats, -40% layout memory on wide lines): upstream PR #18428 brings
+  them; Scintilla's unreleased `fa2ab2` fixes #2520, then pyre's crash guard goes.
+- **Measured** (`vm/layout-perf.ps1`, `vm/replace-perf.ps1`; 6 cores, Courier New and Segoe UI; builds alternated,
+  the VM's speed drifts; medians). Page layout cache, 20 lines of 250 KB: repaint 41 -> 21 ms (monospaced) and 629 ->
+  21 ms (proportional), caret move 40 -> 17 and 621 -> 17 ms, typing 60 -> 43 and 557 -> 109 ms; the document cache
+  took 1.26 GB after wrapping 1,000,000 lines (rejected). Layout threads: word wrap of 1,000,000 lines 850 -> 350 ms
+  and 13.3 -> 7.1 s, but long monospaced lines got slower (relayout 82 -> 197 ms): every segment taken through one
+  atomic counter, neighbours' positions sharing cache lines; taken in blocks (Scintilla local patch), 72 ms. Replace
+  All adding a line per match to 1,000,000 lines: 169 s -> 3.3 s with the redraw off; without lines added, 2.5 s as
+  before. Multiple phases: no cost on caret moves, typing and scrolling (all at the 60 Hz floor); a full relayout of 20
+  lines of 250 KB 69 -> 123 ms.
+- **pyre**: `ca75fc6` page cache and threads (the blocks patch), `16c04fe` Replace All and line removals with the
+  redraw off, `a40cf72` the user's locale for DirectWrite fonts, multiple phases, the Document Map's tabs, `25738ce`
+  Preferences > Editing 1 > Text Rendering: Line spacing (+1 to +10 px at 100%, the edit views only, again after a DPI
+  change) and Font ligatures (Scintilla local patch: `SC_FONTRENDERING_LIGATURES`, a FontQuality bit, an
+  `IDWriteTypography` with liga, clig and calt off on every layout), `5c23f33` as reviewed, `a52ca6a` docs. Note: the
+  ligatures were never missing: DirectWrite draws them within a style run (an earlier answer said otherwise).
+- **Review** (`npp-review`, two independent reviewers). Fixed: kept layouts not laid out again after a tab stop or
+  representation change (ElasticTabstops; Scintilla local patch in `Editor.cxx`); the page cache's memory (10 bytes
+  per character per kept line) on every view: now the edit views only, and not for a large file; blocks sized for
+  every thread (a line of a few long segments); `RedrawOff` over every shown view of the document (cloned: 41 s ->
+  8 s for 200,000 lines; also Cut Bookmarked Lines, Remove Consecutive Duplicate Lines); at most 8 layout threads; a
+  plugin's extra ascent kept at Normal spacing; the locale's sort suffix; the Peeker's tabs; the Line spacing items
+  translatable. Rejected: page-slot collisions of folded lines repeating per phase (rare, a paint-loop patch), the
+  GDI views restyled on a ligature toggle (once). Undo of a big Replace All was already fast (Scintilla defers
+  multi-step undo's scroll bars).
+- **Tests**: new `pyre-text-options` (16) and `pyre-layout-cache` (12: 4 of them fail on the build before the review);
+  `leaks.ps1` gets a ligatures and spacing operation (flat over 1000); the 13 older sets pass.
+- **Not done**: fold markers and indicators at high DPI (1 px strokes, thin at 175%: `SCI_MARKERSETSTROKEWIDTH`),
+  fractional font sizes (#12364), the experimental bidirectional mode for mixed RTL text in LTR views (Neil: a user
+  option, it costs speed). `harness/src/nppdrive.cpp` (the Wine-era driver) reads the overrides with message 5002,
+  `SC_WORK_IDLE` since the move to 5101/5102: fix it if that driver is used again.
+- **Scintilla bug report draft** (casual, for Pyre909 to edit and post if wanted; a report, no patch):
+  > Hi! Ran into this while trying SC_CACHE_PAGE in Notepad++: kept line layouts (SC_CACHE_PAGE or SC_CACHE_DOCUMENT) aren't laid out again after SCI_ADDTABSTOP /
+  > SCI_CLEARTABSTOPS or after a representation change (SCI_SETREPRESENTATION, SCI_CLEARREPRESENTATION,
+  > SCI_CLEARALLREPRESENTATIONS, SCI_SETREPRESENTATIONAPPEARANCE). ChangeTabStops only redraws, and a kept layout is
+  > only checked against the text and styles, so a shown line keeps its old tab positions and representation widths
+  > until it's restyled. With the default SC_CACHE_CARET it hardly shows (one slot, reused by every line). Repro:
+  > SC_CACHE_PAGE, lines "a\tb", SCI_ADDTABSTOP(line, 200) on a shown line, then SCI_POINTXFROMPOSITION of "b": the old
+  > x. Invalidating the layout cache there fixed it in my build.
 
 ## PR review round and upstream merge (2026-10-15/16)
 
