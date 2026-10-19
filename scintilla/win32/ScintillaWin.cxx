@@ -596,7 +596,7 @@ class ScintillaWin :
 #if defined(USE_D2D)
 	bool UpdateRenderingParams(bool force) noexcept;
 	void SetListRenderingParams() noexcept;	// N++
-	bool UpdateMeasuringMode() noexcept;	// N++
+	bool UpdateFontBits() noexcept;	// N++
 	void SetFontRenderingParameter(uptr_t parameter, sptr_t value);	// N++
 	HRESULT Create3D() noexcept;
 	void CreateRenderTarget();
@@ -2269,11 +2269,12 @@ sptr_t ScintillaWin::IdleMessage(unsigned int iMessage, uptr_t wParam, sptr_t lP
 }
 
 #if defined(USE_D2D)
-// N++: the measuring of the GDI classic rendering mode (see FontRenderingOverrides::MeasuringBits). Returns whether it
-// changed: fonts must then be realised again and cached layouts dropped.
-bool ScintillaWin::UpdateMeasuringMode() noexcept {
+// N++: the font bits of the overrides, the measuring of the GDI classic rendering mode and the font features (see
+// FontRenderingOverrides::FontBits). Returns whether they changed: fonts must then be realised again and cached layouts
+// dropped.
+bool ScintillaWin::UpdateFontBits() noexcept {
 	const FontQuality extraFontFlag = static_cast<FontQuality>(
-		(static_cast<int>(vs.extraFontFlag) & ~fontQualityMeasuringGdiClassic) | fontRenderingOverrides.MeasuringBits(deviceScaleFactor));
+		(static_cast<int>(vs.extraFontFlag) & ~fontQualityOverrideBits) | fontRenderingOverrides.FontBits(deviceScaleFactor));
 	if (extraFontFlag == vs.extraFontFlag) {
 		return false;
 	}
@@ -2289,8 +2290,8 @@ void ScintillaWin::SetFontRenderingParameter(uptr_t parameter, sptr_t value) {
 	if (technology != Technology::Default) {
 		UpdateRenderingParams(true);
 	}
-	if (UpdateMeasuringMode()) {
-		// Realise fonts again with the new measuring and drop cached layouts
+	if (UpdateFontBits()) {
+		// Realise fonts again with the new measuring or features and drop cached layouts
 		InvalidateStyleRedraw();
 	} else if (technology != Technology::Default) {
 		DropGraphics();
@@ -2353,7 +2354,7 @@ sptr_t ScintillaWin::SciMessage(Message iMessage, uptr_t wParam, sptr_t lParam) 
 						return 0;
 					}
 					UpdateRenderingParams(true);
-					UpdateMeasuringMode();	// N++: layouts are invalidated below
+					UpdateFontBits();	// N++: layouts are invalidated below
 #else
 					return 0;
 #endif
@@ -2502,7 +2503,7 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 #if defined(USE_D2D)
 			if (technology != Technology::Default) {
 				UpdateRenderingParams(true);
-				UpdateMeasuringMode();	// N++: layouts are invalidated below
+				UpdateFontBits();	// N++: layouts are invalidated below
 			}
 #endif
 			UpdateBaseElements();
@@ -2581,7 +2582,7 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 					DropGraphics();
 					Redraw();
 					// N++: the device scale factor may have changed, which enables or disables GDI-compatible measuring
-					if (UpdateMeasuringMode()) {
+					if (UpdateFontBits()) {
 						InvalidateStyleRedraw();
 					}
 				}

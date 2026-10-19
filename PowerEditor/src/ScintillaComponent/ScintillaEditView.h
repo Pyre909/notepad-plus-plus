@@ -275,8 +275,8 @@ public:
 
 	void init(HINSTANCE hInst, HWND hPere) override;
 
-	// Pyre909 build: the Text Rendering settings (antialiasing, DirectWrite mode, contrast) applied to the view, or to every
-	// live Notepad++ Scintilla (edit views, Finders, Document Map, Peeker, plugins' Scintillas...)
+	// Pyre909 build: the Text Rendering settings (antialiasing, DirectWrite mode, contrast, ligatures, line spacing) applied
+	// to the view, or to every live Notepad++ Scintilla (edit views, Finders, Document Map, Peeker, plugins' Scintillas...)
 	void applyTextRenderingSettings();
 	static void applyTextRenderingSettingsToAll();
 	// Pyre909 build: setTechnologyToAll, then each view that switched updates what depends on the technology
@@ -738,6 +738,7 @@ protected:
 	UINT _viewDpi = 0; // DPI of the view, for its pixel sizes (scroll width, x offset) after a DPI change
 	void setMarkerImagesForDpi(UINT dpi);
 	void updateForDpi(); // after WM_DPICHANGED_AFTERPARENT: the Notepad++ pixel sizes (margins, markers) for the new DPI
+	void applyLineSpacing(); // Pyre909 build: see applyTextRenderingSettings
 
 	bool _isMainEditZone = false;
 	SCINTILLA_FUNC _pScintillaFunc = nullptr;

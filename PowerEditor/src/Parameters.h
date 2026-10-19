@@ -958,6 +958,9 @@ struct ScintillaViewParams
 	textAntialiasing _textAntialiasing = textAntialiasingFollowWindows;
 	textRenderingMode _textRenderingMode = textRenderingModeAutomatic;
 	textContrast _textContrast = textContrastFollowWindows;
+	bool _textLigatures = true;  // the fonts' ligatures (DirectWrite only: GDI draws none)
+	int _lineSpacing = 0;        // extra pixels between the lines, at 96 DPI (0-10)
+	static constexpr int maxLineSpacing = 10;
 	bool isClearTypeAntialiasing() const {
 		return (_textAntialiasing == textAntialiasingClearType) || (_textAntialiasing == textAntialiasingClearTypeLessColor);
 	}

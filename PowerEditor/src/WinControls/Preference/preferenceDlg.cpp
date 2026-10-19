@@ -1864,16 +1864,23 @@ void EditingSubDlg::initTextRenderingParam()
 		L"GDI classic (pixel-aligned)" }, svp._textRenderingMode);
 	setComboItems(IDC_COMBO_TEXTCONTRAST, { L"Follow Windows", L"Medium", L"High", L"Very high" }, svp._textContrast);
 
+	// the line spacing: the index of its item is the extra pixels
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_LINESPACING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Normal"));
+	for (int spacing = 1; spacing <= ScintillaViewParams::maxLineSpacing; ++spacing)
+		::SendDlgItemMessage(_hSelf, IDC_COMBO_LINESPACING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>((L"+" + std::to_wstring(spacing) + L" px").c_str()));
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_LINESPACING, CB_SETCURSEL, svp._lineSpacing, 0);
+	setChecked(IDC_CHECK_FONTLIGATURES, svp._textLigatures);
+
 	enableDirectWriteTextRendering();
 
 	// the tooltips: their id in the localization files, their English text
-	struct ComboTip
+	struct ControlTip
 	{
-		int _comboId = 0;
+		int _controlId = 0;
 		const char* _stringId = nullptr;
 		const wchar_t* _text = nullptr;
 	};
-	static constexpr ComboTip comboTips[]{
+	static constexpr ControlTip controlTips[]{
 		{ IDC_COMBO_SC_TECHNOLOGY_CHOICE, "scintillaRenderingTechnology-tip",
 			L"May improve rendering of special characters or resolve some graphics issues." },
 		{ IDC_COMBO_TEXTANTIALIASING, "textAntialiasing-tip",
@@ -1881,13 +1888,17 @@ void EditingSubDlg::initTextRenderingParam()
 		{ IDC_COMBO_TEXTRENDERINGMODE, "textRenderingMode-tip",
 			L"Natural avoids the vertical blur of small text. GDI classic snaps the glyphs to whole pixels like GDI rendering (the crispest on standard-DPI screens)." },
 		{ IDC_COMBO_TEXTCONTRAST, "textContrast-tip",
-			L"DirectWrite only. Makes the strokes heavier: darkens dark text on light backgrounds and thickens light text on dark themes." }
+			L"DirectWrite only. Makes the strokes heavier: darkens dark text on light backgrounds and thickens light text on dark themes." },
+		{ IDC_COMBO_LINESPACING, "lineSpacing-tip",
+			L"Extra space between the lines of the editor, split above and below the text. In pixels at 100% scale: more on high-DPI screens." },
+		{ IDC_CHECK_FONTLIGATURES, "fontLigatures-tip",
+			L"DirectWrite only. The ligatures of the font, such as the arrows and operators (-> != >=) of coding fonts like Cascadia Code or Fira Code. Unchecked: drawn as separate characters." }
 	};
 	NativeLangSpeaker* pNativeSpeaker = nppParam.getNativeLangSpeaker();
-	for (const ComboTip& comboTip : comboTips)
+	for (const ControlTip& controlTip : controlTips)
 	{
-		wstring tip2Show = pNativeSpeaker->getLocalizedStrFromID(comboTip._stringId, comboTip._text);
-		_tips.push_back(createToolTip(comboTip._comboId, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL()));
+		wstring tip2Show = pNativeSpeaker->getLocalizedStrFromID(controlTip._stringId, controlTip._text);
+		_tips.push_back(createToolTip(controlTip._controlId, _hSelf, _hInst, tip2Show.data(), pNativeSpeaker->isRTL()));
 	}
 }
 
@@ -1903,11 +1914,13 @@ static bool isTextContrastApplied()
 	return isDirectWriteTechnology() && (NppParameters::getInstance().getSVP()._textAntialiasing != textAntialiasingNone);
 }
 
-// the DirectWrite mode doesn't apply to the GDI rendering mode, nor the text contrast (see isTextContrastApplied)
+// the DirectWrite mode and the ligatures don't apply to the GDI rendering mode, nor the text contrast (see
+// isTextContrastApplied)
 void EditingSubDlg::enableDirectWriteTextRendering() const
 {
 	::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_TEXTRENDERINGMODE), isDirectWriteTechnology());
 	::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_TEXTCONTRAST), isTextContrastApplied());
+	::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_FONTLIGATURES), isDirectWriteTechnology());
 
 	// the labels show the state with their text color (see WM_CTLCOLORSTATIC)
 	redrawDlgItem(IDC_TEXTRENDERINGMODE_STATIC);
@@ -2167,6 +2180,11 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 					::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_VIRTUALSPACE, 0, 0);
 					return TRUE;
 
+				case IDC_CHECK_FONTLIGATURES: // Pyre909 build
+					svp._textLigatures = isCheckedOrNot(IDC_CHECK_FONTLIGATURES);
+					ScintillaEditView::applyTextRenderingSettingsToAll();
+					return TRUE;
+
 				case IDC_CHECK_SCROLLBEYONDLASTLINE:
 					svp._scrollBeyondLastLine = isCheckedOrNot(IDC_CHECK_SCROLLBEYONDLASTLINE);
 					::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_SCROLLBEYONDLASTLINE, 0, 0);
@@ -2245,9 +2263,10 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 							}
 
 							const int ctrlId = LOWORD(wParam);
-							if (ctrlId == IDC_COMBO_TEXTANTIALIASING || ctrlId == IDC_COMBO_TEXTRENDERINGMODE || ctrlId == IDC_COMBO_TEXTCONTRAST)
+							if (ctrlId == IDC_COMBO_TEXTANTIALIASING || ctrlId == IDC_COMBO_TEXTRENDERINGMODE || ctrlId == IDC_COMBO_TEXTCONTRAST ||
+								ctrlId == IDC_COMBO_LINESPACING)
 							{
-								// the items of each combo box are the values of its enum
+								// the items of each combo box are the values of its enum, or the line spacing's pixels
 								const int selIndex = static_cast<int>(::SendDlgItemMessage(_hSelf, ctrlId, CB_GETCURSEL, 0, 0));
 								if (selIndex == CB_ERR)
 									return TRUE;
@@ -2260,8 +2279,10 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 								}
 								else if (ctrlId == IDC_COMBO_TEXTRENDERINGMODE)
 									svp._textRenderingMode = static_cast<textRenderingMode>(selIndex);
-								else
+								else if (ctrlId == IDC_COMBO_TEXTCONTRAST)
 									svp._textContrast = static_cast<textContrast>(selIndex);
+								else
+									svp._lineSpacing = selIndex;
 
 								ScintillaEditView::applyTextRenderingSettingsToAll();
 								return TRUE;

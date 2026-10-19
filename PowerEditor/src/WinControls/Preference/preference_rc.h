@@ -232,6 +232,9 @@
 #define IDC_COMBO_TEXTRENDERINGMODE                    6284
 #define IDC_TEXTCONTRAST_STATIC                        6285
 #define IDC_COMBO_TEXTCONTRAST                         6286
+#define IDC_LINESPACING_STATIC                         6287
+#define IDC_COMBO_LINESPACING                          6288
+#define IDC_CHECK_FONTLIGATURES                        6289
 
 #define IDD_PREFERENCE_SUB_MARGING_BORDER_EDGE         6290
 #define IDC_LINENUMBERMARGE_GB_STATIC                  6291

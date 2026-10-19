@@ -29,6 +29,11 @@ constexpr float lightTextMinIntensity = 0.5f;
 // rendering mode, so that its fonts are realised and cached apart
 constexpr int fontQualityMeasuringGdiClassic = 0x10;
 static_assert((fontQualityMeasuringGdiClassic & static_cast<int>(FontQuality::QualityMask)) == 0);
+// The FontQuality bit that has DirectWrite lay out text without the fonts' ligatures (SC_FONTRENDERING_LIGATURES 0)
+constexpr int fontQualityNoLigatures = 0x20;
+static_assert((fontQualityNoLigatures & (static_cast<int>(FontQuality::QualityMask) | fontQualityMeasuringGdiClassic)) == 0);
+// The FontQuality bits of the overrides (see FontBits)
+constexpr int fontQualityOverrideBits = fontQualityMeasuringGdiClassic | fontQualityNoLigatures;
 
 static_assert((DWRITE_RENDERING_MODE_CLEARTYPE_GDI_CLASSIC == SC_RENDERINGMODE_GDICLASSIC) &&
 	(DWRITE_RENDERING_MODE_CLEARTYPE_NATURAL == SC_RENDERINGMODE_NATURAL) &&
@@ -86,6 +91,8 @@ public:
 		case SC_FONTRENDERING_LIGHTTEXTGAMMA:
 			// like SPI_GETFONTSMOOTHINGCONTRAST
 			return value >= 1000 && value <= 2200;
+		case SC_FONTRENDERING_LIGATURES:
+			return value == 0;
 		default:
 			return false;
 		}
@@ -104,8 +111,9 @@ public:
 		return (parameter < values.size()) ? values[parameter] : SC_FONTRENDERING_DEFAULT;
 	}
 
+	// Whether a rendering parameter is overridden (the font features are not rendering parameters)
 	[[nodiscard]] bool Any() const noexcept {
-		return std::any_of(values.cbegin(), values.cend(), [](int value) noexcept { return value != SC_FONTRENDERING_DEFAULT; });
+		return std::any_of(values.cbegin(), values.cbegin() + SC_FONTRENDERING_LIGATURES, [](int value) noexcept { return value != SC_FONTRENDERING_DEFAULT; });
 	}
 
 	// The FontQuality bits of the measuring: like GDI for the GDI classic mode, so that the glyphs are on whole pixels when
@@ -113,6 +121,11 @@ public:
 	[[nodiscard]] int MeasuringBits(float deviceScaleFactor) const noexcept {
 		return ((values[SC_FONTRENDERING_RENDERINGMODE] == SC_RENDERINGMODE_GDICLASSIC) && (deviceScaleFactor == 1.0f)) ?
 			fontQualityMeasuringGdiClassic : 0;
+	}
+
+	// The FontQuality bits of the overrides, which have the fonts realised and cached apart: the measuring and the features
+	[[nodiscard]] int FontBits(float deviceScaleFactor) const noexcept {
+		return MeasuringBits(deviceScaleFactor) | ((values[SC_FONTRENDERING_LIGATURES] == 0) ? fontQualityNoLigatures : 0);
 	}
 
 	// Replaces the default and custom (ClearType) parameters made as upstream does, from the monitor's ones and the gamma of

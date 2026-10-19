@@ -602,10 +602,28 @@ void ScintillaEditView::applyTextRenderingSettings()
 		{ SC_FONTRENDERING_ENHANCEDCONTRAST, contrast._enhancedContrast },
 		{ SC_FONTRENDERING_GRAYSCALEENHANCEDCONTRAST, contrast._grayscaleEnhancedContrast },
 		{ SC_FONTRENDERING_LIGHTTEXTGAMMA, contrast._lightTextGamma },
-		{ SC_FONTRENDERING_CLEARTYPELEVEL, (svp._textAntialiasing == textAntialiasingClearTypeLessColor) ? clearTypeLessColorLevel : SC_FONTRENDERING_DEFAULT }
+		{ SC_FONTRENDERING_CLEARTYPELEVEL, (svp._textAntialiasing == textAntialiasingClearTypeLessColor) ? clearTypeLessColorLevel : SC_FONTRENDERING_DEFAULT },
+		{ SC_FONTRENDERING_LIGATURES, svp._textLigatures ? SC_FONTRENDERING_DEFAULT : 0 } // 0: off; default: the fonts' own
 	};
 	for (const auto& [parameter, value] : parameters)
 		execute(SCI_SETFONTRENDERINGPARAMETER, parameter, value);
+
+	applyLineSpacing();
+}
+
+// Pyre909 build: the line spacing of Preferences > Editing 1, for the edit views only (not the Finders, Document Map or
+// plugins' Scintillas): pixels at 96 DPI scaled to the view's DPI, the extra space split above and below the text
+void ScintillaEditView::applyLineSpacing()
+{
+	if (!_isMainEditZone)
+		return;
+
+	const int extra = DPIManagerV2::scale(NppParameters::getInstance().getSVP()._lineSpacing, _viewDpi);
+	const int extraAscent = extra / 2;
+	if (execute(SCI_GETEXTRAASCENT) != extraAscent)
+		execute(SCI_SETEXTRAASCENT, extraAscent);
+	if (execute(SCI_GETEXTRADESCENT) != extra - extraAscent)
+		execute(SCI_SETEXTRADESCENT, extra - extraAscent);
 }
 
 void ScintillaEditView::applyTextRenderingSettingsToAll()
@@ -3300,6 +3318,7 @@ void ScintillaEditView::updateForDpi()
 		execute(SCI_SETXOFFSET, DPIManagerV2::scale(xOffset, dpi, _viewDpi));
 	}
 	_viewDpi = dpi;
+	applyLineSpacing(); // Pyre909 build
 
 	setMarkerImagesForDpi(DPIManagerV2::getDpiForWindow(_hParent));
 

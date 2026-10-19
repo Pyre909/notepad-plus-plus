@@ -1057,6 +1057,8 @@ Translation note:
 					<Item id="6281" name="Antialiasing:"/>
 					<Item id="6283" name="DirectWrite mode:"/>
 					<Item id="6285" name="Text contrast:"/>
+					<Item id="6287" name="Line spacing:"/>
+					<Item id="6289" name="Font ligatures"/>
 					<ComboBox id="6362">
 						<Element name="GDI (most compatible)"/>
 						<Element name="DirectWrite (default)"/>
@@ -1961,10 +1963,12 @@ If you select advanced mode but do not edit files in the aforementioned language
 			<!-- Don't translate "Global override" and "Default Style" -->
 			<global-override-tip value="Enabling &quot;Global override&quot; here will override that parameter in all language styles. What you probably really want is to use the &quot;Default Style&quot; settings instead"/>
 			<scintillaRenderingTechnology-tip value="May improve rendering of special characters or resolve some graphics issues."/>
-			<!-- Don't translate "ClearType", "DirectWrite", "GDI" and "DPI" in the 3 following tips -->
+			<!-- Don't translate "ClearType", "DirectWrite", "GDI", "DPI", "Cascadia Code" and "Fira Code" in the 5 following tips -->
 			<textAntialiasing-tip value="Follow Windows: the Windows font smoothing (off, Standard or ClearType). ClearType: always, as &quot;Enable smooth font&quot; did; &quot;less color fringing&quot; applies to DirectWrite only. Grayscale is recommended for OLED screens and for rotated (portrait) screens, where ClearType color fringes are more visible."/>
 			<textRenderingMode-tip value="Natural avoids the vertical blur of small text. GDI classic snaps the glyphs to whole pixels like GDI rendering (the crispest on standard-DPI screens)."/>
 			<textContrast-tip value="DirectWrite only. Makes the strokes heavier: darkens dark text on light backgrounds and thickens light text on dark themes."/>
+			<lineSpacing-tip value="Extra space between the lines of the editor, split above and below the text. In pixels at 100% scale: more on high-DPI screens."/>
+			<fontLigatures-tip value="DirectWrite only. The ligatures of the font, such as the arrows and operators (-&gt; != &gt;=) of coding fonts like Cascadia Code or Fira Code. Unchecked: drawn as separate characters."/>
 
 			<!-- Due to the limited space on the status bar, if the translations for 'length' & 'lines' are much longer than the English words, please leave them in English instead of translating them. -->
 			<statusbar-length-lines value="length: $STR_REPLACE1$    lines: $STR_REPLACE2$"/>
