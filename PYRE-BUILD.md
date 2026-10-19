@@ -11,7 +11,21 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   fringing, Grayscale, None), the DirectWrite mode (Automatic, Natural for sharper small text, Symmetric, GDI
   classic) and the text contrast. "Follow Windows" follows the Windows font smoothing with DirectWrite
   too (official issue #17461), and a change of it at once, the ClearType Text Tuner's included.
+- **Line spacing and font ligatures** (Preferences > Editing 1 > Text Rendering): extra space between the lines
+  of the editor, +1 to +10 pixels at 100% scale (official issue #971), and the fonts' ligatures, such as the
+  arrows and operators of Cascadia Code or Fira Code, turned off when unwanted (DirectWrite; official issue #14764).
 - **The rendering mode applies at once**, without restarting Notepad++.
+- **Faster with long lines and large files**: the layouts of the lines shown are kept between paints (not for a file
+  over the large file size of Preferences > Performance), and lines are laid out on several threads. Moving the caret and typing in files with very long lines (minified JSON
+  or JavaScript, logs) are up to 30 times faster (official issue #5267); turning word wrap on in a 1,000,000-line
+  file is 2 to 2.5 times faster.
+- **Replace All that adds or removes lines is much faster**: adding a line to each of 1,000,000 lines took nearly
+  3 minutes, about 3 seconds now, also with the document shown in both views; the same for Remove and Cut Bookmarked
+  Lines, Remove Unmarked Lines and Remove Consecutive Duplicate Lines (official issue #10301).
+- **Tall glyphs drawn whole, Chinese and Japanese in their own forms** (DirectWrite): the parts of glyphs taller than
+  a line (Burmese, Thai marks, stacked accents) aren't cut off any more (official issues #12446 and #16259), Han
+  characters take the forms of the Windows locale's language (official issue #15265), and the Document Map lays out
+  tabs like the editor.
 - **Fonts of a weight draw correctly with DirectWrite**: "Fira Code Light", "Cascadia Code SemiBold" or
   "Bahnschrift Light" are drawn with their own font instead of a fallback font, and bold is a heavier font of the
   family: SemiBold for a Light font, the heaviest up to Black for a SemiBold one (which GDI alone doesn't embolden).
