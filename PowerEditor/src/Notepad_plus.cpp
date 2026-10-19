@@ -3032,6 +3032,8 @@ void Notepad_plus::deleteMarkedLines(bool isMarked)
 
 	intptr_t lastLine = _pEditView->lastZeroBasedLineNumber();
 
+	// the scroll bars updated once, not after each line removed (see FindReplaceDlg::processAll)
+	::SendMessage(_pEditView->getHSelf(), WM_SETREDRAW, FALSE, 0);
 	_pEditView->execute(SCI_BEGINUNDOACTION);
 	for (intptr_t i = lastLine ; i >= 0 ; i--)
 	{
@@ -3039,6 +3041,8 @@ void Notepad_plus::deleteMarkedLines(bool isMarked)
 			deleteMarkedline(i);
 	}
 	_pEditView->execute(SCI_ENDUNDOACTION);
+	::SendMessage(_pEditView->getHSelf(), WM_SETREDRAW, TRUE, 0);
+	::InvalidateRect(_pEditView->getHSelf(), nullptr, TRUE);
 }
 
 void Notepad_plus::pasteToMarkedLines()

@@ -3385,7 +3385,20 @@ int FindReplaceDlg::processAll(ProcessOperation op, FindOption* opt,
 	findReplaceInfo._startRange = startPosition;
 	findReplaceInfo._endRange = endPosition;
 
+	// Scintilla updates the scroll bars after each line added or removed, which is slow: with the redraw off, only once
+	// at the end. Not for a hidden view (Replace All in All Opened Documents): WM_SETREDRAW TRUE would show it
+	const HWND hView = (*_ppEditView)->getHSelf();
+	const bool isRedrawOff = (op == ProcessReplaceAll) && (::GetWindowLongPtr(hView, GWL_STYLE) & WS_VISIBLE);
+	if (isRedrawOff)
+		::SendMessage(hView, WM_SETREDRAW, FALSE, 0);
+
 	int nbProcessed = processRange(op, findReplaceInfo, pFindersInfo, pOptions, colourStyleID, nullptr, pMatches);
+
+	if (isRedrawOff)
+	{
+		::SendMessage(hView, WM_SETREDRAW, TRUE, 0);
+		::InvalidateRect(hView, nullptr, TRUE);
+	}
 
 	// Turn ON the notifications after operations
 	(*_ppEditView)->execute(SCI_SETMODEVENTMASK, notifFlag);
