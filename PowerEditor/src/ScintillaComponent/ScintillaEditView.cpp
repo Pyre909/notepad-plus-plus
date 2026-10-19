@@ -404,6 +404,16 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 	// 1.8 to 2.5 times faster with 6 threads, laying out long lines 1.1 to 1.25 times (with Scintilla's segments taken in
 	// blocks, see LayoutSegments in EditView.cxx: one by one, the threads contended and it was slower)
 	execute(SCI_SETLAYOUTTHREADS, std::thread::hardware_concurrency());
+	// Pyre909 build: DirectWrite draws the characters whose forms differ between languages (Han characters in Chinese
+	// and Japanese) and picks fallback fonts after the font locale, en-US unless set: the user's locale (#15265)
+	wchar_t userLocale[LOCALE_NAME_MAX_LENGTH]{};
+	if (::GetUserDefaultLocaleName(userLocale, LOCALE_NAME_MAX_LENGTH) > 0)
+		execute(SCI_SETFONTLOCALE, 0, reinterpret_cast<LPARAM>(wstring2string(userLocale).c_str()));
+	// Pyre909 build: the text drawn over the backgrounds of all the lines, not line by line clipped to its line, so that
+	// the parts of glyphs taller than a line (stacked diacritics, Burmese, Thai) aren't cut off (#12446, #16259). Slower
+	// than two phases, but not much with the page layout cache. DirectWrite only: drawn through a buffer, as with GDI,
+	// it acts as SC_PHASES_TWO
+	execute(SCI_SETPHASESDRAW, SC_PHASES_MULTIPLE);
 	execute(SCI_SETMARGINMASKN, _SC_MARGE_FOLDER, SC_MASK_FOLDERS);
 	showMargin(_SC_MARGE_FOLDER, true);
 

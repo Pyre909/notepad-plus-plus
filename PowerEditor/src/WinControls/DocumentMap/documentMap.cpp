@@ -356,6 +356,9 @@ intptr_t CALLBACK DocumentMap::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 			_hwndScintilla = reinterpret_cast<HWND>(::SendMessage(_hParent, NPPM_CREATESCINTILLAHANDLE, 0, reinterpret_cast<LPARAM>(_hSelf)));
 			_pMapView = reinterpret_cast<ScintillaEditView *>(::SendMessage(_hParent, NPPM_INTERNAL_GETSCINTEDTVIEW, 0, reinterpret_cast<LPARAM>(_hwndScintilla)));
 			_pMapView->execute(SCI_SETZOOM, static_cast<WPARAM>(-10), 0);
+			// Pyre909 build: tabs as in the editor, scaled down, as Scintilla advises for a miniature view: its minimum tab
+			// width (2 pixels, over half of a 4-space tab stop at this size) moved text after tabs to the next stop
+			_pMapView->execute(SCI_SETTABMINIMUMWIDTH, 0);
 			_pMapView->execute(SCI_SETVSCROLLBAR, FALSE, 0);
 			_pMapView->execute(SCI_SETHSCROLLBAR, FALSE, 0);
 			_pMapView->execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF); // Turn off the modification event
