@@ -10,22 +10,25 @@ ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
-- `pyre` pushed on 2026-10-19 at `7c83c57` (Pyre909 CI: all 13 jobs pass): the speed, glyph and Text Rendering work
-  of that day (`a52ca6a`, section "Speed, glyphs and Text Rendering options" below) and the Style Configurator bug
-  fixes (`a913d55`..`7c83c57`, section "Style Configurator" below), on top of `b0ae0e6` (2026-10-16). Released as
-  `pyre-8.9.8.1-7c83c57` (published 2026-10-20 UTC; its ARM64 installer is installed on the VM, the exe checked
-  byte for byte against the installer's).
-- **Not pushed yet** (in the session worktree's branch, waiting on Pyre909's OK), on top of `7c83c57`: `f0b94ec`
-  upstream merged up to `b661c2b` (2026-10-19: the incremental search bar at the top, two Find options moved out of
-  Preferences; conflict in `resource.h`: upstream's `NPPM_INTERNAL_INCSEARCHBARPOSITION` took `+ 114`, the fork's
-  `NPPM_INTERNAL_DPICHANGEDRELAYOUT` is `+ 115` now; `per-monitor-dpi_20260925` still has it at `+ 114`: its rebase,
-  due anyway (based on the master of 2026-10-06, it conflicts with upstream since `a660d79` in `DockingManager.cpp`,
-  `StaticDialog.h`, `StatusBar.cpp`, `dpiManagerV2.cpp`), takes `+ 115` too), and `a5e52d2`, the font of every theme set on the Global override page (section "Style
-  Configurator"). Before pushing: GitHub Sync fork for `master`, then `pyre`, then Pyre909 CI.
+- `pyre` pushed on 2026-10-19 at `a5e52d2`; Pyre909 CI run 39374283434 started on it (check its result). On top of
+  `7c83c57`: `f0b94ec` upstream merged up to `b661c2b` (2026-10-19: the incremental search bar at the top, two Find
+  options moved out of Preferences; conflict in `resource.h`: upstream's `NPPM_INTERNAL_INCSEARCHBARPOSITION` took
+  `+ 114`, the fork's `NPPM_INTERNAL_DPICHANGEDRELAYOUT` is `+ 115` now), and `a5e52d2`, the font of every theme set
+  on the Global override page (section "Style Configurator"). The fork's `master` is still at `a660d79`: GitHub Sync
+  fork brings it to `b661c2b` (`pyre` has it already). Previewed by Pyre909 from `C:\npp-preview-a5e52d2` (a portable
+  copy of the installation with the ARM64 build and a copy of their settings).
+- `7c83c57` (CI: all 13 jobs pass): the speed, glyph and Text Rendering work of that day (`a52ca6a`, section "Speed,
+  glyphs and Text Rendering options" below) and the Style Configurator bug fixes (`a913d55`..`7c83c57`), on top of
+  `b0ae0e6` (2026-10-16). Released as `pyre-8.9.8.1-7c83c57` (published 2026-10-20 UTC; its ARM64 installer is
+  installed on the VM, the exe checked byte for byte against the installer's). No release of `a5e52d2` yet.
+- `per-monitor-dpi_20260925` still has `NPPM_INTERNAL_DPICHANGEDRELAYOUT` at `+ 114`: its rebase, due anyway (based on
+  the master of 2026-10-06, it conflicts with upstream since `a660d79` in `DockingManager.cpp`, `StaticDialog.h`,
+  `StatusBar.cpp`, `dpiManagerV2.cpp`), takes `+ 115` too.
 - Intermittent, to watch (2026-10-19): `live-rendering-switch-scroll` once found its wrapped 3000-line document 2 lines
   up after the tab switches ("top lines 1498, 1498, 1498" for 1500, DirectWrite LTR), in a harness run right after the
   x64 and Win32 builds. Not reproduced since: 6 runs on `a5e52d2`, 3 of them with an x64 rebuild running, and 3 on the
-  release `7c83c57` under the same load (it passed in the harness runs on `f0b94ec` and the first redesign too). The next time, keep the test's settings folder and the view's wrap state.
+  release `7c83c57` under the same load (it passed in the harness runs on `f0b94ec` and the first redesign too). The
+  next time, keep the test's settings folder and the view's wrap state.
 - CI is manual since 2026-10-16 (workflow **Pyre909 CI**, `pyre-ci.yml`, generated from upstream's `CI_build.yml` by
   `.github/pyre/make-ci.ps1`); upstream's `CI_build` and `release-notifier` are disabled on the fork. Actions works
   again (the refusals of 2026-10-15 are over): the four PR branches passed all 13 jobs on 2026-10-16.
