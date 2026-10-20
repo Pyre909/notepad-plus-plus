@@ -2,8 +2,11 @@
 # - A theme of the installation saved with Save & Close (a copy in the user's themes folder) keeps its changes when
 #   selected again in the same session (the installation's file was loaded again, without them).
 # - A dark mode switch selects the dark mode theme by its exact name: "Solarized", not "Solarized-light" (listed first).
-# - An emptied font name is saved (it came back on the next start: upstream #13919), and so is a font name for a style
-#   the theme gave none (defensive: Notepad++'s theme update adds the missing attribute from the model at load).
+# - An emptied font name is saved (it came back on the next start: upstream #13919), and so is a font chosen for a
+#   style whose fontName was emptied in the session: a theme without the attribute gets it empty when loaded (the
+#   update from the model), and pugixml then reads that value as absent.
+# - Dark mode before the Style Configurator exists: the dialog, opened then, shows the dark mode's theme (its copy, which
+#   the update from the model saved, is the current theme too).
 # - The user keywords typed are applied once the typing pauses, not on each key (each application restyles the views:
 #   14.6 ms a key before, 2.7 ms after, with a 100,000-line C++ file; one restyle after the pause).
 # Runs a copy of the build in a folder of its own with four of the installation's themes next to it (as installed), a
@@ -32,6 +35,7 @@ public static class SC {
 	[DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
 	[DllImport("user32.dll")] public static extern IntPtr SendMessageTimeout(IntPtr h, uint m, IntPtr w, IntPtr l, uint flags, uint timeout, out IntPtr result);
 	[DllImport("user32.dll", CharSet=CharSet.Unicode, EntryPoint="SendMessageW")] public static extern IntPtr SendMessageStr(IntPtr h, uint m, IntPtr w, string l);
+	[DllImport("user32.dll", CharSet=CharSet.Unicode, EntryPoint="SendMessageW")] public static extern IntPtr SendMessageSb(IntPtr h, uint m, IntPtr w, StringBuilder l);
 	[DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
 	[DllImport("user32.dll")] public static extern IntPtr GetParent(IntPtr h);
 }
@@ -85,6 +89,20 @@ function Select-Text([IntPtr] $dlg, [int] $id, [string] $text, [switch] $List) {
 	Start-Sleep -Milliseconds 300
 	$true
 }
+# a radio button of a dialog page checked (the other one unchecked), then clicked
+function Set-Radio([IntPtr] $page, [int] $on, [int] $off) {
+	[void](Send ([SC]::GetDlgItem($page, $off)) $BM_SETCHECK 0); [void](Send ([SC]::GetDlgItem($page, $on)) $BM_SETCHECK 1)
+	[void](Send $page $WM_COMMAND $on ([SC]::GetDlgItem($page, $on)).ToInt64()); Start-Sleep -Milliseconds 1000
+}
+# the text of a combo box's selected item
+function Get-ComboText([IntPtr] $dlg, [int] $id) {
+	$box = [SC]::GetDlgItem($dlg, $id)
+	$i = Send $box 0x0147   # CB_GETCURSEL
+	if ($i -lt 0) { return '' }
+	$sb = [Text.StringBuilder]::new([int](Send $box 0x0149 $i) + 1)   # CB_GETLBTEXTLEN
+	[void][SC]::SendMessageSb($box, 0x0148, [IntPtr]$i, $sb)   # CB_GETLBTEXT
+	$sb.ToString()
+}
 function Open-Styler { [void][SC]::PostMessage($script:main, $WM_COMMAND, [IntPtr]$IDM_LANGSTYLE_CONFIG_DLG, [IntPtr]::Zero); Find-Dialog 'Style Configurator' }
 function Save-Close([IntPtr] $dlg) { [void](Send $dlg $WM_COMMAND $IDC_SAVECLOSE_BUTTON ([SC]::GetDlgItem($dlg, $IDC_SAVECLOSE_BUTTON)).ToInt64()); Start-Sleep -Milliseconds 500 }
 function Default-Style-Attr([string] $file, [string] $attr) {
@@ -133,6 +151,18 @@ try {
 	$script:main = $proc.MainWindowHandle; Start-Sleep -Milliseconds 1000
 	$view = Get-Kids $script:main | Where-Object { (Get-Cls $_) -eq 'Scintilla' -and [SC]::IsWindowVisible($_) -and ([SC]::GetParent($_) -eq $script:main) } | Select-Object -First 1
 
+	# dark mode before the Style Configurator exists: Solarized loaded from the installation (and maybe saved as the
+	# user's copy by its update from the model); the dialog, opened then, shows Solarized as the current theme
+	[void][SC]::PostMessage($script:main, $WM_COMMAND, [IntPtr]$IDM_SETTING_PREFERENCE, [IntPtr]::Zero)
+	$darkPage = Find-Dialog 'Preferences' $IDC_RADIO_DARKMODE_DARKMODE
+	Set-Radio $darkPage $IDC_RADIO_DARKMODE_DARKMODE $IDC_RADIO_DARKMODE_LIGHTMODE
+	$copyMade = Test-Path (Join-Path $settings 'themes\Solarized.xml')
+	$dlg = Open-Styler
+	$current = Get-ComboText $dlg $IDC_SWITCH2THEME_COMBO
+	Check "dark mode first, then the Style Configurator: its current theme Solarized$(if ($copyMade) { ' (the copy the update from the model made)' })" ($current -eq 'Solarized') "selected: $current"
+	[void](Send $dlg $WM_COMMAND 2 0); Start-Sleep -Milliseconds 300   # IDCANCEL
+	Set-Radio $darkPage $IDC_RADIO_DARKMODE_LIGHTMODE $IDC_RADIO_DARKMODE_DARKMODE
+
 	# an emptied font name, saved (Default (stylers.xml): the settings' stylers.xml)
 	$dlg = Open-Styler
 	[void](Select-Text $dlg $IDC_LANGUAGES_COMBO 'Global Styles'); [void](Select-Text $dlg $IDC_STYLES_LIST 'Default Style' -List)
@@ -142,7 +172,7 @@ try {
 	$font = Default-Style-Attr (Join-Path $settings 'stylers.xml') 'fontName'
 	Check 'emptied font name of the Default Style saved in stylers.xml (#13919)' ($font -eq '') "fontName=""$font"""
 
-	# a font name for a style the theme gave none
+	# a font chosen for a style whose theme had no fontName (emptied on load by the update from the model)
 	$dlg = Open-Styler
 	Check '  theme NoFont selected' (Select-Text $dlg $IDC_SWITCH2THEME_COMBO 'NoFont')
 	[void](Select-Text $dlg $IDC_LANGUAGES_COMBO 'Global Styles'); [void](Select-Text $dlg $IDC_STYLES_LIST 'Default Style' -List)
@@ -150,7 +180,7 @@ try {
 	Save-Close $dlg
 	$font = Default-Style-Attr $noFont 'fontName'
 	$shown = if ($null -eq $font) { '(no attribute)' } else { '"' + $font + '"' }
-	Check 'font name saved where the theme had none' ($font -eq 'Consolas') "fontName $shown"
+	Check 'a font chosen where the attribute was emptied on load, saved' ($font -eq 'Consolas') "fontName $shown"
 
 	# an installation's theme saved as the user's copy, then selected again in the same session
 	$dlg = Open-Styler
@@ -180,16 +210,10 @@ try {
 	[void](Send $dlg $WM_COMMAND 2 0); Start-Sleep -Milliseconds 300   # IDCANCEL: the keywords discarded
 
 	# a dark mode switch with the Style Configurator created: its dark mode theme, Solarized (not Solarized-light)
-	[void][SC]::PostMessage($script:main, $WM_COMMAND, [IntPtr]$IDM_SETTING_PREFERENCE, [IntPtr]::Zero)
-	$darkPage = Find-Dialog 'Preferences' $IDC_RADIO_DARKMODE_DARKMODE
-	foreach ($pair in @(@($IDC_RADIO_DARKMODE_DARKMODE, $IDC_RADIO_DARKMODE_LIGHTMODE), @($IDC_RADIO_DARKMODE_LIGHTMODE, $IDC_RADIO_DARKMODE_DARKMODE))) {
-		[void](Send ([SC]::GetDlgItem($darkPage, $pair[1])) $BM_SETCHECK 0); [void](Send ([SC]::GetDlgItem($darkPage, $pair[0])) $BM_SETCHECK 1)
-		[void](Send $darkPage $WM_COMMAND $pair[0] ([SC]::GetDlgItem($darkPage, $pair[0])).ToInt64()); Start-Sleep -Milliseconds 1000
-		if ($pair[0] -eq $IDC_RADIO_DARKMODE_DARKMODE) {
-			$back = Send $view $SCI_STYLEGETBACK $STYLE_DEFAULT
-			Check 'dark mode: its theme Solarized, not Solarized-light' ($back -eq (Bgr '002B36')) ('Default Style background {0:X6}, Solarized {1:X6}, Solarized-light {2:X6} (BGR)' -f $back, (Bgr '002B36'), (Bgr 'FDF6E3'))
-		}
-	}
+	Set-Radio $darkPage $IDC_RADIO_DARKMODE_DARKMODE $IDC_RADIO_DARKMODE_LIGHTMODE
+	$back = Send $view $SCI_STYLEGETBACK $STYLE_DEFAULT
+	Check 'dark mode: its theme Solarized, not Solarized-light' ($back -eq (Bgr '002B36')) ('Default Style background {0:X6}, Solarized {1:X6}, Solarized-light {2:X6} (BGR)' -f $back, (Bgr '002B36'), (Bgr 'FDF6E3'))
+	Set-Radio $darkPage $IDC_RADIO_DARKMODE_LIGHTMODE $IDC_RADIO_DARKMODE_DARKMODE
 }
 finally {
 	if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
