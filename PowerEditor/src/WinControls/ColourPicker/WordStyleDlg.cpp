@@ -969,7 +969,8 @@ void WordStyleDlg::applyCurrentSelectedThemeAndUpdateUI()
 
 bool WordStyleDlg::selectThemeByName(const wchar_t* themeName)
 {
-	LRESULT iTheme = ::SendMessage(_hSwitch2ThemeCombo, CB_FINDSTRING, 1, reinterpret_cast<LPARAM>(themeName));
+	// Pyre909 build: the exact name: a prefix took "Solarized-light" for "Solarized" (listed first) on a dark mode switch
+	LRESULT iTheme = ::SendMessage(_hSwitch2ThemeCombo, CB_FINDSTRINGEXACT, 1, reinterpret_cast<LPARAM>(themeName));
 	if (iTheme == CB_ERR)
 		return false;
 
@@ -1286,7 +1287,8 @@ void WordStyleDlg::setVisualFromStyleList()
 	LRESULT iFontName = 0;
 	if (!style._fontName.empty())
 	{
-		iFontName = ::SendMessage(_hFontNameCombo, CB_FINDSTRING, 1, reinterpret_cast<LPARAM>(style._fontName.c_str()));
+		// Pyre909 build: the exact name (a prefix showed "Fira Code Retina" for an uninstalled "Fira Code")
+		iFontName = ::SendMessage(_hFontNameCombo, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(style._fontName.c_str()));
 		if (iFontName == CB_ERR)
 			iFontName = 0;
 	}
