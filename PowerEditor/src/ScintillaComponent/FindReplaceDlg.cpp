@@ -310,6 +310,12 @@ FindReplaceDlg::~FindReplaceDlg()
 	if (_2ButtonsTip)
 		::DestroyWindow(_2ButtonsTip);
 
+	if (_confirmDlgTip)
+		::DestroyWindow(_confirmDlgTip);
+
+	if (_replaceAndStopTip)
+		::DestroyWindow(_replaceAndStopTip);
+
 	if (_dirFromActiveDocTip)
 		::DestroyWindow(_dirFromActiveDocTip);
 
@@ -422,6 +428,10 @@ void FindReplaceDlg::fillFindHistory()
 	::SendDlgItemMessage(_hSelf, IDC_PURGE_CHECK, BM_SETCHECK, findHistory._isPurge, 0);
 
 	::SendDlgItemMessage(_hSelf, IDC_2_BUTTONS_MODE, BM_SETCHECK, findHistory._isSearch2ButtonsMode, 0);
+
+	const NppGUI&	nppGUI = nppParams.getNppGUI();
+	::SendDlgItemMessage(_hSelf, IDC_CONFIRMREPLACEOPENDOCS, BM_SETCHECK, nppGUI._confirmReplaceInAllOpenDocs, 0);
+	::SendDlgItemMessage(_hSelf, IDC_REPLACEANDSTOP, BM_SETCHECK, nppGUI._replaceStopsWithoutFindingNext, 0);
 
 	if (findHistory._searchMode == FindHistory::regExpr)
 	{
@@ -1639,6 +1649,8 @@ intptr_t CALLBACK FindReplaceDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 		{
 			NppDarkMode::setDarkTooltips(_shiftTrickUpTip, NppDarkMode::ToolTipsType::tooltip);
 			NppDarkMode::setDarkTooltips(_2ButtonsTip, NppDarkMode::ToolTipsType::tooltip);
+			NppDarkMode::setDarkTooltips(_confirmDlgTip, NppDarkMode::ToolTipsType::tooltip);
+			NppDarkMode::setDarkTooltips(_replaceAndStopTip, NppDarkMode::ToolTipsType::tooltip);
 			NppDarkMode::setDarkTooltips(_filterTip, NppDarkMode::ToolTipsType::tooltip);
 			NppDarkMode::setDarkTooltips(_dirFromActiveDocTip, NppDarkMode::ToolTipsType::tooltip);
 			
@@ -1695,8 +1707,14 @@ intptr_t CALLBACK FindReplaceDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 			 wstring searchButtonTip = pNativeSpeaker->getLocalizedStrFromID("shift-change-direction-tip", L"Use Shift+Enter to search in the opposite direction.");
 			 _shiftTrickUpTip = createToolTip(IDOK, _hSelf, _hInst, searchButtonTip.data(), _isRTL);
 
-			 wstring checkboxTip = pNativeSpeaker->getLocalizedStrFromID("two-find-buttons-tip", L"2 find buttons mode");
-			 _2ButtonsTip = createToolTip(IDC_2_BUTTONS_MODE, _hSelf, _hInst, checkboxTip.data(), _isRTL);
+			 wstring checkbox2ModeTip = pNativeSpeaker->getLocalizedStrFromID("two-find-buttons-tip", L"2 find buttons mode");
+			 _2ButtonsTip = createToolTip(IDC_2_BUTTONS_MODE, _hSelf, _hInst, checkbox2ModeTip.data(), _isRTL);
+
+			 wstring checkboxConfirmDlgTip = pNativeSpeaker->getLocalizedStrFromID("confirm-replace-in-all-open-docs-tip", L"Confirm \"Replace All in All Opened Documents\" action");
+			 _confirmDlgTip = createToolTip(IDC_CONFIRMREPLACEOPENDOCS, _hSelf, _hInst, checkboxConfirmDlgTip.data(), _isRTL);
+
+			 wstring checkboxReplaceAndStopTip = pNativeSpeaker->getLocalizedStrFromID("replace-and-stop-tip", L"After replacing, don't move to the following occurrence");
+			 _replaceAndStopTip = createToolTip(IDC_REPLACEANDSTOP, _hSelf, _hInst, checkboxReplaceAndStopTip.data(), _isRTL);
 
 			 wstring findInFilesFilterTip = pNativeSpeaker->getLocalizedStrFromID("find-in-files-filter-tip", L"Find in cpp, cxx, h, hxx && hpp:\r*.cpp *.cxx *.h *.hxx *.hpp\r\rFind in all files except exe, obj && log:\r*.* !*.exe !*.obj !*.log\r\rFind in all files but exclude folders tests, bin && bin64:\r*.* !\\tests !\\bin*\r\rFind in all files but exclude all folders log or logs recursively:\r*.* !+\\log*");
 			 _filterTip = createToolTip(IDC_FIF_FILTER_TIP_STATIC, _hSelf, _hInst, findInFilesFilterTip.data(), _isRTL);
@@ -2316,6 +2334,14 @@ intptr_t CALLBACK FindReplaceDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 					}
 				}
 				return TRUE;
+
+				case IDC_REPLACEANDSTOP:
+				{
+					NppGUI& nppGUI = NppParameters::getInstance().getNppGUI();
+					nppGUI._replaceStopsWithoutFindingNext = isCheckedOrNot(IDC_REPLACEANDSTOP);
+				}
+				return TRUE;
+
 //Process actions
 				case IDC_FINDALL_OPENEDFILES :
 				{
@@ -2471,6 +2497,13 @@ intptr_t CALLBACK FindReplaceDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 					}
 				}
 				return TRUE;
+
+				case IDC_CONFIRMREPLACEOPENDOCS:
+				{
+					NppGUI& nppGui = nppParamInst.getNppGUI();
+					nppGui._confirmReplaceInAllOpenDocs = isCheckedOrNot(IDC_CONFIRMREPLACEOPENDOCS);
+					return TRUE;
+				}
 
 				case IDC_REPLACE_OPENEDFILES :
 				{
@@ -4212,10 +4245,12 @@ void FindReplaceDlg::enableReplaceFunc(bool isEnable)
 	// replace controls
 	showFindDlgItem(ID_STATICTEXT_REPLACE, isEnable);
 	showFindDlgItem(IDREPLACE, isEnable);
+	showFindDlgItem(IDC_REPLACEANDSTOP, isEnable);
 	showFindDlgItem(IDREPLACEWITH, isEnable);
 	showFindDlgItem(IDD_FINDREPLACE_SWAP_BUTTON, isEnable);
 	showFindDlgItem(IDREPLACEALL, isEnable);
 	showFindDlgItem(IDC_REPLACE_OPENEDFILES, isEnable);
+	showFindDlgItem(IDC_CONFIRMREPLACEOPENDOCS, isEnable);
 	showFindDlgItem(IDC_REPLACEINSELECTION);
 	showFindDlgItem(IDC_IN_SELECTION_CHECK);
 	showFindDlgItem(IDC_2_BUTTONS_MODE);
@@ -4285,9 +4320,11 @@ void FindReplaceDlg::enableFindInFilesControls(bool isEnable, bool projectPanels
 	showFindDlgItem(IDC_COPY_MARKED_TEXT, !isEnable);
 
 	showFindDlgItem(IDREPLACE, !isEnable);
+	showFindDlgItem(IDC_REPLACEANDSTOP, !isEnable);
 	showFindDlgItem(IDC_REPLACEINSELECTION, !isEnable);
 	showFindDlgItem(IDREPLACEALL, !isEnable);
 	showFindDlgItem(IDC_REPLACE_OPENEDFILES, !isEnable);
+	showFindDlgItem(IDC_CONFIRMREPLACEOPENDOCS, !isEnable);
 
 	// Show Items
 	if (isEnable)
@@ -5412,10 +5449,12 @@ void FindReplaceDlg::enableMarkFunc()
 	// Replace controls to hide
 	showFindDlgItem(ID_STATICTEXT_REPLACE, false);
 	showFindDlgItem(IDREPLACE, false);
+	showFindDlgItem(IDC_REPLACEANDSTOP, false);
 	showFindDlgItem(IDREPLACEWITH, false);
 	showFindDlgItem(IDD_FINDREPLACE_SWAP_BUTTON, false);
 	showFindDlgItem(IDREPLACEALL, false);
 	showFindDlgItem(IDC_REPLACE_OPENEDFILES, false);
+	showFindDlgItem(IDC_CONFIRMREPLACEOPENDOCS, false);
 
 	// find controls to hide
 	showFindDlgItem(IDC_FINDALL_OPENEDFILES, false);
@@ -5551,8 +5590,6 @@ void FindReplaceDlg::drawStatusBarItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 
 bool FindReplaceDlg::replaceInFilesConfirmCheck(const wstring& directory, const wstring& fileTypes)
 {
-	bool confirmed = false;
-
 	NativeLangSpeaker* pNativeSpeaker = (NppParameters::getInstance()).getNativeLangSpeaker();
 
 	wstring title = pNativeSpeaker->getLocalizedStrFromID("replace-in-files-confirm-title", L"Are you sure?");
@@ -5569,50 +5606,29 @@ bool FindReplaceDlg::replaceInFilesConfirmCheck(const wstring& directory, const 
 
 	msg += msg2;
 
-	int res = ::MessageBox(NULL, msg.c_str(), title.c_str(), MB_OKCANCEL | MB_DEFBUTTON2 | MB_TASKMODAL);
-
-	if (res == IDOK)
-	{
-		confirmed = true;
-	}
-
+	const bool confirmed = NppDarkMode::darkMessageBoxW(nullptr, msg.c_str(), title.c_str(), MB_OKCANCEL | MB_DEFBUTTON2 | MB_TASKMODAL) == IDOK;
 	return confirmed;
 }
 
 bool FindReplaceDlg::replaceInProjectsConfirmCheck()
 {
-	bool confirmed = false;
-
 	NativeLangSpeaker* pNativeSpeaker = (NppParameters::getInstance()).getNativeLangSpeaker();
 
 	wstring title = pNativeSpeaker->getLocalizedStrFromID("replace-in-projects-confirm-title", L"Are you sure?");
 
 	wstring msg = pNativeSpeaker->getLocalizedStrFromID("replace-in-projects-confirm-message", L"Do you want to replace all occurrences in all documents in the selected Project Panel(s)?");
-	int res = ::MessageBox(NULL, msg.c_str(), title.c_str(), MB_OKCANCEL | MB_DEFBUTTON2 | MB_TASKMODAL);
 
-	if (res == IDOK)
-	{
-		confirmed = true;
-	}
-
+	const bool confirmed = NppDarkMode::darkMessageBoxW(nullptr, msg.c_str(), title.c_str(), MB_OKCANCEL | MB_DEFBUTTON2 | MB_TASKMODAL) == IDOK;
 	return confirmed;
 }
 
 bool FindReplaceDlg::replaceInOpenDocsConfirmCheck()
 {
-	bool confirmed = false;
-
 	NativeLangSpeaker* pNativeSpeaker = (NppParameters::getInstance()).getNativeLangSpeaker();
 	wstring title = pNativeSpeaker->getLocalizedStrFromID("replace-in-open-docs-confirm-title", L"Are you sure?");
 	wstring msg = pNativeSpeaker->getLocalizedStrFromID("replace-in-open-docs-confirm-message", L"Are you sure you want to replace all occurrences in all open documents?");
 
-	int res = ::MessageBox(NULL, msg.c_str(), title.c_str(), MB_OKCANCEL | MB_DEFBUTTON2 | MB_TASKMODAL);
-
-	if (res == IDOK)
-	{
-		confirmed = true;
-	}
-
+	const bool confirmed = NppDarkMode::darkMessageBoxW(nullptr, msg.c_str(), title.c_str(), MB_OKCANCEL | MB_DEFBUTTON2 | MB_TASKMODAL) == IDOK;
 	return confirmed;
 }
 
@@ -6453,7 +6469,14 @@ intptr_t CALLBACK FindIncrementDlg::run_dlgProc(UINT message, WPARAM wParam, LPA
 		case WM_INITDIALOG:
 		{
 			NppDarkMode::autoSubclassAndThemeChildControls(getHSelf());
-			::SendDlgItemMessage(_hSelf, IDC_INCFINDCOUNT, BM_SETCHECK, TRUE, 0);
+
+			const FindHistory& findHistory = NppParameters::getInstance().getFindHistory();
+			setChecked(IDC_INCFINDMATCHCASE, findHistory._isIncrementalMatchCase);
+			setChecked(IDC_INCFINDHILITEALL, findHistory._isIncrementalHighlightAll);
+			setChecked(IDC_INCFINDCOUNT, findHistory._isIncrementalCount);
+
+			NppGUI& nppGUI = NppParameters::getInstance().getNppGUI();
+			::SetDlgItemText(_hSelf, IDC_GOUPDOWN_TOGGLE_BUTTON, nppGUI._incrementalSearchBarAtTop ? L"˅" : L"˄");
 			return TRUE;
 		}
 
@@ -6467,6 +6490,15 @@ intptr_t CALLBACK FindIncrementDlg::run_dlgProc(UINT message, WPARAM wParam, LPA
 
 			switch (LOWORD(wParam))
 			{
+				case IDC_GOUPDOWN_TOGGLE_BUTTON:
+				{
+					NppGUI& nppGUI = NppParameters::getInstance().getNppGUI();
+					nppGUI._incrementalSearchBarAtTop = !nppGUI._incrementalSearchBarAtTop;
+					::SetDlgItemText(_hSelf, IDC_GOUPDOWN_TOGGLE_BUTTON, nppGUI._incrementalSearchBarAtTop ? L"˅" : L"˄");
+					::SendMessage(_hParent, NPPM_INTERNAL_INCSEARCHBARPOSITION, 0, 0);
+					return TRUE;
+				}
+
 				case IDCANCEL :
 					(*(_pFRDlg->_ppEditView))->clearIndicator(SCE_UNIVERSAL_FOUND_STYLE_INC);
 					(*(_pFRDlg->_ppEditView))->grabFocus();
@@ -6498,6 +6530,7 @@ intptr_t CALLBACK FindIncrementDlg::run_dlgProc(UINT message, WPARAM wParam, LPA
 					break;
 
 				case IDC_INCFINDMATCHCASE:
+					NppParameters::getInstance().getFindHistory()._isIncrementalMatchCase = isCheckedOrNot(IDC_INCFINDMATCHCASE);
 					updateSearch = true;
 					updateCase = true;
 					updateHiLight = true;
@@ -6505,10 +6538,12 @@ intptr_t CALLBACK FindIncrementDlg::run_dlgProc(UINT message, WPARAM wParam, LPA
 					break;
 
 				case IDC_INCFINDHILITEALL:
+					NppParameters::getInstance().getFindHistory()._isIncrementalHighlightAll = isCheckedOrNot(IDC_INCFINDHILITEALL);
 					updateHiLight = true;
 					break;
 
 				case IDC_INCFINDCOUNT:
+					NppParameters::getInstance().getFindHistory()._isIncrementalCount = isCheckedOrNot(IDC_INCFINDCOUNT);
 					_matches.clear();
 					break;
 
@@ -6710,7 +6745,7 @@ void FindIncrementDlg::addToRebar(ReBar * rebar)
 	_rbBand.fMask   = RBBIM_STYLE | RBBIM_CHILD | RBBIM_CHILDSIZE |
 					  RBBIM_SIZE | RBBIM_ID;
 
-	_rbBand.fStyle = RBBS_HIDDEN | RBBS_NOGRIPPER;
+	_rbBand.fStyle = RBBS_HIDDEN | RBBS_NOGRIPPER | RBBS_BREAK; // RBBS_BREAK: in the top rebar, a row of its own below the toolbar
 	_rbBand.hwndChild	= getHSelf();
 	_rbBand.wID			= REBAR_BAR_SEARCH;	//ID REBAR_BAR_SEARCH for search dialog
 	_rbBand.cxMinChild	= 0;
