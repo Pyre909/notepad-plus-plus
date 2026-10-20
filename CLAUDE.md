@@ -66,6 +66,15 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
   `msbuild PowerEditor\visual.net\notepadPlus.sln /m /p:configuration=Release /p:platform=x64`
   gives `PowerEditor\bin64\Notepad++.exe`; `/p:platform=ARM64` gives `PowerEditor\binarm64\Notepad++.exe` (native on
   the VM; needs Visual Studio's MSVC ARM64 build tools component, which the setup script adds).
+- The Pyre909 build differs from upstream's build settings (since 2026-10-20; one-line changes, so merges stay easy):
+  **C++23** everywhere (`stdcpp23` = `/std:c++23preview` in `notepadPlus.Cpp.props`, `Scintilla.vcxproj`,
+  `Lexilla.vcxproj`; `-std:c++23preview` in `scintilla.mak` and `lexilla.mak`; `CMAKE_CXX_STANDARD 23`; `-std=c++23` in
+  the three makefiles), not `stdcpplatest` (the C++26 preview); **Windows 10 1809** as the minimum (`_WIN32_WINNT_WIN10`,
+  `NTDDI_WIN10_RS5`, linker `MinimumRequiredVersion` 10.0, the installer's check in `tools.nsh`), so Windows 10 functions
+  are called directly, not through `GetProcAddress` (only the undocumented dark mode functions, plugins, Wine's
+  `wine_get_version`, DbgHelp and DirectWrite stay dynamic); **PGO** switch: `/p:PyrePgo=Instrument`, the training run,
+  then `/p:PyrePgo=Optimize` (the instrumented exe is linked without `/DEPENDENTLOADFLAG:0x800`, to find `pgort140.dll`
+  next to it). Measured on the VM (ARM64, 2026-10-20): lexing 19% faster, folding and Mark All 17%, wrapping 15%.
 - After a change of a class layout in a header many files include (a member of `ScintillaEditView.h`, `Parameters.h`,
   `SurfaceD2D.h`), rebuild clean (`/t:Rebuild`) before testing: an incremental build left stale objects once, and the
   exe crashed at startup (0xC000041D, 2026-10-06).
