@@ -6,6 +6,8 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 
 ## What's different from official Notepad++
 
+- **Needs Windows 10 version 1809 or later** (official Notepad++ runs on older versions too): the build calls
+  Windows 10's functions directly, and its installer stops on an older Windows.
 - **Text rendering settings** (Preferences > Editing 1 > Text Rendering): the rendering mode (GDI or a
   DirectWrite mode, moved here from MISC.), antialiasing (Follow Windows, ClearType, ClearType with less color
   fringing, Grayscale, None), the DirectWrite mode (Automatic, Natural for sharper small text, Symmetric, GDI
@@ -22,6 +24,12 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **Replace All that adds or removes lines is much faster**: adding a line to each of 1,000,000 lines took nearly
   3 minutes, about 3 seconds now, also with the document shown in both views; the same for Remove and Cut Bookmarked
   Lines, Remove Unmarked Lines and Remove Consecutive Duplicate Lines (official issue #10301).
+- **The Function List 25 to 30 times faster**: about 6 seconds instead of over 3 minutes for 60,000 lines of C++, a
+  third of a second instead of 9.5 seconds for 3,000 (its regular expressions match faster and are compiled once).
+- **Auto-completion faster in large files**: about 30% less time per keystroke (76 instead of 108 ms in 60,000 lines
+  of C++).
+- **Profile-guided build**: the release exes are optimized from a training run; syntax highlighting is about 19%
+  faster, folding and Mark All 17%, word wrap 15% (measured on ARM64).
 - **Tall glyphs drawn whole, Chinese and Japanese in their own forms** (DirectWrite): the parts of glyphs taller than
   a line (Burmese, Thai marks, stacked accents) aren't cut off any more (official issues #12446 and #16259), Han
   characters take the forms of the Windows locale's language (official issue #15265), and the Document Map lays out
@@ -40,6 +48,8 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **Redrawn "Standard icons"** (Preferences > General > Toolbar): the 32 standard toolbar icons drawn again as
   flat vector art, sharp at every scale from 100% to 300% instead of 16x16 bitmaps stretched (official issue
   #16110, where the icons alone are offered).
+- **Rounded corners on Windows 11** for the popups Windows leaves square: call tips, the About box, the colour
+  picker and the document peeker (Preferences > Dark Mode, on by default).
 - **Per-monitor DPI awareness** (Preferences > MISC., experimental, restart required).
 - **Font sizes 1 to 4 pt** in the font size lists.
 - **A crash guard** for DirectWrite fonts with an out-of-range weight (Scintilla bug #2520).
