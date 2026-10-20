@@ -272,6 +272,16 @@ intptr_t CALLBACK WordStyleDlg::run_dlgProc(UINT Message, WPARAM wParam, LPARAM 
 			return TRUE;
 		}
 
+		case WM_TIMER: // Pyre909 build
+		{
+			if (wParam == userKeywordsApplyTimerID)
+			{
+				applyPendingUserKeywords();
+				return TRUE;
+			}
+			break;
+		}
+
 		case WM_DPICHANGED:
 		{
 			_dpiManager.setDpiWP(wParam);
@@ -294,7 +304,8 @@ intptr_t CALLBACK WordStyleDlg::run_dlgProc(UINT Message, WPARAM wParam, LPARAM 
 				{
 					updateUserKeywords();
 					notifyDataModified();
-					apply(GENERAL_CHANGE);
+					_isUserKeywordsApplyPending = true; // Pyre909 build: applied once the typing pauses
+					::SetTimer(_hSelf, userKeywordsApplyTimerID, userKeywordsApplyDelay, nullptr);
 					return TRUE;
 				}
 				else if (editID == IDC_USER_EXT_EDIT)
@@ -308,6 +319,11 @@ intptr_t CALLBACK WordStyleDlg::run_dlgProc(UINT Message, WPARAM wParam, LPARAM 
 			}
 			else
 			{
+				// Pyre909 build: the user keywords typed are applied before anything else is done (Save & Close takes the
+				// styles applied), but not on the other notifications of their own box (EN_UPDATE comes with each key)
+				if (reinterpret_cast<HWND>(lParam) != ::GetDlgItem(_hSelf, IDC_USER_KEYWORDS_EDIT))
+					applyPendingUserKeywords();
+
 				switch (wParam)
 				{
 					case IDC_BOLD_CHECK :
@@ -969,6 +985,8 @@ void WordStyleDlg::applyCurrentSelectedThemeAndUpdateUI()
 
 bool WordStyleDlg::selectThemeByName(const wchar_t* themeName)
 {
+	applyPendingUserKeywords(); // Pyre909 build: to the theme they were typed for
+
 	// Pyre909 build: the exact name: a prefix took "Solarized-light" for "Solarized" (listed first) on a dark mode switch
 	LRESULT iTheme = ::SendMessage(_hSwitch2ThemeCombo, CB_FINDSTRINGEXACT, 1, reinterpret_cast<LPARAM>(themeName));
 	if (iTheme == CB_ERR)
@@ -1433,6 +1451,17 @@ void WordStyleDlg::restoreGlobalOverrideValues() const
 {
 	GlobalOverride& gOverride = (NppParameters::getInstance()).getGlobalOverrideStyle();
 	gOverride = _gOverride2restored;
+}
+
+// Pyre909 build: the user keywords typed, applied now if their application is pending (see userKeywordsApplyDelay)
+void WordStyleDlg::applyPendingUserKeywords()
+{
+	if (!_isUserKeywordsApplyPending)
+		return;
+
+	::KillTimer(_hSelf, userKeywordsApplyTimerID);
+	_isUserKeywordsApplyPending = false;
+	apply(GENERAL_CHANGE);
 }
 
 void WordStyleDlg::apply(int applicationInfo)

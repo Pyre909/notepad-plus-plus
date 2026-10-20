@@ -125,6 +125,12 @@ private :
 	void showGlobalOverrideCtrls(bool show);
 	void applyCurrentSelectedThemeAndUpdateUI();
 
+	// Pyre909 build: the user keywords typed are applied (every document restyled) once the typing pauses, not on each key
+	static constexpr UINT_PTR userKeywordsApplyTimerID = 1;
+	static constexpr UINT userKeywordsApplyDelay = 300; // milliseconds
+	bool _isUserKeywordsApplyPending = false;
+	void applyPendingUserKeywords();
+
 	// Pyre909 build: the font of every theme (config.xml), the row under the theme selector
 	void initFontForEveryThemeCtrls() const;
 	void updateFontForEveryThemeCtrls() const;
