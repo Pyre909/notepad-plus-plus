@@ -386,7 +386,7 @@ SET(rcFiles
 IF (WIN32)
 	SET(option WIN32)
 	SET(win32_LIBRARIES comctl32 shlwapi dbghelp version crypt32 wintrust sensapi wininet imm32 msimg32 uxtheme dwmapi)
-	set(CMAKE_CXX_STANDARD 20)
+	set(CMAKE_CXX_STANDARD 23)
 if ( MSVC )
 	#do not use for mingw builds
 	SET(CMAKE_CXX_FLAGS "/EHa /MP /W4")
@@ -395,7 +395,7 @@ if ( MSVC )
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 else ( MSVC )
 	# For possible MinGW compilation
-	SET(CMAKE_CXX_FLAGS "-include../gcc/gcc-fixes.h -std=c++20 -fpermissive -municode")
+	SET(CMAKE_CXX_FLAGS "-include../gcc/gcc-fixes.h -std=c++23 -fpermissive -municode")
 	SET(defs -DUNICODE -D_UNICODE -D_WIN32_WINNT=_WIN32_WINNT_WIN7 -DNTDDI_VERSION=NTDDI_WIN7 -D_USE_64BIT_TIME_T -DNOMINMAX -DOEMRESOURCE)
 endif ( MSVC )
 ENDIF (WIN32)

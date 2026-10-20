@@ -35,7 +35,7 @@
       <DisableSpecificWarnings>4456;4457;4459</DisableSpecificWarnings>
       <AdditionalOptions>/Zc:__cplusplus /source-charset:utf-8 /Zc:strictStrings /w15262 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpp23</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
       <DisableAnalyzeExternal>true</DisableAnalyzeExternal>

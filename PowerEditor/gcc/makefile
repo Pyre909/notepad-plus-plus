@@ -49,7 +49,7 @@ else
   COMPILER_SUFFIX := gcc.
 endif
 
-CXXFLAGS := -include $(GCC_DIRECTORY)/gcc-fixes.h -std=c++20 -Wpedantic -Wall -Wextra -Wconversion
+CXXFLAGS := -include $(GCC_DIRECTORY)/gcc-fixes.h -std=c++23 -Wpedantic -Wall -Wextra -Wconversion
 RC := $(CROSS_COMPILE)windres
 RCFLAGS := --codepage=65001
 CPP_PATH := $(SCINTILLA_DIRECTORY)/include $(LEXILLA_DIRECTORY)/include
