@@ -29,6 +29,10 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **Fonts of a weight draw correctly with DirectWrite**: "Fira Code Light", "Cascadia Code SemiBold" or
   "Bahnschrift Light" are drawn with their own font instead of a fallback font, and bold is a heavier font of the
   family: SemiBold for a Light font, the heaviest up to Black for a SemiBold one (which GDI alone doesn't embolden).
+- **Style Configurator fixes**: a theme of the installation, once saved, no longer comes back unsaved when selected
+  again in the same session; a dark mode switch picks its theme by its exact name ("Solarized", not
+  "Solarized-light"), and a style's font too; a font name set back to empty is saved (official issue #13919); the
+  user keywords typed are applied when the typing pauses, not on each key.
 - **A font for every theme** (Settings > Style Configurator, the row under "Select theme"): the font, size, bold,
   italic and underline forced for all styles, which Global override's check boxes did per theme, are set once and kept
   when switching themes (saved in config.xml, not in the theme). The Global override style keeps its colours.
