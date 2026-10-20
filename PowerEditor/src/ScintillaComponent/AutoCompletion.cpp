@@ -28,6 +28,7 @@
 #include <cwchar>
 #include <limits>
 #include <locale>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -476,128 +477,165 @@ bool AutoCompletion::showApiAndWordComplete()
 	return showAutoComplete(autocFuncAndWord, false);
 }
 
-// Pyre909 build: the words of a UTF-8 text starting with a prefix, in text order, exactly as the regex of getWordArray()
-// finds them with Notepad++'s Boost search ("\<" + prefix + "[^ \t\n\r.,;:\"(){}=<>'+!?\[\]]+", ECMAScript, the Win32
-// traits, resumed after each word): a word starts where a word character (alphabetic or digit for CT_CTYPE1, or '_')
-// follows a character that isn't one, and ends before a delimiter, which is ASCII, so bytes can be scanned. One pass over
-// the text instead of a regex search per word through Scintilla: 10 to 60 times faster. The prefix is taken literally (the
-// regex took its metacharacters as such). Case insensitive, the characters are compared by their lower case
-// (LCMapStringW), for an ASCII prefix only: false is returned for another one, which the regex is left to search.
-namespace
+#ifndef __GNUC__ // MinGW and Clang build the regex with the C++ traits (BOOST_REGEX_NO_W32): they keep it
+// Pyre909 build: the words of a UTF-8 text starting with a prefix, in text order, as the regex of getWordArray() finds them in
+// the MSVC builds ("\<" + prefix + "[^ \t\n\r.,;:\"(){}=<>'+!?\[\]]+", ECMAScript, Boost's Win32 traits, resumed after each
+// word): a word starts where a word character (alphabetic or digit for CT_CTYPE1, or '_') follows a character that isn't
+// one, and ends before a delimiter, which is ASCII, so bytes can be scanned. One pass over the text instead of a regex search
+// per word through Scintilla: 10 to 60 times faster. The prefix is taken literally (the regex read its metacharacters as
+// such). Case insensitive, the characters are compared by their lower case (LCMapStringW), for an ASCII prefix only. Nothing
+// is returned, for the regex to search, for another prefix in case insensitive mode or when the scan meets an invalid UTF-8
+// sequence (the regex's document iterator reads those its own way).
+static constexpr auto isWordDelimiter = [] {
+	std::array<bool, 256> table{};
+	for (const char c : std::string_view(" \t\n\r.,;:\"(){}=<>'+!?[]"))
+		table[static_cast<unsigned char>(c)] = true;
+	return table;
+}();
+
+// the code point of the UTF-8 sequence at text[i] and its length, 0 for an invalid sequence
+static std::pair<char32_t, size_t> decodeUtf8(std::string_view text, size_t i)
 {
-	constexpr std::string_view wordDelimiters = " \t\n\r.,;:\"(){}=<>'+!?[]";
-
-	// the code point of the UTF-8 sequence at text[i] and its length (U+FFFD and 1 for an invalid one)
-	std::pair<char32_t, size_t> decodeUtf8(std::string_view text, size_t i)
+	const auto lead = static_cast<unsigned char>(text[i]);
+	if (lead < 0x80)
+		return { lead, 1 };
+	const size_t len = (lead >= 0xF5) ? 0 : (lead >= 0xF0) ? 4 : (lead >= 0xE0) ? 3 : (lead >= 0xC2) ? 2 : 0;
+	if ((len == 0) || (i + len > text.size()))
+		return { 0, 0 };
+	char32_t c = lead & (0x3F >> (len - 1));
+	for (size_t k = 1; k < len; ++k)
 	{
-		const auto lead = static_cast<unsigned char>(text[i]);
-		if (lead < 0x80)
-			return { lead, 1 };
-		const size_t len = (lead >= 0xF0) ? 4 : (lead >= 0xE0) ? 3 : (lead >= 0xC0) ? 2 : 0;
-		if ((len == 0) || (i + len > text.size()))
-			return { 0xFFFD, 1 };
-		char32_t c = lead & (0x3F >> (len - 1));
-		for (size_t k = 1; k < len; ++k)
+		const auto trail = static_cast<unsigned char>(text[i + k]);
+		if ((trail & 0xC0) != 0x80)
+			return { 0, 0 };
+		c = (c << 6) | (trail & 0x3F);
+	}
+	static constexpr char32_t shortest[]{ 0, 0, 0x80, 0x800, 0x10000 }; // an overlong sequence is invalid
+	if ((c < shortest[len]) || ((c >= 0xD800) && (c <= 0xDFFF)) || (c > 0x10FFFF))
+		return { 0, 0 };
+	return { c, len };
+}
+
+// the code point ending at text[i - 1], nothing for an invalid sequence
+static std::optional<char32_t> decodeUtf8Before(std::string_view text, size_t i)
+{
+	size_t start = i - 1;
+	while ((start > 0) && (i - start < 4) && ((static_cast<unsigned char>(text[start]) & 0xC0) == 0x80))
+		--start;
+	const auto [c, len] = decodeUtf8(text, start);
+	if ((len == 0) || (start + len != i))
+		return std::nullopt;
+	return c;
+}
+
+// \w of Boost's Win32 traits: a UTF-16 code unit typed alphabetic or digit by CT_CTYPE1, or '_' (beyond U+FFFF, the regex
+// tests a half of the surrogate pair, which has neither type)
+static bool isRegexWordChar(char32_t c)
+{
+	if (c < 0x80)
+		return (c == '_') || ((c >= '0') && (c <= '9')) || (((c | 0x20) >= 'a') && ((c | 0x20) <= 'z'));
+	if (c > 0xFFFF)
+		return false;
+	const auto unit = static_cast<wchar_t>(c);
+	WORD type = 0;
+	return ::GetStringTypeW(CT_CTYPE1, &unit, 1, &type) && (type & (C1_ALPHA | C1_DIGIT));
+}
+
+// the few characters beyond ASCII whose lower case (LCMapStringW, the user's locale, as the Win32 traits) is ASCII, such as
+// U+0130 to 'i' and U+212A KELVIN SIGN to 'k', found once
+static const std::vector<std::pair<char32_t, char>>& nonAsciiWithAsciiLowerCase()
+{
+	static const auto found = [] {
+		std::vector<std::pair<char32_t, char>> pairs;
+		const LCID locale = ::GetUserDefaultLCID();
+		for (char32_t from = 0x80; from <= 0xFFFF; ++from)
 		{
-			const auto trail = static_cast<unsigned char>(text[i + k]);
-			if ((trail & 0xC0) != 0x80)
-				return { 0xFFFD, 1 };
-			c = (c << 6) | (trail & 0x3F);
+			const auto unit = static_cast<wchar_t>(from);
+			wchar_t lower[2]{};
+			if ((::LCMapStringW(locale, LCMAP_LOWERCASE, &unit, 1, lower, 2) == 1) && (lower[0] < 0x80))
+				pairs.emplace_back(from, static_cast<char>(lower[0]));
 		}
-		return { c, len };
-	}
+		return pairs;
+	}();
+	return found;
+}
 
-	// the code point ending at text[i - 1]
-	char32_t decodeUtf8Before(std::string_view text, size_t i)
-	{
-		size_t start = i - 1;
-		while ((start > 0) && (i - start < 4) && ((static_cast<unsigned char>(text[start]) & 0xC0) == 0x80))
-			--start;
-		const auto [c, len] = decodeUtf8(text, start);
-		return (start + len == i) ? c : 0xFFFD;
-	}
+// the lower case of c as the Win32 traits make it if it is ASCII, else 0
+static char asciiLowerCase(char32_t c)
+{
+	if (c < 0x80)
+		return static_cast<char>(((c >= 'A') && (c <= 'Z')) ? c + ('a' - 'A') : c);
+	const auto& toAscii = nonAsciiWithAsciiLowerCase();
+	const auto it = std::ranges::find(toAscii, c, &std::pair<char32_t, char>::first);
+	return (it != toAscii.end()) ? it->second : 0;
+}
 
-	// \w of Boost's Win32 traits: a UTF-16 code unit typed alphabetic or digit by CT_CTYPE1, or '_' (half of a surrogate pair
-	// has neither type)
-	bool isRegexWordChar(char32_t c)
-	{
-		if (c < 0x80)
-			return (c == '_') || ((c >= '0') && (c <= '9')) || (((c | 0x20) >= 'a') && ((c | 0x20) <= 'z'));
-		if (c > 0xFFFF)
-			return false;
-		const auto unit = static_cast<wchar_t>(c);
-		WORD type = 0;
-		return ::GetStringTypeW(CT_CTYPE1, &unit, 1, &type) && (type & (C1_ALPHA | C1_DIGIT));
-	}
+static std::optional<std::vector<std::string_view>> findWordsWithPrefix(std::string_view text, std::string_view prefix, bool isMatchCase)
+{
+	constexpr auto npos = std::string_view::npos;
+	const bool isAsciiPrefix = std::ranges::all_of(prefix, [](char c) { return static_cast<unsigned char>(c) < 0x80; });
+	if (prefix.empty() || (!isMatchCase && !isAsciiPrefix))
+		return std::nullopt;
 
-	// the few characters beyond ASCII whose lower case (LCMapStringW, the user's locale, as the Win32 traits) is ASCII, such as
-	// U+0130 to 'i' and U+212A KELVIN SIGN to 'k', found once
-	const std::vector<std::pair<char32_t, char>>& nonAsciiWithAsciiLowerCase()
-	{
-		static const auto found = [] {
-			std::vector<std::pair<char32_t, char>> pairs;
-			const LCID locale = ::GetUserDefaultLCID();
-			for (char32_t from = 0x80; from <= 0xFFFF; ++from)
+	std::vector<std::string_view> words;
+	bool isInvalid = false;
+
+	// the prefix matched text[i, j): takes the word there if one starts at i, returns where the search goes on
+	const auto takeWord = [&](size_t i, size_t j) -> size_t {
+		const auto [c, len] = decodeUtf8(text, i);
+		if (len == 0)
+		{
+			isInvalid = true;
+			return npos;
+		}
+		if (!isRegexWordChar(c))
+			return i + 1;
+		if (i > 0)
+		{
+			const auto before = decodeUtf8Before(text, i);
+			if (!before)
 			{
-				const auto unit = static_cast<wchar_t>(from);
-				wchar_t lower[2]{};
-				if ((::LCMapStringW(locale, LCMAP_LOWERCASE, &unit, 1, lower, 2) == 1) && (lower[0] < 0x80))
-					pairs.emplace_back(from, static_cast<char>(lower[0]));
+				isInvalid = true;
+				return npos;
 			}
-			return pairs;
-		}();
-		return found;
-	}
+			if (isRegexWordChar(*before))
+				return i + 1;
+		}
 
-	// the lower case of c as the Win32 traits make it if it is ASCII, else 0
-	char asciiLowerCase(char32_t c)
-	{
-		if (c < 0x80)
-			return static_cast<char>(((c >= 'A') && (c <= 'Z')) ? c + ('a' - 'A') : c);
-		const auto& toAscii = nonAsciiWithAsciiLowerCase();
-		const auto it = std::ranges::find(toAscii, c, &std::pair<char32_t, char>::first);
-		return (it != toAscii.end()) ? it->second : 0;
-	}
-
-	template <typename OnWord>
-	bool forEachWordWithPrefix(std::string_view text, std::string_view prefix, bool isMatchCase, OnWord&& onWord)
-	{
-		std::array<bool, 256> isDelimiter{};
-		for (const char c : wordDelimiters)
-			isDelimiter[static_cast<unsigned char>(c)] = true;
-
-		// the end of the word whose prefix ends at text[j], or npos if no character of it follows the prefix
-		const auto wordEnd = [&](size_t j) {
-			size_t end = j;
-			while ((end < text.size()) && !isDelimiter[static_cast<unsigned char>(text[end])])
+		size_t end = j;
+		while (end < text.size())
+		{
+			const auto b = static_cast<unsigned char>(text[end]);
+			if (b < 0x80)
+			{
+				if (isWordDelimiter[b])
+					break;
 				++end;
-			return (end > j) ? end : std::string_view::npos;
-		};
-		const auto isAfterNonWordChar = [&](size_t i) { return (i == 0) || !isRegexWordChar(decodeUtf8Before(text, i)); };
-
-		if (isMatchCase)
-		{
-			if (!isRegexWordChar(decodeUtf8(prefix, 0).first))
-				return true; // \< never matches
-
-			for (size_t i = text.find(prefix); i != std::string_view::npos; )
-			{
-				const size_t end = isAfterNonWordChar(i) ? wordEnd(i + prefix.size()) : std::string_view::npos;
-				if (end != std::string_view::npos)
-				{
-					onWord(text.substr(i, end - i));
-					i = text.find(prefix, end);
-				}
-				else
-				{
-					i = text.find(prefix, i + 1);
-				}
 			}
-			return true;
+			else if (const size_t charLen = decodeUtf8(text, end).second; charLen != 0)
+			{
+				end += charLen;
+			}
+			else
+			{
+				isInvalid = true;
+				return npos;
+			}
 		}
+		if (end == j) // no character after the prefix
+			return i + 1;
+		words.push_back(text.substr(i, end - i));
+		return end;
+	};
 
-		if (!std::ranges::all_of(prefix, [](char c) { return static_cast<unsigned char>(c) < 0x80; }))
-			return false;
+	if (isMatchCase)
+	{
+		for (size_t i = text.find(prefix); i != npos; i = text.find(prefix, takeWord(i, i + prefix.size())))
+		{
+		}
+	}
+	else
+	{
 		std::string lowerPrefix(prefix);
 		for (char& c : lowerPrefix)
 			c = asciiLowerCase(static_cast<unsigned char>(c));
@@ -612,39 +650,42 @@ namespace
 				isFirstByte[(c < 0x800) ? (0xC0 | (c >> 6)) : (0xE0 | (c >> 12))] = true;
 		}
 
-		// the end of the prefix matched at text[i], or npos
-		const auto prefixEnd = [&](size_t i) {
+		// the end of the prefix matched at text[i], npos if it doesn't match there
+		const auto prefixEnd = [&](size_t i) -> size_t {
 			for (const char p : lowerPrefix)
 			{
 				if (i >= text.size())
-					return std::string_view::npos;
+					return npos;
 				const auto [c, len] = decodeUtf8(text, i);
+				if (len == 0)
+				{
+					isInvalid = true;
+					return npos;
+				}
 				if (asciiLowerCase(c) != p)
-					return std::string_view::npos;
+					return npos;
 				i += len;
 			}
 			return i;
 		};
 
-		for (size_t i = 0; i < text.size(); )
+		for (size_t i = 0; (i < text.size()) && !isInvalid; )
 		{
-			if (isFirstByte[static_cast<unsigned char>(text[i])])
+			if (!isFirstByte[static_cast<unsigned char>(text[i])])
 			{
-				if (const size_t j = prefixEnd(i); (j != std::string_view::npos) && isRegexWordChar(decodeUtf8(text, i).first) && isAfterNonWordChar(i))
-				{
-					if (const size_t end = wordEnd(j); end != std::string_view::npos)
-					{
-						onWord(text.substr(i, end - i));
-						i = end;
-						continue;
-					}
-				}
+				++i;
+				continue;
 			}
-			++i;
+			const size_t j = prefixEnd(i);
+			i = (j == npos) ? i + 1 : takeWord(i, j);
 		}
-		return true;
 	}
+
+	if (isInvalid)
+		return std::nullopt;
+	return words;
 }
+#endif
 
 void AutoCompletion::getWordArray(std::vector<std::string>& wordArray, const char* beginChars, const char* excludeChars) const
 {
@@ -661,7 +702,7 @@ void AutoCompletion::getWordArray(std::vector<std::string>& wordArray, const cha
 	const auto addWord = [&](std::string_view word) {
 		if (word.size() >= bufSize)
 			return;
-		const std::string w(word);
+		const std::string w(word.substr(0, word.find('\0'))); // as SCI_GETTEXTRANGE gives it (a C string)
 		if (excludeChars && (std::strncmp(w.c_str(), excludeChars, bufSize) == 0))
 			return;
 		if (_funcCompletionActive)
@@ -681,13 +722,19 @@ void AutoCompletion::getWordArray(std::vector<std::string>& wordArray, const cha
 
 	size_t docLength = _pEditView->execute(SCI_GETLENGTH);
 
-	// Pyre909 build: a UTF-8 document's words in one pass over its text (see forEachWordWithPrefix)
+#ifndef __GNUC__
+	// Pyre909 build: a UTF-8 document's words in one pass over its text (see findWordsWithPrefix)
 	if (_pEditView->execute(SCI_GETCODEPAGE) == SC_CP_UTF8)
 	{
 		const auto* text = reinterpret_cast<const char*>(_pEditView->execute(SCI_GETCHARACTERPOINTER));
-		if (text && forEachWordWithPrefix(std::string_view(text, docLength), beginChars, isMatchCase, addWord))
+		if (const auto words = text ? findWordsWithPrefix(std::string_view(text, docLength), beginChars, isMatchCase) : std::nullopt)
+		{
+			for (const std::string_view word : *words)
+				addWord(word);
 			return;
+		}
 	}
+#endif
 
 	std::string expr = "\\<";
 	expr += beginChars;

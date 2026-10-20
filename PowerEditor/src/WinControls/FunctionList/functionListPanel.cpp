@@ -94,6 +94,7 @@ void FunctionListPanel::addEntry(const wchar_t *nodeName, const wchar_t *display
 void FunctionListPanel::removeAllEntries()
 {
 	_treeView.removeAllItems();
+	_areLeafPositionsSet = false; // Pyre909 build: their items are gone
 }
 
 void FunctionListPanel::addInStateArray(TreeStateNode tree2Update, const wchar_t *searchText, bool isSorted)
