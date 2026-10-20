@@ -48,9 +48,13 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     DirectWrite (its "(CPU)" rows are the work).
   - Cleanup (2026-10-20, with Pyre909's OK): the scratch branches, the Actions artifacts (632), the PGO and
     `text-rendering_20260925` worktrees (the branch stays), the test folders in `%TEMP%` and `C:\npp-*` (not
-    `C:\npp-test`), the harness's old runs. Left to Pyre909 (administrator): `review/umdh-scope.ps1 -Remove`, the
-    allocation stacks Windows records for the ARM64 dev builds, which slow them (`pyre-layout-cache`'s Replace All
-    check took 18.2 s once under load against its 15 s limit, 14.8 s alone).
+    `C:\npp-test`), the harness's old runs; Pyre909 then removed the allocation stacks Windows recorded for the ARM64 dev
+    builds (`review/umdh-scope.ps1 -Remove`, as administrator), which slowed them (`pyre-layout-cache`'s Replace All
+    check took 18.2 s once under load against its 15 s limit, 14.8 s alone). For a leak hunt with stacks, run
+    `umdh-scope.ps1` again.
+  - Release: draft `pyre-8.9.8.1-56d6ea5` (2026-10-20, run 39453207726, all 5 jobs; PGO), the first with this
+    program's sections 1 to 4 and parts A and B; its notes list Windows 10 1809 as the minimum. For Pyre909 to
+    publish. The draft of `344c2ad` (sections 1 to 4 only) was deleted with their OK.
   - Tools: `.github/pyre/bench.ps1` (benchmarks, PGO training), `.github/pyre/pgo.ps1`, `review/tests/function-list.ps1`
     (upstream's unit tests, timed, test files in CRLF as CI's checkout), the harness's fixes (leaks measured twice before
     a FAIL, normalized line endings, `pyre-text-rendering-config` reads after a `WM_NULL` round trip).
