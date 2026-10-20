@@ -150,4 +150,20 @@ copy "..\src\stylers.model.xml" "$(OutDir)stylers.model.xml"
       <CETCompat>false</CETCompat>
     </Link>
   </ItemDefinitionGroup>
+  <!-- Pyre909 build: profile-guided optimization of a Release exe (the release workflow): /p:PyrePgo=Instrument links an
+       instrumented exe, which writes notepad++!N.pgc next to notepad++.pgd at its exit (pgort140.dll next to it; the
+       training run: the tooling branch's vm\bench.ps1 -Train), then /p:PyrePgo=Optimize links with that profile -->
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(PyrePgo)'=='Release|Instrument'">
+    <Link>
+      <LinkTimeCodeGeneration>PGInstrument</LinkTimeCodeGeneration>
+      <!-- without /DEPENDENTLOADFLAG:0x800 (imports from System32 only): pgort140.dll is next to the instrumented exe,
+           which is never shipped -->
+      <AdditionalOptions></AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(PyrePgo)'=='Release|Optimize'">
+    <Link>
+      <LinkTimeCodeGeneration>PGOptimization</LinkTimeCodeGeneration>
+    </Link>
+  </ItemDefinitionGroup>
 </Project>
