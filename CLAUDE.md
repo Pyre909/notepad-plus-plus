@@ -159,8 +159,10 @@ and can't run 32-bit NSIS installers):
    2026-10-01: weights 300 and 600, ink and width per line within 2.4% and 3 px of GDI; readings in `STATUS.md`).
    "Cascadia Code SemiBold" bold: DirectWrite draws it with Cascadia Code Bold, not a simulated bold (**pass**,
    2026-10-06, the face DirectWrite matches to the bold weight; GDI doesn't embolden a SemiBold font at all).
-4. Per-monitor DPI with monitors at different scales: still to do (needs a second display or a change of Windows'
-   scale, made by Pyre909).
+4. Per-monitor DPI with a change of Windows' scale: **done** (2026-10-20, Pyre909 changed it 150% -> 100% -> 150% while
+   the tooling branch's `review/tests/pyre-dpi-scale.ps1 -WaitForScaleChange` ran): every panel follows both ways,
+   except the Project Panel's text-button toolbar, which keeps its 100% height back at 150% (a known fault, in
+   `STATUS.md`). Two monitors of different scales: still to do (needs a second display).
 
 ## Where the rest is
 
