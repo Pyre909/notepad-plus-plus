@@ -653,10 +653,16 @@ void ScintillaEditView::applyTextRenderingSettingsToAll()
 
 void ScintillaEditView::switchTechnologyOfAll(writeTechnologyEngine technology)
 {
+	NppGUI& nppGui = NppParameters::getInstance().getNppGUI();
+	const writeTechnologyEngine previous = nppGui._writeTechnologyEngine;
+	if ((technology == previous) || (technology >= directWriteTechnologyUnavailable) || (previous >= directWriteTechnologyUnavailable))
+		return;
+	nppGui._writeTechnologyEngine = technology;
+
 	std::vector<std::pair<ScintillaEditView*, int>> previousTechnologies;
 	for (ScintillaEditView* pView : _liveViews)
 		previousTechnologies.emplace_back(pView, static_cast<int>(pView->execute(SCI_GETTECHNOLOGY)));
-	setTechnologyToAll(technology);
+	setTechnologyToAll(previous, technology);
 	for (const auto& [pView, previousTechnology] : previousTechnologies)
 		pView->technologyChanged(previousTechnology);
 }
@@ -4841,24 +4847,17 @@ void ScintillaEditView::sortLines(size_t fromLine, size_t toLine, ISorter* pSort
 	}
 }
 
-void ScintillaEditView::setTechnologyToAll(writeTechnologyEngine technology)
+void ScintillaEditView::setTechnologyToAll(int previous, int technology)
 {
-	NppGUI& nppGui = NppParameters::getInstance().getNppGUI();
-	const writeTechnologyEngine previous = nppGui._writeTechnologyEngine;
-	if ((technology == previous) || (technology >= directWriteTechnologyUnavailable) || (previous >= directWriteTechnologyUnavailable))
-		return;
-
-	nppGui._writeTechnologyEngine = technology;
-
 	// the views on the previous setting follow it (not those a plugin switched); RTL ones keep GDI until LTR
 	for (ScintillaEditView* pView : _liveViews)
 	{
 		if (pView->isTextDirectionRTL())
 		{
-			if (pView->_technologyIfLTR == static_cast<int>(previous))
+			if (pView->_technologyIfLTR == previous)
 				pView->_technologyIfLTR = technology;
 		}
-		else if (pView->execute(SCI_GETTECHNOLOGY) == static_cast<LRESULT>(previous))
+		else if (pView->execute(SCI_GETTECHNOLOGY) == previous)
 		{
 			pView->execute(SCI_SETTECHNOLOGY, technology);
 		}

@@ -279,7 +279,8 @@ public:
 	// to the view, or to every live Notepad++ Scintilla (edit views, Finders, Document Map, Peeker, plugins' Scintillas...)
 	void applyTextRenderingSettings();
 	static void applyTextRenderingSettingsToAll();
-	// Pyre909 build: setTechnologyToAll, then each view that switched updates what depends on the technology
+	// Pyre909 build: the Rendering mode setting changed: the views on the previous one switch (setTechnologyToAll), then each
+	// view that switched updates what depends on the technology
 	static void switchTechnologyOfAll(writeTechnologyEngine technology);
 	// Pyre909 build: after the technology of the view changed, its "Follow Windows" antialiasing and its style fonts
 	void technologyChanged(int previousTechnology);
@@ -721,7 +722,7 @@ public:
 	void applyWindowsFontQuality();
 	// switches the views following the Rendering mode setting to another technology, without restarting
 	// (the right-to-left views keep GDI, see changeTextDirection)
-	static void setTechnologyToAll(writeTechnologyEngine technology);
+	static void setTechnologyToAll(int previous, int technology);
 	void setPositionRestoreNeeded(bool val) { _positionRestoreNeeded = val; }
 	void markedTextToClipboard(int indiStyle, bool doAll = false);
 	void removeAnyDuplicateLines();
