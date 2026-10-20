@@ -48,11 +48,14 @@ function Invoke-Npp([string] $settings) {
 			$script:kids = [Collections.Generic.List[IntPtr]]::new(); [void][TC.U]::EnumChildWindows($main, { param($h, $l) $script:kids.Add($h); $true }, [IntPtr]::Zero)
 			$view = $script:kids | Where-Object { $sb = [Text.StringBuilder]::new(32); [void][TC.U]::GetClassName($_, $sb, 32); ($sb.ToString() -eq 'Scintilla') -and [TC.U]::IsWindowVisible($_) -and ([TC.U]::GetParent($_) -eq $main) } | Select-Object -First 1
 		}
-		Start-Sleep -Milliseconds 800
+		# then its startup done: a WM_NULL sent to the main window is answered once its message loop runs, after the settings
+		# are applied (a view read before, right after the harness's builds, was still GDI, its settings not applied yet)
+		if ($main -ne [IntPtr]::Zero) { $r = [IntPtr]::Zero; [void][TC.U]::SendMessageTimeout($main, 0, [IntPtr]::Zero, [IntPtr]::Zero, 0, 60000, [ref]$r) }
+		Start-Sleep -Milliseconds 300
 		if ($view) { $quality = Send $view $SCI_GETFONTQUALITY; $technology = Send $view $SCI_GETTECHNOLOGY; $mode = [int](Send $view $SCI_GETFONTRENDERINGPARAMETER $SC_FONTRENDERING_RENDERINGMODE) }
 	}
 	finally {
-		if (-not $proc.HasExited) { [void][TC.U]::PostMessage($main, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero); if (-not $proc.WaitForExit(10000)) { Stop-Process -Id $proc.Id -Force } }
+		if (-not $proc.HasExited) { [void][TC.U]::PostMessage($main, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero); if (-not $proc.WaitForExit(30000)) { Stop-Process -Id $proc.Id -Force } }
 	}
 	[pscustomobject]@{ Quality = $quality; Technology = $technology; Mode = $mode; Config = [IO.File]::ReadAllText((Join-Path $settings 'config.xml')) }
 }
