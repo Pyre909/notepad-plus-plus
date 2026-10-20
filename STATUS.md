@@ -5,10 +5,32 @@ build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` 
 `scintilla/SCINTILLA-UPSTREAM.md`, and how Scintilla's maintainer decides (a survey of 792 tickets, compared with
 ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md`.
 
-## Handoff (2026-10-19): read this first
+## Handoff (2026-10-20): read this first
 
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
+
+- **The performance program (2026-10-20)**, asked by Pyre909: newer toolsets, refactoring, performance "in
+  sections/parts", every language feature that helps, Windows 11 polish. Their choices: upstream code changed only where
+  a measurement shows a gain (small marked patches), Windows 10 1809 minimum, C++23 everywhere, Windows 11 polish (not a
+  redesign). Each part: measured before/after, harness, CI on a scratch branch (`pyre-section1_20261020`,
+  `pyre-pgo-release_20261020`), then `pyre` fast-forwarded to the commit CI passed.
+  - Section 1, toolsets, in `pyre`: C++23 (`0aa1234`), Windows 10 1809 (`4140a37`), its functions called directly
+    (`e2f301d`), the PGO switch (`ea8a856`), the PGO release workflow (`29189eb`, `12b8184`: 5 jobs, x64 trained on its
+    runner, ARM64 instrumented on x64, trained on `windows-11-arm`, optimized on x64; input `test_only`). PGO against
+    LTCG (ARM64, `.github/pyre/bench.ps1`, 5 rounds): lexing -19%, folding and Mark All -17%, wrapping -15%, startup -7%.
+  - Section 2, refactoring, parts C (`02451e9`) and D (`071a9b5`) in `pyre`; parts A and B (owned fonts, panel icons)
+    share code with `per-monitor-dpi_20260925`: with its rebase; part E (Scintilla patch) skipped, clarity only.
+  - Section 3, performance: the regex engine (`0d2b005`, in `pyre`; CI: all 13 jobs pass): the Function List on 60,000 lines of
+    C++ 190 s -> 6.1 s, on 3,000 lines 9.5 s -> 0.36 s (tables for the Win32 traits of wchar_t, 16 compiled regexes
+    kept, `isInZones` binary search); upstream's 46 Function List unit tests the same. Measured and dropped: the tree
+    filled in linear time (the same tree, 3% faster). Next: profile what's left (6 s), then lexers and Scintilla.
+  - For section 4 (UI): Windows' status bar repaints at once (`UpdateWindow` in comctl32's `SB_SETTEXT`) for each part
+    Notepad++ sets on every keystroke; `bench.ps1`'s scroll times are the display's 60 Hz with DirectWrite (its "(CPU)"
+    rows are the work).
+  - Tools: `.github/pyre/bench.ps1` (benchmarks, PGO training), `.github/pyre/pgo.ps1`, `review/tests/function-list.ps1`
+    (upstream's unit tests, timed, test files in CRLF as CI's checkout), the harness's fixes (leaks measured twice before
+    a FAIL, normalized line endings, `pyre-text-rendering-config` reads after a `WM_NULL` round trip).
 
 - `pyre` pushed on 2026-10-19 at `a5e52d2`; Pyre909 CI: all 13 jobs pass (run 39374283434). On top of
   `7c83c57`: `f0b94ec` upstream merged up to `b661c2b` (2026-10-19: the incremental search bar at the top, two Find
