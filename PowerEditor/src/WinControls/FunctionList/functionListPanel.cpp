@@ -19,7 +19,10 @@
 #include "ScintillaEditView.h"
 #include "localization.h"
 #include "ImageListSet.h"
+#include <algorithm>
+#include <cstdint>
 #include <fstream>
+#include <iterator>
 
 using nlohmann::json;
 using namespace std;
@@ -129,6 +132,7 @@ TreeParams* FunctionListPanel::getFromStateArray(const wstring& fullFilePath)
 
 void FunctionListPanel::sortOrUnsort()
 {
+	_areLeafPositionsSet = false; // Pyre909 build: the tree order changes
 	bool doSort = shouldSort();
 	if (doSort)
 		_pTreeView->sort(_pTreeView->getRoot(), true);
@@ -261,8 +265,7 @@ void FunctionListPanel::reload()
 	}
 
 	// clean up
-	_findLine = -1;
-	_findEndLine = -1;
+	_areLeafPositionsSet = false; // Pyre909 build
 	TreeStateNode currentTree;
 	bool isOK = _treeView.retrieveFoldingStateTo(currentTree, _treeView.getRoot());
 	if (isOK)
@@ -378,65 +381,47 @@ void FunctionListPanel::showPreferencesMenu()
 		0, _hSelf, NULL);
 }
 
+// Pyre909 build: marks the leaf of the nearest function starting on the caret's line or before it (the first in the tree if
+// several start on that line), else the root, as the walk of the whole tree did on each caret move (its range cache never
+// hit). The leaves are listed in document order once after each change of the tree.
 void FunctionListPanel::markEntry()
 {
-	LONG lineNr = static_cast<LONG>((*_ppEditView)->getCurrentLineNumber());
-	HTREEITEM root = _treeView.getRoot();
-	if (_findLine != -1 && _findEndLine != -1 && lineNr >= _findLine && lineNr < _findEndLine)
-		return;
-	_findLine = -1;
-	_findEndLine = -1;
-	findMarkEntry(root, lineNr);
-	if (_findLine != -1)
+	if (!_areLeafPositionsSet)
 	{
-		_treeView.selectItem(_findItem);
-	}
-	else
-	{
-		_treeView.selectItem(root);
+		_leafPositions.clear();
+		addLeafPositions(_treeView.getRoot());
+		std::ranges::stable_sort(_leafPositions, {}, &LeafPosition::_pos);
+		_areLeafPositionsSet = true;
 	}
 
+	const ScintillaEditView& view = **_ppEditView;
+	const intptr_t lineNr = view.getCurrentLineNumber();
+	const bool isLastLine = (lineNr + 1 >= view.execute(SCI_GETLINECOUNT));
+	const intptr_t nextLineStart = isLastLine ? INTPTR_MAX : view.execute(SCI_POSITIONFROMLINE, lineNr + 1);
+	const auto last = std::ranges::lower_bound(_leafPositions, nextLineStart, {}, &LeafPosition::_pos);
+	if (last == _leafPositions.begin())
+	{
+		_treeView.selectItem(_treeView.getRoot());
+		return;
+	}
+
+	const intptr_t lineStart = view.execute(SCI_POSITIONFROMLINE, view.execute(SCI_LINEFROMPOSITION, std::prev(last)->_pos));
+	const auto first = std::ranges::lower_bound(_leafPositions.begin(), last, lineStart, {}, &LeafPosition::_pos);
+	_treeView.selectItem(std::ranges::min_element(first, last, {}, &LeafPosition::_treeOrder)->_item);
 }
 
-void FunctionListPanel::findMarkEntry(HTREEITEM htItem, LONG line)
+void FunctionListPanel::addLeafPositions(HTREEITEM hItem)
 {
-	HTREEITEM cItem{};
-	TVITEM tvItem{};
-	for (; htItem != NULL; htItem = _treeView.getNextSibling(htItem))
+	for (; hItem != nullptr; hItem = _treeView.getNextSibling(hItem))
 	{
-		cItem = _treeView.getChildFrom(htItem);
-		if (cItem != NULL)
+		if (HTREEITEM hChild = _treeView.getChildFrom(hItem))
 		{
-			findMarkEntry(cItem, line);
+			addLeafPositions(hChild);
 		}
-		else
+		else if (const auto* posStr = reinterpret_cast<const wstring*>(_treeView.getItemParam(hItem)))
 		{
-			tvItem.hItem = htItem;
-			tvItem.mask = TVIF_IMAGE | TVIF_PARAM;
-			::SendMessage(_treeViewSearchResult.getHSelf(), TVM_GETITEM, 0, reinterpret_cast<LPARAM>(&tvItem));
-
-			wstring *posStr = reinterpret_cast<wstring *>(tvItem.lParam);
-			if (posStr)
-			{
-				int pos = _wtoi(posStr->c_str());
-				if (pos != -1)
-				{
-					LONG sci_line = static_cast<LONG>((*_ppEditView)->execute(SCI_LINEFROMPOSITION, pos));
-					if (line >= sci_line)
-					{
-						if (sci_line > _findLine || _findLine == -1)
-						{
-							_findLine = sci_line;
-							_findItem = htItem;
-						}
-					}
-					else
-					{
-						if (sci_line < _findEndLine)
-							_findEndLine = sci_line;
-					}
-				}
-			}
+			if (const int pos = _wtoi(posStr->c_str()); pos != -1)
+				_leafPositions.push_back({ pos, _leafPositions.size(), hItem });
 		}
 	}
 }
@@ -621,6 +606,7 @@ void FunctionListPanel::searchFuncAndSwitchView()
 	}
 
 	// restore selected sorting
+	_areLeafPositionsSet = false; // Pyre909 build: the tree order changes
 	if (shouldSort())
 		_pTreeView->sort(_pTreeView->getRoot(), true);
 	else
