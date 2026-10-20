@@ -9009,6 +9009,7 @@ std::wstring NppParameters::writeStyles(LexerStylerArray& lexersStylers, StyleAr
 	if (!savePath.empty())
 	{
 		static_cast<void>(NppXml::saveFile(_pXmlUserStylerDoc._doc, savePath.c_str()));
+		_themeSwitcher.setThemePath(_pXmlUserStylerDoc._path, savePath); // Pyre909 build
 		return savePath;
 	}
 

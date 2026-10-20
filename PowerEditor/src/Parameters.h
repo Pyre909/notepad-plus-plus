@@ -1338,6 +1338,16 @@ public:
 		_themeStylerSavePath[key] = val;
 	}
 
+	// Pyre909 build: a theme of the installation saved as the user's copy is loaded from that copy afterwards (selecting
+	// the theme again in the same session loaded the installation's file, without the changes saved)
+	void setThemePath(const std::wstring& oldPath, const std::wstring& newPath) {
+		for (auto& theme : _themeList)
+		{
+			if (theme.second == oldPath)
+				theme.second = newPath;
+		}
+	}
+
 private:
 	std::vector<std::pair<std::wstring, std::wstring>> _themeList;
 	std::map<std::wstring, std::wstring> _themeStylerSavePath;
