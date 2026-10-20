@@ -10,7 +10,7 @@ ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
-- `pyre` pushed on 2026-10-19 at `a5e52d2`; Pyre909 CI run 39374283434 started on it (check its result). On top of
+- `pyre` pushed on 2026-10-19 at `a5e52d2`; Pyre909 CI: all 13 jobs pass (run 39374283434). On top of
   `7c83c57`: `f0b94ec` upstream merged up to `b661c2b` (2026-10-19: the incremental search bar at the top, two Find
   options moved out of Preferences; conflict in `resource.h`: upstream's `NPPM_INTERNAL_INCSEARCHBARPOSITION` took
   `+ 114`, the fork's `NPPM_INTERNAL_DPICHANGEDRELAYOUT` is `+ 115` now), and `a5e52d2`, the font of every theme set
