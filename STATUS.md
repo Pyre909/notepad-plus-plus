@@ -10,10 +10,11 @@ ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
-- `pyre` pushed on 2026-10-19 (`a52ca6a`): the speed, glyph and Text Rendering work of that day (section "Speed,
-  glyphs and Text Rendering options" below) on top of `b0ae0e6` (pushed 2026-10-16: upstream merged up to `a660d79`,
-  the PR reviews' improvements). Pyre909 CI not run yet on `a52ca6a`: run it (`gh workflow run pyre-ci.yml --ref pyre
-  -f ref=pyre`; MinGW and Clang catch what MSVC doesn't). No release built since: Pyre909 said "Don't build for now"
+- `pyre` pushed on 2026-10-19 (`cff6c08`): the speed, glyph and Text Rendering work of that day (`a52ca6a`, section
+  "Speed, glyphs and Text Rendering options" below; Pyre909 CI: all 13 jobs pass, run 39352072234) and four
+  Style Configurator bug fixes (`a913d55`..`cff6c08`, section "Style Configurator" below), on top of `b0ae0e6` (pushed
+  2026-10-16: upstream merged up to `a660d79`, the PR reviews' improvements). Run Pyre909 CI on `cff6c08`
+  (`gh workflow run pyre-ci.yml --ref pyre -f ref=pyre`). No release built since: Pyre909 said "Don't build for now"
   (2026-10-16); then Actions > Pyre909 release.
 - CI is manual since 2026-10-16 (workflow **Pyre909 CI**, `pyre-ci.yml`, generated from upstream's `CI_build.yml` by
   `.github/pyre/make-ci.ps1`); upstream's `CI_build` and `release-notifier` are disabled on the fork. Actions works
@@ -33,6 +34,38 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
   paths slower: time copies of the builds in plain folders). Debugging Tools installed, symbols in `C:\symbols`.
 - Reviews: `review.ps1 -Quiet`, then the AI review (skill `npp-review`). After a change of a class layout in a header
   (a member added), rebuild clean: the harness builds incrementally (5 false failures on 2026-10-15).
+
+## Style Configurator (2026-10-19)
+
+Asked by Pyre909: "can we improve the style configurator somehow". Three research agents (upstream issues and forum,
+the code, other editors), then "fix those bugs".
+- **Fixed in pyre** (upstream bugs, each its own commit, each a possible small upstream PR with an issue first):
+  `a913d55` a theme of the installation saved with Save & Close (written as the user's copy) came back unsaved when
+  selected again in the same session (the theme list kept the installation's path; the next save overwrote the copy):
+  `ThemeSwitcher::setThemePath` from `writeStyles`. `8c51a77` a dark mode switch picked its theme by a prefix
+  (`CB_FINDSTRING`: "Solarized-light" for "Solarized"), a style's font too. `4f783af` an emptied font name wasn't
+  saved (upstream #13919). `840214b` each key typed in the user keywords box restyled the views (14.6 ms a key with
+  100,000 C++ lines; 2.7 ms now, one restyle 300 ms after the last key; upstream #16143 reports a visible redraw).
+  Test `review/tests/pyre-style-configurator.ps1` (8 checks; 3 fail on `a52ca6a`).
+- **Wanted upstream, not refused** (issue, signal): fold-line and hidden-lines colours as Global Styles (#12751,
+  #10313, #12110), a visible "transparent" (inherit) check box instead of the right-click (#18057, #5620), Ctrl+A in
+  the keyword boxes (#16131, a PR invited), the colour popup's slots shifted not overwritten (#9813), the popup opening
+  with the previous style's colour (#11996), the dialog not coming to the front when reopened (#11811), the font list
+  refreshed without a restart (#17923), a theme reset (#17824). New styles need stylers.model.xml, DarkModeDefault and
+  every theme updated and `modelDate` bumped (#18501).
+- **Refused upstream** (don't propose): typing in the font name or size combos (#16374, PRs #16710, #16470), font
+  sizes 1-4 (#18412, ours), folding Global override into Default Style (#15640: Global override moved last instead),
+  translating Global Styles names (#15514), recolouring shipped themes (#14721, #11842).
+- **Ideas** (code read + other editors; not started): the style at the caret selected in the dialog (JetBrains' "Jump
+  to Colors and Fonts", VS Code's token inspector; use `SCI_GETSTYLEINDEXAT`, not `SCI_GETSTYLEAT` (negative above
+  127); HTML-family lexers split by ID range), a banner on every style while Global override forces something (the
+  forum's top confusion), the inherited value shown for a blank font or size ("(Default: Consolas)"), keyboard access
+  to the colour pickers (no tab stop, announced as "F"), a hex field and recent colours in the colour popup, a search
+  box over languages and styles, reset/mark modified styles against the shipped theme, a contrast ratio readout, a
+  sample swatch in the empty right half. Smaller: the fork's second font list filled lazily (+70 ms on the first open:
+  252 vs 185 ms), Save & Close writing the theme when only "For every theme" changed (pyre), the row's "(Theme)",
+  "Always", "Never" not localizable (pyre), `destroy()` resetting the wrong picker, a duplicate swatch, theme font sizes
+  over 28 shown blank.
 
 ## Speed, glyphs and Text Rendering options (2026-10-19)
 
