@@ -462,11 +462,12 @@ intptr_t CALLBACK VerticalFileSwitcher::run_dlgProc(UINT message, WPARAM wParam,
 					hdi.cchTextMax = MAX_PATH;
 					Header_GetItem(hwndHD, test->iItem, &hdi);
 
-					// storing column width data
+					// storing column width data, for 96 DPI as the list view reads it (scaled to the DPI of the panel)
+					const int width = DPIManagerV2::unscale(hdi.cxy, _hSelf);
 					if (hdi.pszText == pNativeSpeaker->getAttrNameStr(L"Ext.", FS_ROOTNODE, FS_CLMNEXT))
-						nppParams.getNppGUI()._fileSwitcherExtWidth = hdi.cxy;
+						nppParams.getNppGUI()._fileSwitcherExtWidth = width;
 					else if (hdi.pszText == pNativeSpeaker->getAttrNameStr(L"Path", FS_ROOTNODE, FS_CLMNPATH))
-						nppParams.getNppGUI()._fileSwitcherPathWidth = hdi.cxy;
+						nppParams.getNppGUI()._fileSwitcherPathWidth = width;
 
 					return TRUE;
 				}
