@@ -13,8 +13,8 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
 - **The performance program (2026-10-20)**, asked by Pyre909: newer toolsets, refactoring, performance "in
   sections/parts", every language feature that helps, Windows 11 polish. Their choices: upstream code changed only where
   a measurement shows a gain (small marked patches), Windows 10 1809 minimum, C++23 everywhere, Windows 11 polish (not a
-  redesign). Each part: measured before/after, harness, CI on a scratch branch (`pyre-section1_20261020`,
-  `pyre-pgo-release_20261020`), then `pyre` fast-forwarded to the commit CI passed.
+  redesign). Each part: measured before/after, harness, CI on a scratch branch (`pyre-section<n>_20261020`, deleted
+  once `pyre` has it), then `pyre` fast-forwarded to the commit CI passed.
   - Section 1, toolsets, in `pyre`: C++23 (`0aa1234`), Windows 10 1809 (`4140a37`), its functions called directly
     (`e2f301d`), the PGO switch (`ea8a856`), the PGO release workflow (`29189eb`, `12b8184`: 5 jobs, x64 trained on its
     runner, ARM64 instrumented on x64, trained on `windows-11-arm`, optimized on x64; input `test_only`). PGO against
@@ -24,10 +24,22 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
   - Section 3, performance: the regex engine (`0d2b005`, in `pyre`; CI: all 13 jobs pass): the Function List on 60,000 lines of
     C++ 190 s -> 6.1 s, on 3,000 lines 9.5 s -> 0.36 s (tables for the Win32 traits of wchar_t, 16 compiled regexes
     kept, `isInZones` binary search); upstream's 46 Function List unit tests the same. Measured and dropped: the tree
-    filled in linear time (the same tree, 3% faster). Next: profile what's left (6 s), then lexers and Scintilla.
-  - For section 4 (UI): Windows' status bar repaints at once (`UpdateWindow` in comctl32's `SB_SETTEXT`) for each part
-    Notepad++ sets on every keystroke; `bench.ps1`'s scroll times are the display's 60 Hz with DirectWrite (its "(CPU)"
-    rows are the work).
+    filled in linear time (the same tree, 3% faster). Then auto-completion (`266b8dd`, in `pyre`): the keywords and the
+    words found looked up in sets, 108 -> 76 ms a keystroke on 60,000 lines (the same lists, item by item); what's left
+    is upstream's search of the whole document for each prefix. The profile is flat after that: no lexer or Scintilla
+    change kept.
+  - Section 4, Windows 11 polish (`b64b8ed`, in `pyre`): popups Windows 11 leaves square (call tips, About box, colour
+    picker, document peeker) rounded by DWM, switchable (Preferences > Dark Mode, config.xml MISC `roundedPopups`,
+    default on); test `review/tests/pyre-rounded-popups.ps1`. Mica dropped: the VM's Windows (25H2) already gives the
+    title bars Mica (the same pixels with `DWMSBT_MAINWINDOW`), and Mica behind the bars means repainting every
+    custom-drawn bar, a redesign. Measured and dropped earlier: caching the status bar texts (Windows' status bar
+    repaints at once in `SB_SETTEXT`; no measurable gain). `bench.ps1`'s scroll times are the display's 60 Hz with
+    DirectWrite (its "(CPU)" rows are the work).
+  - Cleanup (2026-10-20, with Pyre909's OK): the scratch branches, the Actions artifacts (632), the PGO and
+    `text-rendering_20260925` worktrees (the branch stays), the test folders in `%TEMP%` and `C:\npp-*` (not
+    `C:\npp-test`), the harness's old runs. Left to Pyre909 (administrator): `review/umdh-scope.ps1 -Remove`, the
+    allocation stacks Windows records for the ARM64 dev builds, which slow them (`pyre-layout-cache`'s Replace All
+    check took 18.2 s once under load against its 15 s limit, 14.8 s alone).
   - Tools: `.github/pyre/bench.ps1` (benchmarks, PGO training), `.github/pyre/pgo.ps1`, `review/tests/function-list.ps1`
     (upstream's unit tests, timed, test files in CRLF as CI's checkout), the harness's fixes (leaks measured twice before
     a FAIL, normalized line endings, `pyre-text-rendering-config` reads after a `WM_NULL` round trip).
@@ -37,8 +49,8 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
   options moved out of Preferences; conflict in `resource.h`: upstream's `NPPM_INTERNAL_INCSEARCHBARPOSITION` took
   `+ 114`, the fork's `NPPM_INTERNAL_DPICHANGEDRELAYOUT` is `+ 115` now), and `a5e52d2`, the font of every theme set
   on the Global override page (section "Style Configurator"). The fork's `master` is still at `a660d79`: GitHub Sync
-  fork brings it to `b661c2b` (`pyre` has it already). Previewed by Pyre909 from `C:\npp-preview-a5e52d2` (a portable
-  copy of the installation with the ARM64 build and a copy of their settings).
+  fork brings it to `b661c2b` (`pyre` has it already). Previewed by Pyre909 from a portable copy of the installation
+  with the ARM64 build and a copy of their settings (`C:\npp-preview-a5e52d2`, deleted in the cleanup).
 - `7c83c57` (CI: all 13 jobs pass): the speed, glyph and Text Rendering work of that day (`a52ca6a`, section "Speed,
   glyphs and Text Rendering options" below) and the Style Configurator bug fixes (`a913d55`..`7c83c57`), on top of
   `b0ae0e6` (2026-10-16). Released as `pyre-8.9.8.1-7c83c57` (published 2026-10-20 UTC; its ARM64 installer is
