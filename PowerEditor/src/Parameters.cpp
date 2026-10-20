@@ -9085,15 +9085,14 @@ void NppParameters::writeStyle2Element(const Style& style2Write, Style& style2Sy
 		NppXml::removeAttribute(element, "colorStyle");
 	}
 
-	if (!style2Write._fontName.empty())
+	// Pyre909 build: an emptied font name (the style takes the Default Style's font) is saved too, and a font name for a
+	// style the theme gave none (no fontName attribute); before, both were lost on the next start
+	const char* oldFontName = NppXml::attribute(element, "fontName");
+	const std::string fontName = wstring2string(style2Write._fontName);
+	if (oldFontName ? (fontName != oldFontName) : !fontName.empty())
 	{
-		const char* oldFontName = NppXml::attribute(element, "fontName");
-		const std::string fontName = wstring2string(style2Write._fontName);
-		if (oldFontName && oldFontName != fontName)
-		{
-			NppXml::setAttribute(element, "fontName", fontName);
-			style2Sync._fontName = style2Write._fontName;
-		}
+		NppXml::setAttribute(element, "fontName", fontName);
+		style2Sync._fontName = style2Write._fontName;
 	}
 
 	if (style2Write._fontSize != STYLE_NOT_USED)
