@@ -131,8 +131,8 @@ private :
 	bool _isUserKeywordsApplyPending = false;
 	void applyPendingUserKeywords();
 
-	// Pyre909 build: the font of every theme (config.xml), the row under the theme selector
-	void initFontForEveryThemeCtrls() const;
-	void updateFontForEveryThemeCtrls() const;
-	void fontForEveryThemeChanged(int ctrlID);
+	// Pyre909 build: the font controls of the Global override show and set the font of every theme (config.xml)
+	static bool isGlobalOverrideFontCtrl(WPARAM wParam);
+	void setVisualFromGlobalOverrideFont();
+	void globalOverrideFontChanged(int ctrlID);
 };

@@ -58,18 +58,9 @@
 	#define IDC_GLOBAL_GOTOSETTINGS_LINK	(IDD_STYLER_DLG + 34)
 	#define IDC_GLOBAL_WHATISGLOBALOVERRIDE_LINK	(IDD_STYLER_DLG + 35)
 
-	// Pyre909 build: the font of every theme (WordStyleDlg::initFontForEveryThemeCtrls), apart from upstream's numbers
-	#define IDC_EVERYTHEME_STATIC	(IDD_STYLER_DLG + 80)
-	#define IDC_EVERYTHEME_FONT_COMBO	(IDD_STYLER_DLG + 81)
-	#define IDC_EVERYTHEME_SIZE_STATIC	(IDD_STYLER_DLG + 82)
-	#define IDC_EVERYTHEME_SIZE_COMBO	(IDD_STYLER_DLG + 83)
-	#define IDC_EVERYTHEME_BOLD_STATIC	(IDD_STYLER_DLG + 84)
-	#define IDC_EVERYTHEME_BOLD_COMBO	(IDD_STYLER_DLG + 85)
-	#define IDC_EVERYTHEME_ITALIC_STATIC	(IDD_STYLER_DLG + 86)
-	#define IDC_EVERYTHEME_ITALIC_COMBO	(IDD_STYLER_DLG + 87)
-	#define IDC_EVERYTHEME_UNDERLINE_STATIC	(IDD_STYLER_DLG + 88)
-	#define IDC_EVERYTHEME_UNDERLINE_COMBO	(IDD_STYLER_DLG + 89)
-	#define IDC_EVERYTHEME_NOTE_STATIC	(IDD_STYLER_DLG + 90)
+	// Pyre909 build: the note of the Global override (its font is the same in every theme), apart from upstream's numbers;
+	// not + 90, the note of the former row (its text may still be in a nativeLang.xml copied from english_customizable.xml)
+	#define IDC_EVERYTHEME_NOTE_STATIC	(IDD_STYLER_DLG + 91)
 	                                                    
 # define IDD_GLOBAL_STYLER_DLG	2300
     #define IDC_SAVECLOSE_BUTTON	(IDD_GLOBAL_STYLER_DLG + 1)

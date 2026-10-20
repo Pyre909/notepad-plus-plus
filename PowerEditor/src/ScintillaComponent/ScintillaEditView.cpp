@@ -1139,7 +1139,8 @@ void ScintillaEditView::setStyle(Style styleToSet) const
 			}
 		}
 
-		// Pyre909 build: the font forced for every theme (the Style Configurator's "For every theme") is in config.xml
+		// Pyre909 build: the font forced for every theme (the font controls of the Style Configurator's Global override) is
+		// in config.xml
 		if (go.enableFont && !go.fontName.empty())
 			styleToSet._fontName = go.fontName;
 		if (go.enableFontSize && (go.fontSize > 0))

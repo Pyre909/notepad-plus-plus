@@ -799,9 +799,10 @@ static void writeTextRenderingParams(NppXml::Element& elem, const ScintillaViewP
 		elem.remove_attribute(name);
 }
 
-// Pyre909 build: the font forced for every theme (the Style Configurator's "For every theme") with the force flags of
-// <GUIConfig name="globalOverride">: forcedFontName="Consolas" forcedFontSize="11" forcedFontStyle="0", the bold, italic
-// and underline forced on (FONTSTYLE_*). A config.xml without them (another Notepad++'s) gets them from the theme once.
+// Pyre909 build: the font forced for every theme (the font controls of the Style Configurator's Global override) with
+// the force flags of <GUIConfig name="globalOverride">: forcedFontName="Consolas" forcedFontSize="11" forcedFontStyle="0",
+// the bold, italic and underline forced on (FONTSTYLE_*). A config.xml without them (another Notepad++'s) gets them from
+// the theme once.
 static constexpr int forcedFontStyles = FONTSTYLE_BOLD | FONTSTYLE_ITALIC | FONTSTYLE_UNDERLINE;
 
 static void readGlobalOverrideFont(const NppXml::Element& elem, GlobalOverride& go)
