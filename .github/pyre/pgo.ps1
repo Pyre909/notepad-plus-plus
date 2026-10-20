@@ -51,7 +51,9 @@ switch ($Step) {
 		Get-ChildItem $out -Filter '*.pgc' -ErrorAction SilentlyContinue | Remove-Item -Force
 		[void](Build 'Instrument')
 		$vs = & $vswhere -latest -products * -property installationPath
-		$pgort = Find-PlatformFile (Join-Path $vs 'VC\Tools\MSVC') 'pgort140.dll'
+		# of the newest toolset, the one the build used (a runner can have older ones side by side, 14.29 of VS 2019)
+		$pgort = Get-ChildItem (Join-Path $vs 'VC\Tools\MSVC') -Directory | Sort-Object { [version]$_.Name } -Descending |
+			ForEach-Object { Find-PlatformFile $_.FullName 'pgort140.dll' } | Select-Object -First 1
 		if (-not $pgort) { throw "no $Platform pgort140.dll under $vs\VC\Tools\MSVC" }
 		Copy-Item $pgort.FullName $out -Force
 		foreach ($d in @(@('functionList', 'functionList'), @('APIs', 'autoCompletion'))) {
