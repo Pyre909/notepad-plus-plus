@@ -1139,6 +1139,7 @@ Translation note:
 					<Item id="7127" name="Edge disabled"/>
 					<Item id="7130" name="Reset"/>
 					<Item id="7135" name="Tones"/>
+					<Item id="7134" name="Rounded corners on popups (Windows 11)"/>
 				</DarkMode>
 
 				<MarginsBorderEdge title="Margins/Border/Edge">

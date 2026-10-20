@@ -526,6 +526,7 @@
 #define IDC_RADIO_DARKMODE_LIGHTMODE                   7131
 #define IDC_RADIO_DARKMODE_DARKMODE                    7132
 #define IDC_RADIO_DARKMODE_FOLLOWWINDOWS               7133
+#define IDC_CHECK_DARKMODE_ROUNDEDPOPUPS               7134 // Pyre909 build
 
 #define IDC_DARKMODE_TONES_GB_STATIC                   7135
 #define IDD_DROPDOWN_RESET_RED                         7136

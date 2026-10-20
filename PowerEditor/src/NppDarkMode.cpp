@@ -4243,6 +4243,19 @@ namespace NppDarkMode
 		}
 	}
 
+	// Pyre909 build: Windows 11 rounds the windows that have a caption or a sizing border, not the other popups (call tips,
+	// About box, colour picker, document peeker); asked for them while the "roundedPopups" option is on. Called each time
+	// such a popup is shown, so the option applies at once.
+	void setRoundedCorners(HWND hwnd, bool isSmall)
+	{
+		if (!NppDarkMode::isWindows11())
+			return;
+
+		const bool isRounded = NppParameters::getInstance().getNppGUI()._roundedPopups;
+		const DWM_WINDOW_CORNER_PREFERENCE corner = !isRounded ? DWMWCP_DEFAULT : (isSmall ? DWMWCP_ROUNDSMALL : DWMWCP_ROUND);
+		::DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
+	}
+
 	void setDarkExplorerTheme(HWND hwnd)
 	{
 		SetWindowTheme(hwnd, g_isAtLeastWindows10 && NppDarkMode::isEnabled() ? L"DarkMode_Explorer" : nullptr, nullptr);
@@ -4480,6 +4493,26 @@ namespace NppDarkMode
 	void setDarkAutoCompletion()
 	{
 		::EnumThreadWindows(::GetCurrentThreadId(), enumAutocompleteProc, 0);
+	}
+
+	// Pyre909 build: a call tip is a popup of this thread too, a new window each time Scintilla shows one (it destroys
+	// it on cancel), square by default: nothing to do when the option is off. Call tips a plugin shows itself
+	// (SCI_CALLTIPSHOW) aren't rounded, unless shown at the same time as one of Notepad++'s.
+	static BOOL CALLBACK enumCallTipProc(HWND hwnd, LPARAM /*lParam*/)
+	{
+		constexpr size_t classNameLen = 16;
+		wchar_t className[classNameLen]{};
+		GetClassName(hwnd, className, classNameLen);
+		if (wcscmp(className, L"CallTip") == 0)
+			NppDarkMode::setRoundedCorners(hwnd, true);
+
+		return TRUE;
+	}
+
+	void setRoundedCallTips()
+	{
+		if (NppDarkMode::isWindows11() && NppParameters::getInstance().getNppGUI()._roundedPopups)
+			::EnumThreadWindows(::GetCurrentThreadId(), enumCallTipProc, 0);
 	}
 
 	LRESULT onCtlColor(HDC hdc)

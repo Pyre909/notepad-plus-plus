@@ -214,6 +214,7 @@ namespace NppDarkMode
 	void autoSubclassWindowMenuBar(HWND hWnd);
 
 	void setDarkTitleBar(HWND hwnd);
+	void setRoundedCorners(HWND hwnd, bool isSmall = false); // Pyre909 build
 	void setDarkExplorerTheme(HWND hwnd);
 	void setDarkScrollBar(HWND hwnd);
 	void setDarkTooltips(HWND hwnd, ToolTipsType type);
@@ -229,6 +230,7 @@ namespace NppDarkMode
 	void setBorder(HWND hwnd, bool border = true);
 
 	void setDarkAutoCompletion();
+	void setRoundedCallTips(); // Pyre909 build
 
 	LRESULT onCtlColor(HDC hdc);
 	LRESULT onCtlColorCtrl(HDC hdc);

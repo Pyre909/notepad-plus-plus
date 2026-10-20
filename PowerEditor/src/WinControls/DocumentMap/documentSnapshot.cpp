@@ -17,6 +17,7 @@
 
 #include "documentSnapshot.h"
 
+#include "NppDarkMode.h"
 #include "ScintillaEditView.h"
 #include "documentSnapshot_rc.h"
 
@@ -50,6 +51,7 @@ void DocumentPeeker::doDialog(POINT p, Buffer *pBuf, const ScintillaEditView & s
 	{
 		create(IDD_DOCUMENTSNAPSHOT);
 	}
+	NppDarkMode::setRoundedCorners(_hSelf); // Pyre909 build
 
 	syncDisplay(pBuf, scintSource);
     // Adjust the position of DocumentPeeker

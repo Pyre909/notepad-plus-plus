@@ -807,6 +807,7 @@ struct NppGUI final
 	bool _enableFoldCmdToggable = false;
 	bool _hideMenuRightShortcuts = false;
 	bool _perMonitorDpiAwareness = false; // experimental opt-in per-monitor v2 DPI awareness, applied at startup
+	bool _roundedPopups = true; // Pyre909 build: Windows 11 rounded corners on the popups it leaves square (NppDarkMode::setRoundedCorners)
 	writeTechnologyEngine _writeTechnologyEngine = directWriteTechnology;
 	bool _isWordCharDefault = true;
 	std::string _customWordChars;

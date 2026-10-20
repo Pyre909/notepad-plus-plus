@@ -106,6 +106,7 @@ intptr_t CALLBACK ColourPopup::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 		case WM_INITDIALOG:
 		{
 			NppDarkMode::autoSubclassAndThemeChildControls(_hSelf);
+			NppDarkMode::setRoundedCorners(_hSelf); // Pyre909 build
 
 			for (const auto& color : colorItems)
 			{

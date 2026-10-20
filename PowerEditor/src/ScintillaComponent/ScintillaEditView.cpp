@@ -3228,6 +3228,7 @@ void ScintillaEditView::showAutoCompletion(size_t lenEntered, const std::string&
 void ScintillaEditView::showCallTip(size_t startPos, const std::string& def) const
 {
 	execute(SCI_CALLTIPSHOW, startPos, reinterpret_cast<LPARAM>(def.c_str()));
+	NppDarkMode::setRoundedCallTips(); // Pyre909 build
 }
 
 wstring ScintillaEditView::getLine(size_t lineNumber) const

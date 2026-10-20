@@ -257,6 +257,7 @@ void AboutDlg::doDialog()
 		create(IDD_ABOUTBOX);
 		DPIManagerV2::setThreadDpiAwarenessContext(dpiContext);
 	}
+	NppDarkMode::setRoundedCorners(_hSelf); // Pyre909 build
 
 	// Adjust the position of AboutBox
 	moveForDpiChange();

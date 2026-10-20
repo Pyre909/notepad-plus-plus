@@ -7105,6 +7105,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 
 			_nppGUI._isFawSymlinkAllowed = getBoolAttribute(childNode, "isFawSymlinkAllowed", _nppGUI._isFawSymlinkAllowed);
 			_nppGUI._perMonitorDpiAwareness = getBoolAttribute(childNode, "perMonitorDpiAwareness", _nppGUI._perMonitorDpiAwareness);
+			_nppGUI._roundedPopups = getBoolAttribute(childNode, "roundedPopups", _nppGUI._roundedPopups); // Pyre909 build
 		}
 		// <GUIConfig name="DarkMode" enable="no" colorTone="0" customColorTop="2105376" customColorMenuHotTrack="4539717" customColorActive="3684408"
 		// customColorMain="2105376" customColorError="176" customColorText="14737632" customColorDarkText="12632256" customColorDisabledText="8421504"
@@ -8247,6 +8248,7 @@ void NppParameters::createXmlTreeFromGUIParams()
 		setBoolAttribute(GUIConfigElement, "hideMenuRightShortcuts", _nppGUI._hideMenuRightShortcuts);
 		setBoolAttribute(GUIConfigElement, "isFawSymlinkAllowed", _nppGUI._isFawSymlinkAllowed);
 		setBoolAttribute(GUIConfigElement, "perMonitorDpiAwareness", _nppGUI._perMonitorDpiAwareness);
+		setBoolAttribute(GUIConfigElement, "roundedPopups", _nppGUI._roundedPopups); // Pyre909 build
 	}
 
 	// <GUIConfig name="Searching" monospacedFontFindDlg="no" fillFindFieldWithSelected="yes" fillFindFieldSelectCaret="yes"

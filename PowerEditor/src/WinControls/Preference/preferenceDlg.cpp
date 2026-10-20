@@ -2634,6 +2634,9 @@ intptr_t CALLBACK DarkModeSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 			}
 			::SendDlgItemMessage(_hSelf, id, BM_SETCHECK, TRUE, 0);
 
+			setChecked(IDC_CHECK_DARKMODE_ROUNDEDPOPUPS, nppGUI._roundedPopups && NppDarkMode::isWindows11()); // Pyre909 build: unchecked where it can't apply
+			::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_DARKMODE_ROUNDEDPOPUPS), NppDarkMode::isWindows11());
+
 			_pBackgroundColorPicker = std::make_unique<ColourPicker>();
 			_pCtrlBackgroundColorPicker = std::make_unique<ColourPicker>();
 			_pHotBackgroundColorPicker = std::make_unique<ColourPicker>();
@@ -2849,6 +2852,12 @@ intptr_t CALLBACK DarkModeSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 			bool doEnableCustomizedColorCtrls = false;
 			switch (wParam)
 			{
+				case IDC_CHECK_DARKMODE_ROUNDEDPOPUPS: // Pyre909 build: applied when each popup shows
+				{
+					nppGUI._roundedPopups = isCheckedOrNot(IDC_CHECK_DARKMODE_ROUNDEDPOPUPS);
+					return TRUE;
+				}
+
 				case IDC_RADIO_DARKMODE_FOLLOWWINDOWS:
 				{
 					NppDarkMode::handleSettingChange(nullptr, 0, true);
