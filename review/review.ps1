@@ -291,7 +291,11 @@ foreach ($f in $changed) {
 	}
 	if ($e -match '^i/(\S+)\s+w/(\S+)') {
 		$i = $Matches[1]; $w = $Matches[2]
+		# a file git normalizes (attribute text, text=auto or eol, as Lexilla's makefiles): LF in git, the checkout's line
+		# endings in the working copy, so i/lf w/crlf is how it always is, not a conversion
+		$normalized = (($e -split "`t")[0]) -match 'attr/(text|text=auto)(\s|$)|eol='
 		if ($w -eq 'mixed') { $eolBad += "$f has mixed line endings" }
+		elseif ($normalized) { }
 		elseif (($i -in 'lf', 'crlf') -and ($w -in 'lf', 'crlf') -and ($i -ne $w)) { $eolBad += "$f converted from $i to $w" }
 	}
 }
