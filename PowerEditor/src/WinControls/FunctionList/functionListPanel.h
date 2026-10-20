@@ -114,9 +114,17 @@ private:
 	TreeView _treeViewSearchResult;
 
 	SCROLLINFO si{};
-	long _findLine = -1;
-	long _findEndLine = -1;
-	HTREEITEM _findItem = nullptr;
+
+	// the leaves of _treeView in document order, for markEntry() on each caret move, made again when the tree has changed
+	struct LeafPosition
+	{
+		intptr_t _pos = 0;
+		size_t _treeOrder = 0; // among leaves on the same line, the first in the tree is marked
+		HTREEITEM _item = nullptr;
+	};
+	std::vector<LeafPosition> _leafPositions;
+	bool _areLeafPositionsSet = false;
+	void addLeafPositions(HTREEITEM hItem);
 
 	std::wstring _sortTipStr = L"Sort";
 	std::wstring _reloadTipStr = L"Reload";
@@ -139,7 +147,6 @@ private:
 	bool openSelection(const TreeView &treeView);
 	bool shouldSort();
 	void setSort(bool isEnabled);
-	void findMarkEntry(HTREEITEM htItem, LONG line);
 	void initPreferencesMenu();
 	void showPreferencesMenu();
 };
