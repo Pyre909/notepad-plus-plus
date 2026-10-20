@@ -37,16 +37,22 @@ $root = Join-Path ([IO.Path]::GetTempPath()) ('npp-review\pyre-text-rendering-co
 # Notepad++ with a settings folder: the font quality of its main view (-1 if none), the config.xml it wrote on exit
 function Invoke-Npp([string] $settings) {
 	$proc = Start-Process $Exe -ArgumentList '-multiInst', '-nosession', "-settingsDir=$settings", '-titleAdd=REVIEW-TEST' -PassThru
-	$quality = -1; $technology = -1; $mode = $null
+	$quality = -1; $technology = -1; $mode = $null; $main = [IntPtr]::Zero; $view = $null
 	try {
-		for ($i = 0; $i -lt 100; $i++) { $proc.Refresh(); if ($proc.MainWindowHandle -ne 0) { break }; Start-Sleep -Milliseconds 100 }
+		# the main window once its view is there (up to 15 s: a slow start, or the first window the process shows, which
+		# isn't always the main one, let the view go unread and the WM_CLOSE get lost: no config.xml written)
+		for ($i = 0; ($i -lt 150) -and (-not $view); $i++) {
+			Start-Sleep -Milliseconds 100
+			$proc.Refresh(); $main = $proc.MainWindowHandle
+			if ($main -eq [IntPtr]::Zero) { continue }
+			$script:kids = [Collections.Generic.List[IntPtr]]::new(); [void][TC.U]::EnumChildWindows($main, { param($h, $l) $script:kids.Add($h); $true }, [IntPtr]::Zero)
+			$view = $script:kids | Where-Object { $sb = [Text.StringBuilder]::new(32); [void][TC.U]::GetClassName($_, $sb, 32); ($sb.ToString() -eq 'Scintilla') -and [TC.U]::IsWindowVisible($_) -and ([TC.U]::GetParent($_) -eq $main) } | Select-Object -First 1
+		}
 		Start-Sleep -Milliseconds 800
-		$script:kids = [Collections.Generic.List[IntPtr]]::new(); [void][TC.U]::EnumChildWindows($proc.MainWindowHandle, { param($h, $l) $script:kids.Add($h); $true }, [IntPtr]::Zero)
-		$view = $script:kids | Where-Object { $sb = [Text.StringBuilder]::new(32); [void][TC.U]::GetClassName($_, $sb, 32); ($sb.ToString() -eq 'Scintilla') -and [TC.U]::IsWindowVisible($_) -and ([TC.U]::GetParent($_) -eq $proc.MainWindowHandle) } | Select-Object -First 1
 		if ($view) { $quality = Send $view $SCI_GETFONTQUALITY; $technology = Send $view $SCI_GETTECHNOLOGY; $mode = [int](Send $view $SCI_GETFONTRENDERINGPARAMETER $SC_FONTRENDERING_RENDERINGMODE) }
 	}
 	finally {
-		if (-not $proc.HasExited) { [void][TC.U]::PostMessage($proc.MainWindowHandle, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero); if (-not $proc.WaitForExit(10000)) { Stop-Process -Id $proc.Id -Force } }
+		if (-not $proc.HasExited) { [void][TC.U]::PostMessage($main, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero); if (-not $proc.WaitForExit(10000)) { Stop-Process -Id $proc.Id -Force } }
 	}
 	[pscustomobject]@{ Quality = $quality; Technology = $technology; Mode = $mode; Config = [IO.File]::ReadAllText((Join-Path $settings 'config.xml')) }
 }
