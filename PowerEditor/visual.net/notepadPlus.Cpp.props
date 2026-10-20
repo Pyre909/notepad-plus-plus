@@ -25,7 +25,7 @@
   <ItemDefinitionGroup Label="Globals">
     <ClCompile>
       <AdditionalIncludeDirectories>..\src;..\src\MISC;..\src\MISC\Common;..\src\MISC\Exception;..\src\MISC\PluginsManager;..\src\MISC\Process;..\src\MISC\RegExt;..\src\MISC\hmac;..\src\MISC\md5;..\src\MISC\sha1;..\src\MISC\sha2;..\src\MISC\sha512;..\src\MISC\SysMsg;..\src\ScintillaComponent;..\src\Win32Explr;..\src\WinControls;..\src\WinControls\AboutDlg;..\src\WinControls\AnsiCharPanel;..\src\WinControls\ClipboardHistory;..\src\WinControls\ColourPicker;..\src\WinControls\ContextMenu;..\src\WinControls\DockingWnd;..\src\WinControls\DocumentMap;..\src\WinControls\FileBrowser;..\src\WinControls\FindCharsInRange;..\src\WinControls\FunctionList;..\src\WinControls\Grid;..\src\WinControls\ImageListSet;..\src\WinControls\OpenSaveFileDialog;..\src\WinControls\PluginsAdmin;..\src\WinControls\Preference;..\src\WinControls\ProjectPanel;..\src\WinControls\ReadDirectoryChanges;..\src\WinControls\shortcut;..\src\WinControls\SplitterContainer;..\src\WinControls\StaticDialog;..\src\WinControls\StaticDialog\RunDlg;..\src\WinControls\StatusBar;..\src\WinControls\TabBar;..\src\WinControls\TaskList;..\src\WinControls\ToolBar;..\src\WinControls\ToolTip;..\src\WinControls\TrayIcon;..\src\WinControls\TreeView;..\src\WinControls\VerticalFileSwitcher;..\src\WinControls\WindowsDlg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_WIN32_WINNT=_WIN32_WINNT_WIN7;NTDDI_VERSION=NTDDI_WIN7;_WINDOWS;OEMRESOURCE;NOMINMAX;_USE_64BIT_TIME_T;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WIN32_WINNT=_WIN32_WINNT_WIN10;NTDDI_VERSION=NTDDI_WIN10_RS5;_WINDOWS;OEMRESOURCE;NOMINMAX;_USE_64BIT_TIME_T;_CRT_NONSTDC_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -130,14 +130,14 @@ copy "..\src\stylers.model.xml" "$(OutDir)stylers.model.xml"
   <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
-      <MinimumRequiredVersion>6.00</MinimumRequiredVersion>
+      <MinimumRequiredVersion>10.0</MinimumRequiredVersion>
       <CETCompat>false</CETCompat>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Platform)'=='x64'">
     <Link>
       <TargetMachine>MachineX64</TargetMachine>
-      <MinimumRequiredVersion>6.00</MinimumRequiredVersion>
+      <MinimumRequiredVersion>10.0</MinimumRequiredVersion>
       <LargeAddressAware>true</LargeAddressAware>
       <CETCompat>false</CETCompat>
     </Link>
@@ -145,7 +145,7 @@ copy "..\src\stylers.model.xml" "$(OutDir)stylers.model.xml"
   <ItemDefinitionGroup Condition="'$(Platform)'=='ARM64'">
     <Link>
       <AdditionalDependencies>gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <MinimumRequiredVersion>6.02</MinimumRequiredVersion>
+      <MinimumRequiredVersion>10.0</MinimumRequiredVersion>
       <LargeAddressAware>true</LargeAddressAware>
       <CETCompat>false</CETCompat>
     </Link>

@@ -171,6 +171,13 @@ ws2003_goQuit:
 		Abort
 ws2003_endTest:
 
+	; Pyre909 build: built for Windows 10 version 1809 (build 17763) or later (_WIN32_WINNT_WIN10, NTDDI_WIN10_RS5,
+	; subsystem version 10.0: an older Windows refuses to start it)
+	${IfNot} ${AtLeastBuild} 17763
+		MessageBox MB_OK|MB_ICONSTOP "This Notepad++ (Pyre909 build) needs Windows 10 version 1809 or later. The installation will be aborted."
+		Abort
+	${EndIf}
+
 !ifdef ARCHARM64
 	${If} ${IsNativeARM64}
 		; OK
