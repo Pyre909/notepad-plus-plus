@@ -9009,7 +9009,12 @@ std::wstring NppParameters::writeStyles(LexerStylerArray& lexersStylers, StyleAr
 	if (!savePath.empty())
 	{
 		static_cast<void>(NppXml::saveFile(_pXmlUserStylerDoc._doc, savePath.c_str()));
-		_themeSwitcher.setThemePath(_pXmlUserStylerDoc._path, savePath); // Pyre909 build
+		// Pyre909 build: the theme is the copy from now on, in the theme list and as the current theme (Cancel reloads it,
+		// the Style Configurator finds it in the list, config.xml records it). This runs on a load too: the update of a
+		// theme from the model saves it.
+		_themeSwitcher.setThemePath(_pXmlUserStylerDoc._path, savePath);
+		if (_nppGUI._themeName == _pXmlUserStylerDoc._path)
+			_nppGUI._themeName = savePath;
 		return savePath;
 	}
 
@@ -9085,11 +9090,13 @@ void NppParameters::writeStyle2Element(const Style& style2Write, Style& style2Sy
 		NppXml::removeAttribute(element, "colorStyle");
 	}
 
-	// Pyre909 build: an emptied font name (the style takes the Default Style's font) is saved too, and a font name for a
-	// style the theme gave none (no fontName attribute); before, both were lost on the next start
-	const char* oldFontName = NppXml::attribute(element, "fontName");
+	// Pyre909 build: an emptied font name (the style takes the Default Style's font) is saved too: it came back on the
+	// next start. A style whose element has no fontName attribute has its font controls disabled: nothing to write. The
+	// attribute is looked up, not its value: pugixml keeps a value set empty as no string, which as_string reads as absent
+	// (a font chosen after the attribute was emptied in the same session wasn't saved).
+	const auto fontNameAttribute = element.attribute("fontName");
 	const std::string fontName = wstring2string(style2Write._fontName);
-	if (oldFontName ? (fontName != oldFontName) : !fontName.empty())
+	if (fontNameAttribute && (fontName != fontNameAttribute.value()))
 	{
 		NppXml::setAttribute(element, "fontName", fontName);
 		style2Sync._fontName = style2Write._fontName;

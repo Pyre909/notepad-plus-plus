@@ -320,9 +320,17 @@ intptr_t CALLBACK WordStyleDlg::run_dlgProc(UINT Message, WPARAM wParam, LPARAM 
 			else
 			{
 				// Pyre909 build: the user keywords typed are applied before anything else is done (Save & Close takes the
-				// styles applied), but not on the other notifications of their own box (EN_UPDATE comes with each key)
-				if (reinterpret_cast<HWND>(lParam) != ::GetDlgItem(_hSelf, IDC_USER_KEYWORDS_EDIT))
+				// styles applied), but not on the other notifications of their own box (EN_UPDATE comes with each key);
+				// Cancel discards them with the rest
+				if (wParam == IDCANCEL)
+				{
+					::KillTimer(_hSelf, userKeywordsApplyTimerID);
+					_isUserKeywordsApplyPending = false;
+				}
+				else if (reinterpret_cast<HWND>(lParam) != ::GetDlgItem(_hSelf, IDC_USER_KEYWORDS_EDIT))
+				{
 					applyPendingUserKeywords();
+				}
 
 				switch (wParam)
 				{
@@ -988,7 +996,7 @@ bool WordStyleDlg::selectThemeByName(const wchar_t* themeName)
 	applyPendingUserKeywords(); // Pyre909 build: to the theme they were typed for
 
 	// Pyre909 build: the exact name: a prefix took "Solarized-light" for "Solarized" (listed first) on a dark mode switch
-	LRESULT iTheme = ::SendMessage(_hSwitch2ThemeCombo, CB_FINDSTRINGEXACT, 1, reinterpret_cast<LPARAM>(themeName));
+	LRESULT iTheme = ::SendMessage(_hSwitch2ThemeCombo, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(themeName));
 	if (iTheme == CB_ERR)
 		return false;
 
