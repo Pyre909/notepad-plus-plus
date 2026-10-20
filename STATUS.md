@@ -10,12 +10,22 @@ ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
-- `pyre` pushed on 2026-10-19 (`cff6c08`): the speed, glyph and Text Rendering work of that day (`a52ca6a`, section
-  "Speed, glyphs and Text Rendering options" below; Pyre909 CI: all 13 jobs pass, run 39352072234) and four
-  Style Configurator bug fixes (`a913d55`..`cff6c08`, section "Style Configurator" below), on top of `b0ae0e6` (pushed
-  2026-10-16: upstream merged up to `a660d79`, the PR reviews' improvements). Run Pyre909 CI on `cff6c08`
-  (`gh workflow run pyre-ci.yml --ref pyre -f ref=pyre`). No release built since: Pyre909 said "Don't build for now"
-  (2026-10-16); then Actions > Pyre909 release.
+- `pyre` pushed on 2026-10-19 at `7c83c57` (Pyre909 CI: all 13 jobs pass): the speed, glyph and Text Rendering work
+  of that day (`a52ca6a`, section "Speed, glyphs and Text Rendering options" below) and the Style Configurator bug
+  fixes (`a913d55`..`7c83c57`, section "Style Configurator" below), on top of `b0ae0e6` (2026-10-16). Released as
+  `pyre-8.9.8.1-7c83c57` (published 2026-10-20 UTC; its ARM64 installer is installed on the VM, the exe checked
+  byte for byte against the installer's).
+- **Not pushed yet** (in the session worktree's branch, waiting on Pyre909's OK), on top of `7c83c57`: `f0b94ec`
+  upstream merged up to `b661c2b` (2026-10-19: the incremental search bar at the top, two Find options moved out of
+  Preferences; conflict in `resource.h`: upstream's `NPPM_INTERNAL_INCSEARCHBARPOSITION` took `+ 114`, the fork's
+  `NPPM_INTERNAL_DPICHANGEDRELAYOUT` is `+ 115` now; `per-monitor-dpi_20260925` still has it at `+ 114`: its rebase,
+  due anyway (based on the master of 2026-10-06, it conflicts with upstream since `a660d79` in `DockingManager.cpp`,
+  `StaticDialog.h`, `StatusBar.cpp`, `dpiManagerV2.cpp`), takes `+ 115` too), and `a5e52d2`, the font of every theme set on the Global override page (section "Style
+  Configurator"). Before pushing: GitHub Sync fork for `master`, then `pyre`, then Pyre909 CI.
+- Intermittent, to watch (2026-10-19): `live-rendering-switch-scroll` once found its wrapped 3000-line document 2 lines
+  up after the tab switches ("top lines 1498, 1498, 1498" for 1500, DirectWrite LTR), in a harness run right after the
+  x64 and Win32 builds. Not reproduced since: 6 runs on `a5e52d2`, 3 of them with an x64 rebuild running, and 3 on the
+  release `7c83c57` under the same load (it passed in the harness runs on `f0b94ec` and the first redesign too). The next time, keep the test's settings folder and the view's wrap state.
 - CI is manual since 2026-10-16 (workflow **Pyre909 CI**, `pyre-ci.yml`, generated from upstream's `CI_build.yml` by
   `.github/pyre/make-ci.ps1`); upstream's `CI_build` and `release-notifier` are disabled on the fork. Actions works
   again (the refusals of 2026-10-15 are over): the four PR branches passed all 13 jobs on 2026-10-16.
@@ -47,6 +57,13 @@ the code, other editors), then "fix those bugs".
   saved (upstream #13919). `840214b` each key typed in the user keywords box restyled the views (14.6 ms a key with
   100,000 C++ lines; 2.7 ms now, one restyle 300 ms after the last key; upstream #16143 reports a visible redraw).
   Test `review/tests/pyre-style-configurator.ps1` (8 checks; 3 fail on `a52ca6a`).
+- **The font of every theme on the Global override page** (`a5e52d2`, asked by Pyre909: "redesign the style
+  configurator a bit. The way we put that global override at the top"; of three layouts, Pyre909 chose this one over a
+  one-line summary at the top or a Preferences setting). The row of five "(Theme)" lists under "Select theme" is gone:
+  the dialog is upstream's again (`WordStyleDlg.rc` byte for byte, plus a note), so upstream's changes to it merge
+  without conflicts. Global override's own font controls and font "Force ..." check boxes show and set the config.xml
+  values; the check boxes no longer mark the theme modified (upstream's do: a theme switch then asked to save it).
+  Test `review/tests/pyre-font-every-theme.ps1` rewritten for it (21 checks; one is an old `nativeLang.xml` with the former note under its id 2290: the note is 2291).
 - **Wanted upstream, not refused** (issue, signal): fold-line and hidden-lines colours as Global Styles (#12751,
   #10313, #12110), a visible "transparent" (inherit) check box instead of the right-click (#18057, #5620), Ctrl+A in
   the keyword boxes (#16131, a PR invited), the colour popup's slots shifted not overwritten (#9813), the popup opening
