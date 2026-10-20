@@ -73,29 +73,36 @@ function Get-HeapGrowth([string] $before, [string] $after, [string] $diff) {
 
 # an operation $Count times after 200 for the warm-up (caches, lazily loaded DLLs: a few GDI objects were still
 # created in the first few hundred tab switches); growth per 1000 operations allowed: 10 GDI and USER objects, 50
-# handles (the system's own fluctuation), 8 MB of private memory, and with UMDH 256 KB of heap
+# handles (the system's own fluctuation), 8 MB of private memory, and with UMDH 256 KB of heap. A growth over the limits
+# is measured again over $Count more: a leak grows in both, a cache that grows once at some point doesn't (Direct2D's
+# glyph cache: 32 KB of heap and 4 GDI objects, at a random tab switch, in about one run of three on 2026-10-19).
 function Measure-Op([string] $name, [scriptblock] $op) {
 	for ($i = 0; $i -lt 200; $i++) { & $op }
-	$before = Get-Counters
 	$heapBefore = Join-Path $settings 'heap-before.txt'; $heapAfter = Join-Path $settings 'heap-after.txt'
-	if ($script:useUmdh) { [void](Save-Heap $heapBefore) }
-	for ($i = 0; $i -lt $Count; $i++) { & $op }
-	$after = Get-Counters
-	$per1000 = 1000 / $Count
-	$gdi = ($after.Gdi - $before.Gdi) * $per1000; $user = ($after.User - $before.User) * $per1000
-	$handles = ($after.Handles - $before.Handles) * $per1000; $mb = ($after.PrivateMB - $before.PrivateMB) * $per1000
-	$detail = "per 1000: GDI {0:+0;-0;0}, USER {1:+0;-0;0}, handles {2:+0;-0;0}, private {3:+0.0;-0.0;0} MB (GDI {4}, USER {5}, handles {6}, {7} MB)" -f $gdi, $user, $handles, $mb, $after.Gdi, $after.User, $after.Handles, $after.PrivateMB
-	# under AddressSanitizer (asan.ps1) freed memory stays in its quarantine: then objects and handles only
-	$memoryOk = ($mb -le 8) -or [bool]$env:ASAN_OPTIONS
-	if ($script:useUmdh) {
-		[void](Save-Heap $heapAfter)
-		$growth = Get-HeapGrowth $heapBefore $heapAfter (Join-Path $settings ("heap-diff-{0}.txt" -f ($name -replace '\W+', '-').Substring(0, [Math]::Min(30, $name.Length))))
-		$heapKB = $growth.Bytes * $per1000 / 1KB
-		$detail += "; heap {0:+0.0;-0.0;0} KB per 1000 (UMDH)" -f $heapKB
-		$memoryOk = $memoryOk -and ($heapKB -le 256)
-		if ($heapKB -gt 16) { foreach ($e in $growth.Top) { $script:results.Add("INFO    heap growth: $e") } }
+	for ($attempt = 1; $attempt -le 2; $attempt++) {
+		$before = Get-Counters
+		if ($script:useUmdh) { [void](Save-Heap $heapBefore) }
+		for ($i = 0; $i -lt $Count; $i++) { & $op }
+		$after = Get-Counters
+		$per1000 = 1000 / $Count
+		$gdi = ($after.Gdi - $before.Gdi) * $per1000; $user = ($after.User - $before.User) * $per1000
+		$handles = ($after.Handles - $before.Handles) * $per1000; $mb = ($after.PrivateMB - $before.PrivateMB) * $per1000
+		$detail = "per 1000: GDI {0:+0;-0;0}, USER {1:+0;-0;0}, handles {2:+0;-0;0}, private {3:+0.0;-0.0;0} MB (GDI {4}, USER {5}, handles {6}, {7} MB)" -f $gdi, $user, $handles, $mb, $after.Gdi, $after.User, $after.Handles, $after.PrivateMB
+		# under AddressSanitizer (asan.ps1) freed memory stays in its quarantine: then objects and handles only
+		$memoryOk = ($mb -le 8) -or [bool]$env:ASAN_OPTIONS
+		if ($script:useUmdh) {
+			[void](Save-Heap $heapAfter)
+			$growth = Get-HeapGrowth $heapBefore $heapAfter (Join-Path $settings ("heap-diff-{0}-{1}.txt" -f ($name -replace '\W+', '-').Substring(0, [Math]::Min(30, $name.Length)), $attempt))
+			$heapKB = $growth.Bytes * $per1000 / 1KB
+			$detail += "; heap {0:+0.0;-0.0;0} KB per 1000 (UMDH)" -f $heapKB
+			$memoryOk = $memoryOk -and ($heapKB -le 256)
+			if ($heapKB -gt 16) { foreach ($e in $growth.Top) { $script:results.Add("INFO    heap growth: $e") } }
+		}
+		$ok = ($gdi -le 10) -and ($user -le 10) -and ($handles -le 50) -and $memoryOk
+		if ($ok -or ($attempt -eq 2)) { break }
+		$script:results.Add("INFO  ${name}: grew over the first $Count ($detail): measured again")
 	}
-	Check "${name}: no leak over $Count" (($gdi -le 10) -and ($user -le 10) -and ($handles -le 50) -and $memoryOk) $detail
+	Check "${name}: no leak over $Count" $ok $detail
 }
 
 # a settings folder of its own: the Default Style in "Bahnschrift Light", a C++ and a Python file
