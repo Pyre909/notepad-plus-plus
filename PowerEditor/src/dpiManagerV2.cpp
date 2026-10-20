@@ -23,138 +23,35 @@
 
 #include <string_view>
 
-namespace NppDarkMode
-{
-	bool isWindows10();
-}
-
-template <typename P>
-inline auto LoadFn(HMODULE handle, P& pointer, const char* name) noexcept -> bool
-{
-	if (auto* proc = ::GetProcAddress(handle, name); proc != nullptr)
-	{
-		pointer = reinterpret_cast<P>(reinterpret_cast<INT_PTR>(proc));
-		return true;
-	}
-	return false;
-}
-
-[[nodiscard]] static UINT WINAPI DummyGetDpiForSystem()
-{
-	UINT dpi = USER_DEFAULT_SCREEN_DPI;
-	if (HDC hdc = ::GetDC(nullptr); hdc != nullptr)
-	{
-		dpi = static_cast<UINT>(::GetDeviceCaps(hdc, LOGPIXELSX));
-		::ReleaseDC(nullptr, hdc);
-	}
-	return dpi;
-}
-
-[[nodiscard]] static UINT WINAPI DummyGetDpiForWindow([[maybe_unused]] HWND hwnd)
-{
-	return DummyGetDpiForSystem();
-}
-
-[[nodiscard]] static int WINAPI DummyGetSystemMetricsForDpi(int nIndex, UINT dpi)
-{
-	return DPIManagerV2::scale(::GetSystemMetrics(nIndex), dpi);
-}
-
-[[nodiscard]] static BOOL WINAPI DummySystemParametersInfoForDpi(UINT uiAction, UINT uiParam, PVOID pvParam, UINT fWinIni, [[maybe_unused]] UINT dpi)
-{
-	return ::SystemParametersInfoW(uiAction, uiParam, pvParam, fWinIni);
-}
-
-[[nodiscard]] static BOOL WINAPI DummyIsValidDpiAwarenessContext([[maybe_unused]] DPI_AWARENESS_CONTEXT value)
-{
-	return FALSE;
-}
-
-[[nodiscard]] static DPI_AWARENESS_CONTEXT WINAPI DummySetThreadDpiAwarenessContext([[maybe_unused]] DPI_AWARENESS_CONTEXT dpiContext)
-{
-	return nullptr;
-}
-
-[[nodiscard]] static DPI_AWARENESS_CONTEXT WINAPI DummyGetWindowDpiAwarenessContext([[maybe_unused]] HWND hwnd)
-{
-	return nullptr;
-}
-
-static BOOL WINAPI DummyAdjustWindowRectExForDpi(
-	[[maybe_unused]] LPRECT lpRect,
-	[[maybe_unused]] DWORD dwStyle,
-	[[maybe_unused]] BOOL bMenu,
-	[[maybe_unused]] DWORD dwExStyle,
-	[[maybe_unused]] UINT dpi
-)
-{
-	return FALSE;
-}
-
-using fnGetDpiForSystem = UINT (WINAPI*)(VOID);
-using fnGetDpiForWindow = UINT (WINAPI*)(HWND hwnd);
-using fnGetSystemMetricsForDpi = int (WINAPI*)(int nIndex, UINT dpi);
-using fnSystemParametersInfoForDpi = BOOL (WINAPI*)(UINT uiAction, UINT uiParam, PVOID pvParam, UINT fWinIni, UINT dpi);
-using fnIsValidDpiAwarenessContext = BOOL (WINAPI*)(DPI_AWARENESS_CONTEXT value);
-using fnSetThreadDpiAwarenessContext = DPI_AWARENESS_CONTEXT (WINAPI*)(DPI_AWARENESS_CONTEXT dpiContext);
-using fnGetWindowDpiAwarenessContext = DPI_AWARENESS_CONTEXT (WINAPI*)(HWND hwnd);
-using fnAdjustWindowRectExForDpi = BOOL (WINAPI*)(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi);
-
-static fnGetDpiForSystem _fnGetDpiForSystem = DummyGetDpiForSystem;
-static fnGetDpiForWindow _fnGetDpiForWindow = DummyGetDpiForWindow;
-static fnGetSystemMetricsForDpi _fnGetSystemMetricsForDpi = DummyGetSystemMetricsForDpi;
-static fnSystemParametersInfoForDpi _fnSystemParametersInfoForDpi = DummySystemParametersInfoForDpi;
-static fnIsValidDpiAwarenessContext _fnIsValidDpiAwarenessContext = DummyIsValidDpiAwarenessContext;
-static fnSetThreadDpiAwarenessContext _fnSetThreadDpiAwarenessContext = DummySetThreadDpiAwarenessContext;
-static fnGetWindowDpiAwarenessContext _fnGetWindowDpiAwarenessContext = DummyGetWindowDpiAwarenessContext;
-static fnAdjustWindowRectExForDpi _fnAdjustWindowRectExForDpi = DummyAdjustWindowRectExForDpi;
+// Pyre909 build: Windows 10 version 1809 or later: the DPI functions of user32 (Windows 10 1607) are called directly,
+// not looked up at run time with fallbacks for older Windows
 
 static bool _isPerMonitorV2Active = false;
 
-void DPIManagerV2::initDpiAPI()
-{
-	if (NppDarkMode::isWindows10())
-	{
-		HMODULE hUser32 = ::GetModuleHandleW(L"user32.dll");
-		if (hUser32 != nullptr)
-		{
-			LoadFn(hUser32, _fnGetDpiForSystem, "GetDpiForSystem");
-			LoadFn(hUser32, _fnGetDpiForWindow, "GetDpiForWindow");
-			LoadFn(hUser32, _fnGetSystemMetricsForDpi, "GetSystemMetricsForDpi");
-			LoadFn(hUser32, _fnSystemParametersInfoForDpi, "SystemParametersInfoForDpi");
-			LoadFn(hUser32, _fnIsValidDpiAwarenessContext, "IsValidDpiAwarenessContext");
-			LoadFn(hUser32, _fnSetThreadDpiAwarenessContext, "SetThreadDpiAwarenessContext");
-			LoadFn(hUser32, _fnGetWindowDpiAwarenessContext, "GetWindowDpiAwarenessContext");
-			LoadFn(hUser32, _fnAdjustWindowRectExForDpi, "AdjustWindowRectExForDpi");
-
-		}
-	}
-}
-
 int DPIManagerV2::getSystemMetricsForDpi(int nIndex, UINT dpi)
 {
-	return _fnGetSystemMetricsForDpi(nIndex, dpi);
+	return ::GetSystemMetricsForDpi(nIndex, dpi);
 }
 
 int DPIManagerV2::getSystemMetricsForWindow(int nIndex, HWND hWnd)
 {
 	if (_isPerMonitorV2Active) // Windows 10 1703+: GetSystemMetricsForDpi() is available
 	{
-		return _fnGetSystemMetricsForDpi(nIndex, DPIManagerV2::getDpiForWindow(hWnd));
+		return ::GetSystemMetricsForDpi(nIndex, DPIManagerV2::getDpiForWindow(hWnd));
 	}
 	return ::GetSystemMetrics(nIndex);
 }
 
 bool DPIManagerV2::isValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT value)
 {
-	return _fnIsValidDpiAwarenessContext(value) == TRUE;
+	return ::IsValidDpiAwarenessContext(value) == TRUE;
 }
 
 DPI_AWARENESS_CONTEXT DPIManagerV2::setThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT dpiContext)
 {
 	if (DPIManagerV2::isValidDpiAwarenessContext(dpiContext))
 	{
-		return _fnSetThreadDpiAwarenessContext(dpiContext);
+		return ::SetThreadDpiAwarenessContext(dpiContext);
 	}
 	return nullptr;
 }
@@ -177,26 +74,26 @@ DPI_AWARENESS_CONTEXT DPIManagerV2::getWindowDpiAwarenessContext(HWND hWnd)
 {
 	if (hWnd != nullptr)
 	{
-		return _fnGetWindowDpiAwarenessContext(hWnd);
+		return ::GetWindowDpiAwarenessContext(hWnd);
 	}
 	return nullptr;
 }
 
 bool DPIManagerV2::adjustWindowRectExForDpi(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle, UINT dpi)
 {
-	return _fnAdjustWindowRectExForDpi(lpRect, dwStyle, bMenu, dwExStyle, dpi) == TRUE;
+	return ::AdjustWindowRectExForDpi(lpRect, dwStyle, bMenu, dwExStyle, dpi) == TRUE;
 }
 
 UINT DPIManagerV2::getDpiForSystem()
 {
-	return _fnGetDpiForSystem();
+	return ::GetDpiForSystem();
 }
 
 UINT DPIManagerV2::getDpiForWindow(HWND hWnd)
 {
 	if (hWnd != nullptr)
 	{
-		if (const auto dpi = _fnGetDpiForWindow(hWnd); dpi > 0)
+		if (const auto dpi = ::GetDpiForWindow(hWnd); dpi > 0)
 		{
 			return dpi;
 		}
@@ -223,7 +120,7 @@ LOGFONT DPIManagerV2::getDefaultGUIFontForDpi(UINT dpi, FontType type)
 	NONCLIENTMETRICS ncm{};
 	ncm.cbSize = sizeof(NONCLIENTMETRICS);
 
-	if (_fnSystemParametersInfoForDpi(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0, dpi) == TRUE)
+	if (::SystemParametersInfoForDpi(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0, dpi) == TRUE)
 	{
 		switch (type)
 		{
@@ -271,7 +168,7 @@ LOGFONT DPIManagerV2::getDefaultGUIFontForDpi(UINT dpi, FontType type)
 LOGFONT DPIManagerV2::getIconTitleFontForDpi(UINT dpi)
 {
 	LOGFONT lf{};
-	if (_fnSystemParametersInfoForDpi(SPI_GETICONTITLELOGFONT, sizeof(LOGFONT), &lf, 0, dpi) == TRUE)
+	if (::SystemParametersInfoForDpi(SPI_GETICONTITLELOGFONT, sizeof(LOGFONT), &lf, 0, dpi) == TRUE)
 	{
 		return lf;
 	}

@@ -44,8 +44,6 @@ public:
 
 	enum class FontType { menu, status, message, caption, smcaption };
 
-	static void initDpiAPI();
-
 	static int getSystemMetricsForDpi(int nIndex, UINT dpi);
 	int getSystemMetricsForDpi(int nIndex) const {
 		return getSystemMetricsForDpi(nIndex, _dpi);

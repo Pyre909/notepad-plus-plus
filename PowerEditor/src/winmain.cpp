@@ -49,55 +49,15 @@ namespace
 {
 
 
-void allowForbidPrivilegeMessages(const Notepad_plus_Window& notepad_plus_plus, winVer winVer)
+void allowForbidPrivilegeMessages(const Notepad_plus_Window& notepad_plus_plus, [[maybe_unused]] winVer winVer)
 {
-	#ifndef MSGFLT_ADD
-	const DWORD MSGFLT_ADD = 1;
-	const DWORD MSGFLT_REMOVE = 2;
-	#endif
-	#ifndef MSGFLT_ALLOW
-	const DWORD MSGFLT_ALLOW = 1;
-	const DWORD MSGFLT_DISALLOW = 2;
-	#endif
 	// Tell UAC that lower integrity processes are allowed to send WM_COPYDATA (or other) messages to this process (or window)
 	// This (WM_COPYDATA) allows opening new files to already opened elevated Notepad++ process via explorer context menu.
-	if (winVer >= WV_VISTA || winVer == WV_UNKNOWN)
-	{
-		HMODULE hDll = GetModuleHandle(L"user32.dll");
-		if (hDll)
-		{
-			// According to MSDN ChangeWindowMessageFilter may not be supported in future versions of Windows,
-			// that is why we use ChangeWindowMessageFilterEx if it is available (windows version >= Win7).
-			if (winVer == WV_VISTA)
-			{
-				typedef BOOL (WINAPI *MESSAGEFILTERFUNC)(UINT message,DWORD dwFlag);
-
-				MESSAGEFILTERFUNC func = (MESSAGEFILTERFUNC)::GetProcAddress( hDll, "ChangeWindowMessageFilter" );
-
-				if (func)
-				{
-					func(WM_COPYDATA, MSGFLT_ADD);
-					func(NPPM_INTERNAL_RESTOREFROMMINIMIZED, MSGFLT_ADD);
-
-					func(WM_COMMAND, MSGFLT_REMOVE); // Disallow WM_COMMAND messages from lower integrity processes (for security reasons)
-				}
-			}
-			else
-			{
-				typedef BOOL (WINAPI *MESSAGEFILTERFUNCEX)(HWND hWnd,UINT message,DWORD action,VOID* pChangeFilterStruct);
-
-				MESSAGEFILTERFUNCEX funcEx = (MESSAGEFILTERFUNCEX)::GetProcAddress( hDll, "ChangeWindowMessageFilterEx" );
-
-				if (funcEx)
-				{
-					funcEx(notepad_plus_plus.getHSelf(), WM_COPYDATA, MSGFLT_ALLOW, NULL);
-					funcEx(notepad_plus_plus.getHSelf(), NPPM_INTERNAL_RESTOREFROMMINIMIZED, MSGFLT_ALLOW, NULL);
-
-					funcEx(notepad_plus_plus.getHSelf(), WM_COMMAND, MSGFLT_DISALLOW, NULL); // Disallow WM_COMMAND messages from lower integrity processes (for security reasons)
-				}
-			}
-		}
-	}
+	// Pyre909 build: Windows 10 or later: ChangeWindowMessageFilterEx (Windows 7) called directly
+	const HWND hNpp = notepad_plus_plus.getHSelf();
+	::ChangeWindowMessageFilterEx(hNpp, WM_COPYDATA, MSGFLT_ALLOW, nullptr);
+	::ChangeWindowMessageFilterEx(hNpp, NPPM_INTERNAL_RESTOREFROMMINIMIZED, MSGFLT_ALLOW, nullptr);
+	::ChangeWindowMessageFilterEx(hNpp, WM_COMMAND, MSGFLT_DISALLOW, nullptr); // Disallow WM_COMMAND messages from lower integrity processes (for security reasons)
 }
 
 // parseCommandLine() takes command line arguments part string, cuts arguments by using white space as separator.
@@ -745,7 +705,6 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE /*hPrevInstance
 	NppGUI & nppGui = nppParameters.getNppGUI();
 
 	NppDarkMode::initDarkMode();
-	DPIManagerV2::initDpiAPI();
 
 	bool doUpdateNpp = nppGui._autoUpdateOpt._doAutoUpdate != NppGUI::autoupdate_disabled;
 	bool updateAtExit = nppGui._autoUpdateOpt._doAutoUpdate == NppGUI::autoupdate_on_exit;

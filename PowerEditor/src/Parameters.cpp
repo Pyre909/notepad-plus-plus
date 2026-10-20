@@ -653,8 +653,6 @@ static constexpr ScintillaKeyDefinition scintKeyDefs[]
 
 #define SESSION_BACKUP_EXT L".inCaseOfCorruption.bak"
 
-using PGNSI = void (WINAPI*)(LPSYSTEM_INFO);
-
 static int strVal(const char* str, int base)
 {
 	if (!str) return -1;
@@ -1124,7 +1122,6 @@ winVer NppParameters::getWindowsVersion()
 {
 	OSVERSIONINFOEX osvi;
 	SYSTEM_INFO si;
-	PGNSI pGNSI;
 
 	ZeroMemory(&si, sizeof(SYSTEM_INFO));
 	ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
@@ -1138,11 +1135,7 @@ winVer NppParameters::getWindowsVersion()
 			return WV_UNKNOWN;
 	}
 
-	pGNSI = reinterpret_cast<PGNSI>(::GetProcAddress(GetModuleHandle(L"kernel32.dll"), "GetNativeSystemInfo"));
-	if (pGNSI != nullptr)
-		pGNSI(&si);
-	else
-		GetSystemInfo(&si);
+	::GetNativeSystemInfo(&si); // Pyre909 build: called directly (Windows 10 or later)
 
 	switch (si.wProcessorArchitecture)
 	{
@@ -9274,28 +9267,9 @@ void NppParameters::addScintillaModifiedIndex(int index)
 #ifndef	_WIN64
 void NppParameters::safeWow64EnableWow64FsRedirection(BOOL Wow64FsEnableRedirection)
 {
-	HMODULE kernel = GetModuleHandle(L"kernel32");
-	if (kernel)
-	{
-		BOOL isWow64 = FALSE;
-		typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
-		LPFN_ISWOW64PROCESS IsWow64ProcessFunc = (LPFN_ISWOW64PROCESS) GetProcAddress(kernel,"IsWow64Process");
-
-		if (IsWow64ProcessFunc)
-		{
-			IsWow64ProcessFunc(GetCurrentProcess(),&isWow64);
-
-			if (isWow64)
-			{
-				typedef BOOL (WINAPI *LPFN_WOW64ENABLEWOW64FSREDIRECTION)(BOOL);
-				LPFN_WOW64ENABLEWOW64FSREDIRECTION Wow64EnableWow64FsRedirectionFunc = (LPFN_WOW64ENABLEWOW64FSREDIRECTION)GetProcAddress(kernel, "Wow64EnableWow64FsRedirection");
-				if (Wow64EnableWow64FsRedirectionFunc)
-				{
-					Wow64EnableWow64FsRedirectionFunc(Wow64FsEnableRedirection);
-				}
-			}
-		}
-	}
+	// Pyre909 build: Windows 10 or later: IsWow64Process and Wow64EnableWow64FsRedirection called directly
+	if (BOOL isWow64 = FALSE; ::IsWow64Process(::GetCurrentProcess(), &isWow64) && isWow64)
+		::Wow64EnableWow64FsRedirection(Wow64FsEnableRedirection != FALSE); // its parameter is a BOOLEAN
 }
 #endif
 
