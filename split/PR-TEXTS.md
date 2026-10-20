@@ -10,10 +10,12 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 2 | `text-rendering_20260925` | `a485acc` + `bb32194` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 closed** (2026-10-02: too large a change) |
 | 3 | `text-rendering-translations_20260925` | `1aa8b0e` | 29 xml | – | Label capitalisation (stacked on 2) | no (`[xml]`); on hold, 2 is closed |
 | 4 | `per-monitor-dpi_20260925` | `4eaa93d` | 61 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
-| 5 | `directwrite-font-names_20260930` | `9f605be` | 7 (Notepad++ only) | not measured | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | no: bug fix of #9951 (open since 2021) and #12393. Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
-| 6 | `rtl-views-gdi_20261006` | `53d0026` | 4 | small | Right-to-left views drawn with GDI (DirectWrite can't mirror them) | no: bug fix of #17865 and #17518 (both open); open it first |
-| 7 | `live-rendering-switch_20261005` | `53d0026` + `d50fb3b` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
-| 8 | `directwrite-font-smoothing_20261006` | `76b3210` | 4 | small | DirectWrite following the Windows font smoothing | no: bug fix of #14954 (open since 2024) |
+| 5 | `directwrite-font-names_20260930` | `ace29cd` | 7 (Notepad++ only) | not measured | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | no: bug fix of #9951 (open since 2021) and #12393. Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
+| 6 | `rtl-views-gdi_20261006` | `9fdd356` | 4 | small | Right-to-left views drawn with GDI (DirectWrite can't mirror them) | no: bug fix of #17865 and #17518 (both open); open it first |
+| 7 | `live-rendering-switch_20261005` | `9fdd356` + `61eccb1` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
+| 8 | `directwrite-font-smoothing_20261006` | `5dff07b` | 4 | small | DirectWrite following the Windows font smoothing | no: bug fix of #14954 (open since 2024) |
+| 9 | `function-list-caret_20261020` | `398b2c2` | 2 | none | Function List caret tracking: a binary search, not a walk of the tree per caret move | no: bug fix (issue to open first) |
+| 10 | `doclist-column-width_20261020` | `20f0a90` | 1 | none | Document List column widths stored for 96 DPI, as they are read | no: bug fix (check by hand, then issue) |
 
 Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs, `9f605be`, 2026-10-06; 6, 7 and 8: 13/13, 2026-10-06). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
 
@@ -752,6 +754,147 @@ AI disclosure: I wrote this with help from an AI assistant (Claude), then review
 - [x] I have read contributing guidelines
 
 fix #14954
+```
+
+## 9. Function List: caret tracking fast in large files (bug fix)
+
+Branch `function-list-caret_20261020`, one commit (`398b2c2`) on upstream `master` `b661c2b`, 2 files, +44 −51, no
+Scintilla change, no setting or UI text. Made on 2026-10-20 from `pyre`'s `4d4b96b` (and the `removeAllEntries` reset of
+`68c7fdd`), found by an API review of the fork (a measured hot spot).
+
+What happens: `FunctionListPanel::markEntry` runs on every `SCN_UPDATEUI` while the panel is shown (caret moves, scrolls,
+edits) and walked the whole tree each time: per function a `TVM_GETITEM`, a `_wtoi` and an `SCI_LINEFROMPOSITION`. Its
+range cache (`_findLine`, `_findEndLine`) never hits: `_findEndLine` starts at -1 and `findMarkEntry` only lowers it. The
+fix lists the leaves in document order once after each change of the tree (reload, sort, the search box, `removeAllEntries`)
+and finds the entry with `std::ranges::lower_bound`: the nearest function starting on the caret's line or before it, the
+first in the tree when several start on that line (as before), else the root.
+
+Tested (ARM64 Release on the VM): every caret line of a 6,000-line C++ file (1,801 functions; unsorted and sorted, 8,002
+moves) and of a JavaScript file with three functions per line (ties, which sorting changes): the entry each build marks,
+read back from the tree, is the same. Upstream's 46 Function List unit tests pass. Measured on 60,000 lines of C++ with 18,001 functions: a
+caret move 374 ms (a build whose `markEntry` is upstream's) -> 16.6 ms with this branch's build, the display refresh, as
+with the panel closed (363 -> 5.7 ms CPU, 4.0 ms closed); the marks test above on this branch's own build: the same marks
+(2026-10-20). Related but not the same: #3592 and #9691 (the list rebuilt on
+a view or tab switch), not changed here.
+
+Before opening:
+1. Done on 2026-10-20: CI on the fork (all 13 jobs, run 39491227386), the harness on this branch (0 FAIL, 0 WARN,
+   `function-list` 46 checks), the marks test on this branch's own build (the same marks, 8,305 caret positions).
+2. Pyre909 opens the issue below, then the PR with `fix #<issue>`.
+
+### Issue — title
+`Function List makes every caret move slow in large files`
+
+### Issue — body
+```
+### Description of the Issue
+With the Function List panel open, every caret move gets slow in a file with lots of functions. On a 60,000-line C++ file with about 18,000 functions, each arrow key press or click takes around 370 ms here (17 ms with the panel closed), so moving around the file feels laggy. Scrolling too, since it's the same notification.
+
+Looking at the code, FunctionListPanel::markEntry() runs on every SCN_UPDATEUI and walks the whole tree each time (a TVM_GETITEM, a _wtoi and an SCI_LINEFROMPOSITION per function). There's a cache meant to skip that while the caret stays inside the same function (_findLine / _findEndLine), but it never hits: _findEndLine starts at -1 and findMarkEntry only ever lowers it (`if (sci_line < _findEndLine)`), so it stays -1.
+
+### Steps To Reproduce
+1. Open a big source file with a lot of functions (I used 60,000 lines of C++ with ~18,000 functions).
+2. View > Function List.
+3. Move the caret around with the arrow keys or the mouse.
+
+### Current Behavior
+Each caret move lags, about 370 ms per move with the file above.
+
+### Expected Behavior
+Caret moves as fast as with the panel closed.
+
+### Debug Information
+(paste Help > Debug Info)
+```
+
+### PR — title
+`Make Function List's caret tracking fast in large files`
+
+### PR — body
+```
+markEntry() runs on every SCN_UPDATEUI while the Function List is shown, and it walked the whole tree every time (TVM_GETITEM + _wtoi + SCI_LINEFROMPOSITION per function). The range cache that was supposed to avoid that never hit, since _findEndLine starts at -1 and only ever gets lowered.
+
+Now the leaves get listed in document order once after each change of the tree (reload, sort, the search box, removeAllEntries), and the entry is found with a binary search. Same result as before: the nearest function starting on the caret's line or before it, the first one in the tree when several start on that line, otherwise the root.
+
+2 files, +44 −51.
+
+Tested on Windows 11 ARM64 with Release builds:
+- every caret line of a 6,000-line C++ file (1,801 functions, unsorted and sorted) and of a JS file with three functions per line: the marked entry is the same as before on every line
+- the 46 Function List unit tests pass
+- 60,000 lines of C++ with ~18,000 functions: a caret move went from 374 ms to 16.6 ms, the same as with the panel closed (CPU 363 ms -> 5.7 ms, 4.0 ms with the panel closed)
+- all 13 CI jobs pass on my fork
+
+AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+
+- [x] I have read contributing guidelines
+
+fix #<issue>
+```
+
+## 10. Document List: column widths kept over 100% scale (bug fix)
+
+Branch `doclist-column-width_20261020`, one commit (`20f0a90`) on upstream `master` `b661c2b`, 1 file, +4 −3. Found on
+2026-10-20 by the code review of `per-monitor-dpi_20260925` (which stored the widths for 96 DPI only with per-monitor
+awareness on); `pyre` has the same fix (`dd3cd5a`).
+
+What happens: the widths of the Ext. and Path columns are read for 96 DPI and scaled to the DPI of the panel
+(`VerticalFileSwitcherListView::initList` and `resizeColumns`: `DPIManagerV2::scale(width, dpi)`), but a resize of a column
+stores them in pixels (`VerticalFileSwitcher.cpp`, `HDN_ENDTRACK`: `_fileSwitcherExtWidth = hdi.cxy`). Over 100%, a resized
+column comes back wider at the next layout of the panel (a resize of the window or the panel, a restart), and wider again
+after each new resize. The fix stores `DPIManagerV2::unscale(hdi.cxy, _hSelf)`, the inverse of the read.
+
+Not yet seen happen: a test can't drive the header's divider (synthetic mouse messages and a WM_NOTIFY sent from another
+process don't reach the code), so the numbers in the texts below are what the code computes.
+
+Before opening:
+1. Pyre909 checks it by hand on the VM at 150%: View > Document List; drag the Ext. column's divider (wider by about a
+   finger); resize the Notepad++ window; the column jumps to about 1.5 times the width (official 8.9.8.1 or `pyre` before
+   `dd3cd5a`); with this branch's build it stays. Put the widths seen into the texts.
+2. CI on the fork: done (run 39488337590, all 13 jobs).
+3. Pyre909 opens the issue below, then the PR with `fix #<issue>`.
+
+### Issue — title
+`Document List column widths grow when the display scale is over 100%`
+
+### Issue — body
+```
+### Description of the Issue
+At a display scale over 100%, resizing the Ext. (or Path) column of the Document List doesn't stick: the next time the panel lays out its columns (resizing the window or the panel, or restarting), the column comes back wider, about 1.5 times as wide at 150%. Resize it again and it grows again.
+
+Looking at the code: the widths are read as 96-DPI values and scaled up (VerticalFileSwitcherListView::initList / resizeColumns use DPIManagerV2::scale(width, dpi)), but when you resize a column VerticalFileSwitcher stores the width in pixels (HDN_ENDTRACK: `_fileSwitcherExtWidth = hdi.cxy`), so it gets scaled one extra time.
+
+### Steps To Reproduce
+1. Set the Windows display scale to 150%.
+2. View > Document List.
+3. Drag the divider of the Ext. column to make it a bit wider.
+4. Resize the Notepad++ window.
+
+### Current Behavior
+The Ext. column jumps to about 1.5x the width you gave it, and keeps growing each time you resize it again.
+
+### Expected Behavior
+The column keeps the width you set.
+
+### Debug Information
+(paste Help > Debug Info)
+```
+
+### PR — title
+`Keep the Document List's column widths at a display scale over 100%`
+
+### PR — body
+```
+The Ext. and Path column widths are read as 96-DPI values and scaled to the panel's DPI, but resizing a column stored the width in pixels, so over 100% it got scaled one extra time: at 150% a column you made 80 px wide came back 120 px wide at the next layout, and grew again after each resize.
+
+Now the width is stored for 96 DPI (DPIManagerV2::unscale with the panel's window), the inverse of how it's read. 1 file, +4 −3.
+
+Tested on Windows 11 ARM64 at 150% with Release builds: (Pyre909: what you saw), all 13 CI jobs pass on my fork.
+
+AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+
+- [x] I have read contributing guidelines
+
+fix #<issue>
 ```
 
 ---

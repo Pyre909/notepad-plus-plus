@@ -10,6 +10,37 @@ ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
+- **The review round (2026-10-20, evening)**, asked by Pyre909: sync with upstream (the fork's `master` brought to
+  `b661c2b` with `gh repo sync`; `pyre` had it), a preview (`C:\npp-preview-49de091`, a portable copy of the installation
+  with a copy of their settings), then: are the older PRs as good as they can be, can their restarts go, what does upstream
+  do for per-monitor DPI and why, the best APIs. Four read-only reviews (DPI research, the small PRs, the large PRs, an API
+  audit with measurements), their findings checked against the code before use.
+  - Answers. Upstream builds C++20: PR code stays within it (C++23 is `pyre`'s). Upstream keeps the main window, panels and
+    plugins system aware (manifest) and switches dialogs to per-monitor v2 one at a time (Preferences, Style Configurator,
+    About...); the Find dialog's switch was backed out after #18462 (a black status bar on scale changes); the panels are
+    #14959's open part, which our branch does; their reasons: small reversible steps, custom controls (donho reverted a
+    full per-monitor attempt in 2021), plugins. The per-monitor restart can't go (a window's DPI awareness is fixed at
+    creation, plugins hold the main window's and the views' handles, mixed hosting only hosts system-aware children in a
+    per-monitor parent): a "relaunch" prompt instead. Plugins, to prototype in `pyre`: their own dialogs are scaled by
+    Windows in per-monitor v2; docked plugin panels through `DialogDpiLayout` (with an opt-out); an NPPN for DPI changes.
+    APIs: rendering, file I/O and XML already the right ones; the gains are algorithms (below).
+  - `pyre` (CI 13/13, run 39490875390; harness 0 FAIL 0 WARN), on top of `49de091`: `4d4b96b` Function List caret
+    tracking (a binary search; its range cache never hit: 374 -> 16.6 ms a caret move on 60,000 lines with 18,001
+    functions; the same entry marked on every line of two test files, sorted and not); `9f3a9c0` + `68c7fdd`
+    auto-completion: one pass over the UTF-8 text instead of a regex search per word (MSVC builds; the regex for other
+    encodings, a non-ASCII prefix in case-insensitive mode, invalid UTF-8) and an upper-case table for the sort (CPU per
+    keystroke, 60,000 lines: 's' 49.5 -> 6.2 ms, case insensitive 47.4 -> 10.4 ms; the lists the same item by item in 7
+    cases); `24d3fac` the live switch's `setTechnologyToAll` as on its branch; `dd3cd5a` the Document List's column widths
+    stored for 96 DPI.
+  - PR branches: `directwrite-font-names_20260930` rebased on `b661c2b`, `setStyleFont` in one body (`ace29cd`, CI 13/13);
+    `live-rendering-switch_20261005` leaves upstream's Preferences lines (`61eccb1`, CI 13/13, harness: its tests pass,
+    `directwrite-font-names` fails as on upstream); new: kit 9 `function-list-caret_20261020` (`398b2c2`, CI 13/13) and
+    kit 10 `doclist-column-width_20261020` (`20f0a90`, CI 13/13; a test can't drive the header's divider: Pyre909 checks it
+    by hand at 150% first). The smoothing/RTL interaction is already kit 8's "Before opening 2".
+  - Left, needing Pyre909's scale changes (to batch in one session): the DPI rework (the Project Panel toolbar fault with a
+    build logging its size, the UDL undocked onto another monitor, upstream's helpers instead of duplicates and of the
+    global flag, the relaunch prompt, #18462 tried with several random scale changes, the PR split in smaller ones, ~30%
+    less), the plugin prototype. The Document List check by hand.
 - **The performance program (2026-10-20)**, asked by Pyre909: newer toolsets, refactoring, performance "in
   sections/parts", every language feature that helps, Windows 11 polish. Their choices: upstream code changed only where
   a measurement shows a gain (small marked patches), Windows 10 1809 minimum, C++23 everywhere, Windows 11 polish (not a
