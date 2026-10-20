@@ -71,6 +71,8 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 								   0,0,0,0,_hSelf, nullptr, _hInst, nullptr);
 
 			DPIManagerV2::initIconTitleFont(_hToolbarMenu, DPIManagerV2::getDpiForWindow(_hSelf), _hToolbarFontDpi);
+			if (DPIManagerV2::isPerMonitorV2Active())
+				::SetWindowSubclass(_hToolbarMenu, ToolbarSubclass, static_cast<UINT_PTR>(SubclassID::first), reinterpret_cast<DWORD_PTR>(this));
 
 			TBBUTTON tbButtons[2]{};
 
@@ -228,11 +230,58 @@ std::vector<int> ProjectPanel::getTreeImageIds()
 	);
 }
 
+// The height of the toolbar's text buttons for its font, as comctl32 computes it (text and padding): comctl32 itself makes
+// them no higher than for the DPI the toolbar was created at (a toolbar made at 150% clipped the text at 200%)
+static void fitToolbarButtonsToFont(HWND hToolbar)
+{
+	HDC hdc = ::GetDC(hToolbar);
+	const HGDIOBJ hOldFont = ::SelectObject(hdc, reinterpret_cast<HFONT>(::SendMessage(hToolbar, WM_GETFONT, 0, 0)));
+	TEXTMETRIC tm{};
+	::GetTextMetrics(hdc, &tm);
+	::SelectObject(hdc, hOldFont);
+	::ReleaseDC(hToolbar, hdc);
+
+	const auto padding = static_cast<DWORD>(::SendMessage(hToolbar, TB_GETPADDING, 0, 0));
+	::SendMessage(hToolbar, TB_SETBUTTONSIZE, 0, MAKELPARAM(0, tm.tmHeight + HIWORD(padding)));
+}
+
+// The toolbar's buttons fitted to each new font (per-monitor DPI awareness), and the panel's font set again after a theme
+// change, which Windows sends after a DPI change: comctl32 then puts its own font and its own button height back
+LRESULT CALLBACK ProjectPanel::ToolbarSubclass(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch (uMsg)
+	{
+		case WM_NCDESTROY:
+		{
+			::RemoveWindowSubclass(hWnd, ToolbarSubclass, uIdSubclass);
+			break;
+		}
+
+		case WM_SETFONT:
+		{
+			const LRESULT result = ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+			fitToolbarButtonsToFont(hWnd);
+			::SendMessage(hWnd, TB_AUTOSIZE, 0, 0);
+			return result;
+		}
+
+		case WM_THEMECHANGED:
+		{
+			const LRESULT result = ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+			const auto* pPanel = reinterpret_cast<const ProjectPanel*>(dwRefData);
+			if (pPanel->_hToolbarFontDpi)
+				::SendMessage(hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(pPanel->_hToolbarFontDpi.get()), TRUE);
+			return result;
+		}
+	}
+	return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+
 void ProjectPanel::onDpiChanged(UINT prevDpi)
 {
 	const UINT dpi = _dpiManager.getDpi();
 
-	// toolbar: text buttons, sized for their font
+	// toolbar: text buttons, sized for their font (ToolbarSubclass)
 	DPIManagerV2::setIconTitleFont(_hToolbarMenu, dpi, _hToolbarFontDpi);
 	::SendMessage(_hToolbarMenu, TB_AUTOSIZE, 0, 0);
 

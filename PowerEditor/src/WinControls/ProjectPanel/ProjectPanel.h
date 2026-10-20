@@ -138,6 +138,7 @@ protected:
 	POINT getMenuDisplayPoint(int iButton) const;
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	void onDpiChanged(UINT prevDpi) override;
+	static LRESULT CALLBACK ToolbarSubclass(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 	std::vector<int> getTreeImageIds();
 	bool buildTreeFrom(const NppXml::Element& projectRoot, HTREEITEM hParentItem);
 	void notified(LPNMHDR notification);
