@@ -477,8 +477,9 @@ intptr_t CALLBACK VerticalFileSwitcher::run_dlgProc(UINT message, WPARAM wParam,
 					hdi.cchTextMax = MAX_PATH;
 					Header_GetItem(hwndHD, test->iItem, &hdi);
 
-					// storing column width data (for 96 DPI with the per-monitor DPI awareness: the DPI of the panel can change)
-					const int width = DPIManagerV2::isPerMonitorV2Active() ? DPIManagerV2::unscale(hdi.cxy, _hSelf) : hdi.cxy;
+					// storing column width data, for 96 DPI as the list view reads it (scaled to the DPI of the panel; Pyre909 build:
+					// in pixels before, so that a column grew at each layout over 100%, as in upstream: doclist-column-width_20261020)
+					const int width = DPIManagerV2::unscale(hdi.cxy, _hSelf);
 					if (hdi.pszText == pNativeSpeaker->getAttrNameStr(L"Ext.", FS_ROOTNODE, FS_CLMNEXT))
 						nppParams.getNppGUI()._fileSwitcherExtWidth = width;
 					else if (hdi.pszText == pNativeSpeaker->getAttrNameStr(L"Path", FS_ROOTNODE, FS_CLMNPATH))
