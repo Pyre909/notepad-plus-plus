@@ -29,6 +29,7 @@
 #include <locale>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -273,10 +274,21 @@ static constexpr const char* xpmboxDark[]{
 
 static constexpr size_t tagMaxLen = 256;
 
-static bool isInList(const std::string& word, const std::vector<std::string>& wordArray)
+// Pyre909 build: the words found for a completion list, each added once, in the order found (a set beside the list, not a
+// scan of the list for each word: thousands of words for a common prefix in a large file)
+class UniqueWords
 {
-	return std::find(wordArray.begin(), wordArray.end(), word) != wordArray.end();
-}
+public:
+	explicit UniqueWords(std::vector<std::string>& wordArray) : _wordArray(wordArray), _added(wordArray.begin(), wordArray.end()) {}
+	void add(const std::string& word)
+	{
+		if (_added.insert(word).second)
+			_wordArray.push_back(word);
+	}
+private:
+	std::vector<std::string>& _wordArray;
+	std::unordered_set<std::string> _added;
+};
 
 static bool isAllDigits(const std::string& str)
 {
@@ -357,6 +369,7 @@ bool AutoCompletion::showAutoComplete(AutocompleteType autocType, bool autoInser
 
 		if (autocType == autocFuncBrief || autocType == autocFuncAndWord)
 		{
+			UniqueWords uniqueWords(wordArray); // Pyre909 build
 			for (size_t i = 0, kwlen = _keyWordArray.size(); i < kwlen; ++i)
 
 			{
@@ -374,8 +387,7 @@ bool AutoCompletion::showAutoComplete(AutocompleteType autocType, bool autoInser
 
 				if (compareResult == 0)
 				{
-					if (!isInList(_keyWordArray[i], wordArray))
-						wordArray.push_back(_keyWordArray[i]);
+					uniqueWords.add(_keyWordArray[i]);
 				}
 			}
 		}
@@ -490,6 +502,7 @@ void AutoCompletion::getWordArray(std::vector<std::string>& wordArray, const cha
 
 	const std::string boxId = "\x1E" + std::to_string(BOX_IMG_ID);
 	const std::string funcId = "\x1E" + std::to_string(FUNC_IMG_ID);
+	UniqueWords uniqueWords(wordArray); // Pyre909 build: and the keywords looked up in _keyWordSet, not scanned
 
 	while (posFind >= 0)
 	{
@@ -505,25 +518,16 @@ void AutoCompletion::getWordArray(std::vector<std::string>& wordArray, const cha
 			{
 				if (_funcCompletionActive)
 				{
-					if (isInList(w + boxId, _keyWordArray))
-					{
-						if (!isInList(w + boxId, wordArray))
-							wordArray.push_back(w + boxId);
-					}
-					else if (isInList(w + funcId, _keyWordArray))
-					{
-						if (!isInList(w + funcId, wordArray))
-							wordArray.push_back(w + funcId);
-					}
-					else if (!isInList(w, wordArray))
-					{
-						wordArray.push_back(w);
-					}
+					if (const std::string boxWord = w + boxId; _keyWordSet.contains(boxWord))
+						uniqueWords.add(boxWord);
+					else if (const std::string funcWord = w + funcId; _keyWordSet.contains(funcWord))
+						uniqueWords.add(funcWord);
+					else
+						uniqueWords.add(w);
 				}
 				else
 				{
-					if (!isInList(w, wordArray))
-						wordArray.push_back(w);
+					uniqueWords.add(w);
 				}
 			}
 		}
@@ -1188,6 +1192,7 @@ bool AutoCompletion::setLanguage(LangType language)
 
 	_keyWords.clear();
 	_keyWordArray.clear();
+	_keyWordSet.clear(); // Pyre909 build
 
 	if (_funcCompletionActive)
 	{
@@ -1229,6 +1234,7 @@ bool AutoCompletion::setLanguage(LangType language)
 			_keyWords.append(_keyWordArray[i]);
 			_keyWords.append(" ");
 		}
+		_keyWordSet.insert(_keyWordArray.begin(), _keyWordArray.end()); // Pyre909 build: looked up for each word found
 	}
 	return _funcCompletionActive;
 }

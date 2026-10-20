@@ -22,6 +22,7 @@
 #include <windows.h>
 
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "Notepad_plus_msgs.h"
@@ -115,6 +116,7 @@ private:
 	bool _ignoreCase = true;
 
 	std::vector<std::string> _keyWordArray;
+	std::unordered_set<std::string> _keyWordSet; // Pyre909 build: the same words, looked up for each word of the document found
 	std::string _keyWords;
 	size_t _keyWordMaxLen = 0;
 
