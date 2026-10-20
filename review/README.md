@@ -44,7 +44,10 @@ A test drives a built Notepad++ the way a user would and checks the result. Cont
 - uses a settings folder of its own (`-multiInst -nosession -settingsDir=<folder in %TEMP%>`), never the user's;
 - prints `PASS <check>` / `FAIL <check>` lines and, last, `<n> checks, <m> failed`;
 - prints `0 checks, 0 failed` when the build hasn't what it tests (a pyre test on an upstream branch, a live switch
-  test on a build without it): `review.ps1` reports it as INFO, skipped, not as a pass;
+  test on a build without it), after a line saying why, `INFO  <reason>: skipped`: `review.ps1` reports it as INFO,
+  skipped, not as a pass. Without that line, no check is a FAIL (the test stopped before its first check);
+- any error of the test is a FAIL, whatever its summary says: a line on its error stream (an exception, a cmdlet
+  error) or a non-zero exit code (a test that throws still prints `0 checks, 0 failed` from its `finally`);
 - closes Notepad++ at the end.
 
 Memory errors (any branch): `asan.ps1 -Ref <branch, tag or commit> [-Test All]` builds the ref with AddressSanitizer

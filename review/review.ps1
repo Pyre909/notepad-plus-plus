@@ -105,7 +105,46 @@ function Get-StyleHits([string] $text, [bool] $isCpp) {
 	}
 }
 
+# the verdict on an app-level test from its output, its error stream and its exit code. An error of the test (an
+# exception, a non-zero exit code) fails it whatever its summary says: a test that throws still prints its summary from
+# its finally block, "0 checks, 0 failed". No check ran: a skip when the test says why (an INFO or SKIP line saying
+# "skipped"), else a failure (it stopped before its first check).
+function Get-TestVerdict([string[]] $Out, [string[]] $Errors, [int] $ExitCode) {
+	$summary = $Out | Where-Object { $_ -match '^(\d+) checks?, (\d+) failed' } | Select-Object -Last 1
+	$checks = -1; $failed = -1
+	if ($summary -match '^(\d+) checks?, (\d+) failed') { $checks = [int]$Matches[1]; $failed = [int]$Matches[2] }
+	if ($Errors.Count -or ($ExitCode -ne 0)) {
+		$what = @($(if ($ExitCode -ne 0) { "exit code $ExitCode" }), $(if ($Errors.Count) { "$($Errors.Count) error line(s)" })) | Where-Object { $_ }
+		return @{ Level = 'FAIL'; Message = "the test ended with an error ($($what -join ', '))$(if ($summary) { "; $summary" })"; Details = @($Errors | Select-Object -First 6) }
+	}
+	if ($checks -eq 0) {
+		$reasons = @($Out | Where-Object { $_ -match '^(SKIP|INFO)\b.*\bskipped\b' })
+		if ($reasons.Count) { return @{ Level = 'INFO'; Message = 'no check ran, the test skips this build'; Details = $reasons } }
+		return @{ Level = 'FAIL'; Message = 'no check ran, and the test gave no reason to skip'; Details = @($Out | Select-Object -Last 5) }
+	}
+	if (($checks -gt 0) -and ($failed -eq 0)) { return @{ Level = 'PASS'; Message = $summary; Details = @() } }
+	@{ Level = 'FAIL'; Message = $(if ($summary) { $summary } else { 'no summary line' }); Details = @($Out | Where-Object { $_ -match '^FAIL\b|Exception|\berror\b' }) }
+}
+
 if ($SelfTest) {
+	# each test outcome must get its verdict
+	Section 'Self-test of the test verdicts'
+	$verdicts = @(
+		@{ Name = 'checks passed'; Out = @('PASS  a', '1 checks, 0 failed'); Errors = @(); Exit = 0; Expect = 'PASS' }
+		@{ Name = 'a check failed'; Out = @('FAIL  a', '2 checks, 1 failed'); Errors = @(); Exit = 0; Expect = 'FAIL' }
+		@{ Name = 'skipped, with its reason'; Out = @('INFO  not a Pyre909 build: skipped', '0 checks, 0 failed'); Errors = @(); Exit = 0; Expect = 'INFO' }
+		@{ Name = 'an exception before the first check'; Out = @('0 checks, 0 failed'); Errors = @('Exception calling "ReadAllText"'); Exit = 1; Expect = 'FAIL' }
+		@{ Name = 'an error after passed checks'; Out = @('PASS  a', '1 checks, 0 failed'); Errors = @('Cannot convert null'); Exit = 1; Expect = 'FAIL' }
+		@{ Name = 'a non-zero exit code alone'; Out = @('PASS  a', '1 checks, 0 failed'); Errors = @(); Exit = 1; Expect = 'FAIL' }
+		@{ Name = 'no check ran, no reason given'; Out = @('0 checks, 0 failed'); Errors = @(); Exit = 0; Expect = 'FAIL' }
+		@{ Name = 'an INFO line that is no skip'; Out = @('INFO  Windows font smoothing: ClearType', '0 checks, 0 failed'); Errors = @(); Exit = 0; Expect = 'FAIL' }
+		@{ Name = 'no summary line'; Out = @('PASS  a'); Errors = @(); Exit = 0; Expect = 'FAIL' }
+	)
+	foreach ($c in $verdicts) {
+		$v = Get-TestVerdict $c.Out $c.Errors $c.Exit
+		Report $(if ($v.Level -eq $c.Expect) { 'PASS' } else { 'FAIL' }) ('{0,-40} -> {1}: {2}' -f $c.Name, $v.Level, $v.Message)
+	}
+
 	# each rule must fire on a line that breaks it, and no rule on lines that follow the style
 	Section 'Self-test of the style rules'
 	$t = "`t"
@@ -385,15 +424,14 @@ if ($Test.Count) {
 	elseif (-not $scripts.Count) { Report WARN "no test named $($Test -join ', ') in $(Join-Path $PSScriptRoot 'tests')" }
 	foreach ($s in $scripts) {
 		if (-not (Test-Path $testExe)) { break }
-		$out = @(& pwsh -NoProfile -File $s.FullName -Exe $testExe 2>&1 | ForEach-Object { "$_" })
+		$raw = @(& pwsh -NoProfile -File $s.FullName -Exe $testExe 2>&1)
+		$exitCode = $LASTEXITCODE
+		$out = @($raw | ForEach-Object { "$_" })
+		# what the test wrote to its error stream (the child pwsh's stderr): an exception or error of the test script
+		$errors = @($raw | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | ForEach-Object { "$_" })
 		Set-Content -Path (Join-Path $logDir "test-$($s.BaseName).log") -Value $out -Encoding utf8
-		$summary = $out | Where-Object { $_ -match '^(\d+) checks?, (\d+) failed' } | Select-Object -Last 1
-		$checks = -1; $failed = -1
-		if ($summary -match '^(\d+) checks?, (\d+) failed') { $checks = [int]$Matches[1]; $failed = [int]$Matches[2] }
-		# a test that ran no check proves nothing: it skipped this build (for example a pyre test on an upstream branch)
-		if ($checks -eq 0) { Report INFO "$($s.BaseName): no check ran, the test skips this build" @($out | Where-Object { $_ -match '^(SKIP|INFO)\b' }) }
-		elseif (($checks -gt 0) -and ($failed -eq 0)) { Report PASS "$($s.BaseName): $summary" }
-		else { Report FAIL "$($s.BaseName): $(if ($summary) { $summary } else { 'no summary line' })" @($out | Where-Object { $_ -match '^FAIL\b|Exception|\berror\b' }) }
+		$v = Get-TestVerdict $out $errors $exitCode
+		Report $v.Level "$($s.BaseName): $($v.Message)" $v.Details
 	}
 }
 
