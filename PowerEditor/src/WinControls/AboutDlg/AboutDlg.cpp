@@ -419,9 +419,8 @@ intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			{
 				const ScintillaViewParams& svp = nppParam.getSVP();
 				auto addTextRenderingInfo = [this](const wchar_t* label, std::initializer_list<const wchar_t*> names, int value) {
-					_debugInfoStr += label;
-					_debugInfoStr += (value >= 0 && static_cast<size_t>(value) < names.size()) ? names.begin()[value] : L"unknown";
-					_debugInfoStr += L" (" + std::to_wstring(value) + L")\r\n";
+					const wchar_t* name = ((value >= 0) && (static_cast<size_t>(value) < names.size())) ? names.begin()[value] : L"unknown";
+					_debugInfoStr += std::format(L"{}{} ({})\r\n", label, name, value);
 				};
 				// the names have to match the textAntialiasing, textRenderingMode & textContrast enums
 				addTextRenderingInfo(L"Text Antialiasing: ", { L"Follow Windows", L"ClearType", L"ClearType less color fringing", L"Grayscale", L"None" }, svp._textAntialiasing);

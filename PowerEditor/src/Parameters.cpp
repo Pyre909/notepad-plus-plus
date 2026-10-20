@@ -794,7 +794,7 @@ static void writeTextRenderingParams(NppXml::Element& elem, const ScintillaViewP
 	NppXml::setAttribute(elem, "lineSpacing", svp._lineSpacing);
 	// the advanced overrides of the former Pyre909 builds
 	for (const char* name : { "fontGamma", "fontEnhancedContrast", "fontGrayscaleEnhancedContrast", "fontClearTypeLevel", "fontPixelGeometry", "fontLightTextGamma" })
-		elem.remove_attribute(name);
+		NppXml::removeAttribute(elem, name);
 }
 
 // Pyre909 build: the font forced for every theme (the font controls of the Style Configurator's Global override) with

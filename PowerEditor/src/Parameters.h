@@ -1347,10 +1347,10 @@ public:
 	// Pyre909 build: a theme of the installation saved as the user's copy is loaded from that copy afterwards (selecting
 	// the theme again in the same session loaded the installation's file, without the changes saved)
 	void setThemePath(const std::wstring& oldPath, const std::wstring& newPath) {
-		for (auto& theme : _themeList)
+		for (auto& [name, path] : _themeList)
 		{
-			if (theme.second == oldPath)
-				theme.second = newPath;
+			if (path == oldPath)
+				path = newPath;
 		}
 	}
 

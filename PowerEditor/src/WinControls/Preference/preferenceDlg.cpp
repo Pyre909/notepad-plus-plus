@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cwchar>
+#include <format>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -1833,31 +1834,21 @@ void EditingSubDlg::initTextRenderingParam()
 	NppGUI& nppGUI = nppParam.getNppGUI();
 	const ScintillaViewParams& svp = nppParam.getSVP();
 
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"GDI (most compatible)"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DirectWrite (default)"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DirectWrite (retain frames)"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DirectWrite (draw to GDI DC)"));
-	::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"DirectWrite (DirectX 11)"));
-
-	if ((nppGUI._writeTechnologyEngine < 0) || (nppGUI._writeTechnologyEngine > directWriteTechnologyUnavailable))
-		nppGUI._writeTechnologyEngine = directWriteTechnology;
-
-	if (nppGUI._writeTechnologyEngine != directWriteTechnologyUnavailable)
-	{
-		::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_SETCURSEL, nppGUI._writeTechnologyEngine, 0);
-	}
-	else
-	{
-		::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_SETCURSEL, defaultTechnology, 0);
-		::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE), false);
-	}
-
-	// the items order has to match the textAntialiasing, textRenderingMode & textContrast enums
+	// the items order has to match the writeTechnologyEngine, textAntialiasing, textRenderingMode & textContrast enums
 	auto setComboItems = [this](int comboId, std::initializer_list<const wchar_t*> items, int selected) {
 		for (const wchar_t* item : items)
 			::SendDlgItemMessage(_hSelf, comboId, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(item));
 		::SendDlgItemMessage(_hSelf, comboId, CB_SETCURSEL, selected, 0);
 	};
+
+	if ((nppGUI._writeTechnologyEngine < 0) || (nppGUI._writeTechnologyEngine > directWriteTechnologyUnavailable))
+		nppGUI._writeTechnologyEngine = directWriteTechnology;
+	const bool isDirectWriteAvailable = (nppGUI._writeTechnologyEngine != directWriteTechnologyUnavailable);
+	setComboItems(IDC_COMBO_SC_TECHNOLOGY_CHOICE, { L"GDI (most compatible)", L"DirectWrite (default)", L"DirectWrite (retain frames)",
+		L"DirectWrite (draw to GDI DC)", L"DirectWrite (DirectX 11)" }, isDirectWriteAvailable ? nppGUI._writeTechnologyEngine : defaultTechnology);
+	if (!isDirectWriteAvailable)
+		::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE), false);
+
 	setComboItems(IDC_COMBO_TEXTANTIALIASING, { L"Follow Windows", L"ClearType", L"ClearType (less color fringing)", L"Grayscale", L"None" },
 		svp._textAntialiasing);
 	setComboItems(IDC_COMBO_TEXTRENDERINGMODE, { L"Automatic", L"Natural (sharper small text)", L"Symmetric (smoother)",
@@ -1867,7 +1858,7 @@ void EditingSubDlg::initTextRenderingParam()
 	// the line spacing: the index of its item is the extra pixels
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_LINESPACING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Normal"));
 	for (int spacing = 1; spacing <= ScintillaViewParams::maxLineSpacing; ++spacing)
-		::SendDlgItemMessage(_hSelf, IDC_COMBO_LINESPACING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>((L"+" + std::to_wstring(spacing) + L" px").c_str()));
+		::SendDlgItemMessage(_hSelf, IDC_COMBO_LINESPACING, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(std::format(L"+{} px", spacing).c_str()));
 	::SendDlgItemMessage(_hSelf, IDC_COMBO_LINESPACING, CB_SETCURSEL, svp._lineSpacing, 0);
 	setChecked(IDC_CHECK_FONTLIGATURES, svp._textLigatures);
 

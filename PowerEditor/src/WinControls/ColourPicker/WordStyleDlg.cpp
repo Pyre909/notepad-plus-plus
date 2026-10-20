@@ -21,6 +21,7 @@
 
 #include <shlwapi.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <cwchar>
 #include <memory>
@@ -1578,21 +1579,33 @@ static constexpr GlobalOverrideFontCheck globalOverrideFontChecks[]{
 	{ IDC_GLOBAL_UNDERLINE_CHECK, &GlobalOverride::enableUnderLine }
 };
 
+struct FontStyleCheck
+{
+	int _ctrlID = 0;
+	int _fontStyle = FONTSTYLE_NONE;
+};
+static constexpr FontStyleCheck fontStyleChecks[]{
+	{ IDC_BOLD_CHECK, FONTSTYLE_BOLD },
+	{ IDC_ITALIC_CHECK, FONTSTYLE_ITALIC },
+	{ IDC_UNDERLINE_CHECK, FONTSTYLE_UNDERLINE }
+};
+
+// an item of the font size combo box as a number: 0 for the empty item (or more than 2 digits, as updateFontSize reads them)
+static int getFontSizeItem(HWND hCombo, LRESULT i)
+{
+	wchar_t item[4]{};
+	if (::SendMessage(hCombo, CB_GETLBTEXTLEN, i, 0) < static_cast<LRESULT>(std::size(item)))
+		::SendMessage(hCombo, CB_GETLBTEXT, i, reinterpret_cast<LPARAM>(item));
+	return _wtoi(item);
+}
+
 bool WordStyleDlg::isGlobalOverrideFontCtrl(WPARAM wParam)
 {
 	const int ctrlID = LOWORD(wParam);
 	if (HIWORD(wParam) == CBN_SELCHANGE)
 		return (ctrlID == IDC_FONT_COMBO) || (ctrlID == IDC_FONTSIZE_COMBO);
-	if (HIWORD(wParam) != BN_CLICKED)
-		return false;
-	if ((ctrlID == IDC_BOLD_CHECK) || (ctrlID == IDC_ITALIC_CHECK) || (ctrlID == IDC_UNDERLINE_CHECK))
-		return true;
-	for (const GlobalOverrideFontCheck& check : globalOverrideFontChecks)
-	{
-		if (check._ctrlID == ctrlID)
-			return true;
-	}
-	return false;
+	return (HIWORD(wParam) == BN_CLICKED) &&
+		(std::ranges::contains(fontStyleChecks, ctrlID, &FontStyleCheck::_ctrlID) || std::ranges::contains(globalOverrideFontChecks, ctrlID, &GlobalOverrideFontCheck::_ctrlID));
 }
 
 void WordStyleDlg::setVisualFromGlobalOverrideFont()
@@ -1619,14 +1632,8 @@ void WordStyleDlg::setVisualFromGlobalOverrideFont()
 		{
 			const auto count = ::SendMessage(_hFontSizeCombo, CB_GETCOUNT, 0, 0);
 			LRESULT i = 1; // after the empty item
-			for (; i < count; ++i)
-			{
-				wchar_t item[4]{};
-				if (::SendMessage(_hFontSizeCombo, CB_GETLBTEXTLEN, i, 0) < static_cast<LRESULT>(std::size(item)))
-					::SendMessage(_hFontSizeCombo, CB_GETLBTEXT, i, reinterpret_cast<LPARAM>(item));
-				if (_wtoi(item) > go.fontSize)
-					break;
-			}
+			while ((i < count) && (getFontSizeItem(_hFontSizeCombo, i) <= go.fontSize))
+				++i;
 			iFontSize = ::SendMessage(_hFontSizeCombo, CB_INSERTSTRING, i, reinterpret_cast<LPARAM>(fontSize.c_str()));
 			if (iFontSize < 0)
 				iFontSize = 0;
@@ -1634,9 +1641,8 @@ void WordStyleDlg::setVisualFromGlobalOverrideFont()
 	}
 	::SendMessage(_hFontSizeCombo, CB_SETCURSEL, iFontSize, 0);
 
-	::SendMessage(_hCheckBold, BM_SETCHECK, (go.fontStyle & FONTSTYLE_BOLD) ? BST_CHECKED : BST_UNCHECKED, 0);
-	::SendMessage(_hCheckItalic, BM_SETCHECK, (go.fontStyle & FONTSTYLE_ITALIC) ? BST_CHECKED : BST_UNCHECKED, 0);
-	::SendMessage(_hCheckUnderline, BM_SETCHECK, (go.fontStyle & FONTSTYLE_UNDERLINE) ? BST_CHECKED : BST_UNCHECKED, 0);
+	for (const FontStyleCheck& check : fontStyleChecks)
+		::CheckDlgButton(_hSelf, check._ctrlID, (go.fontStyle & check._fontStyle) ? BST_CHECKED : BST_UNCHECKED);
 
 	::EnableWindow(_hFontNameCombo, TRUE);
 	::EnableWindow(_hFontSizeCombo, TRUE);
@@ -1647,7 +1653,6 @@ void WordStyleDlg::setVisualFromGlobalOverrideFont()
 void WordStyleDlg::globalOverrideFontChanged(int ctrlID)
 {
 	GlobalOverride& go = NppParameters::getInstance().getGlobalOverrideStyle();
-	auto isChecked = [this, ctrlID]() { return ::SendDlgItemMessage(_hSelf, ctrlID, BM_GETCHECK, 0, 0) == BST_CHECKED; };
 	if (ctrlID == IDC_FONT_COMBO)
 	{
 		const auto i = ::SendMessage(_hFontNameCombo, CB_GETCURSEL, 0, 0);
@@ -1662,27 +1667,17 @@ void WordStyleDlg::globalOverrideFontChanged(int ctrlID)
 		const auto i = ::SendMessage(_hFontSizeCombo, CB_GETCURSEL, 0, 0);
 		if (i == CB_ERR)
 			return;
-		wchar_t fontSize[4]{};
-		if (::SendMessage(_hFontSizeCombo, CB_GETLBTEXTLEN, i, 0) < static_cast<LRESULT>(std::size(fontSize)))
-			::SendMessage(_hFontSizeCombo, CB_GETLBTEXT, i, reinterpret_cast<LPARAM>(fontSize));
-		go.fontSize = _wtoi(fontSize); // 0, the empty item: not forced (see ScintillaEditView::setStyle)
+		go.fontSize = getFontSizeItem(_hFontSizeCombo, i); // 0, the empty item: not forced (see ScintillaEditView::setStyle)
 		::InvalidateRect(_hFontSizeStaticText, nullptr, FALSE);
 	}
-	else if ((ctrlID == IDC_BOLD_CHECK) || (ctrlID == IDC_ITALIC_CHECK) || (ctrlID == IDC_UNDERLINE_CHECK))
+	else if (const auto style = std::ranges::find(fontStyleChecks, ctrlID, &FontStyleCheck::_ctrlID); style != std::end(fontStyleChecks))
 	{
-		const int fontStyle = (ctrlID == IDC_BOLD_CHECK) ? FONTSTYLE_BOLD : ((ctrlID == IDC_ITALIC_CHECK) ? FONTSTYLE_ITALIC : FONTSTYLE_UNDERLINE);
-		if (isChecked())
-			go.fontStyle |= fontStyle;
-		else
-			go.fontStyle &= ~fontStyle;
+		const bool isChecked = (::IsDlgButtonChecked(_hSelf, ctrlID) == BST_CHECKED);
+		go.fontStyle = isChecked ? (go.fontStyle | style->_fontStyle) : (go.fontStyle & ~style->_fontStyle);
 	}
-	else
+	else if (const auto force = std::ranges::find(globalOverrideFontChecks, ctrlID, &GlobalOverrideFontCheck::_ctrlID); force != std::end(globalOverrideFontChecks))
 	{
-		for (const GlobalOverrideFontCheck& check : globalOverrideFontChecks)
-		{
-			if (check._ctrlID == ctrlID)
-				go.*check._isForced = isChecked();
-		}
+		go.*force->_isForced = (::IsDlgButtonChecked(_hSelf, ctrlID) == BST_CHECKED);
 	}
 
 	// config.xml, not the theme: Cancel restores it (see prepare2Cancel), switching themes keeps it
