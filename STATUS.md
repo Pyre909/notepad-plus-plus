@@ -19,8 +19,19 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     (`e2f301d`), the PGO switch (`ea8a856`), the PGO release workflow (`29189eb`, `12b8184`: 5 jobs, x64 trained on its
     runner, ARM64 instrumented on x64, trained on `windows-11-arm`, optimized on x64; input `test_only`). PGO against
     LTCG (ARM64, `.github/pyre/bench.ps1`, 5 rounds): lexing -19%, folding and Mark All -17%, wrapping -15%, startup -7%.
-  - Section 2, refactoring, parts C (`02451e9`) and D (`071a9b5`) in `pyre`; parts A and B (owned fonts, panel icons)
-    share code with `per-monitor-dpi_20260925`: with its rebase; part E (Scintilla patch) skipped, clarity only.
+  - Section 2, refactoring, parts C (`02451e9`) and D (`071a9b5`) in `pyre`; parts A and B (`0b3cbca`, in `pyre` and
+    folded into `per-monitor-dpi_20260925`'s commit, CI: all 13 jobs pass): the per-monitor DPI fonts owned by
+    `UniqueFont` (dpiManagerV2.h; no destructor or delete block left), `std::ranges::find`, the icon sets as spans, -64
+    lines; the harness's `leaks` test unchanged; a real DPI change: `review/tests/pyre-dpi-scale.ps1`, a person changes
+    the display scale. Part E (Scintilla patch) skipped, clarity only.
+  - The first real DPI change on the VM (2026-10-20, Pyre909 changed the scale 150% -> 100% -> 150% while
+    `pyre-dpi-scale.ps1` ran on `0b3cbca`): Notepad++ stays responsive, every tree, list view, list box and toolbar of
+    the 7 panels rescales at 100%; back at 150% all but one come back exactly. **Known fault, from before the
+    refactoring:** the Project Panel's toolbar of text buttons stays at its 100% height (31 -> 22 pixels). A toolbar of
+    the same styles outside Notepad++ follows the same `WM_SETFONT` + `TB_AUTOSIZE` both ways and ignores
+    `WM_DPICHANGED_AFTERPARENT` (scratch program), so the cause is in Notepad++; finding it needs a build logging the
+    button size through the DPI change and two more scale changes by Pyre909. GDI objects 379 -> 500 at 100% -> 501
+    back: resources cached per DPI (`getMainMenuColourBitmap`...), not a leak per change.
   - Section 3, performance: the regex engine (`0d2b005`, in `pyre`; CI: all 13 jobs pass): the Function List on 60,000 lines of
     C++ 190 s -> 6.1 s, on 3,000 lines 9.5 s -> 0.36 s (tables for the Win32 traits of wchar_t, 16 compiled regexes
     kept, `isInZones` binary search); upstream's 46 Function List unit tests the same. Measured and dropped: the tree
@@ -55,9 +66,9 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
   glyphs and Text Rendering options" below) and the Style Configurator bug fixes (`a913d55`..`7c83c57`), on top of
   `b0ae0e6` (2026-10-16). Released as `pyre-8.9.8.1-7c83c57` (published 2026-10-20 UTC; its ARM64 installer is
   installed on the VM, the exe checked byte for byte against the installer's). No release of `a5e52d2` yet.
-- `per-monitor-dpi_20260925` still has `NPPM_INTERNAL_DPICHANGEDRELAYOUT` at `+ 114`: its rebase, due anyway (based on
-  the master of 2026-10-06, it conflicts with upstream since `a660d79` in `DockingManager.cpp`, `StaticDialog.h`,
-  `StatusBar.cpp`, `dpiManagerV2.cpp`), takes `+ 115` too.
+- `per-monitor-dpi_20260925` rebased on upstream `b661c2b` on 2026-10-20 (`4eaa93d`, kit section 4: the conflicts in
+  `resource.h`, `DockingManager.cpp`, `StaticDialog.h`, `StatusBar.cpp`, `dpiManagerV2.cpp` resolved as `pyre`'s merge;
+  `NPPM_INTERNAL_DPICHANGEDRELAYOUT` at `+ 115`; every DPI file equal to `pyre`'s but for `pyre`'s other features).
 - Intermittent, to watch (2026-10-19): `live-rendering-switch-scroll` once found its wrapped 3000-line document 2 lines
   up after the tab switches ("top lines 1498, 1498, 1498" for 1500, DirectWrite LTR), in a harness run right after the
   x64 and Win32 builds. Not reproduced since: 6 runs on `a5e52d2`, 3 of them with an x64 rebuild running, and 3 on the
@@ -412,7 +423,7 @@ The generator, the scripts and the review sheets of both versions are in `icons/
 | `directwrite-font-smoothing_20261006` | `76b3210` | DirectWrite following the Windows font smoothing (bug fix: #14954), on upstream `master`: PR to open (kit section 8). CI: all 13 jobs pass (its ARM64 Debug job hung on GitHub's runner once, passed when re-run) |
 | `directwrite-font-names_20260930` | `9f605be` | Fonts such as "Fira Code Light" drawn by DirectWrite (Notepad++-only change; a bug fix of #9951 and #12393, PR after the checks of kit section 5). Rewritten, rebased and force-pushed on 2026-10-06 (the first version was `6e8579e`) |
 | `standard-icons-hidpi_20261007` | `bc2e60f` | The redrawn standard toolbar icons alone (ICOs and SVGs, no code), on upstream `master`: offered on #16110 (a comment, no PR) |
-| `per-monitor-dpi_20260925` | `8a455e0` | Opt-in per-monitor DPI awareness (discuss with maintainers before a PR) |
+| `per-monitor-dpi_20260925` | `4eaa93d` | Opt-in per-monitor DPI awareness (discuss with maintainers before a PR); rebased on `b661c2b` on 2026-10-20 |
 | `font-size-1pt_20260925` | `faaeb59` | Font sizes 1-4 pt: PR #18412 closed upstream (not wanted); kept in the fork |
 | `font-weight-names_20260925` | `47341a4` | Superseded: the Scintilla version of the font-name fix |
 | `scintilla-upstream_20260930` | | This branch: tools, kits, notes (no Notepad++ history) |

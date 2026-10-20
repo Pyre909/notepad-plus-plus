@@ -9,7 +9,7 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 1 | `font-size-1pt_20260925` | `faaeb59` | 2 | +0 | Font sizes 1–4 pt in the size lists | #18412; **PR closed, not accepted** |
 | 2 | `text-rendering_20260925` | `a485acc` + `bb32194` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 closed** (2026-10-02: too large a change) |
 | 3 | `text-rendering-translations_20260925` | `1aa8b0e` | 29 xml | – | Label capitalisation (stacked on 2) | no (`[xml]`); on hold, 2 is closed |
-| 4 | `per-monitor-dpi_20260925` | `8a455e0` | 61 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
+| 4 | `per-monitor-dpi_20260925` | `4eaa93d` | 61 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
 | 5 | `directwrite-font-names_20260930` | `9f605be` | 7 (Notepad++ only) | not measured | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | no: bug fix of #9951 (open since 2021) and #12393. Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
 | 6 | `rtl-views-gdi_20261006` | `53d0026` | 4 | small | Right-to-left views drawn with GDI (DirectWrite can't mirror them) | no: bug fix of #17865 and #17518 (both open); open it first |
 | 7 | `live-rendering-switch_20261005` | `53d0026` + `d50fb3b` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
@@ -218,7 +218,13 @@ a485acc text-rendering-translations_20260925` (drops PR 2's original commit, wha
 
 ## 4. Per-monitor DPI awareness (discuss first)
 
-Branch `per-monitor-dpi_20260925`, one commit `8a455e0` on upstream `master` `a69bc23` (reconciled on 2026-10-07: rebased
+Branch `per-monitor-dpi_20260925`, one commit `4eaa93d` on upstream `master` `b661c2b` (rebased on 2026-10-20: the
+conflicts with upstream's 32 commits since `a69bc23` resolved as `pyre`'s merge did: `NPPM_INTERNAL_DPICHANGEDRELAYOUT` at
+`+ 115` after upstream's `+ 114`, both sides' includes in `StaticDialog.h`, upstream's restructured `DockingManager.cpp`
+block with this branch's `setFloatingRect`, upstream's new status bar `WM_DPICHANGED` code plus an `else` that gives the
+main status bar its new font, both sides' functions in `dpiManagerV2.cpp`; then `pyre`'s section 2 parts A and B folded
+in: the fonts owned by `UniqueFont`, ranges lookups, icon sets as spans, -64 lines; CI: all 13 jobs pass, run
+39450677072), 61 files, +1455 −252. Before: `8a455e0` on `a69bc23` (reconciled on 2026-10-07: rebased
 from 8.9.8.1's `8a0ff70`, authored by Pyre909 with the Co-Authored-By line), 61 files, +1529 −254. Upstream's 13 new
 commits made the About, hash and Shortcut Mapper dialogs per-monitor (ozone10, part of #14959): AboutDlg now takes
 upstream's code whole (the branch no longer changes it), dpiManagerV2.cpp keeps both sides' functions in `pyre`'s
@@ -231,8 +237,10 @@ Review harness (2026-10-07, ARM64, x64 and Win32 builds): no FAIL of its own; th
 (`directwrite-font-names`, the three RTL ones) failing as on unmodified upstream. WARNs explained: the size; whitespace of
 code moved into a new block; `UserDefineDialog.cpp` indented with spaces as upstream's file is; `try {` as upstream
 writes it 32 times out of 33. The independent AI review of `pyre`'s merge (2026-10-06) covered the same DPI code against
-the same upstream; its open point is disclosed in the PR body. Not tested: two monitors of different scales (test round
-row, waiting on Pyre909). CI of `8a455e0`: all 13 jobs pass (run 37655731626, 2026-10-07).
+the same upstream; its open point is disclosed in the PR body. CI of `8a455e0`: all 13 jobs pass (run 37655731626,
+2026-10-07). A real DPI change (2026-10-20, `pyre`'s same code, the Windows scale 150% -> 100% -> 150%,
+`review/tests/pyre-dpi-scale.ps1`): every panel follows, but the Project Panel's text-button toolbar keeps its 100% height
+back at 150% (STATUS, section 2): fix it before the PR. Not tested: two monitors of different scales.
 
 Why discuss first, and where: on #14959 (ozone10's hiDPI tracking issue, open), the unchecked items are the UDL
 splitter and the whole Panels section (title, tab control, main field, splitter, plugin support), and ozone10 wrote on
