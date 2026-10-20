@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 #include "Scintilla.h"
@@ -60,6 +61,68 @@
 
 using namespace Scintilla::Internal;
 using namespace boost;
+
+#ifdef BOOST_REGEX_USE_WIN32_LOCALE // the default traits of MSVC builds (MinGW and Clang use cpp_regex_traits)
+// Pyre909 build: the Win32 regex traits of wchar_t answered from tables. w32_regex_traits<wchar_t> asks Windows for the
+// lower case (LCMapStringW) and the CT_CTYPE1 type (GetStringTypeExW) of every character it compares, which a case
+// insensitive search (the Function List's) does billions of times; the tables hold the same answers for every UTF-16
+// code unit, computed once (2.5 ms) with the same calls, for the user's locale when first used (w32_regex_traits reads it
+// at each compilation; casing without LCMAP_LINGUISTIC_CASING and CT_CTYPE1 don't depend on it), as boost does for char
+// with a table of 256.
+namespace
+{
+	static_assert(sizeof(wchar_t) == 2, "a table entry for each UTF-16 code unit");
+
+	class NppWideRegexTraits : public w32_regex_traits<wchar_t>
+	{
+		using Implementation = BOOST_REGEX_DETAIL_NS::w32_regex_traits_implementation<wchar_t>;
+
+		struct Tables
+		{
+			wchar_t _lower[0x10000]{};
+			BOOST_REGEX_DETAIL_NS::word _ctype1[0x10000]{};
+		};
+		static const Tables& getTables()
+		{
+			static const std::unique_ptr<const Tables> instance = [] {
+				auto t = std::make_unique<Tables>();
+				const auto locale = BOOST_REGEX_DETAIL_NS::w32_get_default_locale();
+				for (unsigned int i = 0; i < 0x10000; ++i)
+				{
+					const wchar_t c = static_cast<wchar_t>(i);
+					t->_lower[i] = BOOST_REGEX_DETAIL_NS::w32_tolower(c, locale);
+					if (!BOOST_REGEX_DETAIL_NS::GetStringTypeExW(locale, BOOST_REGEX_DETAIL_NS::ct_ctype1, &c, 1, &t->_ctype1[i]))
+						t->_ctype1[i] = 0;
+				}
+				return std::unique_ptr<const Tables>(std::move(t));
+			}();
+			return *instance;
+		}
+		const Tables* _tables = &getTables(); // taken when the traits are made (once per compilation), not for each character
+
+	public:
+		wchar_t translate(wchar_t c) const { return c; }
+		wchar_t translate_nocase(wchar_t c) const { return _tables->_lower[static_cast<unsigned short>(c)]; }
+		wchar_t translate(wchar_t c, bool icase) const { return icase ? translate_nocase(c) : c; }
+		wchar_t tolower(wchar_t c) const { return translate_nocase(c); }
+		// as w32_regex_traits<wchar_t>::isctype, with the CT_CTYPE1 type from the table
+		bool isctype(wchar_t c, char_class_type f) const
+		{
+			if ((f & Implementation::mask_base) && (_tables->_ctype1[static_cast<unsigned short>(c)] & f & Implementation::mask_base))
+				return true;
+			if ((f & Implementation::mask_unicode) && BOOST_REGEX_DETAIL_NS::is_extended(c))
+				return true;
+			if ((f & Implementation::mask_word) && (c == '_'))
+				return true;
+			if ((f & Implementation::mask_vertical) && (BOOST_REGEX_DETAIL_NS::is_separator(c) || (c == '\v')))
+				return true;
+			if ((f & Implementation::mask_horizontal) && isctype(c, 0x0008u) && !isctype(c, Implementation::mask_vertical))
+				return true;
+			return false;
+		}
+	};
+}
+#endif
 
 class BoostRegexSearch : public RegexSearchBase
 {
@@ -209,7 +272,6 @@ private:
 	template <class CharT, class CharacterIterator>
 	class EncodingDependent {
 	public:
-		EncodingDependent() : _lastCompileFlags(-1) {}
 		void compileRegex(const char *regex, const int compileFlags);
 		Match FindText(SearchParameters& search);
 		char *SubstituteByPosition(const char *text, Sci::Position *length);
@@ -219,14 +281,28 @@ private:
 
 	public:
 		typedef CharT Char;
+#ifdef BOOST_REGEX_USE_WIN32_LOCALE
+		// Pyre909 build: wchar_t with the traits answered from tables (NppWideRegexTraits)
+		typedef basic_regex<CharT, std::conditional_t<std::is_same_v<CharT, wchar_t>, regex_traits<wchar_t, NppWideRegexTraits>, regex_traits<CharT>>> Regex;
+#else
 		typedef basic_regex<CharT> Regex;
+#endif
 		typedef match_results<CharacterIterator> MatchResults;
 
 		MatchResults _match;
 	private:
 		Regex _regex;
-		std::string _lastRegexString;
-		int _lastCompileFlags;
+		// Pyre909 build: the regexes compiled last, the latest first. A Function List parse alternates between several (its
+		// function expression, then the name expressions, for every match): with only the last one kept, each was compiled
+		// again every time.
+		struct CompiledRegex
+		{
+			std::string _regexString;
+			int _compileFlags = 0;
+			Regex _regex;
+		};
+		static constexpr size_t maxCompiledRegexes = 16; // the C++ parser alternates between 9
+		std::vector<CompiledRegex> _compiledRegexes;
 	};
 
 	class SearchParameters {
@@ -433,12 +509,22 @@ BoostRegexSearch::Match BoostRegexSearch::EncodingDependent<CharT, CharacterIter
 template <class CharT, class CharacterIterator>
 void BoostRegexSearch::EncodingDependent<CharT, CharacterIterator>::compileRegex(const char *regex, const int compileFlags)
 {
-	if (_lastCompileFlags != compileFlags || _lastRegexString != regex)
+	const auto compiled = std::find_if(_compiledRegexes.begin(), _compiledRegexes.end(), [regex, compileFlags](const CompiledRegex& r) {
+		return (r._compileFlags == compileFlags) && (r._regexString == regex);
+	});
+	if (compiled == _compiledRegexes.end())
 	{
-		_regex = Regex(CharTPtr(regex), static_cast<regex_constants::syntax_option_type>(compileFlags));
-		_lastRegexString = regex;
-		_lastCompileFlags = compileFlags;
+		// compiled first: one that doesn't compile throws, nothing kept
+		Regex newRegex(CharTPtr(regex), static_cast<regex_constants::syntax_option_type>(compileFlags));
+		if (_compiledRegexes.size() == maxCompiledRegexes)
+			_compiledRegexes.pop_back();
+		_compiledRegexes.insert(_compiledRegexes.begin(), CompiledRegex{ regex, compileFlags, std::move(newRegex) });
 	}
+	else
+	{
+		std::rotate(_compiledRegexes.begin(), compiled, compiled + 1); // the latest first
+	}
+	_regex = _compiledRegexes.front()._regex; // a basic_regex shares its compiled form: no copy of it
 }
 
 Sci::Position BoostRegexSearch::SearchParameters::nextCharacter(Sci::Position position) const

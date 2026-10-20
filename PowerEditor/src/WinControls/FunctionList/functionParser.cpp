@@ -19,6 +19,8 @@
 
 #include <windows.h>
 
+#include <algorithm>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <utility>
@@ -659,12 +661,10 @@ void FunctionParser::getCommentZones(std::vector<std::pair<size_t, size_t>>& com
 
 bool FunctionParser::isInZones(size_t pos2Test, const std::vector<std::pair<size_t, size_t>>& zones)
 {
-	for (size_t i = 0, len = zones.size(); i < len; ++i)
-	{
-		if (pos2Test >= zones[i].first && pos2Test < zones[i].second)
-			return true;
-	}
-	return false;
+	// Pyre909 build: the zones are getCommentZones', in the document's order and apart: the last one starting at or before
+	// the position is the only one that can hold it (a binary search, not a scan of all of them for every match)
+	const auto next = std::ranges::upper_bound(zones, pos2Test, {}, &std::pair<size_t, size_t>::first);
+	return (next != zones.begin()) && (pos2Test < std::prev(next)->second);
 }
 
 
