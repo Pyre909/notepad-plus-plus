@@ -3,18 +3,30 @@ name: Pyre909 release
 # Private builds of the pyre branch: x64 and ARM64 installers and portable zips in a DRAFT release, which only people
 # with push access to this repository can see. Run it from the Actions tab (Run workflow, with pyre as the default
 # branch). Publishing the draft makes it public; it creates the release's tag, which starts nothing (no push trigger).
+#
+# Each exe is profile-guided (PGO, .github/pyre/pgo.ps1): an instrumented build runs .github/pyre/bench.ps1 -Train,
+# then the Release build is optimized with that profile. x64 trains on its own runner; ARM64 is instrumented on x64,
+# trained on an ARM64 runner, and optimized on x64 by an identical compile, which matches the profile.
+# test_only: everything built and packaged, the files kept as the run's artifact, no draft release.
 
 on:
   workflow_dispatch:
+    inputs:
+      pgo:
+        description: 'Profile-guided optimization (instrumented build, training run, optimized build)'
+        type: boolean
+        default: true
+      test_only:
+        description: 'Test run: the files as the run''s artifact, no draft release'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 jobs:
-  release:
-
+  x64:
     runs-on: windows-latest
-
     steps:
     - name: Checkout repo
       uses: actions/checkout@v6
@@ -22,13 +34,136 @@ jobs:
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v3
 
+    - name: PGO, instrumented build and training (x64)
+      if: inputs.pgo
+      shell: pwsh
+      run: |
+        .github\pyre\pgo.ps1 -Step Instrument -Platform x64
+        .github\pyre\pgo.ps1 -Step Train -Platform x64
+
+    - name: MSBuild of n++ exe (x64 Release, optimized with the profile)
+      if: inputs.pgo
+      shell: pwsh
+      run: .github\pyre\pgo.ps1 -Step Optimize -Platform x64
+
     - name: MSBuild of n++ exe (x64 Release)
+      if: ${{ !inputs.pgo }}
       working-directory: PowerEditor\visual.net\
       run: msbuild notepadPlus.sln /m /p:configuration="Release" /p:platform="x64"
 
+    - uses: actions/upload-artifact@v4
+      with:
+        name: exe-x64
+        path: PowerEditor\bin64\notepad++.exe
+        if-no-files-found: error
+
+  arm64-instrument:
+    if: inputs.pgo
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v6
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v3
+
+    - name: PGO, instrumented build (ARM64)
+      shell: pwsh
+      run: .github\pyre\pgo.ps1 -Step Instrument -Platform ARM64
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: arm64-instrumented
+        path: |
+          PowerEditor\binarm64\notepad++.exe
+          PowerEditor\binarm64\*.pgd
+          PowerEditor\binarm64\pgort140.dll
+          PowerEditor\binarm64\*.model.xml
+          PowerEditor\binarm64\functionList\
+          PowerEditor\binarm64\autoCompletion\
+        if-no-files-found: error
+
+  arm64-train:
+    needs: arm64-instrument
+    runs-on: windows-11-arm
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v6
+
+    - uses: actions/download-artifact@v4
+      with:
+        name: arm64-instrumented
+        path: instrumented
+
+    - name: PGO, training (ARM64)
+      shell: pwsh
+      run: .github\pyre\pgo.ps1 -Step Train -Platform ARM64 -Exe instrumented\notepad++.exe
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: arm64-profile
+        path: instrumented\*.pgc
+        if-no-files-found: error
+
+  arm64:
+    needs: arm64-train
+    if: ${{ !cancelled() && (needs.arm64-train.result == 'success' || needs.arm64-train.result == 'skipped') }}
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v6
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v3
+
+    - uses: actions/download-artifact@v4
+      if: inputs.pgo
+      with:
+        name: arm64-instrumented
+        path: PowerEditor\binarm64
+
+    - uses: actions/download-artifact@v4
+      if: inputs.pgo
+      with:
+        name: arm64-profile
+        path: PowerEditor\binarm64
+
+    - name: MSBuild of n++ exe (ARM64 Release, optimized with the profile)
+      if: inputs.pgo
+      shell: pwsh
+      run: |
+        # only the database and the profile are kept: the instrumented exe gives way to the optimized one
+        Get-ChildItem PowerEditor\binarm64 -Exclude '*.pgd', '*.pgc' | Remove-Item -Recurse -Force
+        .github\pyre\pgo.ps1 -Step Optimize -Platform ARM64
+
     - name: MSBuild of n++ exe (ARM64 Release)
+      if: ${{ !inputs.pgo }}
       working-directory: PowerEditor\visual.net\
       run: msbuild notepadPlus.sln /m /p:configuration="Release" /p:platform="ARM64"
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: exe-arm64
+        path: PowerEditor\binarm64\notepad++.exe
+        if-no-files-found: error
+
+  release:
+    needs: [x64, arm64]
+    if: ${{ !cancelled() && needs.x64.result == 'success' && needs.arm64.result == 'success' }}
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v6
+
+    - uses: actions/download-artifact@v4
+      with:
+        name: exe-x64
+        path: PowerEditor\bin64
+
+    - uses: actions/download-artifact@v4
+      with:
+        name: exe-arm64
+        path: PowerEditor\binarm64
 
     - name: Package the portable zips
       id: package
@@ -53,7 +188,21 @@ jobs:
         .github\pyre\installer.ps1 -Arch x64 -Exe PowerEditor\bin64\Notepad++.exe -OutDir out -Commit ${{ github.sha }} -MakeNsis $makensis -SevenZip $sevenZip
         .github\pyre\installer.ps1 -Arch arm64 -Exe PowerEditor\binarm64\Notepad++.exe -OutDir out -Commit ${{ github.sha }} -MakeNsis $makensis -SevenZip $sevenZip
 
+    - name: Note the optimization in the release notes
+      if: inputs.pgo
+      shell: pwsh
+      run: |
+        Add-Content out\notes.md "`nBoth exes are profile-guided (PGO), trained on x64 and on ARM64 hardware by the release workflow."
+
+    - name: Keep the files (test run)
+      if: inputs.test_only
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-files
+        path: out\
+
     - name: Create the draft release
+      if: ${{ !inputs.test_only }}
       shell: pwsh
       env:
         GH_TOKEN: ${{ github.token }}
