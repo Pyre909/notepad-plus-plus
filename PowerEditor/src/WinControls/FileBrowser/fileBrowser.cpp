@@ -373,7 +373,7 @@ void FileBrowser::setToolbarImageLists(int iconSize)
 {
 	static constexpr int iconIDs[] = { IDI_FB_SELECTCURRENTFILE, IDI_FB_FOLDALL, IDI_FB_EXPANDALL };
 	static constexpr int iconDarkModeIDs[] = { IDI_FB_SELECTCURRENTFILE_DM, IDI_FB_FOLDALL_DM, IDI_FB_EXPANDALL_DM };
-	setPanelToolbarImageLists(_hToolbarMenu, _hInst, iconSize, iconIDs, iconDarkModeIDs, static_cast<int>(std::size(iconIDs)), _iconListVector);
+	setPanelToolbarImageLists(_hToolbarMenu, _hInst, iconSize, iconIDs, iconDarkModeIDs, _iconListVector);
 }
 
 std::vector<int> FileBrowser::getTreeImageIds()

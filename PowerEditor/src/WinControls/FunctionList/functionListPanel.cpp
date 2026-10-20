@@ -696,7 +696,7 @@ void FunctionListPanel::setToolbarImageLists(int iconSize)
 {
 	static constexpr int iconIDs[] = { IDI_FUNCLIST_SORTBUTTON, IDI_FUNCLIST_RELOADBUTTON, IDI_FUNCLIST_PREFERENCEBUTTON };
 	static constexpr int iconDarkModeIDs[] = { IDI_FUNCLIST_SORTBUTTON_DM, IDI_FUNCLIST_RELOADBUTTON_DM, IDI_FUNCLIST_PREFERENCEBUTTON_DM };
-	setPanelToolbarImageLists(_hToolbarMenu, _hInst, iconSize, iconIDs, iconDarkModeIDs, static_cast<int>(std::size(iconIDs)), _iconListVector);
+	setPanelToolbarImageLists(_hToolbarMenu, _hInst, iconSize, iconIDs, iconDarkModeIDs, _iconListVector);
 }
 
 std::vector<int> FunctionListPanel::getTreeImageIds()
@@ -716,12 +716,7 @@ void FunctionListPanel::onDpiChanged(UINT prevDpi)
 	const int iconSizeDyn = _dpiManager.scale(toolbarIconSize);
 	setToolbarImageLists(iconSizeDyn);
 
-	TBBUTTON tbSearchPlaceHolder{};
-	tbSearchPlaceHolder.idCommand = 0;
-	tbSearchPlaceHolder.iBitmap = _dpiManager.scale(searchEditSepWidth); // width of the separator
-	tbSearchPlaceHolder.fsState = TBSTATE_ENABLED;
-	tbSearchPlaceHolder.fsStyle = BTNS_SEP;
-	tbSearchPlaceHolder.iString = 0;
+	TBBUTTON tbSearchPlaceHolder{ .iBitmap = _dpiManager.scale(searchEditSepWidth), .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_SEP }; // iBitmap: width of the separator
 	::SendMessage(_hToolbarMenu, TB_DELETEBUTTON, 0, 0);
 	::SendMessage(_hToolbarMenu, TB_INSERTBUTTON, 0, reinterpret_cast<LPARAM>(&tbSearchPlaceHolder));
 

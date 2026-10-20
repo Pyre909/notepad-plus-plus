@@ -54,7 +54,6 @@ public:
 class ClipboardHistoryPanel : public DockingDlgInterface {
 public:
 	ClipboardHistoryPanel(): DockingDlgInterface(IDD_CLIPBOARDHISTORY_PANEL), _ppEditView(nullptr), _hwndNextCbViewer(nullptr), _lbBgColor(-1), _lbFgColor(-1) {}
-	~ClipboardHistoryPanel() override;
 
 	void init(HINSTANCE hInst, HWND hPere, ScintillaEditView **ppEditView) {
 		DockingDlgInterface::init(hInst, hPere);
@@ -101,5 +100,5 @@ private:
 	LOGFONT _lfOriginal{};
 	int _itemHeightOriginal = 0;
 	UINT _dpiOriginal = 0;
-	HFONT _hFontDpi = nullptr;
+	UniqueFont _hFontDpi;
 };

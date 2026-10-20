@@ -70,15 +70,7 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			_hToolbarMenu = CreateWindowEx(0,TOOLBARCLASSNAME,NULL, style,
 								   0,0,0,0,_hSelf, nullptr, _hInst, nullptr);
 
-			// the default font of the toolbar is for the system DPI
-			if (DPIManagerV2::isPerMonitorV2Active())
-			{
-				const UINT dpi = DPIManagerV2::getDpiForWindow(_hSelf);
-				if (dpi != DPIManagerV2::getDpiForSystem())
-				{
-					DPIManagerV2::replaceWindowFont(_hToolbarMenu, DPIManagerV2::getIconTitleFontForDpi(dpi), _hToolbarFontDpi);
-				}
-			}
+			DPIManagerV2::initIconTitleFont(_hToolbarMenu, DPIManagerV2::getDpiForWindow(_hSelf), _hToolbarFontDpi);
 
 			TBBUTTON tbButtons[2]{};
 
@@ -217,11 +209,7 @@ intptr_t CALLBACK ProjectPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM 
 			_treeView.destroy();
 			destroyMenus();
 			::DestroyWindow(_hToolbarMenu);
-			if (_hToolbarFontDpi != nullptr)
-			{
-				::DeleteObject(_hToolbarFontDpi);
-				_hToolbarFontDpi = nullptr;
-			}
+			_hToolbarFontDpi.reset();
 			break;
 		}
 
@@ -245,7 +233,7 @@ void ProjectPanel::onDpiChanged(UINT prevDpi)
 	const UINT dpi = _dpiManager.getDpi();
 
 	// toolbar: text buttons, sized for their font
-	DPIManagerV2::replaceWindowFont(_hToolbarMenu, DPIManagerV2::getIconTitleFontForDpi(dpi), _hToolbarFontDpi);
+	DPIManagerV2::setIconTitleFont(_hToolbarMenu, dpi, _hToolbarFontDpi);
 	::SendMessage(_hToolbarMenu, TB_AUTOSIZE, 0, 0);
 
 	// tree: font, item height, images, indent

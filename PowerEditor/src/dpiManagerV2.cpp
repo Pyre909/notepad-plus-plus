@@ -35,9 +35,9 @@ int DPIManagerV2::getSystemMetricsForDpi(int nIndex, UINT dpi)
 
 int DPIManagerV2::getSystemMetricsForWindow(int nIndex, HWND hWnd)
 {
-	if (_isPerMonitorV2Active) // Windows 10 1703+: GetSystemMetricsForDpi() is available
+	if (_isPerMonitorV2Active) // the metrics for the window's monitor; otherwise those Windows scales for the process
 	{
-		return ::GetSystemMetricsForDpi(nIndex, DPIManagerV2::getDpiForWindow(hWnd));
+		return getSystemMetricsForDpi(nIndex, DPIManagerV2::getDpiForWindow(hWnd));
 	}
 	return ::GetSystemMetrics(nIndex);
 }
@@ -175,20 +175,13 @@ LOGFONT DPIManagerV2::getIconTitleFontForDpi(UINT dpi)
 	return getDefaultGUIFontForDpi(dpi); // should not happen, fallback
 }
 
-void DPIManagerV2::replaceWindowFont(HWND hWnd, const LOGFONT& lf, HFONT& hFont)
+void DPIManagerV2::replaceWindowFont(HWND hWnd, const LOGFONT& lf, UniqueFont& font)
 {
-	HFONT hNewFont = ::CreateFontIndirect(&lf);
-	if (hNewFont == nullptr)
+	if (UniqueFont newFont{ ::CreateFontIndirect(&lf) })
 	{
-		return;
+		::SendMessage(hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(newFont.get()), TRUE);
+		font = std::move(newFont); // the previous one deleted
 	}
-
-	::SendMessage(hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(hNewFont), TRUE);
-	if (hFont != nullptr)
-	{
-		::DeleteObject(hFont);
-	}
-	hFont = hNewFont;
 }
 
 LOGFONT DPIManagerV2::getDefaultGUIFontForDpi(UINT dpi, WORD fontSize, FontType type)

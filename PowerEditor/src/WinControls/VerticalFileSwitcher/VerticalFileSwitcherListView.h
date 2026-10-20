@@ -20,6 +20,7 @@
 #include "Window.h"
 #include "TaskListDlg.h"
 #include "Buffer.h"
+#include "dpiManagerV2.h"
 
 #define SORT_DIRECTION_NONE     -1
 #define SORT_DIRECTION_UP     0
@@ -84,7 +85,7 @@ public:
 
 protected:
 	HIMAGELIST _hImaLst = nullptr;
-	HFONT _hFontDpi = nullptr; // font for the DPI of the panel (per-monitor DPI awareness)
+	UniqueFont _hFontDpi; // font for the DPI of the panel (per-monitor DPI awareness)
 
 	int _currentIndex = 0;
 

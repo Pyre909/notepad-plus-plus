@@ -21,6 +21,7 @@
 #include "Window.h"
 #include "Common.h"
 #include "NppDarkMode.h"
+#include "dpiManagerV2.h"
 
 struct TreeStateNode {
 	std::wstring _label;
@@ -128,7 +129,7 @@ protected:
 	NppDarkMode::TreeViewStyle _tvStyleType = NppDarkMode::TreeViewStyle::classic;
 
 	// per-monitor DPI awareness
-	HFONT _hFontDpi = nullptr; // font for the DPI of the parent
+	UniqueFont _hFontDpi; // font for the DPI of the parent
 	int _indentBase = 0; // indent before the first DPI change, and its DPI
 	UINT _indentBaseDpi = 0;
 

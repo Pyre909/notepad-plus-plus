@@ -31,7 +31,6 @@ class ScintillaEditView;
 class AnsiCharPanel : public DockingDlgInterface {
 public:
 	AnsiCharPanel(): DockingDlgInterface(IDD_ANSIASCII_PANEL) {}
-	~AnsiCharPanel() override;
 
 	void init(HINSTANCE hInst, HWND hPere, ScintillaEditView **ppEditView) {
 		DockingDlgInterface::init(hInst, hPere);
@@ -64,5 +63,5 @@ protected:
 private:
 	ScintillaEditView **_ppEditView = nullptr;
 	AsciiListView _listView;
-	HFONT _hFontDpi = nullptr; // font of the list for its DPI (per-monitor DPI awareness)
+	UniqueFont _hFontDpi; // font of the list for its DPI (per-monitor DPI awareness)
 };

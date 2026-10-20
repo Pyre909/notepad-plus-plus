@@ -27,12 +27,6 @@ using namespace std;
 // default widths of the columns (Value, Hex, Character, HTML Name, HTML Decimal, HTML Hexadecimal), for 96 DPI
 static constexpr int columnWidths[] = { 45, 45, 70, 90, 100, 120 };
 
-AnsiCharPanel::~AnsiCharPanel()
-{
-	if (_hFontDpi != nullptr)
-		::DeleteObject(_hFontDpi);
-}
-
 void AnsiCharPanel::switchEncoding()
 {
 	int codepage = (*_ppEditView)->getCurrentBuffer()->getEncoding();
@@ -65,11 +59,7 @@ intptr_t CALLBACK AnsiCharPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 
 			_listView.init(_hInst, _hSelf);
 
-			// the default font of the list view is for the system DPI
-			if (DPIManagerV2::isPerMonitorV2Active() && (_dpiManager.getDpi() != DPIManagerV2::getDpiForSystem()))
-			{
-				DPIManagerV2::replaceWindowFont(_listView.getHSelf(), DPIManagerV2::getIconTitleFontForDpi(_dpiManager.getDpi()), _hFontDpi);
-			}
+			DPIManagerV2::initIconTitleFont(_listView.getHSelf(), _dpiManager.getDpi(), _hFontDpi);
 
 			int codepage = (*_ppEditView)->getCurrentBuffer()->getEncoding();
 			_listView.setValues(codepage==-1?0:codepage);
@@ -178,7 +168,7 @@ void AnsiCharPanel::onDpiChanged(UINT prevDpi)
 	const UINT dpi = _dpiManager.getDpi();
 
 	// the list view sizes its header and its rows with its font
-	DPIManagerV2::replaceWindowFont(hList, DPIManagerV2::getIconTitleFontForDpi(dpi), _hFontDpi);
+	DPIManagerV2::setIconTitleFont(hList, dpi, _hFontDpi);
 
 	// the columns: the default width for the new DPI, or the width set by the user rescaled
 	const int nbColumns = static_cast<int>(std::size(columnWidths));

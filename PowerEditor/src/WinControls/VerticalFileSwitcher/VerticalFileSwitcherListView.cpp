@@ -89,12 +89,7 @@ void VerticalFileSwitcherListView::destroy()
 	}
 	::DestroyWindow(_hSelf);
 	_hSelf = NULL;
-
-	if (_hFontDpi != nullptr)
-	{
-		::DeleteObject(_hFontDpi);
-		_hFontDpi = nullptr;
-	}
+	_hFontDpi.reset();
 } 
 
 void VerticalFileSwitcherListView::initList()
@@ -483,7 +478,7 @@ void VerticalFileSwitcherListView::resizeColumns(int totalWidth)
 void VerticalFileSwitcherListView::rescaleForDpi(UINT dpi, HIMAGELIST hImaLst)
 {
 	// the list view sizes its header, its groups and its rows with its font
-	DPIManagerV2::replaceWindowFont(_hSelf, DPIManagerV2::getIconTitleFontForDpi(dpi), _hFontDpi);
+	DPIManagerV2::setIconTitleFont(_hSelf, dpi, _hFontDpi);
 
 	if (hImaLst != nullptr)
 	{

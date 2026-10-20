@@ -17,6 +17,7 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstring>
 #include <cwchar>
@@ -574,25 +575,13 @@ static constexpr int dluPerBaseUnitX = 4;
 static constexpr int dluPerBaseUnitY = 8;
 static constexpr int pointsPerInch = 72;
 
-DialogDpiLayout::~DialogDpiLayout()
-{
-	for (HFONT hFont : _fontsForDpi)
-	{
-		if (hFont != nullptr)
-			::DeleteObject(hFont);
-	}
-}
-
 int DialogDpiLayout::saveFont(HFONT hFont)
 {
 	if (hFont == nullptr)
 		return -1;
 
-	for (size_t i = 0; i < _fonts.size(); ++i)
-	{
-		if (_fonts[i]._hFont == hFont)
-			return static_cast<int>(i);
-	}
+	if (const auto it = std::ranges::find(_fonts, hFont, &SavedFont::_hFont); it != _fonts.end())
+		return static_cast<int>(it - _fonts.begin());
 
 	static constexpr int lfSize = static_cast<int>(sizeof(LOGFONT));
 	SavedFont savedFont{};
@@ -684,7 +673,7 @@ void DialogDpiLayout::apply(UINT dpi)
 	const bool isSavedDpi = (dpi == _dpi);
 
 	// fonts of the same point size for dpi (the dialog manager creates the font of a dialog template for the DPI)
-	std::vector<HFONT> fontsForDpi;
+	std::vector<UniqueFont> fontsForDpi;
 	for (const SavedFont& savedFont : _fonts)
 	{
 		LOGFONT lf{ savedFont._lf };
@@ -693,7 +682,7 @@ void DialogDpiLayout::apply(UINT dpi)
 			lf.lfHeight = (lf.lfHeight < 0) ? -::MulDiv(::MulDiv(-lf.lfHeight, pointsPerInch, _dpi), dpi, pointsPerInch) : DPIManagerV2::scale(lf.lfHeight, dpi, _dpi);
 			lf.lfWidth = DPIManagerV2::scale(lf.lfWidth, dpi, _dpi);
 		}
-		fontsForDpi.push_back(::CreateFontIndirect(&lf));
+		fontsForDpi.emplace_back(::CreateFontIndirect(&lf));
 	}
 
 	for (size_t iDlg = 0; iDlg < _dlgs.size(); ++iDlg)
@@ -703,7 +692,7 @@ void DialogDpiLayout::apply(UINT dpi)
 		// positions and sizes in the dialog units of the dialog font, as the dialog manager lays out a dialog template
 		// (scaled with the DPI if the dialog units aren't known)
 		SIZE baseUnits{};
-		const HFONT hDlgFont = (dlg._iFont >= 0) ? fontsForDpi[static_cast<size_t>(dlg._iFont)] : nullptr;
+		const HFONT hDlgFont = (dlg._iFont >= 0) ? fontsForDpi[static_cast<size_t>(dlg._iFont)].get() : nullptr;
 		if (!isSavedDpi && (dlg._baseUnits.cx != 0) && (hDlgFont != nullptr))
 			baseUnits = getDialogBaseUnits(dlg._hDlg, hDlgFont);
 		const bool isDlu = (baseUnits.cx != 0) && (baseUnits.cy != 0);
@@ -733,27 +722,17 @@ void DialogDpiLayout::apply(UINT dpi)
 			const LONG height = scaleY(ctrl._rc.bottom - ctrl._rc.top);
 			::SetWindowPos(ctrl._hWnd, nullptr, left, top, width, height, SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
 
-			const HFONT hCtrlFont = (ctrl._iFont >= 0) ? fontsForDpi[static_cast<size_t>(ctrl._iFont)] : nullptr;
+			const HFONT hCtrlFont = (ctrl._iFont >= 0) ? fontsForDpi[static_cast<size_t>(ctrl._iFont)].get() : nullptr;
 			if (hCtrlFont != nullptr)
 				::SendMessage(ctrl._hWnd, WM_SETFONT, reinterpret_cast<WPARAM>(hCtrlFont), FALSE);
 		}
 	}
 
-	// the fonts created for the previous DPI aren't used any more
-	for (HFONT hFont : _fontsForDpi)
-	{
-		if (hFont != nullptr)
-			::DeleteObject(hFont);
-	}
-	_fontsForDpi = std::move(fontsForDpi);
+	_fontsForDpi = std::move(fontsForDpi); // the fonts created for the previous DPI deleted
 }
 
 SIZE DialogDpiLayout::getClientSize(HWND hDlg) const
 {
-	for (const Dlg& dlg : _dlgs)
-	{
-		if (dlg._hDlg == hDlg)
-			return dlg._sizeForDpi;
-	}
-	return {};
+	const auto it = std::ranges::find(_dlgs, hDlg, &Dlg::_hDlg);
+	return (it != _dlgs.end()) ? it->_sizeForDpi : SIZE{};
 }

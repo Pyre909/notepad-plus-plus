@@ -120,7 +120,7 @@ protected:
 	std::wstring _selDirOfFilesFromDirDlg;
 	bool _isDirty = false;
 	int _panelID = 0;
-	HFONT _hToolbarFontDpi = nullptr; // toolbar font for the DPI of the panel (per-monitor DPI awareness)
+	UniqueFont _hToolbarFontDpi; // toolbar font for the DPI of the panel (per-monitor DPI awareness)
 
 	void initMenus();
 	void destroyMenus() const;

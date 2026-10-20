@@ -21,6 +21,7 @@
 
 #include <commctrl.h>
 
+#include <span>
 #include <vector>
 #include <utility>
 
@@ -192,4 +193,4 @@ private:
 
 // the light and dark mode image lists of a panel's toolbar icons, replacing the ones of imageLists (destroyed),
 // the one of the current mode is set to hToolbar
-void setPanelToolbarImageLists(HWND hToolbar, HINSTANCE hInst, int iconSize, const int* iconIDs, const int* iconDarkModeIDs, int nbIcons, std::vector<HIMAGELIST>& imageLists);
+void setPanelToolbarImageLists(HWND hToolbar, HINSTANCE hInst, int iconSize, std::span<const int> iconIDs, std::span<const int> iconDarkModeIDs, std::vector<HIMAGELIST>& imageLists);

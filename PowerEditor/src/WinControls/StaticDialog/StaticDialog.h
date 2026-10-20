@@ -121,7 +121,6 @@ public:
 	DialogDpiLayout() = default;
 	DialogDpiLayout(const DialogDpiLayout&) = delete;
 	DialogDpiLayout& operator=(const DialogDpiLayout&) = delete;
-	~DialogDpiLayout();
 
 	// client size of hDlg, rectangles (client coordinates) and fonts of its children; its child dialogs can be saved too
 	void save(HWND hDlg, UINT dpi);
@@ -163,7 +162,7 @@ private:
 	std::vector<SavedFont> _fonts;
 	std::vector<Dlg> _dlgs;
 	std::vector<Ctrl> _ctrls;
-	std::vector<HFONT> _fontsForDpi; // created for the last applied DPI and set to the controls
+	std::vector<UniqueFont> _fontsForDpi; // created for the last applied DPI and set to the controls
 	UINT _dpi = 0;
 
 	int saveFont(HFONT hFont);

@@ -346,12 +346,6 @@ intptr_t CALLBACK ClipboardHistoryPanel::run_dlgProc(UINT message, WPARAM wParam
 	return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
 }
 
-ClipboardHistoryPanel::~ClipboardHistoryPanel()
-{
-	if (_hFontDpi != nullptr)
-		::DeleteObject(_hFontDpi);
-}
-
 void ClipboardHistoryPanel::onDpiChanged(UINT prevDpi)
 {
 	HWND hList = ::GetDlgItem(_hSelf, IDC_LIST_CLIPBOARD);

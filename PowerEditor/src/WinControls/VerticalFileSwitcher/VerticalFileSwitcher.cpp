@@ -27,6 +27,7 @@
 #include <commctrl.h>
 
 #include <iterator>
+#include <span>
 #include <stdexcept>
 
 #include "NppConstants.h"
@@ -744,35 +745,29 @@ void VerticalFileSwitcher::onDpiChanged(UINT /*prevDpi*/)
 HIMAGELIST VerticalFileSwitcher::getFileStateIconsForDpi(UINT dpi)
 {
 	const int iconSize = DPIManagerV2::scale(g_TabIconSize, dpi);
+	const auto hasIconSize = [iconSize](HIMAGELIST hImaLst) {
+		int cx = 0;
+		int cy = 0;
+		return (hImaLst != nullptr) && (::ImageList_GetIconSize(hImaLst, &cx, &cy) == TRUE) && (cx == iconSize);
+	};
 
-	int cx = 0;
-	int cy = 0;
-	if ((_hImaLst != nullptr) && (::ImageList_GetIconSize(_hImaLst, &cx, &cy) == TRUE) && (cx == iconSize))
+	if (hasIconSize(_hImaLst))
 	{
 		return _hImaLst;
 	}
 
-	if (_hImaLstDpi != nullptr && (::ImageList_GetIconSize(_hImaLstDpi, &cx, &cy) == TRUE) && (cx == iconSize))
+	if (hasIconSize(_hImaLstDpi))
 	{
 		return _hImaLstDpi;
 	}
 
-	const int* iconIDs = docTabIconIDs;
-	int nbIcons = static_cast<int>(std::size(docTabIconIDs));
-	if (_tabIconSet == 1)
-	{
-		iconIDs = docTabIconIDs_alt;
-		nbIcons = static_cast<int>(std::size(docTabIconIDs_alt));
-	}
-	else if (_tabIconSet == 2)
-	{
-		iconIDs = docTabIconIDs_darkMode;
-		nbIcons = static_cast<int>(std::size(docTabIconIDs_darkMode));
-	}
+	// the sets of the tab bar's _tabIconSet: standard, alternative, dark mode
+	static constexpr std::span<const int> iconSets[]{ docTabIconIDs, docTabIconIDs_alt, docTabIconIDs_darkMode };
+	const auto iconIDs = iconSets[((_tabIconSet == 1) || (_tabIconSet == 2)) ? _tabIconSet : 0];
 
 	try {
 		IconList iconList{}; // doesn't own its image list
-		iconList.create(iconSize, _hInst, iconIDs, nbIcons);
+		iconList.create(iconSize, _hInst, iconIDs.data(), static_cast<int>(iconIDs.size()));
 		_hImaLstDpi = iconList.getHandle();
 		return _hImaLstDpi;
 	}

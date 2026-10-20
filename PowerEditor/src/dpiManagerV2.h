@@ -18,6 +18,10 @@
 #pragma once
 #include <windows.h>
 
+#include <memory>
+#include <type_traits>
+#include <utility>
+
 #ifndef WM_DPICHANGED
 #define WM_DPICHANGED 0x02E0
 #endif
@@ -33,6 +37,13 @@
 #ifndef WM_GETDPISCALEDSIZE
 #define WM_GETDPISCALEDSIZE 0x02E4
 #endif
+
+// a font owned by the window it's set to, deleted with it or when replaced
+struct FontDeleter
+{
+	void operator()(HFONT hFont) const noexcept { ::DeleteObject(hFont); }
+};
+using UniqueFont = std::unique_ptr<std::remove_pointer_t<HFONT>, FontDeleter>;
 
 class DPIManagerV2
 {
@@ -161,8 +172,21 @@ public:
 
 	// default font of the list view, tree view and toolbar controls
 	static LOGFONT getIconTitleFontForDpi(UINT dpi);
-	// sets a font created from lf to hWnd, then replaces hFont (the previous one, deleted) with it
-	static void replaceWindowFont(HWND hWnd, const LOGFONT& lf, HFONT& hFont);
+	// sets a font created from lf to hWnd, then replaces font (the previous one, deleted) with it
+	static void replaceWindowFont(HWND hWnd, const LOGFONT& lf, UniqueFont& font);
+	static void replaceWindowFont(HWND hWnd, const LOGFONT& lf, HFONT& hFont) {
+		UniqueFont font{ std::exchange(hFont, nullptr) };
+		replaceWindowFont(hWnd, lf, font);
+		hFont = font.release();
+	}
+	static void setIconTitleFont(HWND hWnd, UINT dpi, UniqueFont& font) {
+		replaceWindowFont(hWnd, getIconTitleFontForDpi(dpi), font);
+	}
+	// a control just created: its default font is for the system DPI
+	static void initIconTitleFont(HWND hWnd, UINT dpi, UniqueFont& font) {
+		if (isPerMonitorV2Active() && (dpi != getDpiForSystem()))
+			setIconTitleFont(hWnd, dpi, font);
+	}
 
 	static void loadIcon(HINSTANCE hinst, const wchar_t* pszName, int cx, int cy, HICON* phico, UINT fuLoad = LR_DEFAULTCOLOR);
 
