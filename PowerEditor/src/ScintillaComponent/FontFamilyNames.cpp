@@ -22,7 +22,9 @@
 #include <cstdlib>
 #include <map>
 #include <optional>
+#include <ranges>
 #include <tuple>
+#include <utility>
 #include <vector>
 #include "FontFamilyNames.h"
 
@@ -62,23 +64,13 @@ namespace
 	// ties are the lighter weight
 	GdiFamilyMember getClosestMember(const std::vector<GdiFamilyMember>& members, LONG weight, bool isItalic)
 	{
-		GdiFamilyMember closest;
-		for (const bool isAnyStyle : { false, true })
-		{
-			for (const GdiFamilyMember& member : members)
-			{
-				if (isAnyStyle || (member._isItalic == isItalic))
-				{
-					const LONG distance = std::abs(member._weight - weight);
-					const LONG closestDistance = std::abs(closest._weight - weight);
-					if ((closest._weight == 0) || (distance < closestDistance) || ((distance == closestDistance) && (member._weight < closest._weight)))
-						closest = member;
-				}
-			}
-			if (closest._weight != 0)
-				break;
-		}
-		return closest;
+		auto distance = [weight](const GdiFamilyMember& m) { return std::pair(std::abs(m._weight - weight), m._weight); };
+		auto sameStyle = members | std::views::filter([isItalic](const GdiFamilyMember& m) { return m._isItalic == isItalic; });
+		if (const auto it = std::ranges::min_element(sameStyle, {}, distance); it != sameStyle.end())
+			return *it;
+		if (const auto it = std::ranges::min_element(members, {}, distance); it != members.end())
+			return *it;
+		return {};
 	}
 
 	struct DirectWrite

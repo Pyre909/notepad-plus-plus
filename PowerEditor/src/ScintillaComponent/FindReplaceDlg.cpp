@@ -28,6 +28,7 @@
 #include <cwchar>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -3419,9 +3420,9 @@ int FindReplaceDlg::processAll(ProcessOperation op, FindOption* opt,
 	findReplaceInfo._endRange = endPosition;
 
 	// Pyre909 build: the scroll bars of the views of the document updated once, not after each line added or removed
-	std::unique_ptr<ScintillaEditView::RedrawOff> redrawOff;
+	std::optional<ScintillaEditView::RedrawOff> redrawOff;
 	if (op == ProcessReplaceAll)
-		redrawOff = std::make_unique<ScintillaEditView::RedrawOff>(**_ppEditView);
+		redrawOff.emplace(**_ppEditView);
 
 	int nbProcessed = processRange(op, findReplaceInfo, pFindersInfo, pOptions, colourStyleID, nullptr, pMatches);
 
