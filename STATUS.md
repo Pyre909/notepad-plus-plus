@@ -83,6 +83,11 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
   - Kit 4's comment for #14959 now proposes the split (switch, main window, edit views, docking, tree helper and one PR
     per panel, dialog layout helper with the incremental search bar and the docked UDL, the checkbox last) and asks
     whether the switch comes first as a config.xml-only option: for Pyre909 to post.
+  - Release (2026-10-21): upstream's `e013310` (CI only: a modelDate check, `pyre-ci.yml` regenerated) merged; the
+    release workflow's artifact actions moved to Node.js 24 (`upload-artifact` v7, `download-artifact` v8: the runs had
+    warned about Node.js 20; now 0 annotations); `PYRE-BUILD.md` brought up to date. **Published**:
+    `pyre-8.9.8.1-f495ad1` (Latest; x64 and ARM64, PGO), notes with a "What's new since 7c83c57" section; the drafts of
+    `56d6ea5` and `e56e9bb` deleted.
   - Left: the plugin prototype (only if Pyre909 wants one: their choice for plugins was to disclose they aren't covered); the UDL undocked onto another monitor (needs a
     second display); the relaunch prompt (probably not needed: the setting says "restart required"). The Document List
     checked by hand (kit 10: 48 -> 72 px before the fix, 50 -> 50 after).
