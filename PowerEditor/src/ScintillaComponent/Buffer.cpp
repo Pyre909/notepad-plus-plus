@@ -127,6 +127,12 @@ Buffer::Buffer(FileManager * pManager, BufferID id, Document doc, DocFileStatus 
 
 	if (nppParamInst.getNativeLangSpeaker()->isRTL() && nppParamInst.getNativeLangSpeaker()->isEditZoneRTL())
 		_isRTL = true;
+
+	// Pyre909 build: "Word wrap per document": a document opened or created takes the last choice (then a large file
+	// none, a session its own); toggling another document later doesn't change it
+	const ScintillaViewParams& svp = nppParamInst.getSVP();
+	if (svp._wrapPerDocument)
+		_wrapState = svp._doWrap ? SC_WRAP_WORD : SC_WRAP_NONE;
 }
 
 
@@ -984,7 +990,9 @@ BufferID FileManager::loadFile(const wchar_t* filename, Document doc, int encodi
 		isLargeFile = fileSize >= nppGui._largeFileRestriction._largeFileSizeDefInByte;
 
 	// Due to the performance issue, the Word Wrap feature will be disabled if it's ON
-	if (isLargeFile && nppGui._largeFileRestriction._deactivateWordWrap)
+	// Pyre909 build: with "Word wrap per document", the large file's own (below), not the current document's
+	const bool isWrapPerDocument = NppParameters::getInstance().getSVP()._wrapPerDocument;
+	if (isLargeFile && nppGui._largeFileRestriction._deactivateWordWrap && !isWrapPerDocument)
 	{
 		bool isWrap = _pNotepadPlus->_pEditView->isWrap();
 		if (isWrap)
@@ -1041,6 +1049,9 @@ BufferID FileManager::loadFile(const wchar_t* filename, Document doc, int encodi
 		Buffer* newBuf = new Buffer(this, _nextBufferID, doc, DOC_REGULAR, fullpath, isLargeFile);
 		BufferID id = newBuf;
 		newBuf->_id = id;
+
+		if (isLargeFile && nppGui._largeFileRestriction._deactivateWordWrap && isWrapPerDocument) // Pyre909 build
+			newBuf->setWrapState(SC_WRAP_NONE);
 
 		if (backupFileName != NULL)
 		{

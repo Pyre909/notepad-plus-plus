@@ -833,6 +833,7 @@
 	#define NPPM_INTERNAL_INCSEARCHBARPOSITION          (NOTEPADPLUS_USER_INTERNAL + 114)
 	#define NPPM_INTERNAL_DPICHANGEDRELAYOUT            (NOTEPADPLUS_USER_INTERNAL + 115)
 	#define NPPM_INTERNAL_OPENLINKAT                    (NOTEPADPLUS_USER_INTERNAL + 116) // Pyre909 build: wParam: position, lParam: the view's HWND
+	#define NPPM_INTERNAL_WRAPPERDOCUMENT               (NOTEPADPLUS_USER_INTERNAL + 117) // Pyre909 build: "Word wrap per document" changed
 
 // See Notepad_plus_msgs.h
 //#define NPPMSG   (WM_USER + 1000)

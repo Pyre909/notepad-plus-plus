@@ -6635,6 +6635,7 @@ void Notepad_plus::getCurrentOpenedFiles(Session & session, bool includeUntitled
 	DocTabView* docTab[nbElem]{};
 	docTab[0] = &_mainDocTab;
 	docTab[1] = &_subDocTab;
+	const bool isWrapPerDocument = NppParameters::getInstance().getSVP()._wrapPerDocument; // Pyre909 build
 	for (size_t k = 0; k < nbElem; ++k)
 	{
 		for (size_t i = 0, len = docTab[k]->nbItem(); i < len ; ++i)
@@ -6677,6 +6678,13 @@ void Notepad_plus::getCurrentOpenedFiles(Session & session, bool includeUntitled
 			sfi._isMonitoring = buf->isMonitoringOn();
 			sfi._individualTabColour = docTab[k]->getIndividualTabColourId(static_cast<int>(i));
 			sfi._isRTL = buf->isRTL();
+
+			// Pyre909 build: "Word wrap per document": the document's, as shown if it is (any wrap mode saved as wrapped)
+			if (isWrapPerDocument)
+			{
+				const int wrapMode = (buf == editView->getCurrentBuffer()) ? static_cast<int>(editView->execute(SCI_GETWRAPMODE)) : buf->getWrapState();
+				sfi._wrapState = (wrapMode < 0) ? -1 : ((wrapMode != SC_WRAP_NONE) ? 1 : 0);
+			}
 
 			_invisibleEditView.execute(SCI_SETDOCPOINTER, 0, buf->getDocument());
 
@@ -7078,6 +7086,15 @@ void Notepad_plus::notifyBufferActivated(BufferID bufid, int view)
 
 	checkDocState();
 	dynamicCheckMenuAndTB();
+
+	// Pyre909 build: "Word wrap per document": the document's own wrap
+	if (NppParameters::getInstance().getSVP()._wrapPerDocument)
+	{
+		const bool isWrapped = _pEditView->isWrap();
+		checkMenuItem(IDM_VIEW_WRAP, isWrapped);
+		_toolBar.setCheck(IDM_VIEW_WRAP, isWrapped);
+	}
+
 	setLangStatus(buf->getLangType());
 	updateStatusBar();
 	checkUnicodeMenuItems(/*buf->getUnicodeMode()*/);

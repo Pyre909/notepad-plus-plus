@@ -2718,6 +2718,27 @@ void Notepad_plus::command(int id)
 		case IDM_VIEW_WRAP:
 		{
 			bool isWrapped = !_pEditView->isWrap();
+
+			// Pyre909 build: with "Word wrap per document", the current document only, in the views showing it; the choice
+			// is still kept below for the documents opened afterwards
+			if ((NppParameters::getInstance()).getSVP()._wrapPerDocument)
+			{
+				Buffer* wrapBuf = _pEditView->getCurrentBuffer();
+				wrapBuf->setWrapState(isWrapped ? SC_WRAP_WORD : SC_WRAP_NONE);
+				for (ScintillaEditView* pView : { &_mainEditView, &_subEditView })
+				{
+					if (pView->getCurrentBuffer() != wrapBuf)
+						continue;
+					if (!isWrapped) // as below
+					{
+						pView->saveCurrentPos();
+						pView->setWrapRestoreNeeded(true);
+					}
+					pView->wrap(isWrapped);
+				}
+			}
+			else
+			{
 			// ViewMoveAtWrappingDisableFix: Disable wrapping messes up visible lines. Therefore save view position before in IDM_VIEW_WRAP and restore after SCN_PAINTED, as Scintilla-Doc. says
 			if (!isWrapped)
 			{
@@ -2728,6 +2749,7 @@ void Notepad_plus::command(int id)
 			}
 			_mainEditView.wrap(isWrapped);
 			_subEditView.wrap(isWrapped);
+			} // Pyre909 build
 			_toolBar.setCheck(IDM_VIEW_WRAP, isWrapped);
 			checkMenuItem(IDM_VIEW_WRAP, isWrapped);
 

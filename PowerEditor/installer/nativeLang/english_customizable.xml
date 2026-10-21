@@ -1034,6 +1034,7 @@ Translation note:
 					<Item id="6228" name="Default"/>
 					<Item id="6229" name="Aligned"/>
 					<Item id="6230" name="Indent"/>
+					<Item id="6369" name="Per document"/>
 					<Item id="6234" name="Disable advanced scrolling feature due to touchpad issue"/>
 					<Item id="6236" name="Enable scrolling beyond last line"/>
 					<Item id="6239" name="Keep selection when right-click outside of selection"/>
@@ -1979,6 +1980,7 @@ If you select advanced mode but do not edit files in the aforementioned language
 			<textContrast-tip value="DirectWrite only. Makes the strokes heavier: darkens dark text on light backgrounds and thickens light text on dark themes."/>
 			<lineSpacing-tip value="Extra space between the lines of the editor, split above and below the text. In pixels at 100% scale: more on high-DPI screens."/>
 			<fontLigatures-tip value="DirectWrite only. The ligatures of the font, such as the arrows and operators (-&gt; != &gt;=) of coding fonts like Cascadia Code or Fira Code. Unchecked: drawn as separate characters."/>
+			<wrapPerDocument-tip value="View &gt; Word wrap for the current document only: each document keeps its own wrap, also in the session. A document opened or created takes the last choice."/>
 
 			<!-- Due to the limited space on the status bar, if the translations for 'length' & 'lines' are much longer than the English words, please leave them in English instead of translating them. -->
 			<statusbar-length-lines value="length: $STR_REPLACE1$    lines: $STR_REPLACE2$"/>

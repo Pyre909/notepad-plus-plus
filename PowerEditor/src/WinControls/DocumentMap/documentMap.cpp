@@ -54,6 +54,10 @@ void DocumentMap::reloadMap()
 		{
 			wrapMap();
 		}
+		else if (!(*_ppEditView)->isWrap() && _pMapView->isWrap()) // Pyre909 build: "Word wrap per document" (wrapped again on SCN_PAINTED)
+		{
+			initWrapMap();
+		}
 
 		scrollMap();
 	}

@@ -304,6 +304,7 @@
 #define IDC_CHECK_ALOOWSIMLINKFAW                      6366
 #define IDC_CHECK_PERMONITORDPIAWARENESS               6367
 #define IDC_CHECK_CLICKABLELINK_CTRLCLICK              6368 // Pyre909 build
+#define IDC_CHECK_WRAPPERDOCUMENT                      6369 // Pyre909 build
 
 #define IDD_PREFERENCE_SUB_NEWDOCUMENT                 6400
 #define IDC_FORMAT_GB_STATIC                           6401

@@ -137,6 +137,8 @@ BEGIN
     CONTROL         "Default",IDC_RADIO_LWDEF,"Button",BS_AUTORADIOBUTTON | WS_GROUP,17,149,68,10
     CONTROL         "Aligned",IDC_RADIO_LWALIGN,"Button",BS_AUTORADIOBUTTON,17,164,68,10
     CONTROL         "Indent",IDC_RADIO_LWINDENT,"Button",BS_AUTORADIOBUTTON,17,179,68,10
+    // Pyre909 build: View > Word wrap for the current document only
+    CONTROL         "Per document",IDC_CHECK_WRAPPERDOCUMENT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP | WS_GROUP,88,149,70,10
 
     CONTROL         "Enable virtual space",IDC_CHECK_VIRTUALSPACE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,173,8,270,10
     CONTROL         "Make current level folding/unfolding commands toggleable",IDC_CHECK_FOLDINGTOGGLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,173,21,270,10

@@ -2684,6 +2684,12 @@ void ScintillaEditView::activateBuffer(BufferID buffer, bool force)
 	// from the Scintilla view then save it to the current document
 	saveCurrentPos();
 
+	// Pyre909 build: "Word wrap per document": the document keeps the wrap mode it has here (a plugin's change included)
+	const ScintillaViewParams& svpWrap = NppParameters::getInstance().getSVP();
+	const bool isWrapPerDocument = _isMainEditZone && svpWrap._wrapPerDocument;
+	if (isWrapPerDocument)
+		_currentBuffer->setWrapState(static_cast<int>(execute(SCI_GETWRAPMODE)));
+
 	// get foldStateInfo of current doc
 	std::vector<size_t> lineStateVector;
 	getCurrentFoldStates(lineStateVector);
@@ -2711,6 +2717,16 @@ void ScintillaEditView::activateBuffer(BufferID buffer, bool force)
 
 	// Everything should be updated, but the language
 	bufferUpdated(_currentBuffer, (BufferChangeMask & ~BufferChangeLanguage));
+
+	// Pyre909 build: "Word wrap per document": the new document's wrap (opened while it was off: the last choice), before
+	// its position is restored
+	if (isWrapPerDocument)
+	{
+		if (newBuf->getWrapState() < 0)
+			newBuf->setWrapState(svpWrap._doWrap ? SC_WRAP_WORD : SC_WRAP_NONE);
+		execute(SCI_SETWRAPMODE, newBuf->getWrapState());
+		_positionRestoreNeeded = false; // a wrapped document's restore still pending isn't this one's (set again if wrapped)
+	}
 
 	// restore the collapsed info
 	const std::vector<size_t> & lineStateVectorNew = newBuf->getHeaderLineState(this);

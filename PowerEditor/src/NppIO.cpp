@@ -2491,6 +2491,16 @@ void Notepad_plus::loadLastSession()
 	_isFolding = false;
 }
 
+// Pyre909 build: "Word wrap per document": the document's wrap saved in the session (none saved: the one it got when
+// opened), not a wrap for a large file whose wrap is turned off
+static void restoreSessionWrap(Buffer* buf, int wrapState)
+{
+	if ((wrapState > 0) && buf->isLargeFile() && NppParameters::getInstance().getNppGUI()._largeFileRestriction._deactivateWordWrap)
+		return;
+	if (wrapState >= 0)
+		buf->setWrapState(wrapState);
+}
+
 bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, const wchar_t* userCreatedSessionName)
 {
 	NppParameters& nppParam = NppParameters::getInstance();
@@ -2617,6 +2627,7 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, const wch
 				buf->setDirty(true);
 
 			buf->setRTL(session._mainViewFiles[i]._isRTL);
+			restoreSessionWrap(buf, session._mainViewFiles[i]._wrapState); // Pyre909 build
 			if (i == 0 && session._activeMainIndex == 0)
 				_mainEditView.changeTextDirection(buf->isRTL());
 
@@ -2759,6 +2770,7 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, const wch
 				buf->setDirty(true);
 
 			buf->setRTL(session._subViewFiles[k]._isRTL);
+			restoreSessionWrap(buf, session._subViewFiles[k]._wrapState); // Pyre909 build
 
 			_subDocTab.setIndividualTabColour(lastOpened, session._subViewFiles[k]._individualTabColour);
 
@@ -2791,6 +2803,17 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, const wch
 		_isFolding = true;
 		_subEditView.syncFoldStateWith(session._subViewFiles[subIndex2Update]._foldStates);
 		_isFolding = false;
+	}
+
+	// Pyre909 build: "Word wrap per document": the first document of each view was shown (in place of the empty one)
+	// before its wrap was read from the session
+	if (nppParam.getSVP()._wrapPerDocument)
+	{
+		for (ScintillaEditView* pView : { &_mainEditView, &_subEditView })
+		{
+			if (const int wrapState = pView->getCurrentBuffer()->getWrapState(); wrapState >= 0)
+				pView->execute(SCI_SETWRAPMODE, wrapState);
+		}
 	}
 
 	_mainEditView.restoreCurrentPosPreStep();

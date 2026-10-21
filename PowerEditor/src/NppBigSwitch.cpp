@@ -3988,6 +3988,41 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			return TRUE;
 		}
 
+		case NPPM_INTERNAL_WRAPPERDOCUMENT: // Pyre909 build: "Word wrap per document" turned on or off (Preferences > Editing 1)
+		{
+			const ScintillaViewParams& svp = nppParam.getSVP();
+			if (svp._wrapPerDocument)
+			{
+				// the documents shown keep their wrap, the others take the last choice (the wrap they had)
+				for (size_t i = 0; i < MainFileManager.getNbBuffers(); ++i)
+					MainFileManager.getBufferByIndex(i)->setWrapState(svp._doWrap ? SC_WRAP_WORD : SC_WRAP_NONE);
+				for (const ScintillaEditView* pView : { &_mainEditView, &_subEditView })
+					pView->getCurrentBuffer()->setWrapState(static_cast<int>(pView->execute(SCI_GETWRAPMODE)));
+				return TRUE;
+			}
+
+			// one wrap for all again: the last choice
+			for (ScintillaEditView* pView : { &_mainEditView, &_subEditView })
+			{
+				if (pView->isWrap() == svp._doWrap)
+					continue;
+				if (!svp._doWrap)
+				{
+					pView->saveCurrentPos();
+					pView->setWrapRestoreNeeded(true);
+				}
+				pView->wrap(svp._doWrap);
+			}
+			checkMenuItem(IDM_VIEW_WRAP, svp._doWrap);
+			_toolBar.setCheck(IDM_VIEW_WRAP, svp._doWrap);
+			if (_pDocMap)
+			{
+				_pDocMap->initWrapMap();
+				_pDocMap->wrapMap();
+			}
+			return TRUE;
+		}
+
 		case NPPM_INTERNAL_OPENLINKAT: // Pyre909 build: a Ctrl+click in an edit view (ScintillaEditView::ScintillaProc)
 		{
 			const auto hView = reinterpret_cast<HWND>(lParam);

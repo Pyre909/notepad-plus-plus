@@ -99,7 +99,7 @@ public :
 	}
 
 private :
-	std::vector<HWND> _tips; // Pyre909 build: of the Text Rendering combo boxes
+	std::vector<HWND> _tips; // Pyre909 build: of the Text Rendering controls and of the line wrap's "Per document"
 
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	void initScintParam();

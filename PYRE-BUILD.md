@@ -54,6 +54,9 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **The character after the caret in the status bar**: its Unicode code point after the position ("U+00E9",
   "U+1F600"), to tell look-alike or invisible characters apart, or the byte of an invalid UTF-8 sequence ("0xE9")
   (official issue #2056).
+- **Word wrap per document** (Preferences > Editing 1 > Line Wrap > "Per document", off by default): View > Word wrap
+  wraps the current document only, each document keeps its own wrap (also in the session), and one opened or created
+  takes the last choice (official issue #5232).
 - **Per-monitor DPI awareness** (Preferences > MISC., experimental, restart required).
 - **Font sizes 1 to 4 pt** in the font size lists.
 - **A crash guard** for DirectWrite fonts with an out-of-range weight (Scintilla bug #2520).

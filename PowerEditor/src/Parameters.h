@@ -143,6 +143,7 @@ struct sessionFileInfo : public Position
 	bool _isRTL = false;
 	bool _isPinned = false;
 	bool _isUntitledTabRenamed = false;
+	int _wrapState = -1; // Pyre909 build: the document's word wrap ("Word wrap per document"): 1, 0, -1 not saved
 	std::wstring _backupFilePath;
 	FILETIME _originalFileLastModifTimestamp {};
 
@@ -923,6 +924,7 @@ struct ScintillaViewParams
 	unsigned char _currentLineFrameWidth = 1; // 1-6 pixel
 	bool _wrapSymbolShow = false;
 	bool _doWrap = false;
+	bool _wrapPerDocument = false; // Pyre909 build: View > Word wrap for the current document only, each keeping its own (Buffer, session); _doWrap the last choice, for the documents opened
 	bool _isEdgeBgMode = false;
 
 	std::vector<size_t> _edgeMultiColumnPos;

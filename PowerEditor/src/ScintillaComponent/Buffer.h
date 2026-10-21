@@ -432,6 +432,11 @@ public:
 	bool isPinned() const { return _isPinned; }
 	void setPinned(bool isPinned) { _isPinned = isPinned; }
 
+	// Pyre909 build: the document's wrap mode with "Word wrap per document" (SC_WRAP_*: SC_WRAP_WORD 1 for View > Word wrap, a
+	// plugin's other mode kept; -1: opened while it was off, the last choice when shown)
+	int getWrapState() const { return _wrapState; }
+	void setWrapState(int wrapState) { _wrapState = wrapState; }
+
 private:
 	int indexOfReference(const ScintillaEditView * identifier) const;
 
@@ -522,5 +527,6 @@ private:
 	bool _isInaccessible = false;
 
 	bool _isRTL = false;
+	int _wrapState = -1; // Pyre909 build
 	bool _isPinned = false;
 };

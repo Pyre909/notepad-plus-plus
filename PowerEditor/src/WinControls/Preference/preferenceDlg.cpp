@@ -1795,6 +1795,7 @@ void EditingSubDlg::initScintParam()
 			id = IDC_RADIO_LWDEF;
 	}
 	::SendDlgItemMessage(_hSelf, id, BM_SETCHECK, TRUE, 0);
+	::SendDlgItemMessage(_hSelf, IDC_CHECK_WRAPPERDOCUMENT, BM_SETCHECK, svp._wrapPerDocument ? BST_CHECKED : BST_UNCHECKED, 0); // Pyre909 build
 
 	int lineHilite = 0;
 	switch (svp._currentLineHiliteMode)
@@ -1883,7 +1884,9 @@ void EditingSubDlg::initTextRenderingParam()
 		{ IDC_COMBO_LINESPACING, "lineSpacing-tip",
 			L"Extra space between the lines of the editor, split above and below the text. In pixels at 100% scale: more on high-DPI screens." },
 		{ IDC_CHECK_FONTLIGATURES, "fontLigatures-tip",
-			L"DirectWrite only. The ligatures of the font, such as the arrows and operators (-> != >=) of coding fonts like Cascadia Code or Fira Code. Unchecked: drawn as separate characters." }
+			L"DirectWrite only. The ligatures of the font, such as the arrows and operators (-> != >=) of coding fonts like Cascadia Code or Fira Code. Unchecked: drawn as separate characters." },
+		{ IDC_CHECK_WRAPPERDOCUMENT, "wrapPerDocument-tip",
+			L"View > Word wrap for the current document only: each document keeps its own wrap, also in the session. A document opened or created takes the last choice." }
 	};
 	NativeLangSpeaker* pNativeSpeaker = nppParam.getNativeLangSpeaker();
 	for (const ControlTip& controlTip : controlTips)
@@ -2227,6 +2230,11 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 				case IDC_RADIO_LWINDENT:
 					svp._lineWrapMethod = LINEWRAP_INDENT;
 					::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_LWINDENT, 0, 0);
+					return TRUE;
+
+				case IDC_CHECK_WRAPPERDOCUMENT: // Pyre909 build
+					svp._wrapPerDocument = isCheckedOrNot(IDC_CHECK_WRAPPERDOCUMENT);
+					::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_WRAPPERDOCUMENT, 0, 0);
 					return TRUE;
 
 				default :
