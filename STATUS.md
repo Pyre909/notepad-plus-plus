@@ -41,8 +41,9 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     `review/tests/pyre-dpi-scale.ps1` extended: `-Changes`, status bars, the Find dialog, black checks, `-Compare` builds,
     15% instead of 25%, which had let the toolbar pass). The Project Panel toolbar: comctl32 sizes text buttons no higher
     than for the DPI the toolbar was made at (31 pixels at 200% from 150%, text clipped), and the theme change Windows sends
-    after a DPI change puts its font and height back; fixed by a toolbar subclass (`97867d0`, local on the session branch,
-    13/13 checks with real changes: 31 -> 38 -> 31). #18462: only `9d99c31`'s `WM_THEMECHANGED` change fixes the black
+    after a DPI change puts its font and height back; fixed by a toolbar subclass (`97867d0`, in `pyre`
+    with `090f5ff` since 2026-10-21, CI 13/13 run 39523430910, the CI's GCC build also run locally; 13/13 checks with
+    real changes: 31 -> 38 -> 31). #18462: only `9d99c31`'s `WM_THEMECHANGED` change fixes the black
     (main window's) status bar, the Find dialog's PMv2 can come back: kit 11, a comment for Pyre909 to post. Known,
     left: below the start scale the status bars stay at least 28 pixels (comctl32 keeps them for the system DPI).
   - Tools added (2026-10-20): MSYS2 with MINGW64 GCC 16.2 and CLANG64 Clang 23.1 (the CI's MSYS2 jobs, run locally:
