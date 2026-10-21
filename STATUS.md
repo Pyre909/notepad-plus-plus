@@ -42,7 +42,7 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     15% instead of 25%, which had let the toolbar pass). The Project Panel toolbar: comctl32 sizes text buttons no higher
     than for the DPI the toolbar was made at (31 pixels at 200% from 150%, text clipped), and the theme change Windows sends
     after a DPI change puts its font and height back; fixed by a toolbar subclass (`97867d0`, in `pyre`
-    with `090f5ff` since 2026-10-21, CI 13/13 run 39523430910, the CI's GCC build also run locally; 13/13 checks with
+    with `090f5ff` since 2026-10-20, CI 13/13 run 39523430910, the CI's GCC build also run locally; 13/13 checks with
     real changes: 31 -> 38 -> 31). #18462: only `9d99c31`'s `WM_THEMECHANGED` change fixes the black
     (main window's) status bar, the Find dialog's PMv2 can come back: kit 11, a comment for Pyre909 to post. Known,
     left: below the start scale the status bars stay at least 28 pixels (comctl32 keeps them for the system DPI).
@@ -51,7 +51,7 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     PowerEditor\gcc\makefile`), Visual Studio's C++ Clang tools (`/p:PlatformToolset=ClangCL`), WinDbg (Time Travel
     Debugging), Sysinternals Suite (DebugView, Process Explorer, Handle, Process Monitor; the Store edition, as winget's zip
     hash was stale). Already there: Windows Performance Toolkit, Application Verifier, cdb.
-  - 2026-10-21: the toolbar fix folded into `per-monitor-dpi_20260925` (`cf6a333`, CI 13/13 run 39528881391);
+  - 2026-10-20: the toolbar fix folded into `per-monitor-dpi_20260925` (`cf6a333`, CI 13/13 run 39528881391);
     `setup-vm.ps1` installs the tools added on the VM and adds missing Visual Studio components to an existing install
     (`9618908`); upstream's `fc40460` (#18523, the Find dialog's replace checkboxes not moving on a resize, the reduced
     mode's hide lists) merged into `pyre` (`7e3ee6c`, CI 13/13 run 39528975956). Checked with a scratch script on the
@@ -59,9 +59,30 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     buttons), the reduced mode left 5 controls shown before, none after. The VM since its restart (Windows update to build
     26300): builds about 3 times slower, the layout cache test's Replace All between 19 and 66 s on the same build (its
     limit is 15 s): not the code (both builds' best run 19.4 s); check the VM's memory and CPUs in Parallels.
-  - Left: the DPI rework's other parts (the UDL undocked onto another monitor: needs a second display; upstream's helpers
-    instead of duplicates and of the global flag; the relaunch prompt, probably not needed as the setting says "restart
-    required"; the PR split in smaller ones, ~30% less), the plugin prototype. The Document List check by hand.
+  - The DPI rework (2026-10-20, evening): two read-only reviews of `per-monitor-dpi_20260925` (the split; the helpers),
+    checked against the code. With the option off the branch changes only the checkbox and one config.xml attribute:
+    most of it can't be run by reviewers before the switch exists, and its few real fixes were gated. Pyre909's choices:
+    ask the maintainers before splitting (the 27-step sequence goes into the #14959 comment, kit 4: to write), and fix the
+    sizes upstream's own per-monitor dialogs get, with the option off too.
+    - `pyre` `35c1b35` (16 files, +89 −142): `scaleFromSystemDpiForWindow` / `getSystemMetricsForWindow` take the
+      window's DPI (Preferences' "go to setting" tip keeps the flag: the main window's code makes it); the menu colour
+      bitmaps always cached (the GDI leak); `Progress::thread` takes its caller's awareness; `getDialogBaseUnits` uses
+      upstream's `getFontAvgAlphaWidth` and a new `getFontHeight`; `scaleLogFont` for `DialogDpiLayout` and Clipboard
+      History; `checkDpiChange` returns whether the DPI changed and `WM_DPICHANGED_AFTERPARENT` relayouts the panel once
+      (four panels' copies gone); `replaceWindowFont` for DockingCont's fonts and the search field's; the flag dropped
+      where the DPI compared is the window's own (kept in `checkDpiChange`: a panel's DPI isn't set while it's created);
+      Preferences' three tips of 260 scaled. Harness: 0 FAIL after a clean rebuild (an incremental one crashed at exit,
+      0xC0000374: stale objects after `functionListPanel.h`'s member type change; CLAUDE.md now says so), one popup-timing
+      flake that passed twice. Scale session (200 -> 100 -> 150%): every panel check passes, the Project toolbar 31 -> 38 ->
+      22 -> 31. Its Preferences tooltip check was wrong (Preferences opened at 150% first: closing only hides it): it now
+      creates Preferences after the first change only.
+    - New upstream bug-fix branches (kit 12, 13): `menu-colour-bitmaps_20261020` (`5903444`: +1,100 GDI objects per 100
+      colour updates before, 0 after; test `menu-colour-bitmaps`), `dpi-dialog-sizes_20261020` (`b759ee8`: the tooltip
+      widths and Shortcut Mapper's grid metrics in upstream's per-monitor dialogs; its evidence, Preferences created at
+      200%, to take in the next scale session, with the plugin prototype's).
+  - Left: kit 4's comment with the split sequence; the plugin prototype; the UDL undocked onto another monitor (needs a
+    second display); the relaunch prompt (probably not needed: the setting says "restart required"). The Document List
+    check by hand.
 - **The performance program (2026-10-20)**, asked by Pyre909: newer toolsets, refactoring, performance "in
   sections/parts", every language feature that helps, Windows 11 polish. Their choices: upstream code changed only where
   a measurement shows a gain (small marked patches), Windows 10 1809 minimum, C++23 everywhere, Windows 11 polish (not a

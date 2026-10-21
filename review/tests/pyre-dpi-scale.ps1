@@ -13,8 +13,12 @@
 # - At the start and after each change, the main window's status bar and the Find dialog's aren't mostly black (upstream's
 #   #18462: with the Find dialog per-monitor aware, its status bar turned black after a scale change in light mode):
 #   Notepad++ is brought to the front, each bar copied from the screen (PNG in the settings folder), black pixels counted.
-# - -Compare <exe>,...: other builds (official, upstream) started alongside, maximized, with the Find dialog open, for the
-#   status bar check only (INFO lines, not checks).
+# - After the first change, Preferences opened in each build (and closed), created there for the first time: its tooltips'
+#   maximum width, 200 or 260 pixels of the system DPI, is scaled for the dialog's DPI (upstream creates Preferences
+#   per-monitor aware even with the option off; before pyre's DPI helper fix of 2026-10-20 the widths stayed 200 and 260
+#   there). Only then: closing Preferences hides it, and tips already made keep their widths when the DPI changes.
+# - -Compare <exe>,...: other builds (official, upstream, a build with the option off) started alongside, maximized, with
+#   the Find dialog open, for the status bar and tooltip checks only (INFO lines, not checks).
 # - The process stays alive and responsive; its GDI objects are reported (fonts and image lists replaced, not added).
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
 param([Parameter(Mandatory)] [string] $Exe, [switch] $WaitForScaleChange, [ValidateRange(2, 20)] [int] $Changes = 2,
@@ -39,6 +43,9 @@ public static class DS {
 	[DllImport("user32.dll")] public static extern IntPtr SendMessageTimeout(IntPtr h, uint m, IntPtr w, IntPtr l, uint flags, uint timeout, out IntPtr result);
 	[DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
 	[DllImport("user32.dll")] public static extern IntPtr GetParent(IntPtr h);
+	[DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr h, uint cmd);
+	[DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr h, uint flags);
+	[DllImport("user32.dll")] public static extern uint GetDpiForSystem();
 	[DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
 	[DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
 	[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
@@ -166,6 +173,30 @@ function Test-StatusBars([string] $tag) {
 		}
 	}
 }
+# Preferences opened in each build: its tooltips' maximum width (TTM_GETMAXTIPWIDTH) against 200 scaled from the system
+# DPI to the dialog's; then closed
+function Test-PreferencesTips([string] $tag) {
+	foreach ($npp in $script:npps) {
+		if ($npp.Process.HasExited) { continue }
+		[void][DS]::PostMessage($npp.Main, $WM_COMMAND, [IntPtr]48011, [IntPtr]::Zero)   # IDM_SETTING_PREFERENCE
+		$pref = $null
+		for ($i = 0; $i -lt 50 -and -not $pref; $i++) {
+			Start-Sleep -Milliseconds 100
+			$pref = @(Get-TopWindows $npp.Process.Id | Where-Object { (Get-Cls $_) -eq '#32770' -and (Get-Txt $_) -eq 'Preferences' -and [DS]::IsWindowVisible($_) }) | Select-Object -First 1
+		}
+		if (-not $pref) { Info "${tag}: $($npp.Label): Preferences not found"; continue }
+		Start-Sleep -Milliseconds 500
+		$tips = @(Get-TopWindows $npp.Process.Id | Where-Object { (Get-Cls $_) -eq 'tooltips_class32' -and [DS]::GetAncestor([DS]::GetWindow($_, 4), 2) -eq $pref })   # GW_OWNER, GA_ROOT
+		$widths = @($tips | ForEach-Object { [int](Send $_ 0x0419) } | Where-Object { $_ -gt 0 } | Sort-Object -Unique)   # TTM_GETMAXTIPWIDTH
+		# createToolTip's 200 and Preferences' 260 (a few tips), in pixels of the system DPI
+		$dpi = [DS]::GetDpiForWindow($pref); $expected = @(200, 260 | ForEach-Object { [math]::Round($_ * $dpi / [DS]::GetDpiForSystem()) })
+		$detail = "Preferences at DPI $dpi, $($tips.Count) tooltips, maximum widths $($widths -join ', '); expected $($expected -join ' or ')"
+		$off = @($widths | Where-Object { $w = $_; -not @($expected | Where-Object { [math]::Abs($w - $_) -le 1 }) })
+		if ($npp.IsUnderTest) { Check "${tag}: Preferences' tooltips as wide as for the dialog's DPI" ($widths.Count -gt 0 -and $off.Count -eq 0) $detail }
+		else { Info "${tag}: $($npp.Label): $detail" }
+		[void][DS]::PostMessage($pref, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero); Start-Sleep -Milliseconds 400
+	}
+}
 function Wait-Dpi([scriptblock] $done, [string] $what) {
 	$deadline = (Get-Date).AddMinutes($TimeoutMinutes)
 	while ((Get-Date) -lt $deadline) {
@@ -236,6 +267,7 @@ try {
 		}
 		Info ("  at DPI ${dpi}: " + (($now.Keys | ForEach-Object { '{0} = {1}' -f $_, $now[$_] }) -join '; '))
 		Test-StatusBars $tag
+		if ($i -eq 1) { Test-PreferencesTips $tag }   # Preferences created at the new DPI
 		Info "GDI objects at DPI ${dpi}: $(Gdi) (at start $gdi1)"
 		$current = $dpi
 		if (-not $isLast) { Write-Host '  (measured: switch back to Settings)' }

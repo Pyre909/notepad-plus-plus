@@ -17,6 +17,8 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 9 | `function-list-caret_20261020` | `398b2c2` | 2 | none | Function List caret tracking: a binary search, not a walk of the tree per caret move | no: bug fix (issue to open first) |
 | 10 | `doclist-column-width_20261020` | `20f0a90` | 1 | none | Document List column widths stored for 96 DPI, as they are read | no: bug fix (check by hand, then issue) |
 | 11 | none | – | – | – | Comment: the Find dialog's black status bar was the swallowed `WM_THEMECHANGED`, so its PMv2 can come back | no: a comment on #18455 or #18462 |
+| 12 | `menu-colour-bitmaps_20261020` | `5903444` | 2 | none | The main menu's colour samples cached, not leaked (11 GDI objects per colour change) | no: bug fix (issue to open first) |
+| 13 | `dpi-dialog-sizes_20261020` | `b759ee8` | 5 | none | Tooltip widths and Shortcut Mapper's grid metrics for the DPI of upstream's per-monitor dialogs | no: bug fix (issue to open first) |
 
 Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs, `9f605be`, 2026-10-06; 6, 7 and 8: 13/13, 2026-10-06). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
 
@@ -243,7 +245,7 @@ writes it 32 times out of 33. The independent AI review of `pyre`'s merge (2026-
 the same upstream; its open point is disclosed in the PR body. CI of `8a455e0`: all 13 jobs pass (run 37655731626,
 2026-10-07). A real DPI change (2026-10-20, `pyre`'s same code, the Windows scale 150% -> 100% -> 150%,
 `review/tests/pyre-dpi-scale.ps1`): every panel follows, but the Project Panel's text-button toolbar keeps its 100% height
-back at 150% (STATUS, section 2). Cause and fix (2026-10-20, `pyre` `97867d0`; folded into this branch's commit on 2026-10-21, `cf6a333`, CI 13/13 run
+back at 150% (STATUS, section 2). Cause and fix (2026-10-20, `pyre` `97867d0`; folded into this branch's commit on 2026-10-20, `cf6a333`, CI 13/13 run
 39528881391, harness 0 FAIL, its 5 WARN the branch's known ones):
 comctl32 sizes text buttons no higher than for the DPI the toolbar was made at (31 pixels at 200% from 150%: text clipped),
 and the theme change Windows sends after a DPI change puts its own font and height back; a subclass of the toolbar fits
@@ -942,6 +944,137 @@ Current master with the two setThreadDpiAwarenessContext lines in FindReplaceDlg
 So it should be safe to turn PMv2 back on for the Find dialog. I didn't try putting the WM_GETDPISCALEDSIZE handler back.
 
 Windows 11 ARM64 (VM), one monitor, Release ARM64 builds. AI disclosure: an AI assistant (Claude) helped me set up the test builds and the measuring script; the scale changes were done by hand.
+```
+
+## 12. Main menu colour samples: GDI leak (bug fix)
+
+Branch `menu-colour-bitmaps_20261020`, one commit (`5903444`) on upstream `master` `fc40460`, 2 files, +28 −16. Found on
+2026-10-20 by the review of `per-monitor-dpi_20260925` (which had the cache, but only with its option on); `pyre` has it
+ungated since the same day.
+
+What happens: `Notepad_plus::setupColorSampleBitmapsOnMainMenuItems` makes 11 new bitmaps each time it runs (the colour
+samples of Search > Jump Up / Jump Down and the Mark Style items, and View > Tab > Apply Color) and never deletes the
+previous ones: they can't simply be deleted, because `ContextMenu` copies the main menu's check mark bitmaps into the
+context menus. It runs at each Style Configurator change of a Mark Style or tab colour (`getApplicationInfo`:
+`COLOR_CHANGE_4_MENU`), and on Cancel after changes. The fix caches them by colour (one bitmap per colour, deleted in
+`~Notepad_plus`).
+
+Tested (ARM64 Release on the VM, the tooling branch's `review/tests/menu-colour-bitmaps.ps1`: `WM_UPDATEMAINMENUBITMAPS`
+sent 100 times, as the Style Configurator does): before, 1,100 GDI objects more and 11 new bitmaps; with the fix, none,
+and every item keeps the same bitmap.
+
+Before opening: CI on the fork (all 13 jobs); Pyre909 opens the issue, then the PR with `fix #<issue>`.
+
+### Issue — title
+`GDI objects leak each time a Mark Style or tab colour is changed in the Style Configurator`
+
+### Issue — body
+```
+### Description of the Issue
+Every time a Mark Style colour or a tab colour is applied in the Style Configurator (and on Cancel after changing colours), Notepad++ creates 11 new bitmaps for the colour samples in the main menu (Search > Jump Up/Jump Down, the Mark Style items, View > Tab > Apply Color) and never deletes the old ones. So the GDI object count only goes up: I measured +1,100 GDI objects after 100 updates.
+
+Looking at the code: Notepad_plus::setupColorSampleBitmapsOnMainMenuItems() calls generateSolidColourMenuItemIcon() for each item each time and replaces the item's bitmap with SetMenuItemBitmaps, but the old bitmap is never freed (and can't just be freed there, since ContextMenu copies the main menu's check mark bitmaps).
+
+### Steps To Reproduce
+1. Open Task Manager > Details and add the "GDI objects" column.
+2. In Notepad++, Settings > Style Configurator > Global Styles > Mark Style 1.
+3. Change its background colour and click Save & Close (or just change it a few times).
+4. Watch the GDI objects of notepad++.exe.
+
+### Current Behavior
++11 GDI objects per colour change, never released.
+
+### Expected Behavior
+No growth.
+
+### Debug Information
+(paste Help > Debug Info)
+```
+
+### PR — title
+`Fix GDI leak of the main menu's colour samples`
+
+### PR — body
+```
+setupColorSampleBitmapsOnMainMenuItems() made 11 new bitmaps each time it ran (each Mark Style or tab colour change in the Style Configurator, and its Cancel) and never deleted the old ones. They can't just be deleted when replaced, since ContextMenu copies the main menu's check mark bitmaps into the context menus.
+
+Now they're cached by colour (one bitmap per colour) and deleted when Notepad++ ends. 2 files, +28 −16.
+
+Tested on Windows 11 ARM64 with Release builds: WM_UPDATEMAINMENUBITMAPS sent 100 times (what the Style Configurator sends): before, +1,100 GDI objects and 11 new bitmaps each time; after, no growth and the same bitmaps. All 13 CI jobs pass on my fork.
+
+AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+
+- [x] I have read contributing guidelines
+
+fix #<issue>
+```
+
+## 13. Legacy pixel sizes in per-monitor DPI aware dialogs (bug fix)
+
+Branch `dpi-dialog-sizes_20261020`, one commit (`b759ee8`) on upstream `master` `fc40460`, 5 files, +25 −7. Found on
+2026-10-20 by the review of `per-monitor-dpi_20260925` (which scaled these only with its option on); `pyre` has it
+since the same day.
+
+What happens: upstream creates Preferences, the Style Configurator, Shortcut Mapper, the About dialogs and others
+per-monitor DPI aware, but some sizes inside them are fixed pixels of the system DPI: the tooltips' maximum width
+(`createToolTip` / `createToolTipRect`: 200; three Preferences tips: 260) and Shortcut Mapper's grid (`SM_CYEDGE`,
+`SM_CYHSCROLL` from `GetSystemMetrics`, used to count its visible rows). On a monitor whose DPI isn't the system DPI
+(another monitor, or the scale changed since signing in), they're too small or too big. The fix adds
+`DPIManagerV2::scaleFromSystemDpiForWindow` and `getSystemMetricsForWindow` (the window's DPI; in a window that isn't
+per-monitor aware, whose DPI is the system DPI, both give what they replace, also before Windows 10 1607) and uses them
+there. Not changed: `ControlInfoTip` (Preferences' "go to setting" tip), which the main window's code creates, so it's
+system aware. Not covered: a dialog already created that then moves to another DPI keeps its tooltips' widths (closing
+Preferences only hides it); upstream's `WM_DPICHANGED` handlers don't touch tooltips. A possible follow-up (a helper
+rescaling a dialog's tooltips), left out to keep this small.
+
+Tested: (to do in a scale session: Preferences created for the first time at 200% on a 150% system, its tooltips'
+maximum widths; the first session of 2026-10-20 opened it at 150% first, so it only showed the case above.)
+
+Before opening: CI on the fork (all 13 jobs); Pyre909 opens the issue, then the PR with `fix #<issue>`.
+
+### Issue — title
+`Tooltips in Preferences wrap at the wrong width after a display scale change`
+
+### Issue — body
+```
+### Description of the Issue
+Preferences (and the Style Configurator, Shortcut Mapper...) are per-monitor DPI aware, but some sizes inside them are still fixed pixels of the system DPI. The visible one: the tooltips' maximum width (200 px in createToolTip, 260 px for a few Preferences tips) isn't scaled, so after changing the display scale (without signing out), or on a second monitor with another scale, the tips wrap too narrow or too wide. (numbers from the test: at 200% on a 150% system, 200 px where 267 is right)
+
+Same thing for Shortcut Mapper's grid, which counts its visible rows with GetSystemMetrics(SM_CYEDGE / SM_CYHSCROLL), i.e. the system DPI's values.
+
+### Steps To Reproduce
+1. Sign in at 150% display scale.
+2. Change the scale to 200% (Settings > System > Display), don't sign out.
+3. Open Notepad++ > Settings > Preferences and hover a (?) help icon.
+
+### Current Behavior
+The tooltip wraps at 200 px (the 150% size), so it's narrow and tall.
+
+### Expected Behavior
+It wraps at the same width relative to the text as at 150%.
+
+### Debug Information
+(paste Help > Debug Info)
+```
+
+### PR — title
+`Scale legacy pixel sizes in per-monitor DPI aware dialogs`
+
+### PR — body
+```
+Preferences, the Style Configurator, Shortcut Mapper and others are created per-monitor DPI aware, but a few sizes inside them are fixed pixels of the system DPI: the tooltips' max width (createToolTip / createToolTipRect 200, three Preferences tips 260) and Shortcut Mapper's grid (SM_CYEDGE and SM_CYHSCROLL from GetSystemMetrics). On a monitor whose DPI isn't the system DPI they come out wrong.
+
+Two small helpers in DPIManagerV2: scaleFromSystemDpiForWindow (a system-DPI size for the window's DPI) and getSystemMetricsForWindow (the metric for the window's DPI). In a window that isn't per-monitor aware (its DPI is the system DPI) they return exactly what they replace, also on Windows before 10 1607. 5 files, +25 −7.
+
+This fixes the sizes a dialog gets when it's created; tooltips of a dialog that's already open (or hidden, like Preferences after closing) keep their width if it moves to another DPI, same as today. That could be a follow-up if you want it.
+
+Tested on Windows 11 ARM64 with Release builds: (numbers). All 13 CI jobs pass on my fork.
+
+AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+
+- [x] I have read contributing guidelines
+
+fix #<issue>
 ```
 
 ---
