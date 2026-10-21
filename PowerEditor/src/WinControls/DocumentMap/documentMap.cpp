@@ -185,14 +185,11 @@ void DocumentMap::wrapMap(const ScintillaEditView *editView)
 		// compute doc map width: dzw/ezw = 1/zoomRatio
 		double docMapWidth = editZoneWidth / zr;
 
-		// a floating map can have another DPI than the edit view, the texts of both are scaled for their DPI
-		if (DPIManagerV2::isPerMonitorV2Active())
-		{
-			const UINT mapDpi = DPIManagerV2::getDpiForWindow(_pMapView->getHSelf());
-			const UINT editDpi = DPIManagerV2::getDpiForWindow(pEditView->getHSelf());
-			if ((mapDpi != editDpi) && (editDpi != 0))
-				docMapWidth = docMapWidth * mapDpi / editDpi;
-		}
+		// a floating map can have another DPI than the edit view (per-monitor DPI awareness), the texts of both are scaled for their DPI
+		const UINT mapDpi = DPIManagerV2::getDpiForWindow(_pMapView->getHSelf());
+		const UINT editDpi = DPIManagerV2::getDpiForWindow(pEditView->getHSelf());
+		if (mapDpi != editDpi)
+			docMapWidth = docMapWidth * mapDpi / editDpi;
 
 		::MoveWindow(_pMapView->getHSelf(), 0, 0, int(docMapWidth), rect.bottom-rect.top, TRUE);
 		_pMapView->wrap(true);

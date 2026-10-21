@@ -1323,22 +1323,10 @@ intptr_t CALLBACK DockingCont::run_dlgProc(UINT Message, WPARAM wParam, LPARAM l
 			TabCtrl_SetPadding(_hContTab, tabDpiPadding / 2, 0);
 			TabCtrl_SetItemSize(_hContTab, 2 * tabDpiPadding, tabDpiPadding);
 
-			HFONT hPrevFont = _hFont;
-			HFONT hPrevFontCaption = _hFontCaption;
-
-			LOGFONT lfTab{ _dpiManager.getDefaultGUIFontForDpi() };
-			_hFont = ::CreateFontIndirect(&lfTab);
-
-			LOGFONT lfCaption{ _dpiManager.getDefaultGUIFontForDpi(DPIManagerV2::FontType::smcaption) };
-			_hFontCaption = ::CreateFontIndirect(&lfCaption);
-
-			// the tab control sizes the tabs with its font, the texts are cut otherwise when the DPI increases
-			::SendMessage(_hContTab, WM_SETFONT, reinterpret_cast<WPARAM>(_hFont), TRUE);
-
-			if (hPrevFont != nullptr)
-				::DeleteObject(hPrevFont);
-			if (hPrevFontCaption != nullptr)
-				::DeleteObject(hPrevFontCaption);
+			// the tab control sizes the tabs with its font, the texts are cut otherwise when the DPI increases; the caption
+			// is drawn with _hFontCaption
+			DPIManagerV2::replaceWindowFont(_hContTab, _dpiManager.getDefaultGUIFontForDpi(), _hFont);
+			DPIManagerV2::replaceWindowFont(_hCaption, _dpiManager.getDefaultGUIFontForDpi(DPIManagerV2::FontType::smcaption), _hFontCaption);
 
 			if (Message == WM_DPICHANGED)
 			{

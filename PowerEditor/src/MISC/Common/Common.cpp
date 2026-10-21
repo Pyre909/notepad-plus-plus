@@ -2365,6 +2365,13 @@ bool isCoreWindows()
 	return isCoreWindows;
 }
 
+// The tip is created by the code of the main window (Preferences' "go to setting"), with its DPI awareness: x in pixels
+// of the system DPI unless that is per-monitor, though the control is in a per-monitor DPI aware dialog
+static int scaleForInfoTip(int x, HWND hCtrl)
+{
+	return DPIManagerV2::isPerMonitorV2Active() ? DPIManagerV2::scaleFromSystemDpiForWindow(x, hCtrl) : x;
+}
+
 bool ControlInfoTip::init(HINSTANCE hInst, HWND ctrl2attached, HWND ctrl2attachedParent, const wstring& tipStr, bool isRTL, unsigned int remainTimeMillisecond /* = 0 */, int maxWidth /* = 200 */)
 {
 	_hWndInfoTip = CreateWindowEx(isRTL ? WS_EX_LAYOUTRTL : 0, TOOLTIPS_CLASS, NULL,
@@ -2391,7 +2398,7 @@ bool ControlInfoTip::init(HINSTANCE hInst, HWND ctrl2attached, HWND ctrl2attache
 	}
 
 	// maxWidth is in pixels of the system DPI
-	SendMessage(_hWndInfoTip, TTM_SETMAXTIPWIDTH, 0, DPIManagerV2::scaleFromSystemDpiForWindow(maxWidth, ctrl2attachedParent));
+	SendMessage(_hWndInfoTip, TTM_SETMAXTIPWIDTH, 0, scaleForInfoTip(maxWidth, ctrl2attachedParent));
 	SendMessage(_hWndInfoTip, TTM_ACTIVATE, TRUE, 0);
 
 	if (remainTimeMillisecond)
@@ -2411,7 +2418,7 @@ void ControlInfoTip::show(showPosition pos) const
 
 	// offsets in pixels of the system DPI
 	const HWND hCtrl = reinterpret_cast<HWND>(_toolInfo.uId);
-	const int xOffset = DPIManagerV2::scaleFromSystemDpiForWindow(15, hCtrl);
+	const int xOffset = scaleForInfoTip(15, hCtrl);
 
 	if (pos == beginning)
 		xPos = rcComboBox.left + xOffset;
@@ -2420,7 +2427,7 @@ void ControlInfoTip::show(showPosition pos) const
 	else // (pos == end)
 		xPos = rcComboBox.left + (rcComboBox.right - rcComboBox.left) - xOffset;
 
-	int yPos = rcComboBox.top + DPIManagerV2::scaleFromSystemDpiForWindow(25, hCtrl);
+	int yPos = rcComboBox.top + scaleForInfoTip(25, hCtrl);
 
 	SendMessage(_hWndInfoTip, TTM_TRACKPOSITION, 0, MAKELPARAM(xPos, yPos));
 	::SendMessage(_hWndInfoTip, TTM_TRACKACTIVATE, TRUE, reinterpret_cast<LPARAM>(&_toolInfo));

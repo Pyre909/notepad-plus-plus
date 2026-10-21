@@ -60,7 +60,7 @@ public:
 		return getSystemMetricsForDpi(nIndex, _dpi);
 	}
 
-	// the metric for the DPI of hWnd with the per-monitor DPI awareness, ::GetSystemMetrics() otherwise
+	// the metric for the DPI of hWnd: right in a per-monitor DPI aware dialog too, also when the option is off
 	static int getSystemMetricsForWindow(int nIndex, HWND hWnd);
 
 	[[nodiscard]] static bool isValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT value);
@@ -132,9 +132,9 @@ public:
 		return scale(x, dpi, getDpiForSystem());
 	}
 
-	// x unchanged without the per-monitor DPI awareness (even in a per-monitor DPI aware dialog)
+	// for the DPI of hWnd: x unchanged in a window that isn't per-monitor DPI aware (its DPI is the system DPI)
 	static int scaleFromSystemDpiForWindow(int x, HWND hWnd) {
-		return isPerMonitorV2Active() ? scaleFromSystemDpi(x, getDpiForWindow(hWnd)) : x;
+		return scaleFromSystemDpi(x, getDpiForWindow(hWnd));
 	}
 
 	int scale(int x) const {
@@ -184,8 +184,13 @@ public:
 	}
 	// a control just created: its default font is for the system DPI
 	static void initIconTitleFont(HWND hWnd, UINT dpi, UniqueFont& font) {
-		if (isPerMonitorV2Active() && (dpi != getDpiForSystem()))
+		if (dpi != getDpiForSystem())
 			setIconTitleFont(hWnd, dpi, font);
+	}
+	// a font of the same point size for toDpi, rounded as the dialog manager does for a dialog template's font
+	static void scaleLogFont(LOGFONT& lf, UINT toDpi, UINT fromDpi) {
+		lf.lfHeight = (lf.lfHeight < 0) ? scaleFont(scale(-lf.lfHeight, 72, fromDpi), toDpi) : scale(lf.lfHeight, toDpi, fromDpi);
+		lf.lfWidth = scale(lf.lfWidth, toDpi, fromDpi);
 	}
 
 	static void loadIcon(HINSTANCE hinst, const wchar_t* pszName, int cx, int cy, HICON* phico, UINT fuLoad = LR_DEFAULTCOLOR);
@@ -203,6 +208,7 @@ public:
 	}
 
 	[[nodiscard]] static int getFontAdjustedHeight(HWND hWnd, HFONT hFont) noexcept;
+	[[nodiscard]] static int getFontHeight(HWND hWnd, HFONT hFont) noexcept; // tmHeight
 	[[nodiscard]] static int getFontAvgAlphaWidth(HWND hWnd, HFONT hFont) noexcept;
 	[[nodiscard]] static int getFontDigitWidth(HWND hWnd, HFONT hFont) noexcept;
 

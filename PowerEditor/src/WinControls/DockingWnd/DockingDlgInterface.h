@@ -108,16 +108,20 @@ protected :
 	// the panel rescales its fonts, images... for its new DPI (_dpiManager), its container relayouts it
 	virtual void onDpiChanged([[maybe_unused]] UINT prevDpi) {}
 
-	// with the per-monitor DPI awareness, calls onDpiChanged() if the DPI of the panel has changed
-	// (also docked in a container of another DPI, or resized before WM_DPICHANGED_AFTERPARENT)
-	void checkDpiChange() {
+	// with the per-monitor DPI awareness, calls onDpiChanged() if the DPI of the panel has changed (also docked in a
+	// container of another DPI, or resized before WM_DPICHANGED_AFTERPARENT); without it, the DPI the panel has while
+	// it's created (before StaticDialog::create sets it) isn't a change
+	bool checkDpiChange() {
 		if (!DPIManagerV2::isPerMonitorV2Active())
-			return;
+			return false;
 
 		const UINT prevDpi = _dpiManager.getDpi();
 		setDpi();
-		if (_dpiManager.getDpi() != prevDpi)
-			onDpiChanged(prevDpi);
+		if (_dpiManager.getDpi() == prevDpi)
+			return false;
+
+		onDpiChanged(prevDpi);
+		return true;
 	}
 
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override {
@@ -125,7 +129,13 @@ protected :
 		{
 			case WM_DPICHANGED_AFTERPARENT:
 			{
-				checkDpiChange();
+				// the panel laid out again for its new fonts and toolbar heights (it isn't always resized)
+				if (checkDpiChange())
+				{
+					RECT rc{};
+					getClientRect(rc);
+					::SendMessage(_hSelf, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rc.right - rc.left, rc.bottom - rc.top));
+				}
 				break;
 			}
 

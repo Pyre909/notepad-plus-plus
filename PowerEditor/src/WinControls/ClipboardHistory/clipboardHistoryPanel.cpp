@@ -371,10 +371,9 @@ void ClipboardHistoryPanel::onDpiChanged(UINT prevDpi)
 	{
 		const UINT dpi = _dpiManager.getDpi();
 
-		// the font of the items drawn by drawItem()
+		// the font of the items drawn by drawItem() (the dialog's font, scaled as the dialog manager does)
 		LOGFONT lf{ _lfOriginal };
-		lf.lfHeight = DPIManagerV2::scale(_lfOriginal.lfHeight, dpi, _dpiOriginal);
-		lf.lfWidth = DPIManagerV2::scale(_lfOriginal.lfWidth, dpi, _dpiOriginal);
+		DPIManagerV2::scaleLogFont(lf, dpi, _dpiOriginal);
 		DPIManagerV2::replaceWindowFont(hList, lf, _hFontDpi);
 
 		// owner drawn items of fixed height: their height doesn't follow the font

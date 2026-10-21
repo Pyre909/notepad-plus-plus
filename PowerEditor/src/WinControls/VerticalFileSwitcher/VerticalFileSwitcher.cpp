@@ -294,7 +294,7 @@ intptr_t CALLBACK VerticalFileSwitcher::run_dlgProc(UINT message, WPARAM wParam,
 			_fileListView.init(_hInst, _hSelf, _hImaLst);
 
 			// the default font of the list view is for the system DPI
-			if (DPIManagerV2::isPerMonitorV2Active() && (_dpiManager.getDpi() != DPIManagerV2::getDpiForSystem()))
+			if (_dpiManager.getDpi() != DPIManagerV2::getDpiForSystem())
 			{
 				_fileListView.rescaleForDpi(_dpiManager.getDpi(), getFileStateIconsForDpi(_dpiManager.getDpi()));
 			}
@@ -735,11 +735,6 @@ void VerticalFileSwitcher::onDpiChanged(UINT /*prevDpi*/)
 	{
 		::ImageList_Destroy(hImaLstOld); // no longer used by the list
 	}
-
-	// the column widths are stored for 96 DPI (the relayout of the panel will do it again with its new size)
-	RECT rc{};
-	getClientRect(rc);
-	_fileListView.resizeColumns(rc.right - rc.left);
 }
 
 // the tab bar's file state icons if they have the size for dpi, otherwise own icons of the same set

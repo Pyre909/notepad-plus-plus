@@ -35,11 +35,9 @@ int DPIManagerV2::getSystemMetricsForDpi(int nIndex, UINT dpi)
 
 int DPIManagerV2::getSystemMetricsForWindow(int nIndex, HWND hWnd)
 {
-	if (_isPerMonitorV2Active) // the metrics for the window's monitor; otherwise those Windows scales for the process
-	{
-		return getSystemMetricsForDpi(nIndex, DPIManagerV2::getDpiForWindow(hWnd));
-	}
-	return ::GetSystemMetrics(nIndex);
+	// a window that isn't per-monitor DPI aware has the system DPI: the metrics Windows scales for the process
+	const UINT dpi = getDpiForWindow(hWnd);
+	return (dpi == getDpiForSystem()) ? ::GetSystemMetrics(nIndex) : getSystemMetricsForDpi(nIndex, dpi);
 }
 
 bool DPIManagerV2::isValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT value)
@@ -214,7 +212,7 @@ DWORD DPIManagerV2::getTextScaleFactor()
 	return defaultVal;
 }
 
-int DPIManagerV2::getFontAdjustedHeight(HWND hWnd, HFONT hFont) noexcept
+static TEXTMETRIC getFontMetrics(HWND hWnd, HFONT hFont)
 {
 	HDC hdc = ::GetDC(hWnd);
 	auto hOldFont = ::SelectObject(hdc, hFont);
@@ -225,7 +223,18 @@ int DPIManagerV2::getFontAdjustedHeight(HWND hWnd, HFONT hFont) noexcept
 	::SelectObject(hdc, hOldFont);
 	::ReleaseDC(hWnd, hdc);
 
+	return tm;
+}
+
+int DPIManagerV2::getFontAdjustedHeight(HWND hWnd, HFONT hFont) noexcept
+{
+	const TEXTMETRIC tm = getFontMetrics(hWnd, hFont);
 	return tm.tmHeight + tm.tmExternalLeading + 4;
+}
+
+int DPIManagerV2::getFontHeight(HWND hWnd, HFONT hFont) noexcept
+{
+	return getFontMetrics(hWnd, hFont).tmHeight;
 }
 
 static int getFontAvgWidth(HWND hWnd, HFONT hFont, std::wstring_view str)

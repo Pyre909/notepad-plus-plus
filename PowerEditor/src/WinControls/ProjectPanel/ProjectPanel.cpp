@@ -234,15 +234,9 @@ std::vector<int> ProjectPanel::getTreeImageIds()
 // them no higher than for the DPI the toolbar was created at (a toolbar made at 150% clipped the text at 200%)
 static void fitToolbarButtonsToFont(HWND hToolbar)
 {
-	HDC hdc = ::GetDC(hToolbar);
-	const HGDIOBJ hOldFont = ::SelectObject(hdc, reinterpret_cast<HFONT>(::SendMessage(hToolbar, WM_GETFONT, 0, 0)));
-	TEXTMETRIC tm{};
-	::GetTextMetrics(hdc, &tm);
-	::SelectObject(hdc, hOldFont);
-	::ReleaseDC(hToolbar, hdc);
-
+	const int textHeight = DPIManagerV2::getFontHeight(hToolbar, reinterpret_cast<HFONT>(::SendMessage(hToolbar, WM_GETFONT, 0, 0)));
 	const auto padding = static_cast<DWORD>(::SendMessage(hToolbar, TB_GETPADDING, 0, 0));
-	::SendMessage(hToolbar, TB_SETBUTTONSIZE, 0, MAKELPARAM(0, tm.tmHeight + HIWORD(padding)));
+	::SendMessage(hToolbar, TB_SETBUTTONSIZE, 0, MAKELPARAM(0, textHeight + HIWORD(padding)));
 }
 
 // The toolbar's buttons fitted to each new font (per-monitor DPI awareness), and the panel's font set again after a theme
@@ -287,11 +281,6 @@ void ProjectPanel::onDpiChanged(UINT prevDpi)
 
 	// tree: font, item height, images, indent
 	_treeView.rescaleForDpi(dpi, prevDpi, getTreeImageIds());
-
-	// layout for the new toolbar height (the panel isn't always resized after the DPI change)
-	RECT rc{};
-	getClientRect(rc);
-	::SendMessage(_hSelf, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rc.right - rc.left, rc.bottom - rc.top));
 }
 
 bool ProjectPanel::checkIfNeedSave()

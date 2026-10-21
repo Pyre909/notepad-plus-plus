@@ -6991,9 +6991,8 @@ DWORD WINAPI Progress::threadFunc(LPVOID data)
 
 int Progress::thread()
 {
-	// the window is scaled for the DPI of the caller window: like the GUI thread, otherwise it would be scaled twice
-	if (DPIManagerV2::isPerMonitorV2Active())
-		DPIManagerV2::setThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+	// the window is scaled for the DPI of the caller window: with its DPI awareness, otherwise it would be scaled twice
+	DPIManagerV2::setThreadDpiAwarenessContext(DPIManagerV2::getWindowDpiAwarenessContext(_hCallerWnd));
 
 	BOOL r = createProgressWindow();
 	::SetEvent(_hActiveState);

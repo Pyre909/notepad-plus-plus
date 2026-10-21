@@ -107,7 +107,7 @@ protected:
 private:
 	HWND _hToolbarMenu = nullptr;
 	HWND _hSearchEdit = nullptr;
-	HFONT _hFontSearchEdit = nullptr;
+	UniqueFont _hFontSearchEdit;
 	std::vector<HIMAGELIST> _iconListVector;
 
 	TreeView *_pTreeView = nullptr;

@@ -395,11 +395,6 @@ void FileBrowser::onDpiChanged(UINT prevDpi)
 
 	// tree: font, item height, images, indent
 	_treeView.rescaleForDpi(_dpiManager.getDpi(), prevDpi, getTreeImageIds());
-
-	// layout for the new toolbar height (the panel isn't always resized after the DPI change)
-	RECT rc{};
-	getClientRect(rc);
-	::SendMessage(_hSelf, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rc.right - rc.left, rc.bottom - rc.top));
 }
 
 void FileBrowser::initPopupMenus()

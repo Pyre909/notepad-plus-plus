@@ -21,7 +21,6 @@
 #include <cstddef>
 #include <cstring>
 #include <cwchar>
-#include <iterator>
 #include <string>
 #include <utility>
 #include <vector>
@@ -570,10 +569,9 @@ intptr_t CALLBACK StaticDialog::dlgProc(HWND hwnd, UINT message, WPARAM wParam, 
 	}
 }
 
-// dialog units per dialog base unit, and points per inch (font sizes)
+// dialog units per dialog base unit
 static constexpr int dluPerBaseUnitX = 4;
 static constexpr int dluPerBaseUnitY = 8;
-static constexpr int pointsPerInch = 72;
 
 int DialogDpiLayout::saveFont(HFONT hFont)
 {
@@ -646,23 +644,10 @@ void DialogDpiLayout::save(HWND hDlg, UINT dpi)
 }
 
 // dialog base units of a font, as the dialog manager computes them: average width of the alphabet letters, font height
+// (0 if they can't be measured: apply() then scales with the DPI)
 static SIZE getDialogBaseUnits(HWND hWnd, HFONT hFont)
 {
-	SIZE baseUnits{};
-	HDC hdc = ::GetDC(hWnd);
-	if (hdc == nullptr)
-		return baseUnits;
-
-	static constexpr wchar_t alphabet[] = L"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-	static constexpr int alphabetLen = static_cast<int>(std::size(alphabet)) - 1;
-	const HGDIOBJ hOldFont = ::SelectObject(hdc, hFont);
-	TEXTMETRIC tm{};
-	SIZE szAlphabet{};
-	if (::GetTextMetrics(hdc, &tm) && ::GetTextExtentPoint32W(hdc, alphabet, alphabetLen, &szAlphabet))
-		baseUnits = { (szAlphabet.cx / (alphabetLen / 2) + 1) / 2, tm.tmHeight }; // rounded average width
-	::SelectObject(hdc, hOldFont);
-	::ReleaseDC(hWnd, hdc);
-	return baseUnits;
+	return { DPIManagerV2::getFontAvgAlphaWidth(hWnd, hFont), DPIManagerV2::getFontHeight(hWnd, hFont) };
 }
 
 void DialogDpiLayout::apply(UINT dpi)
@@ -678,10 +663,7 @@ void DialogDpiLayout::apply(UINT dpi)
 	{
 		LOGFONT lf{ savedFont._lf };
 		if (!isSavedDpi)
-		{
-			lf.lfHeight = (lf.lfHeight < 0) ? -::MulDiv(::MulDiv(-lf.lfHeight, pointsPerInch, _dpi), dpi, pointsPerInch) : DPIManagerV2::scale(lf.lfHeight, dpi, _dpi);
-			lf.lfWidth = DPIManagerV2::scale(lf.lfWidth, dpi, _dpi);
-		}
+			DPIManagerV2::scaleLogFont(lf, dpi, _dpi);
 		fontsForDpi.emplace_back(::CreateFontIndirect(&lf));
 	}
 

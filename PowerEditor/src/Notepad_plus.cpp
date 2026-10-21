@@ -2840,28 +2840,19 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 	NppParameters& nppParam = NppParameters::getInstance();
 	StyleArray& styleArray = nppParam.getMiscStylerArray();
 
-	// with the per-monitor DPI awareness, set again at each DPI change: cached, as the context menus share them
-	const bool isBitmapCached = DPIManagerV2::isPerMonitorV2Active();
-
+	// set again after each change of these colours (and with the per-monitor DPI awareness, each DPI change): the bitmaps
+	// are cached, as the context menus share them (a bitmap made each time and never deleted was a GDI leak)
 	for (size_t j = 0; j < sizeof(bitmapOnStyleMenuItemsInfo) / sizeof(bitmapOnStyleMenuItemsInfo[0]); ++j)
 	{
 		const Style * pStyle = styleArray.findByID(bitmapOnStyleMenuItemsInfo[j].styleIndic);
 		if (pStyle)
 		{
-			HBITMAP hNewBitmap = isBitmapCached ? getMainMenuColourBitmap(pStyle->_bgColor) : generateSolidColourMenuItemIcon(pStyle->_bgColor);
-			if (hNewBitmap)
+			HBITMAP hNewBitmap = getMainMenuColourBitmap(pStyle->_bgColor);
+			if (hNewBitmap && ::SetMenuItemBitmaps(_mainMenuHandle, bitmapOnStyleMenuItemsInfo[j].firstOfThisColorMenuId, MF_BYCOMMAND, hNewBitmap, hNewBitmap))
 			{
-				if (!::SetMenuItemBitmaps(_mainMenuHandle, bitmapOnStyleMenuItemsInfo[j].firstOfThisColorMenuId, MF_BYCOMMAND, hNewBitmap, hNewBitmap))
+				for (int relatedMenuId : bitmapOnStyleMenuItemsInfo[j].sameColorMenuIds)
 				{
-					if (!isBitmapCached)
-						::DeleteObject(hNewBitmap);
-				}
-				else
-				{
-					for (int relatedMenuId : bitmapOnStyleMenuItemsInfo[j].sameColorMenuIds)
-					{
-						::SetMenuItemBitmaps(_mainMenuHandle, relatedMenuId, MF_BYCOMMAND, hNewBitmap, NULL);
-					}
+					::SetMenuItemBitmaps(_mainMenuHandle, relatedMenuId, MF_BYCOMMAND, hNewBitmap, NULL);
 				}
 			}
 		}
@@ -2871,12 +2862,9 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 	for (int i = 0; i < TAB_COLORS_COUNT; ++i)
 	{
 		COLORREF colour = nppParam.getIndividualTabColor(i, NppDarkMode::isEnabled(), true);
-		HBITMAP hBitmap = isBitmapCached ? getMainMenuColourBitmap(colour) : generateSolidColourMenuItemIcon(colour);
+		HBITMAP hBitmap = getMainMenuColourBitmap(colour);
 		if (hBitmap)
-		{
-			if (!::SetMenuItemBitmaps(_mainMenuHandle, IDM_VIEW_TAB_COLOUR_1 + i, MF_BYCOMMAND, hBitmap, hBitmap) && !isBitmapCached)
-				::DeleteObject(hBitmap);
-		}
+			::SetMenuItemBitmaps(_mainMenuHandle, IDM_VIEW_TAB_COLOUR_1 + i, MF_BYCOMMAND, hBitmap, hBitmap);
 	}
 }
 

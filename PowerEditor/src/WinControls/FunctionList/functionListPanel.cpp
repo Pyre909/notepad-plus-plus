@@ -46,12 +46,6 @@ FunctionListPanel::~FunctionListPanel()
 		delete s;
 	}
 
-	if (_hFontSearchEdit != nullptr)
-	{
-		::DeleteObject(_hFontSearchEdit);
-		_hFontSearchEdit = nullptr;
-	}
-
 	for (auto hImgList : _iconListVector)
 	{
 		if (hImgList != nullptr)
@@ -703,7 +697,10 @@ void FunctionListPanel::onDpiChanged(UINT prevDpi)
 	const int iconSizeDyn = _dpiManager.scale(toolbarIconSize);
 	setToolbarImageLists(iconSizeDyn);
 
-	TBBUTTON tbSearchPlaceHolder{ .iBitmap = _dpiManager.scale(searchEditSepWidth), .fsState = TBSTATE_ENABLED, .fsStyle = BTNS_SEP }; // iBitmap: width of the separator
+	TBBUTTON tbSearchPlaceHolder{};
+	tbSearchPlaceHolder.iBitmap = _dpiManager.scale(searchEditSepWidth); // width of the separator
+	tbSearchPlaceHolder.fsState = TBSTATE_ENABLED;
+	tbSearchPlaceHolder.fsStyle = BTNS_SEP;
 	::SendMessage(_hToolbarMenu, TB_DELETEBUTTON, 0, 0);
 	::SendMessage(_hToolbarMenu, TB_INSERTBUTTON, 0, reinterpret_cast<LPARAM>(&tbSearchPlaceHolder));
 
@@ -718,11 +715,6 @@ void FunctionListPanel::onDpiChanged(UINT prevDpi)
 	const std::vector<int> imgIds = getTreeImageIds();
 	_treeView.rescaleForDpi(dpi, prevDpi, imgIds);
 	_treeViewSearchResult.rescaleForDpi(dpi, prevDpi, imgIds);
-
-	// layout for the new toolbar height (the panel isn't always resized after the DPI change)
-	RECT rc{};
-	getClientRect(rc);
-	::SendMessage(_hSelf, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rc.right - rc.left, rc.bottom - rc.top));
 }
 
 intptr_t CALLBACK FunctionListPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
@@ -857,16 +849,7 @@ intptr_t CALLBACK FunctionListPanel::run_dlgProc(UINT message, WPARAM wParam, LP
 
 			::SetWindowSubclass(_hSearchEdit, funclstSearchEditProc, static_cast<UINT_PTR>(SubclassID::first), 0);
 
-			if (_hFontSearchEdit == nullptr)
-			{
-				LOGFONT lf{ _dpiManager.getDefaultGUIFontForDpi() };
-				_hFontSearchEdit = ::CreateFontIndirect(&lf);
-			}
-
-			if (_hFontSearchEdit != nullptr)
-			{
-				::SendMessage(_hSearchEdit, WM_SETFONT, reinterpret_cast<WPARAM>(_hFontSearchEdit), MAKELPARAM(TRUE, 0));
-			}
+			DPIManagerV2::replaceWindowFont(_hSearchEdit, _dpiManager.getDefaultGUIFontForDpi(), _hFontSearchEdit);
 
 			std::vector<int> imgIds = getTreeImageIds();
 
