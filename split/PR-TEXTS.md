@@ -9,7 +9,7 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 1 | `font-size-1pt_20260925` | `faaeb59` | 2 | +0 | Font sizes 1–4 pt in the size lists | #18412; **PR closed, not accepted** |
 | 2 | `text-rendering_20260925` | `a485acc` + `bb32194` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 closed** (2026-10-02: too large a change) |
 | 3 | `text-rendering-translations_20260925` | `1aa8b0e` | 29 xml | – | Label capitalisation (stacked on 2) | no (`[xml]`); on hold, 2 is closed |
-| 4 | `per-monitor-dpi_20260925` | `4eaa93d` | 61 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
+| 4 | `per-monitor-dpi_20260925` | `cf6a333` | 61 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
 | 5 | `directwrite-font-names_20260930` | `ace29cd` | 7 (Notepad++ only) | not measured | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | no: bug fix of #9951 (open since 2021) and #12393. Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
 | 6 | `rtl-views-gdi_20261006` | `9fdd356` | 4 | small | Right-to-left views drawn with GDI (DirectWrite can't mirror them) | no: bug fix of #17865 and #17518 (both open); open it first |
 | 7 | `live-rendering-switch_20261005` | `9fdd356` + `61eccb1` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
@@ -221,7 +221,7 @@ a485acc text-rendering-translations_20260925` (drops PR 2's original commit, wha
 
 ## 4. Per-monitor DPI awareness (discuss first)
 
-Branch `per-monitor-dpi_20260925`, one commit `4eaa93d` on upstream `master` `b661c2b` (rebased on 2026-10-20: the
+Branch `per-monitor-dpi_20260925`, one commit `cf6a333` on upstream `master` `b661c2b` (rebased on 2026-10-20: the
 conflicts with upstream's 32 commits since `a69bc23` resolved as `pyre`'s merge did: `NPPM_INTERNAL_DPICHANGEDRELAYOUT` at
 `+ 115` after upstream's `+ 114`, both sides' includes in `StaticDialog.h`, upstream's restructured `DockingManager.cpp`
 block with this branch's `setFloatingRect`, upstream's new status bar `WM_DPICHANGED` code plus an `else` that gives the
@@ -243,7 +243,8 @@ writes it 32 times out of 33. The independent AI review of `pyre`'s merge (2026-
 the same upstream; its open point is disclosed in the PR body. CI of `8a455e0`: all 13 jobs pass (run 37655731626,
 2026-10-07). A real DPI change (2026-10-20, `pyre`'s same code, the Windows scale 150% -> 100% -> 150%,
 `review/tests/pyre-dpi-scale.ps1`): every panel follows, but the Project Panel's text-button toolbar keeps its 100% height
-back at 150% (STATUS, section 2). Cause and fix (2026-10-20, `pyre` `97867d0`, to bring onto this branch before the PR):
+back at 150% (STATUS, section 2). Cause and fix (2026-10-20, `pyre` `97867d0`; folded into this branch's commit on 2026-10-21, `cf6a333`, CI 13/13 run
+39528881391, harness 0 FAIL, its 5 WARN the branch's known ones):
 comctl32 sizes text buttons no higher than for the DPI the toolbar was made at (31 pixels at 200% from 150%: text clipped),
 and the theme change Windows sends after a DPI change puts its own font and height back; a subclass of the toolbar fits
 the buttons to each font (`TB_SETBUTTONSIZE`) and sets the panel's font again after `WM_THEMECHANGED`. Checked with real

@@ -51,10 +51,17 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     PowerEditor\gcc\makefile`), Visual Studio's C++ Clang tools (`/p:PlatformToolset=ClangCL`), WinDbg (Time Travel
     Debugging), Sysinternals Suite (DebugView, Process Explorer, Handle, Process Monitor; the Store edition, as winget's zip
     hash was stale). Already there: Windows Performance Toolkit, Application Verifier, cdb.
+  - 2026-10-21: the toolbar fix folded into `per-monitor-dpi_20260925` (`cf6a333`, CI 13/13 run 39528881391);
+    `setup-vm.ps1` installs the tools added on the VM and adds missing Visual Studio components to an existing install
+    (`9618908`); upstream's `fc40460` (#18523, the Find dialog's replace checkboxes not moving on a resize, the reduced
+    mode's hide lists) merged into `pyre` (`7e3ee6c`, CI 13/13 run 39528975956). Checked with a scratch script on the
+    builds before and after the merge: widened by 200 px, the two replace checkboxes moved 0 px before, 200 after (with the
+    buttons), the reduced mode left 5 controls shown before, none after. The VM since its restart (Windows update to build
+    26300): builds about 3 times slower, the layout cache test's Replace All between 19 and 66 s on the same build (its
+    limit is 15 s): not the code (both builds' best run 19.4 s); check the VM's memory and CPUs in Parallels.
   - Left: the DPI rework's other parts (the UDL undocked onto another monitor: needs a second display; upstream's helpers
     instead of duplicates and of the global flag; the relaunch prompt, probably not needed as the setting says "restart
-    required"; the PR split in smaller ones, ~30% less), the toolbar fix brought onto `per-monitor-dpi_20260925`, the plugin
-    prototype. The Document List check by hand.
+    required"; the PR split in smaller ones, ~30% less), the plugin prototype. The Document List check by hand.
 - **The performance program (2026-10-20)**, asked by Pyre909: newer toolsets, refactoring, performance "in
   sections/parts", every language feature that helps, Windows 11 polish. Their choices: upstream code changed only where
   a measurement shows a gain (small marked patches), Windows 10 1809 minimum, C++23 everywhere, Windows 11 polish (not a
