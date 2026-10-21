@@ -1,16 +1,11 @@
-# App-level test (review harness), Pyre909 builds only: the font of every theme, set by the font controls of the Style
-# Configurator's Global override and upstream's "Force ... for all styles" check boxes (font, size, bold, italic,
-# underline forced for all styles, in config.xml rather than in the theme's Global override style). It's forced whatever
-# the theme, switching themes keeps it (and the controls show it, not the theme's Global override values), Cancel restores
-# it, Save & Close keeps it out of the theme, the other styles' font controls stay the theme's; a config.xml without it
-# (another Notepad++'s) takes the theme's Global override values once.
+# App-level test (review harness): the font Global override forces, as upstream has it: the theme's "Global override"
+# style, forced for all styles by the "Force ... for all styles" check boxes of config.xml, each theme its own (switching
+# themes takes the new theme's), Cancel restoring it, Save & Close saving it in the theme. A config.xml of a former
+# Pyre909 build, which had one font for every theme in config.xml (forcedFontName ...), is no longer read and those
+# values are dropped on exit. Any build: official Notepad++ passes it too.
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
 param([Parameter(Mandatory)] [string] $Exe)
 $ErrorActionPreference = 'Stop'
-# a Pyre909 build names itself in its About box (PYRE_BUILD_TAG in AboutDlg.cpp)
-if (-not [Text.Encoding]::Unicode.GetString([IO.File]::ReadAllBytes($Exe)).Contains('Pyre909 build')) {
-	'INFO  not a Pyre909 build: skipped'; '0 checks, 0 failed'; exit
-}
 # Monokai, the theme switched to: next to an installed exe, else in the sources of a build's tree
 $monokai = @((Join-Path (Split-Path $Exe) 'themes\Monokai.xml'), (Join-Path (Split-Path (Split-Path $Exe)) 'installer\themes\Monokai.xml')) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 if (-not $monokai) { 'INFO  no Monokai.xml theme found: skipped'; '0 checks, 0 failed'; exit }
@@ -55,7 +50,7 @@ $BM_GETCHECK = 0x00F0; $BM_SETCHECK = 0x00F1; $LB_SETCURSEL = 0x0186; $LB_FINDST
 $IDM_LANGSTYLE_CONFIG_DLG = 46001; $STYLE_DEFAULT = 32; $SCE_C_WORD = 5 # C++ keywords: bold in the default theme, not in Monokai
 $IDC_FONT_COMBO = 2202; $IDC_FONTSIZE_COMBO = 2203; $IDC_BOLD_CHECK = 2204; $IDC_ITALIC_CHECK = 2205; $IDC_UNDERLINE_CHECK = 2218
 $IDC_GLOBAL_FG_CHECK = 2226; $IDC_GLOBAL_FONT_CHECK = 2228; $IDC_GLOBAL_FONTSIZE_CHECK = 2229; $IDC_GLOBAL_BOLD_CHECK = 2230
-$IDC_GLOBAL_ITALIC_CHECK = 2231; $IDC_GLOBAL_UNDERLINE_CHECK = 2232; $IDC_EVERYTHEME_NOTE_STATIC = 2291
+$IDC_GLOBAL_ITALIC_CHECK = 2231; $IDC_GLOBAL_UNDERLINE_CHECK = 2232; $IDC_FORMER_NOTE = 2291 # the former note of the font of every theme
 $IDC_SAVECLOSE_BUTTON = 2301; $IDC_STYLES_LIST = 2305; $IDC_SWITCH2THEME_COMBO = 2307
 
 $script:results = [Collections.Generic.List[string]]::new(); $script:fails = 0
@@ -106,29 +101,24 @@ function Show-Styles($s) { "Default Style {0} {1} bold {2}, keywords {3} {4} bol
 function Get-GlobalOverride([string] $config) { if ($config -match '<GUIConfig name="globalOverride"[^>]*/>') { $Matches[0] } else { '(none)' } }
 function Get-ThemeGlobalOverride([string] $stylersPath) { if ([IO.File]::ReadAllText($stylersPath) -match '<WidgetStyle name="Global override"[^>]*>') { $Matches[0] } else { '(none)' } }
 
-$root = Join-Path ([IO.Path]::GetTempPath()) ('npp-review\pyre-font-every-theme-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+$root = Join-Path ([IO.Path]::GetTempPath()) ('npp-review\global-override-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 try {
-	# --- the font of every theme in config.xml: Consolas 13, never bold
+	# --- the theme's Global override: Consolas 12 (a size of upstream's list: one it hasn't shows empty), not bold; font, size and bold forced; config.xml of a former Pyre909
+	# build that had the font of every theme (Lucida Console 12), which isn't read any more
 	$settings = Join-Path $root 'main'; New-Item -ItemType Directory -Force (Join-Path $settings 'themes') | Out-Null
 	[void](Stop-Npp (Start-Npp $settings)) # writes config.xml and stylers.xml
 	$configPath = Join-Path $settings 'config.xml'; $stylersPath = Join-Path $settings 'stylers.xml'
-	$config = [IO.File]::ReadAllText($configPath) -replace '<GUIConfig name="globalOverride"[^>]*/>', '<GUIConfig name="globalOverride" fg="no" bg="no" font="yes" fontSize="yes" bold="yes" italic="no" underline="no" forcedFontName="Consolas" forcedFontSize="13" forcedFontStyle="0" />'
+	$config = [IO.File]::ReadAllText($configPath) -replace '<GUIConfig name="globalOverride"[^>]*/>', '<GUIConfig name="globalOverride" fg="no" bg="no" font="yes" fontSize="yes" bold="yes" italic="no" underline="no" forcedFontName="Lucida Console" forcedFontSize="12" forcedFontStyle="0" />'
 	[IO.File]::WriteAllText($configPath, $config, [Text.UTF8Encoding]::new($false))
+	$stylers = [regex]::Replace([IO.File]::ReadAllText($stylersPath), '<WidgetStyle name="Global override"[^>]*>', { param($m) $m.Value -replace 'fontName="[^"]*"', 'fontName="Consolas"' -replace 'fontSize="[^"]*"', 'fontSize="12"' -replace 'fontStyle="[^"]*"', 'fontStyle="0"' })
+	[IO.File]::WriteAllText($stylersPath, $stylers, [Text.UTF8Encoding]::new($false))
 	Copy-Item -LiteralPath $monokai (Join-Path $settings 'themes')
 	$file = Join-Path $settings 'test.cpp'; [IO.File]::WriteAllLines($file, [string[]]@('int main()', '{', '	return 0;', '}'))
-	# "English (customizable)" chosen in a build with the former row: its copy (nativeLang.xml, never refreshed) has the
-	# former note under 2290; the note has an id of its own since
-	$customizable = @((Join-Path (Split-Path $Exe) 'localization\english_customizable.xml'), (Join-Path (Split-Path (Split-Path $Exe)) 'installer\nativeLang\english_customizable.xml')) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-	if ($customizable) {
-		$lang = [IO.File]::ReadAllText($customizable) -replace '(<Item id="2235"[^>]*/>)', '$1<Item id="2290" name="FORMER NOTE"/>'
-		[IO.File]::WriteAllText((Join-Path $settings 'nativeLang.xml'), $lang, [Text.UTF8Encoding]::new($false))
-	}
-	$themeGlobalOverride = Get-ThemeGlobalOverride $stylersPath
 
 	$proc = Start-Npp $settings @($file)
 	$view = Get-View $proc
 	$s = Get-Styles $proc $view
-	Check 'start: every style in Consolas 13, the keywords not bold' (($s.Font -eq 'Consolas') -and ($s.Size -eq 13) -and ($s.WordFont -eq 'Consolas') -and ($s.WordSize -eq 13) -and ($s.WordBold -eq 0)) (Show-Styles $s)
+	Check 'start: the theme''s Global override forced, every style in Consolas 12, the keywords not bold' (($s.Font -eq 'Consolas') -and ($s.Size -eq 12) -and ($s.WordFont -eq 'Consolas') -and ($s.WordSize -eq 12) -and ($s.WordBold -eq 0)) (Show-Styles $s)
 
 	function Open-Styler {
 		[void](Send $proc.MainWindowHandle $WM_COMMAND $IDM_LANGSTYLE_CONFIG_DLG)
@@ -155,94 +145,48 @@ try {
 		[void](Send $dlg $WM_COMMAND ((1 -shl 16) -bor $id) $combo.ToInt64()) # CBN_SELCHANGE
 		Start-Sleep -Milliseconds 300
 	}
-	function Click([int] $id, [bool] $checked) {
-		[void](Send (Ctl $id) $BM_SETCHECK $(if ($checked) { 1 } else { 0 }))
-		[void](Send $dlg $WM_COMMAND $id (Ctl $id).ToInt64()) # BN_CLICKED
-		Start-Sleep -Milliseconds 300
-	}
 	# the Global override page: its font controls, its force check boxes (font, size, bold, italic, underline)
 	function Get-GoPage {
 		"{0} / {1} / bold {2} italic {3} underline {4} / forced {5}{6}{7}{8}{9}" -f (Get-Text (Ctl $IDC_FONT_COMBO)), (Get-Text (Ctl $IDC_FONTSIZE_COMBO)),
 			(Get-Check $IDC_BOLD_CHECK), (Get-Check $IDC_ITALIC_CHECK), (Get-Check $IDC_UNDERLINE_CHECK), (Get-Check $IDC_GLOBAL_FONT_CHECK),
 			(Get-Check $IDC_GLOBAL_FONTSIZE_CHECK), (Get-Check $IDC_GLOBAL_BOLD_CHECK), (Get-Check $IDC_GLOBAL_ITALIC_CHECK), (Get-Check $IDC_GLOBAL_UNDERLINE_CHECK)
 	}
-	$expected = 'Consolas / 13 / bold 0 italic 0 underline 0 / forced 11100'
 
 	Select-Style 'Global override'
-	$shown = "note {0}, font combo {1} enabled {2}, font check box {3}, foreground check box {4}" -f (Test-Shown $IDC_EVERYTHEME_NOTE_STATIC), (Test-Shown $IDC_FONT_COMBO), [FT.U]::IsWindowEnabled((Ctl $IDC_FONT_COMBO)), (Test-Shown $IDC_GLOBAL_FONT_CHECK), (Test-Shown $IDC_GLOBAL_FG_CHECK)
-	Check 'Global override: its font controls, the force check boxes and the note shown' ((Test-Shown $IDC_EVERYTHEME_NOTE_STATIC) -and (Test-Shown $IDC_FONT_COMBO) -and [FT.U]::IsWindowEnabled((Ctl $IDC_FONT_COMBO)) -and (Test-Shown $IDC_GLOBAL_FONT_CHECK) -and (Test-Shown $IDC_GLOBAL_FG_CHECK)) $shown
+	$shown = "font combo {0} enabled {1}, font check box {2}, foreground check box {3}, former note {4}" -f (Test-Shown $IDC_FONT_COMBO), [FT.U]::IsWindowEnabled((Ctl $IDC_FONT_COMBO)), (Test-Shown $IDC_GLOBAL_FONT_CHECK), (Test-Shown $IDC_GLOBAL_FG_CHECK), ((Ctl $IDC_FORMER_NOTE) -ne [IntPtr]::Zero)
+	Check 'Global override: its font controls and force check boxes, as upstream (no note of a font shared by every theme)' ((Test-Shown $IDC_FONT_COMBO) -and [FT.U]::IsWindowEnabled((Ctl $IDC_FONT_COMBO)) -and (Test-Shown $IDC_GLOBAL_FONT_CHECK) -and (Test-Shown $IDC_GLOBAL_FG_CHECK) -and ((Ctl $IDC_FORMER_NOTE) -eq [IntPtr]::Zero)) $shown
 	$page = Get-GoPage
-	Check '  they show config.xml: Consolas 13, bold forced off' ($page -eq $expected) $page
-	if ($customizable) {
-		$note = Get-Text (Ctl $IDC_EVERYTHEME_NOTE_STATIC)
-		Check '  the note''s text, not the former note''s of an old nativeLang.xml' ($note -eq "Global override's font settings are shared by every theme.") $note
-	}
+	Check '  they show the theme''s Global override: Consolas 12, bold forced off' ($page -eq 'Consolas / 12 / bold 0 italic 0 underline 0 / forced 11100') $page
 
-	Click $IDC_GLOBAL_BOLD_CHECK $false; $s = Get-Styles $proc $view
-	Check 'bold not forced: the keywords bold, as the theme has them' ($s.WordBold -eq 1) (Show-Styles $s)
-	Click $IDC_GLOBAL_BOLD_CHECK $true; Click $IDC_BOLD_CHECK $true; $s = Get-Styles $proc $view
-	Check 'bold forced on: every style bold' (($s.Bold -eq 1) -and ($s.WordBold -eq 1)) (Show-Styles $s)
-	Click $IDC_BOLD_CHECK $false; $s = Get-Styles $proc $view
-	Check 'bold forced off again: the keywords not bold' (($s.Bold -eq 0) -and ($s.WordBold -eq 0)) (Show-Styles $s)
-	Select-Item $IDC_FONTSIZE_COMBO '14'; $s = Get-Styles $proc $view
-	Check 'size 14 chosen: every style 14' (($s.Size -eq 14) -and ($s.WordSize -eq 14)) (Show-Styles $s)
-	Select-Item $IDC_FONTSIZE_COMBO '13'
-	Check '  the theme''s Global override untouched' ((Get-ThemeGlobalOverride $stylersPath) -eq $themeGlobalOverride) (Get-ThemeGlobalOverride $stylersPath)
-
-	Select-Style 'Default Style'
-	$text = Get-Text (Ctl $IDC_FONT_COMBO)
-	Check 'Default Style: the theme''s own font (Courier New) in its font controls, no note' (($text -eq 'Courier New') -and -not (Test-Shown $IDC_EVERYTHEME_NOTE_STATIC)) $text
-
+	# Notepad++ draws a font that isn't installed in Courier New (ScintillaEditView::setSpecialStyle)
 	$themeCombo = Ctl $IDC_SWITCH2THEME_COMBO
 	$monokaiIndex = [FT.U]::SendMessage($themeCombo, $CB_FINDSTRINGEXACT, [IntPtr](-1), 'Monokai').ToInt64()
 	[void](Send $themeCombo $CB_SETCURSEL $monokaiIndex)
 	[void](Send $dlg $WM_COMMAND ((1 -shl 16) -bor $IDC_SWITCH2THEME_COMBO) $themeCombo.ToInt64())
 	Start-Sleep -Milliseconds 500
 	$s = Get-Styles $proc $view
-	Check 'switched to Monokai: its background, the font of every theme kept (its own is DejaVu Sans Mono 10)' (($s.Back -eq 0x222827) -and ($s.Font -eq 'Consolas') -and ($s.Size -eq 13) -and ($s.WordFont -eq 'Consolas') -and ($s.WordBold -eq 0)) (Show-Styles $s)
+	Check 'switched to Monokai: its background and its own Global override font, DejaVu Sans Mono (Courier New if not installed), its size 10 (no size of its Global override)' (($s.Back -eq 0x222827) -and ($s.Font -in 'DejaVu Sans Mono', 'Courier New') -and ($s.WordFont -eq $s.Font) -and ($s.Size -eq 10) -and ($s.WordBold -eq 0)) (Show-Styles $s)
 	Select-Style 'Global override'
 	$page = Get-GoPage
-	Check '  Global override shows it, not Monokai''s (DejaVu Sans Mono, no size)' ($page -eq $expected) $page
-
-	# Notepad++ draws a font that isn't installed in Courier New (ScintillaEditView::setSpecialStyle)
-	Click $IDC_GLOBAL_FONT_CHECK $false; $s = Get-Styles $proc $view
-	Check 'font not forced: Monokai''s own font, DejaVu Sans Mono (Courier New if not installed), size still 13' (($s.Font -in 'DejaVu Sans Mono', 'Courier New') -and ($s.Size -eq 13)) (Show-Styles $s)
+	Check '  Global override shows Monokai''s' ($page -eq 'DejaVu Sans Mono /  / bold 0 italic 0 underline 0 / forced 11100' -or $page -eq ' /  / bold 0 italic 0 underline 0 / forced 11100') $page
 
 	[void](Send $dlg $WM_COMMAND $IDCANCEL); Start-Sleep -Milliseconds 500
 	$s = Get-Styles $proc $view
-	Check 'Cancel: the default theme and Consolas 13 back' (($s.Back -eq 0xFFFFFF) -and ($s.Font -eq 'Consolas') -and ($s.Size -eq 13) -and ($s.WordBold -eq 0)) (Show-Styles $s)
+	Check 'Cancel: the default theme and Consolas 12 back' (($s.Back -eq 0xFFFFFF) -and ($s.Font -eq 'Consolas') -and ($s.Size -eq 12) -and ($s.WordBold -eq 0)) (Show-Styles $s)
+
+	# Save & Close: the size in the theme's Global override
 	$dlg = Open-Styler
 	Select-Style 'Global override'
-	$page = Get-GoPage
-	Check '  Global override back too' ($page -eq $expected) $page
-
-	# Save & Close: the size in config.xml, the theme's Global override as it was
 	Select-Item $IDC_FONTSIZE_COMBO '14'
 	[void](Send $dlg $WM_COMMAND $IDC_SAVECLOSE_BUTTON (Ctl $IDC_SAVECLOSE_BUTTON).ToInt64()); Start-Sleep -Milliseconds 500
 	$s = Get-Styles $proc $view
-	Check 'Save & Close with size 14: every style 14, the theme''s Global override untouched' (($s.Size -eq 14) -and ((Get-ThemeGlobalOverride $stylersPath) -eq $themeGlobalOverride)) "$(Show-Styles $s); $(Get-ThemeGlobalOverride $stylersPath)"
+	$themeGo = Get-ThemeGlobalOverride $stylersPath
+	Check 'Save & Close with size 14: every style 14, saved in the theme''s Global override' (($s.Size -eq 14) -and ($s.WordSize -eq 14) -and ($themeGo -match 'fontName="Consolas"') -and ($themeGo -match 'fontSize="14"')) "$(Show-Styles $s); $themeGo"
 
 	$boxes = Stop-Npp $proc
 	Check 'exit: no message' ($boxes.Count -eq 0) ($boxes -join '; ')
 	$go = Get-GlobalOverride ([IO.File]::ReadAllText($configPath))
-	Check 'saved in config.xml' ($go -match 'font="yes"' -and $go -match 'fontSize="yes"' -and $go -match 'bold="yes"' -and $go -match 'italic="no"' -and $go -match 'forcedFontName="Consolas"' -and $go -match 'forcedFontSize="14"' -and $go -match 'forcedFontStyle="0"') $go
-
-	# --- a config.xml without it (another Notepad++'s): the theme's Global override values, once
-	$settings = Join-Path $root 'migration'; New-Item -ItemType Directory -Force $settings | Out-Null
-	[void](Stop-Npp (Start-Npp $settings))
-	$configPath = Join-Path $settings 'config.xml'
-	$config = [IO.File]::ReadAllText($configPath) -replace '<GUIConfig name="globalOverride"[^>]*/>', '<GUIConfig name="globalOverride" fg="no" bg="no" font="yes" fontSize="yes" bold="no" italic="no" underline="no" />'
-	[IO.File]::WriteAllText($configPath, $config, [Text.UTF8Encoding]::new($false))
-	$stylersPath = Join-Path $settings 'stylers.xml'
-	$stylers = [IO.File]::ReadAllText($stylersPath)
-	$stylers = [regex]::Replace($stylers, '<WidgetStyle name="Global override"[^>]*/>', { param($m) $m.Value -replace 'fontName="[^"]*"', 'fontName="Lucida Console"' -replace 'fontSize="[^"]*"', 'fontSize="12"' })
-	[IO.File]::WriteAllText($stylersPath, $stylers, [Text.UTF8Encoding]::new($false))
-	$proc = Start-Npp $settings
-	$s = Get-Styles $proc (Get-View $proc)
-	Check 'config.xml of another Notepad++: the theme''s Global override font, Lucida Console 12' (($s.Font -eq 'Lucida Console') -and ($s.Size -eq 12)) (Show-Styles $s)
-	[void](Stop-Npp $proc)
-	$go = Get-GlobalOverride ([IO.File]::ReadAllText($configPath))
-	Check '  saved in config.xml since' ($go -match 'forcedFontName="Lucida Console"' -and $go -match 'forcedFontSize="12"') $go
+	Check 'config.xml: the force flags only, the former build''s font values dropped' ($go -match 'font="yes"' -and $go -match 'fontSize="yes"' -and $go -match 'bold="yes"' -and $go -notmatch 'forcedFont') $go
 }
 finally {
 	foreach ($p in @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $Exe -and $_.MainWindowTitle -match 'REVIEW-TEST' })) { Stop-Process -Id $p.Id -Force }

@@ -88,6 +88,18 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     warned about Node.js 20; now 0 annotations); `PYRE-BUILD.md` brought up to date. **Published**:
     `pyre-8.9.8.1-f495ad1` (Latest; x64 and ARM64, PGO), notes with a "What's new since 7c83c57" section; the drafts of
     `56d6ea5` and `e56e9bb` deleted.
+  - Global override back to upstream (2026-10-21), asked by Pyre909 ("lets make sure pyre has that more in line like
+    upstream"): the font of every theme removed (`aca5fd5`, on top of `f495ad1`): Global override forces the theme's own
+    Global override style again; `WordStyleDlg.rc`, `WordStyleDlgRes.h` and `ScintillaEditView::setStyle` byte for byte
+    upstream's; the Style Configurator fixes kept. Harness 0 FAIL 0 WARN (ARM64, x64, Win32 builds; every test); test
+    `pyre-font-every-theme` became `global-override` (10 checks, any build; the 7c83c57 installation fails 6);
+    `vm/modes.ps1` sets its font in stylers.xml now. Independent review: no defect. Its notes, kept: (1) the next
+    release's notes need a line by hand (package.ps1 takes PYRE-BUILD.md's list, which just loses the bullet): "Global
+    override's font is the theme's again, as in official Notepad++: set it on your theme's Global override style";
+    Pyre909's own themes already have MonoLisaCode there; (2) upstream's STYLE_NOT_USED bug is back with upstream's
+    `setStyle` (a style without a `fontStyle` attribute turns italic and underlined when bold is forced off; no shipped
+    style reaches it): parity chosen, a possible upstream issue. Local refs tidied: `per-monitor-dpi_20260925` was the
+    older `4eaa93d` (now `cf6a333`, as on GitHub), `master` at `origin/master`.
   - Left: the plugin prototype (only if Pyre909 wants one: their choice for plugins was to disclose they aren't covered); the UDL undocked onto another monitor (needs a
     second display); the relaunch prompt (probably not needed: the setting says "restart required"). The Document List
     checked by hand (kit 10: 48 -> 72 px before the fix, 50 -> 50 after).
@@ -191,7 +203,8 @@ the code, other editors), then "fix those bugs".
   saved (upstream #13919). `840214b` each key typed in the user keywords box restyled the views (14.6 ms a key with
   100,000 C++ lines; 2.7 ms now, one restyle 300 ms after the last key; upstream #16143 reports a visible redraw).
   Test `review/tests/pyre-style-configurator.ps1` (8 checks; 3 fail on `a52ca6a`).
-- **The font of every theme on the Global override page** (`a5e52d2`, asked by Pyre909: "redesign the style
+- **The font of every theme on the Global override page** (removed on 2026-10-21 for parity with upstream: see the
+  handoff) (`a5e52d2`, asked by Pyre909: "redesign the style
   configurator a bit. The way we put that global override at the top"; of three layouts, Pyre909 chose this one over a
   one-line summary at the top or a Preferences setting). The row of five "(Theme)" lists under "Select theme" is gone:
   the dialog is upstream's again (`WordStyleDlg.rc` byte for byte, plus a note), so upstream's changes to it merge
@@ -428,7 +441,7 @@ keep the light-text gamma as it is.
   build and on pyre (whose bold keywords print in Segoe UI Semibold, as its screen shows them). Tools in `vm/`:
   `print-pdf.ps1`, `pdf-fonts.ps1`, and `inkcmp.cpp` for the bold weights.
 
-## Font for every theme (2026-10-06, pyre only)
+## Font for every theme (2026-10-06, pyre only; removed 2026-10-21, history)
 
 Pyre909 forces a font, one size and no bold for all styles with Global override. Only its check boxes were in
 config.xml; the values were the theme's Global override style, and upstream moved that entry to the bottom of the style

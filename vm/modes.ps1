@@ -1,5 +1,5 @@
 # Compare the DirectWrite rendering modes of pyre's Text Rendering settings at editor sizes.
-# For each font (config.xml Global override, restart), zoom and quality, sets each mode with SCI_SETFONTRENDERINGPARAMETER
+# For each font (forced by Global override: the theme's style in stylers.xml, restart), zoom and quality, sets each mode with SCI_SETFONTRENDERINGPARAMETER
 # on the edit view, screenshots it (PrintWindow) and diffs it against Automatic (Adaptive also against Natural).
 # Windows PowerShell 5.1: powershell.exe -NoProfile -ExecutionPolicy Bypass -File modes.ps1 [-Fonts ...] [-Zooms ...]
 param(
@@ -99,8 +99,14 @@ foreach ($font in $Fonts) {
 	[xml]$x = Get-Content -Raw $cfg
 	$go = $x.NotepadPlus.GUIConfigs.GUIConfig | Where-Object { $_.name -eq 'globalOverride' }
 	$go.SetAttribute('font', 'yes'); $go.SetAttribute('fontSize', 'yes')
-	$go.SetAttribute('forcedFontName', $font); $go.SetAttribute('forcedFontSize', '10')
 	$x.Save($cfg)
+	# the font forced: the theme's Global override style (pyre's font of every theme, forcedFontName in config.xml, is gone
+	# since 2026-10-21)
+	$stylersPath = Join-Path $Dir 'stylers.xml'
+	[xml]$s = Get-Content -Raw $stylersPath
+	$gs = $s.NotepadPlus.GlobalStyles.WidgetStyle | Where-Object { $_.name -eq 'Global override' }
+	$gs.SetAttribute('fontName', $font); $gs.SetAttribute('fontSize', '10')
+	$s.Save($stylersPath)
 
 	$n = Start-Npp
 	$h = [M]::Editor($n.Top)
