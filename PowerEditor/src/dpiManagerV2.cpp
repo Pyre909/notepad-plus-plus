@@ -134,6 +134,14 @@ int DPIManagerV2::getSystemMetricsForDpi(int nIndex, UINT dpi)
 	return _fnGetSystemMetricsForDpi(nIndex, dpi);
 }
 
+int DPIManagerV2::getSystemMetricsForWindow(int nIndex, HWND hWnd)
+{
+	// a window that isn't per-monitor DPI aware has the system DPI: the metrics Windows scales for the process (also
+	// before Windows 10 1607, where GetSystemMetricsForDpi is emulated)
+	const UINT dpi = getDpiForWindow(hWnd);
+	return (dpi == getDpiForSystem()) ? ::GetSystemMetrics(nIndex) : getSystemMetricsForDpi(nIndex, dpi);
+}
+
 bool DPIManagerV2::isValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT value)
 {
 	return _fnIsValidDpiAwarenessContext(value) == TRUE;

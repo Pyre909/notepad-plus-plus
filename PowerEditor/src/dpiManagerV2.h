@@ -51,6 +51,9 @@ public:
 		return getSystemMetricsForDpi(nIndex, _dpi);
 	}
 
+	// the metric for the DPI of hWnd: a per-monitor DPI aware dialog can have another DPI than the system's
+	static int getSystemMetricsForWindow(int nIndex, HWND hWnd);
+
 	[[nodiscard]] static bool isValidDpiAwarenessContext(DPI_AWARENESS_CONTEXT value);
 	// includes check for `DPI_AWARENESS_CONTEXT dpiContext` via `isValidDpiAwarenessContext`
 	static DPI_AWARENESS_CONTEXT setThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT dpiContext);
@@ -109,6 +112,12 @@ public:
 
 	static int unscale(int x, HWND hWnd) {
 		return scale(x, USER_DEFAULT_SCREEN_DPI, getDpiForWindow(hWnd));
+	}
+
+	// a legacy size in pixels of the system DPI (not scaled from 96 DPI), for the DPI of hWnd: unchanged in a window
+	// that isn't per-monitor DPI aware (its DPI is the system DPI)
+	static int scaleFromSystemDpiForWindow(int x, HWND hWnd) {
+		return scale(x, getDpiForWindow(hWnd), getDpiForSystem());
 	}
 
 	int scale(int x) const {

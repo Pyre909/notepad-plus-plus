@@ -2243,7 +2243,7 @@ intptr_t CALLBACK Editing2SubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 			{
 				if (tip != nullptr)
 				{
-					::SendMessage(tip, TTM_SETMAXTIPWIDTH, 0, 260);
+					::SendMessage(tip, TTM_SETMAXTIPWIDTH, 0, DPIManagerV2::scaleFromSystemDpiForWindow(260, _hSelf));
 				}
 			}
 		}
@@ -7268,7 +7268,7 @@ intptr_t CALLBACK SearchingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPAR
 			_tipInSelThresh = createToolTip(IDC_INSELECTION_THRESH_QUESTION_BUTTON, _hSelf, _hInst, tipInSelectionText.data(), pNativeSpeaker->isRTL());
 			if (_tipInSelThresh != nullptr)
 			{
-				::SendMessage(_tipInSelThresh, TTM_SETMAXTIPWIDTH, 0, 260);
+				::SendMessage(_tipInSelThresh, TTM_SETMAXTIPWIDTH, 0, DPIManagerV2::scaleFromSystemDpiForWindow(260, _hSelf));
 			}
 
 			wstring tipFillFindWhatText = pNativeSpeaker->getLocalizedStrFromID("searchingFillFindWhat-tip", L"Maximum number of selected characters in edit zone to fill automatically the \"Find what\" field when the Ctrl-F is triggered. The maximum value is $INT_REPLACE$, which is the maximum size of \"Find what\" field, limited by the system.");
@@ -7278,7 +7278,7 @@ intptr_t CALLBACK SearchingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPAR
 			_tipFillFindWhatThresh = createToolTip(IDC_FILLFINDWHAT_THRESH_QUESTION_BUTTON, _hSelf, _hInst, tipFillFindWhatText.data(), pNativeSpeaker->isRTL());
 			if (_tipFillFindWhatThresh != nullptr)
 			{
-				::SendMessage(_tipFillFindWhatThresh, TTM_SETMAXTIPWIDTH, 0, 260);
+				::SendMessage(_tipFillFindWhatThresh, TTM_SETMAXTIPWIDTH, 0, DPIManagerV2::scaleFromSystemDpiForWindow(260, _hSelf));
 			}
 			return TRUE;
 		}

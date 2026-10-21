@@ -1258,7 +1258,7 @@ HWND createToolTip(int toolID, HWND hDlg, HINSTANCE hInst, wchar_t* pszText, boo
 	}
 
 	SendMessage(hwndTip, TTM_ACTIVATE, TRUE, 0);
-	SendMessage(hwndTip, TTM_SETMAXTIPWIDTH, 0, 200);
+	SendMessage(hwndTip, TTM_SETMAXTIPWIDTH, 0, DPIManagerV2::scaleFromSystemDpiForWindow(200, hDlg));
 	// Make tip stay 32 seconds (INT16_MAX - 1 is max allowed value)
 	::SendMessage(hwndTip, TTM_SETDELAYTIME, TTDT_AUTOPOP, MAKELPARAM(INT16_MAX - 1, 0));
 
@@ -1314,7 +1314,7 @@ HWND createToolTipRect(int toolID, HWND hWnd, HINSTANCE hInst, wchar_t* pszText,
 	}
 
 	SendMessage(hwndTip, TTM_ACTIVATE, TRUE, 0);
-	SendMessage(hwndTip, TTM_SETMAXTIPWIDTH, 0, 200);
+	SendMessage(hwndTip, TTM_SETMAXTIPWIDTH, 0, DPIManagerV2::scaleFromSystemDpiForWindow(200, hWnd));
 	// Make tip stay 32 seconds and appear faster
 	::SendMessage(hwndTip, TTM_SETDELAYTIME, TTDT_AUTOPOP, MAKELPARAM(INT16_MAX - 1, 0));
 	::SendMessage(hwndTip, TTM_SETDELAYTIME, TTDT_INITIAL, MAKELPARAM(100, 0));
