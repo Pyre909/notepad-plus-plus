@@ -16,6 +16,7 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 8 | `directwrite-font-smoothing_20261006` | `5dff07b` | 4 | small | DirectWrite following the Windows font smoothing | no: bug fix of #14954 (open since 2024) |
 | 9 | `function-list-caret_20261020` | `398b2c2` | 2 | none | Function List caret tracking: a binary search, not a walk of the tree per caret move | no: bug fix (issue to open first) |
 | 10 | `doclist-column-width_20261020` | `20f0a90` | 1 | none | Document List column widths stored for 96 DPI, as they are read | no: bug fix (check by hand, then issue) |
+| 11 | none | – | – | – | Comment: the Find dialog's black status bar was the swallowed `WM_THEMECHANGED`, so its PMv2 can come back | no: a comment on #18455 or #18462 |
 
 Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs, `9f605be`, 2026-10-06; 6, 7 and 8: 13/13, 2026-10-06). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
 
@@ -242,7 +243,13 @@ writes it 32 times out of 33. The independent AI review of `pyre`'s merge (2026-
 the same upstream; its open point is disclosed in the PR body. CI of `8a455e0`: all 13 jobs pass (run 37655731626,
 2026-10-07). A real DPI change (2026-10-20, `pyre`'s same code, the Windows scale 150% -> 100% -> 150%,
 `review/tests/pyre-dpi-scale.ps1`): every panel follows, but the Project Panel's text-button toolbar keeps its 100% height
-back at 150% (STATUS, section 2): fix it before the PR. Not tested: two monitors of different scales.
+back at 150% (STATUS, section 2). Cause and fix (2026-10-20, `pyre` `97867d0`, to bring onto this branch before the PR):
+comctl32 sizes text buttons no higher than for the DPI the toolbar was made at (31 pixels at 200% from 150%: text clipped),
+and the theme change Windows sends after a DPI change puts its own font and height back; a subclass of the toolbar fits
+the buttons to each font (`TB_SETBUTTONSIZE`) and sets the panel's font again after `WM_THEMECHANGED`. Checked with real
+changes 150 -> 200 -> 150%: 31 -> 38 -> 31 pixels, every control of 13 within 15% and back to the pixel. Below the start
+scale the status bars stay at least 28 pixels high (comctl32 keeps them for the system DPI; cosmetic, left). Not tested:
+two monitors of different scales.
 
 Why discuss first, and where: on #14959 (ozone10's hiDPI tracking issue, open), the unchecked items are the UDL
 splitter and the whole Panels section (title, tab control, main field, splitter, plugin support), and ozone10 wrote on
@@ -895,6 +902,45 @@ AI disclosure: I wrote this with help from an AI assistant (Claude), then review
 - [x] I have read contributing guidelines
 
 fix #<issue>
+```
+
+## 11. Comment: the Find dialog's black status bar came from the swallowed WM_THEMECHANGED (no code)
+
+No branch: a comment for ozone10 and donho. #18455 made the Find dialog per-monitor aware (PMv2); donho then saw a black
+status bar after a scale change from 150% to 125% or 200% (comment on #18455, 2026-10-07); ozone10 couldn't reproduce it,
+#18462 didn't fix it, and `9d99c31` ("Fix lite mode status bar turning to black regression when switching scale",
+2026-10-07) did three things at once: the Find dialog's PMv2 commented out "temporarily" (with its `WM_GETDPISCALEDSIZE`
+handler removed), `StatusBarSubclass` passing `WM_THEMECHANGED` on to the control (`break`, was `return 0`), and a redraw
+on `WM_DPICHANGED_AFTERPARENT`.
+
+Measured on 2026-10-20 (Windows 11 ARM64 VM, one monitor 2832x1720, light mode, ARM64 Release builds; the tooling
+branch's `review/tests/pyre-dpi-scale.ps1 -Compare`: each build maximized with the Find dialog open, after each scale
+change the main window's status bar and the Find dialog's copied from the screen and their black pixels counted; the scale
+changed by Pyre909): only the `WM_THEMECHANGED` change matters, and it's the **main window's** status bar that turns
+black (the Find dialog's never did, in any build). Upstream `master` `b661c2b` with the Find dialog's two
+`setThreadDpiAwarenessContext` lines uncommented stayed clean through 150 -> 125 -> 200 -> 100 -> 150%.
+
+Where: on #18455 (donho's report; both are on it), or #18462. Pyre909 picks and posts.
+
+```
+@ozone10 @donho I looked into the black status bar a bit, since the Find dialog's PerMonitorV2 got turned off "temporarily" in 9d99c31.
+
+Looks like it's the StatusBar part of that commit that fixed it, not turning PMv2 off. Before it, StatusBarSubclass did `return 0` on WM_THEMECHANGED, so the status bar control itself never saw the theme change Windows sends after a scale change. Also it's the main window's status bar that turns black, not the Find dialog's.
+
+I built 5ee7a76 (the commit right before 9d99c31) with one part of the fix at a time, had them all open with the Find dialog open (light mode), changed the scale 150 → 200 → 100 → 150, and counted the black pixels of the main status bar after each change:
+
+| build | 200% | 100% | back to 150% |
+|---|---|---|---|
+| 5ee7a76 as is | 98% | 96% | 100% |
+| only `return 0` → `break` on WM_THEMECHANGED | 0% | 0% | 0% |
+| only the WM_DPICHANGED_AFTERPARENT redraw | 98% | 96% | 100% |
+| only PMv2 off for the Find dialog | 0% | 96% | 100% |
+
+Current master with the two setThreadDpiAwarenessContext lines in FindReplaceDlg::doDialog uncommented stayed clean too (150 → 125 → 200 → 100 → 150, 0% every time).
+
+So it should be safe to turn PMv2 back on for the Find dialog. I didn't try putting the WM_GETDPISCALEDSIZE handler back.
+
+Windows 11 ARM64 (VM), one monitor, Release ARM64 builds. AI disclosure: an AI assistant (Claude) helped me set up the test builds and the measuring script; the scale changes were done by hand.
 ```
 
 ---

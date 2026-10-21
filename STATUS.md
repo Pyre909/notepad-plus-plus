@@ -37,10 +37,23 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     `directwrite-font-names` fails as on upstream); new: kit 9 `function-list-caret_20261020` (`398b2c2`, CI 13/13) and
     kit 10 `doclist-column-width_20261020` (`20f0a90`, CI 13/13; a test can't drive the header's divider: Pyre909 checks it
     by hand at 150% first). The smoothing/RTL interaction is already kit 8's "Before opening 2".
-  - Left, needing Pyre909's scale changes (to batch in one session): the DPI rework (the Project Panel toolbar fault with a
-    build logging its size, the UDL undocked onto another monitor, upstream's helpers instead of duplicates and of the
-    global flag, the relaunch prompt, #18462 tried with several random scale changes, the PR split in smaller ones, ~30%
-    less), the plugin prototype. The Document List check by hand.
+  - Scale sessions (Pyre909 changing the scale: 150 -> 125 -> 200 -> 100 -> 150, then 200 -> 100 -> 150, then 200 -> 150;
+    `review/tests/pyre-dpi-scale.ps1` extended: `-Changes`, status bars, the Find dialog, black checks, `-Compare` builds,
+    15% instead of 25%, which had let the toolbar pass). The Project Panel toolbar: comctl32 sizes text buttons no higher
+    than for the DPI the toolbar was made at (31 pixels at 200% from 150%, text clipped), and the theme change Windows sends
+    after a DPI change puts its font and height back; fixed by a toolbar subclass (`97867d0`, local on the session branch,
+    13/13 checks with real changes: 31 -> 38 -> 31). #18462: only `9d99c31`'s `WM_THEMECHANGED` change fixes the black
+    (main window's) status bar, the Find dialog's PMv2 can come back: kit 11, a comment for Pyre909 to post. Known,
+    left: below the start scale the status bars stay at least 28 pixels (comctl32 keeps them for the system DPI).
+  - Tools added (2026-10-20): MSYS2 with MINGW64 GCC 16.2 and CLANG64 Clang 23.1 (the CI's MSYS2 jobs, run locally:
+    `$Env:MSYSTEM='MINGW64'`, `C:\msys64\mingw64\bin` and `C:\msys64\usr\bin` first in PATH, `mingw32-make -f
+    PowerEditor\gcc\makefile`), Visual Studio's C++ Clang tools (`/p:PlatformToolset=ClangCL`), WinDbg (Time Travel
+    Debugging), Sysinternals Suite (DebugView, Process Explorer, Handle, Process Monitor; the Store edition, as winget's zip
+    hash was stale). Already there: Windows Performance Toolkit, Application Verifier, cdb.
+  - Left: the DPI rework's other parts (the UDL undocked onto another monitor: needs a second display; upstream's helpers
+    instead of duplicates and of the global flag; the relaunch prompt, probably not needed as the setting says "restart
+    required"; the PR split in smaller ones, ~30% less), the toolbar fix brought onto `per-monitor-dpi_20260925`, the plugin
+    prototype. The Document List check by hand.
 - **The performance program (2026-10-20)**, asked by Pyre909: newer toolsets, refactoring, performance "in
   sections/parts", every language feature that helps, Windows 11 polish. Their choices: upstream code changed only where
   a measurement shows a gain (small marked patches), Windows 10 1809 minimum, C++23 everywhere, Windows 11 polish (not a
