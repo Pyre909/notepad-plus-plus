@@ -20,6 +20,7 @@
 #include <wininet.h>
 
 #include <ctime>
+#include <format>
 #include <memory>
 
 #include "NppXml.h"
@@ -451,7 +452,7 @@ LRESULT Notepad_plus::init(HWND hwnd)
 	bool willBeShown = nppGUI._statusBarShow;
 	_statusBar.init(_pPublicInterface->getHinst(), hwnd, 6);
 	_statusBar.setPartWidth(STATUSBAR_DOC_SIZE, DPIManagerV2::scale(220, dpi));
-	_statusBar.setPartWidth(STATUSBAR_CUR_POS, DPIManagerV2::scale(260, dpi));
+	_statusBar.setPartWidth(STATUSBAR_CUR_POS, DPIManagerV2::scale(320, dpi)); // Pyre909 build: 260 + the character's code ("    U+1F600": 58 px in Segoe UI 9 pt)
 	_statusBar.setPartWidth(STATUSBAR_EOF_FORMAT, DPIManagerV2::scale(110, dpi));
 	_statusBar.setPartWidth(STATUSBAR_UNICODE_TYPE, DPIManagerV2::scale(120, dpi));
 	_statusBar.setPartWidth(STATUSBAR_TYPING_MODE, DPIManagerV2::scale(45, dpi));
@@ -4598,6 +4599,30 @@ int Notepad_plus::wordCount()
     return _findReplaceDlg.processAll(ProcessCountAll, &env, true);
 }
 
+// Pyre909 build: the character after the caret, for the status bar: its Unicode code point ("U+00E9", "U+1F600"), or the
+// byte of an invalid sequence ("0xE9"); empty at the end of the document
+static wstring getCharCodeAt(const ScintillaEditView& view, size_t pos)
+{
+	const auto next = static_cast<size_t>(view.execute(SCI_POSITIONAFTER, pos));
+	if (next <= pos)
+		return {};
+
+	char bytes[8]{};
+	const size_t len = std::min(next - pos, std::size(bytes) - 1); // a character, or CR LF (one position)
+	view.getText(bytes, pos, pos + len);
+
+	wchar_t wide[4]{};
+	const auto codepage = static_cast<UINT>(view.execute(SCI_GETCODEPAGE));
+	const int wideLen = ::MultiByteToWideChar(codepage, MB_ERR_INVALID_CHARS, bytes, static_cast<int>(len), wide, static_cast<int>(std::size(wide)));
+	if (wideLen <= 0)
+		return std::format(L"0x{:02X}", static_cast<unsigned char>(bytes[0]));
+
+	char32_t codePoint = wide[0];
+	if ((wideLen > 1) && IS_HIGH_SURROGATE(wide[0]) && IS_LOW_SURROGATE(wide[1]))
+		codePoint = 0x10000 + ((wide[0] - 0xD800) << 10) + (wide[1] - 0xDC00);
+	return std::format(L"U+{:04X}", static_cast<uint32_t>(codePoint));
+}
+
 void Notepad_plus::updateStatusBar()
 {
 	// these sections of status bar NOT updated by this function:
@@ -4626,6 +4651,14 @@ void Notepad_plus::updateStatusBar()
 			size_t currPos = _pEditView->execute(SCI_GETCURRENTPOS);
 			statusbarSelStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Pos", L"Pos: ");
 			statusbarSelStr += commafyInt(currPos + 1);
+
+			// Pyre909 build: the character after the caret, not in virtual space (after the line end)
+			const auto mainSel = _pEditView->execute(SCI_GETMAINSELECTION);
+			if (_pEditView->execute(SCI_GETSELECTIONNCARETVIRTUALSPACE, mainSel) == 0)
+			{
+				if (const wstring charCode = getCharCodeAt(*_pEditView, currPos); !charCode.empty())
+					statusbarSelStr += L"    " + charCode;
+			}
 		}
 		else
 		{

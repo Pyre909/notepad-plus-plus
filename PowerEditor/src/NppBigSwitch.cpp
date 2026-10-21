@@ -3932,7 +3932,7 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 				_pDocumentListPanel->updateFileStateIconsForDpi();
 
 			_statusBar.setPartWidth(STATUSBAR_DOC_SIZE, DPIManagerV2::scale(220, dpi));
-			_statusBar.setPartWidth(STATUSBAR_CUR_POS, DPIManagerV2::scale(260, dpi));
+			_statusBar.setPartWidth(STATUSBAR_CUR_POS, DPIManagerV2::scale(320, dpi)); // Pyre909 build: 260 + the character's code ("    U+1F600": 58 px in Segoe UI 9 pt)
 			_statusBar.setPartWidth(STATUSBAR_EOF_FORMAT, DPIManagerV2::scale(110, dpi));
 			_statusBar.setPartWidth(STATUSBAR_UNICODE_TYPE, DPIManagerV2::scale(120, dpi));
 			_statusBar.setPartWidth(STATUSBAR_TYPING_MODE, DPIManagerV2::scale(45, dpi));
