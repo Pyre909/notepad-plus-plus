@@ -95,6 +95,11 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
   PR branch for review, and after an upstream merge into `pyre`; MSVC catches things GCC doesn't and vice versa. By
   default every job runs: upstream's filter (only `.md`/`.txt` changed: nothing built; `[force all]` in the title)
   applies with `jobs=auto` only.
+- The CI's GCC and Clang builds also run locally (MSYS2 on the VM since 2026-10-20: MINGW64 GCC, CLANG64 Clang), in a
+  clean worktree: `$Env:MSYSTEM = 'MINGW64'` (or `CLANG64`), `C:\msys64\mingw64\bin` (or `clang64\bin`) and
+  `C:\msys64\usr\bin` first in `PATH`, then `mingw32-make -j 6 -f PowerEditor\gcc\makefile` (about 4 minutes; `DEBUG=1`
+  for Debug). Also on the VM: Visual Studio's Clang tools (`/p:PlatformToolset=ClangCL`), WinDbg, Sysinternals (DebugView,
+  Process Explorer), the Windows Performance Toolkit.
 
 ## Code conventions
 
@@ -162,9 +167,11 @@ and can't run 32-bit NSIS installers):
    "Cascadia Code SemiBold" bold: DirectWrite draws it with Cascadia Code Bold, not a simulated bold (**pass**,
    2026-10-06, the face DirectWrite matches to the bold weight; GDI doesn't embolden a SemiBold font at all).
 4. Per-monitor DPI with a change of Windows' scale: **done** (2026-10-20, Pyre909 changed it 150% -> 100% -> 150% while
-   the tooling branch's `review/tests/pyre-dpi-scale.ps1 -WaitForScaleChange` ran): every panel follows both ways,
-   except the Project Panel's text-button toolbar, which keeps its 100% height back at 150% (a known fault, in
-   `STATUS.md`). Two monitors of different scales: still to do (needs a second display).
+   the tooling branch's `review/tests/pyre-dpi-scale.ps1 -WaitForScaleChange` ran): every panel follows both ways.
+   The Project Panel's text-button toolbar didn't (comctl32 keeps text buttons no higher than for the DPI the toolbar was
+   made at, and the theme change after a DPI change puts that back): fixed by `ProjectPanel::ToolbarSubclass`, checked
+   with 150 -> 200 -> 150%. Below the start scale the status bars stay at least 28 pixels (comctl32, left as is). Two
+   monitors of different scales: still to do (needs a second display).
 
 ## Where the rest is
 
