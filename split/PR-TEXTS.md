@@ -15,7 +15,7 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 7 | `live-rendering-switch_20261005` | `9fdd356` + `61eccb1` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
 | 8 | `directwrite-font-smoothing_20261006` | `5dff07b` | 4 | small | DirectWrite following the Windows font smoothing | no: bug fix of #14954 (open since 2024) |
 | 9 | `function-list-caret_20261020` | `398b2c2` | 2 | none | Function List caret tracking: a binary search, not a walk of the tree per caret move | no: bug fix (issue to open first) |
-| 10 | `doclist-column-width_20261020` | `20f0a90` | 1 | none | Document List column widths stored for 96 DPI, as they are read | no: bug fix (check by hand, then issue) |
+| 10 | `doclist-column-width_20261020` | `20f0a90` | 1 | none | Document List column widths stored for 96 DPI, as they are read | no: bug fix (checked by hand: 48 -> 72 px before, 50 -> 50 after; issue to open first) |
 | 11 | none | – | – | – | Comment: the Find dialog's black status bar was the swallowed `WM_THEMECHANGED`, so its PMv2 can come back | no: a comment on #18455 or #18462 |
 | 12 | `menu-colour-bitmaps_20261020` | `5903444` | 2 | none | The main menu's colour samples cached, not leaked (11 GDI objects per colour change) | no: bug fix (issue to open first) |
 | 13 | `dpi-dialog-sizes_20261020` | `b759ee8` | 5 | none | Tooltip widths and Shortcut Mapper's grid metrics for the DPI of upstream's per-monitor dialogs | no: bug fix (issue to open first) |
@@ -870,15 +870,14 @@ stores them in pixels (`VerticalFileSwitcher.cpp`, `HDN_ENDTRACK`: `_fileSwitche
 column comes back wider at the next layout of the panel (a resize of the window or the panel, a restart), and wider again
 after each new resize. The fix stores `DPIManagerV2::unscale(hdi.cxy, _hSelf)`, the inverse of the read.
 
-Not yet seen happen: a test can't drive the header's divider (synthetic mouse messages and a WM_NOTIFY sent from another
-process don't reach the code), so the numbers in the texts below are what the code computes.
+Seen on 2026-10-20 (Pyre909 by hand at 150%, the widths read from the list view every 100 ms by a scratch script: a test
+can't drive the header's divider): the installed 8.9.8.1 (before the fix) and `pyre` with it side by side; the Ext.
+column's right edge dragged narrower, then the window resized: before, 48 px came back 72 px (48 x 1.5); with the fix,
+50 px stayed 50. (The divider between Name and Ext. resizes Name: only the Ext. or Path column's own edge stores a width.)
 
 Before opening:
-1. Pyre909 checks it by hand on the VM at 150%: View > Document List; drag the Ext. column's divider (wider by about a
-   finger); resize the Notepad++ window; the column jumps to about 1.5 times the width (official 8.9.8.1 or `pyre` before
-   `dd3cd5a`); with this branch's build it stays. Put the widths seen into the texts.
-2. CI on the fork: done (run 39488337590, all 13 jobs).
-3. Pyre909 opens the issue below, then the PR with `fix #<issue>`.
+1. CI on the fork: done (run 39488337590, all 13 jobs).
+2. Pyre909 opens the issue below, then the PR with `fix #<issue>`.
 
 ### Issue — title
 `Document List column widths grow when the display scale is over 100%`
@@ -886,18 +885,18 @@ Before opening:
 ### Issue — body
 ```
 ### Description of the Issue
-At a display scale over 100%, resizing the Ext. (or Path) column of the Document List doesn't stick: the next time the panel lays out its columns (resizing the window or the panel, or restarting), the column comes back wider, about 1.5 times as wide at 150%. Resize it again and it grows again.
+At a display scale over 100%, resizing the Ext. (or Path) column of the Document List doesn't stick: the next time the panel lays out its columns (resizing the window or the panel, or restarting), the column comes back wider, 1.5 times as wide at 150% (I made it 48 px, it came back 72 px). Resize it again and it grows again.
 
 Looking at the code: the widths are read as 96-DPI values and scaled up (VerticalFileSwitcherListView::initList / resizeColumns use DPIManagerV2::scale(width, dpi)), but when you resize a column VerticalFileSwitcher stores the width in pixels (HDN_ENDTRACK: `_fileSwitcherExtWidth = hdi.cxy`), so it gets scaled one extra time.
 
 ### Steps To Reproduce
 1. Set the Windows display scale to 150%.
 2. View > Document List.
-3. Drag the divider of the Ext. column to make it a bit wider.
+3. Drag the right edge of the Ext. column header to make the column narrower (or wider).
 4. Resize the Notepad++ window.
 
 ### Current Behavior
-The Ext. column jumps to about 1.5x the width you gave it, and keeps growing each time you resize it again.
+The Ext. column jumps to 1.5x the width you gave it (48 px -> 72 px here), and keeps growing each time you resize it again.
 
 ### Expected Behavior
 The column keeps the width you set.
@@ -911,11 +910,11 @@ The column keeps the width you set.
 
 ### PR — body
 ```
-The Ext. and Path column widths are read as 96-DPI values and scaled to the panel's DPI, but resizing a column stored the width in pixels, so over 100% it got scaled one extra time: at 150% a column you made 80 px wide came back 120 px wide at the next layout, and grew again after each resize.
+The Ext. and Path column widths are read as 96-DPI values and scaled to the panel's DPI, but resizing a column stored the width in pixels, so over 100% it got scaled one extra time: at 150% a column I made 48 px wide came back 72 px wide at the next layout, and grew again after each resize.
 
 Now the width is stored for 96 DPI (DPIManagerV2::unscale with the panel's window), the inverse of how it's read. 1 file, +4 −3.
 
-Tested on Windows 11 ARM64 at 150% with Release builds: (Pyre909: what you saw), all 13 CI jobs pass on my fork.
+Tested on Windows 11 ARM64 at 150% with Release builds, by hand: Ext. column dragged narrower, then the window resized. Before: 48 px came back 72 px. With this: 50 px stayed 50 px. All 13 CI jobs pass on my fork.
 
 AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
 

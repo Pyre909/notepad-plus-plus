@@ -85,7 +85,8 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     whether the switch comes first as a config.xml-only option: for Pyre909 to post.
   - Left: the plugin prototype (only if Pyre909 wants one: their choice for plugins was to disclose they aren't covered); the UDL undocked onto another monitor (needs a
     second display); the relaunch prompt (probably not needed: the setting says "restart required"). The Document List
-    check by hand.
+    checked by hand (kit 10: 48 -> 72 px before the fix, 50 -> 50 after).
+  - For Pyre909: post kit 4's comment (#14959) and kit 11's (#18455); open the issues of kits 12, 9, 13 and 10, then their PRs.
 - **The performance program (2026-10-20)**, asked by Pyre909: newer toolsets, refactoring, performance "in
   sections/parts", every language feature that helps, Windows 11 polish. Their choices: upstream code changed only where
   a measurement shows a gain (small marked patches), Windows 10 1809 minimum, C++23 everywhere, Windows 11 polish (not a
