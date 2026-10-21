@@ -47,6 +47,10 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   #16110, where the icons alone are offered).
 - **Rounded corners on Windows 11** for the popups Windows leaves square: call tips, the About box, the colour
   picker and the document peeker (Preferences > Dark Mode, on by default).
+- **Ctrl+click opens links** (Preferences > Cloud & Link > "Open with Ctrl+click", off by default): a Ctrl+click on a
+  link opens it, and a double-click selects a word in it like anywhere else (official issue #9993). A selected link
+  is dragged or deselected by a Ctrl+click as before, and a Ctrl+double-click on a link opens it rather than selecting
+  between delimiters.
 - **Per-monitor DPI awareness** (Preferences > MISC., experimental, restart required).
 - **Font sizes 1 to 4 pt** in the font size lists.
 - **A crash guard** for DirectWrite fonts with an out-of-range weight (Scintilla bug #2520).

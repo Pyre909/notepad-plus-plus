@@ -6881,6 +6881,13 @@ intptr_t CALLBACK CloudAndLinkSubDlg::run_dlgProc(UINT message, WPARAM wParam, L
 			::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_CLICKABLELINK_FULLBOXMODE), linkEnable);
 			::EnableWindow(::GetDlgItem(_hSelf, IDC_URISCHEMES_EDIT), linkEnable);
 
+			// Pyre909 build: a link opened by Ctrl+click, a double-click then selecting a word in it
+			::SendDlgItemMessage(_hSelf, IDC_CHECK_CLICKABLELINK_CTRLCLICK, BM_SETCHECK, nppGUI._openLinkWithCtrlClick ? BST_CHECKED : BST_UNCHECKED, 0);
+			::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_CLICKABLELINK_CTRLCLICK), linkEnable);
+			NativeLangSpeaker* pNativeSpeaker = (NppParameters::getInstance()).getNativeLangSpeaker();
+			wstring ctrlClickTip = pNativeSpeaker->getLocalizedStrFromID("clickable-link-ctrl-click-tip", L"Checked: a Ctrl+click opens a link, and a double-click selects a word in it as in other text. Unchecked: a double-click opens it.");
+			_tipCtrlClick = createToolTip(IDC_CHECK_CLICKABLELINK_CTRLCLICK, _hSelf, _hInst, ctrlClickTip.data(), pNativeSpeaker->isRTL());
+
 			return TRUE;
 		}
 
@@ -7019,6 +7026,7 @@ intptr_t CALLBACK CloudAndLinkSubDlg::run_dlgProc(UINT message, WPARAM wParam, L
 					::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_CLICKABLELINK_NOUNDERLINE), isChecked);
 					::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_CLICKABLELINK_FULLBOXMODE), isChecked);
 					::EnableWindow(::GetDlgItem(_hSelf, IDC_URISCHEMES_EDIT), isChecked);
+					::EnableWindow(::GetDlgItem(_hSelf, IDC_CHECK_CLICKABLELINK_CTRLCLICK), isChecked); // Pyre909 build
 
 					redrawDlgItem(IDC_CLICKABLELINK_STATIC);
 
@@ -7039,6 +7047,12 @@ intptr_t CALLBACK CloudAndLinkSubDlg::run_dlgProc(UINT message, WPARAM wParam, L
 						nppGUI._styleURL = isNoUnderline ? urlNoUnderLineFg : urlUnderLineFg;
 					HWND grandParent = ::GetParent(_hParent);
 					::SendMessage(grandParent, NPPM_INTERNAL_UPDATECLICKABLELINKS, 0, 0);
+				}
+				return TRUE;
+
+				case IDC_CHECK_CLICKABLELINK_CTRLCLICK: // Pyre909 build
+				{
+					nppGUI._openLinkWithCtrlClick = isCheckedOrNot(IDC_CHECK_CLICKABLELINK_CTRLCLICK);
 				}
 				return TRUE;
 

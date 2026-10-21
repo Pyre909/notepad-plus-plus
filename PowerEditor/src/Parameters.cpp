@@ -6358,6 +6358,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 					}
 				}
 			}
+			_nppGUI._openLinkWithCtrlClick = getBoolAttribute(childNode, "ctrlClick"); // Pyre909 build
 		}
 		// <GUIConfig name="uriCustomizedSchemes">svn:// cvs:// git:// imap:// irc:// irc6:// ircs:// ldap:// ldaps:// news: telnet://
 		// gopher:// ssh:// sftp:// smb:// skype: snmp:// spotify: steam:// sms: slack:// chrome:// bitcoin:</GUIConfig>
@@ -8005,6 +8006,7 @@ void NppParameters::createXmlTreeFromGUIParams()
 	{
 		NppXml::Element GUIConfigElement = NppXml::createChildElement(newGUIRoot, "GUIConfig");
 		NppXml::setAttribute(GUIConfigElement, "name", "URL");
+		setBoolAttribute(GUIConfigElement, "ctrlClick", _nppGUI._openLinkWithCtrlClick); // Pyre909 build
 		NppXml::createChildText(GUIConfigElement, std::to_string(_nppGUI._styleURL));
 	}
 

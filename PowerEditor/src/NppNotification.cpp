@@ -374,60 +374,10 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 					}
 				}
 			}
-			else
+			else if (!nppGUI._openLinkWithCtrlClick) // Pyre909 build: else a double-click selects a word of a link, Ctrl+click opens it
 			{
 				// Double click with no modifiers
-				// Check whether cursor is within URL
-				auto indicMsk = notifyView->execute(SCI_INDICATORALLONFOR, notification->position);
-				if (!(indicMsk & (1 << URL_INDIC)))
-					break;
-
-				auto startPos = notifyView->execute(SCI_INDICATORSTART, URL_INDIC, notification->position);
-				auto endPos = notifyView->execute(SCI_INDICATOREND, URL_INDIC, notification->position);
-				if ((notification->position < startPos) || (notification->position > endPos))
-					break;
-
-				// WM_LBUTTONUP goes to opening browser instead of Scintilla here, because the mouse is not captured.
-				// The missing message causes mouse cursor flicker as soon as the mouse cursor is moved to a position outside the text editing area.
-				::PostMessage(notifyView->getHSelf(), WM_LBUTTONUP, 0, 0);
-
-				// Revert selection of current word. Best to this early, otherwise the
-				// selected word is visible all the time while the browser is starting
-				notifyView->execute(SCI_SETSEL, notification->position, notification->position);
-
-				// Open URL
-				wstring url = notifyView->getGenericTextAsString(static_cast<size_t>(startPos), static_cast<size_t>(endPos));
-
-				if (isUncFileUrl(url))
-				{
-					const std::string urlUTF8 = wstring2string(url, CP_UTF8);
-					if (!nppParam.isServerAllowed(urlUTF8.c_str())) // is in the serverWhiteList.xml ?
-					{
-						if (nppParam.networkPathAlwaysAction() == NppParameters::networkPathAlwaysAsk)
-						{
-							NetworkPathWarningBox networkPathWarningBox;
-							networkPathWarningBox.init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), url, "title2");
-							networkPathWarningBox.doDialog(_nativeLangSpeaker.isRTL());
-							int buttonID = networkPathWarningBox.getClickedButtonId();
-
-							networkPathWarningBox.destroy();
-
-							if (buttonID == IDCANCEL || buttonID == IDNO) // Skip once or Always skip
-							{
-								return FALSE;
-							}
-						}
-						else if (nppParam.networkPathAlwaysAction() == NppParameters::networkPathAlwaysSkip)
-						{
-							return FALSE;
-						}
-						else if (nppParam.networkPathAlwaysAction() == NppParameters::networkPathAlwaysLoad)
-						{
-							// do nothing, continue to load the file
-						}
-					}
-				}
-				::ShellExecute(_pPublicInterface->getHSelf(), L"open", url.c_str(), NULL, NULL, SW_SHOW);
+				openLinkAt(notifyView, notification->position, true);
 			}
 			break;
 		}

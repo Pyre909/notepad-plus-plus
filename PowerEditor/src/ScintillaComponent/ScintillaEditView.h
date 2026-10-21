@@ -758,6 +758,12 @@ protected:
 	void applyLayoutCache(); // Pyre909 build: the layout cache and drawing phases of an edit view for its document
 	bool _hasLineSpacing = false; // Pyre909 build: applyLineSpacing gave the view extra ascent or descent
 
+	// Pyre909 build: a link opened by Ctrl+click (ScintillaProc's WM_LBUTTONDOWN)
+	intptr_t ctrlClickedLinkPosition(WPARAM wParam, LPARAM lParam) const;
+	bool _isLinkClicked = false; // its button up is to come
+	DWORD _linkClickTime = 0; // a second click within the double-click time and distance doesn't open it again
+	POINT _linkClickPoint{};
+
 	bool _isMainEditZone = false;
 	SCINTILLA_FUNC _pScintillaFunc = nullptr;
 	SCINTILLA_PTR  _pScintillaPtr = nullptr;

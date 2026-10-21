@@ -539,6 +539,7 @@ private:
 	void maintainIndentation(wchar_t ch);
 
 	void addHotSpot(ScintillaEditView* view = nullptr);
+	bool openLinkAt(ScintillaEditView* view, intptr_t position, bool isDoubleClick); // Pyre909 build: double-click or Ctrl+click
 	void removeAllHotSpot();
 
     void bookmarkAdd(intptr_t lineno) const {

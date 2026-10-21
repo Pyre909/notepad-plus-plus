@@ -3988,6 +3988,13 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 			return TRUE;
 		}
 
+		case NPPM_INTERNAL_OPENLINKAT: // Pyre909 build: a Ctrl+click in an edit view (ScintillaEditView::ScintillaProc)
+		{
+			const auto hView = reinterpret_cast<HWND>(lParam);
+			ScintillaEditView* pView = (hView == _mainEditView.getHSelf()) ? &_mainEditView : ((hView == _subEditView.getHSelf()) ? &_subEditView : nullptr);
+			return pView && openLinkAt(pView, static_cast<intptr_t>(wParam), false);
+		}
+
 		case NPPM_INTERNAL_UPDATECLICKABLELINKS:
 		{
 			if (wParam == 1)

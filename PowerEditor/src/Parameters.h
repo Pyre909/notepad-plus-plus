@@ -805,6 +805,7 @@ struct NppGUI final
 	bool _isWordCharDefault = true;
 	std::string _customWordChars;
 	urlMode _styleURL = urlUnderLineFg;
+	bool _openLinkWithCtrlClick = false; // Pyre909 build: a link opened by Ctrl+click; a double-click then selects a word in it
 	std::wstring _uriSchemes = L"svn:// cvs:// git:// imap:// irc:// irc6:// ircs:// ldap:// ldaps:// news: telnet:// gopher:// ssh:// sftp:// smb:// skype: snmp:// spotify: steam:// sms: slack:// chrome:// bitcoin:";
 	NewDocDefaultSettings _newDocDefaultSettings;
 

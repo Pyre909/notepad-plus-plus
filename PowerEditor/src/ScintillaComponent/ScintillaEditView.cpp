@@ -1059,8 +1059,73 @@ LRESULT CALLBACK ScintillaEditView::ScintillaProc(
 			}
 			break;
 		}
+
+		// Pyre909 build: with Preferences > Cloud & Link > "Open with Ctrl+click", a Ctrl+click on a link opens it instead of
+		// adding a caret: Scintilla gets neither the click, nor its button up, nor the second click of a double-click
+		case WM_LBUTTONDOWN:
+		{
+			pScint->_isLinkClicked = false; // a button up lost to a modal dialog (a network path warning) leaves nothing behind
+			const intptr_t linkPos = pScint->ctrlClickedLinkPosition(wParam, lParam);
+			if (linkPos >= 0)
+			{
+				// the second click of a double-click: within its time and distance of the first, as Windows counts them
+				const auto clickTime = static_cast<DWORD>(::GetMessageTime());
+				const POINT clickPoint{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+				const bool isSecondClick = ((clickTime - pScint->_linkClickTime) <= ::GetDoubleClickTime()) &&
+					(std::abs(clickPoint.x - pScint->_linkClickPoint.x) <= ::GetSystemMetrics(SM_CXDOUBLECLK) / 2) &&
+					(std::abs(clickPoint.y - pScint->_linkClickPoint.y) <= ::GetSystemMetrics(SM_CYDOUBLECLK) / 2);
+				pScint->_linkClickTime = clickTime;
+				pScint->_linkClickPoint = clickPoint;
+				pScint->_isLinkClicked = true;
+
+				// what Scintilla's click would have done first: the view focused (the current one), no list or call tip left
+				::SetFocus(hWnd);
+				pScint->execute(SCI_AUTOCCANCEL);
+				pScint->execute(SCI_CALLTIPCANCEL);
+				if (!isSecondClick)
+					::SendMessage(pScint->_hParent, NPPM_INTERNAL_OPENLINKAT, linkPos, reinterpret_cast<LPARAM>(hWnd));
+				return 0;
+			}
+			break;
+		}
+
+		case WM_LBUTTONUP:
+		{
+			if (pScint->_isLinkClicked) // Pyre909 build: of a Ctrl+click on a link (WM_LBUTTONDOWN)
+			{
+				pScint->_isLinkClicked = false;
+				return 0;
+			}
+			break;
+		}
 	}
 	return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+
+// Pyre909 build: the position of the link under a click with Ctrl only (WM_LBUTTONDOWN) in an edit view, -1 if there's none or
+// "Open with Ctrl+click" is off. A link in a selection is left to Scintilla: Ctrl+drag copies the selection, a Ctrl+click
+// drops one of several.
+intptr_t ScintillaEditView::ctrlClickedLinkPosition(WPARAM wParam, LPARAM lParam) const
+{
+	if (!_isMainEditZone || !NppParameters::getInstance().getNppGUI()._openLinkWithCtrlClick)
+		return -1;
+	if (((wParam & (MK_CONTROL | MK_SHIFT)) != MK_CONTROL) || (::GetKeyState(VK_MENU) < 0) || (::GetCapture() == _hSelf))
+		return -1;
+	if (!_currentBuffer || !_currentBuffer->allowClickableLink())
+		return -1;
+
+	// -1 in the margins too
+	const intptr_t pos = execute(SCI_CHARPOSITIONFROMPOINTCLOSE, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+	if ((pos < 0) || !(execute(SCI_INDICATORALLONFOR, pos) & (1 << URL_INDIC)))
+		return -1;
+
+	const auto nbSelections = execute(SCI_GETSELECTIONS);
+	for (LRESULT i = 0; i < nbSelections; ++i)
+	{
+		if ((pos >= execute(SCI_GETSELECTIONNSTART, i)) && (pos < execute(SCI_GETSELECTIONNEND, i)))
+			return -1;
+	}
+	return pos;
 }
 
 #define DEFAULT_FONT_NAME L"Courier New"

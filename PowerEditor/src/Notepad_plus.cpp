@@ -3720,6 +3720,68 @@ void Notepad_plus::addHotSpot(ScintillaEditView* view)
 	delete[] wideText;
 }
 
+// Pyre909 build: the link at the position opened, by a double-click (as upstream's SCN_DOUBLECLICK handler did) or a
+// Ctrl+click (ScintillaEditView::ScintillaProc); false if there's no link there
+bool Notepad_plus::openLinkAt(ScintillaEditView* view, intptr_t position, bool isDoubleClick)
+{
+	// Check whether cursor is within URL
+	auto indicMsk = view->execute(SCI_INDICATORALLONFOR, position);
+	if (!(indicMsk & (1 << URL_INDIC)))
+		return false;
+
+	auto startPos = view->execute(SCI_INDICATORSTART, URL_INDIC, position);
+	auto endPos = view->execute(SCI_INDICATOREND, URL_INDIC, position);
+	if ((position < startPos) || (position > endPos))
+		return false;
+
+	if (isDoubleClick)
+	{
+		// WM_LBUTTONUP goes to opening browser instead of Scintilla here, because the mouse is not captured.
+		// The missing message causes mouse cursor flicker as soon as the mouse cursor is moved to a position outside the text editing area.
+		::PostMessage(view->getHSelf(), WM_LBUTTONUP, 0, 0);
+
+		// Revert selection of current word. Best to this early, otherwise the
+		// selected word is visible all the time while the browser is starting
+		view->execute(SCI_SETSEL, position, position);
+	}
+
+	// Open URL
+	wstring url = view->getGenericTextAsString(static_cast<size_t>(startPos), static_cast<size_t>(endPos));
+
+	NppParameters& nppParam = NppParameters::getInstance();
+	if (isUncFileUrl(url))
+	{
+		const std::string urlUTF8 = wstring2string(url, CP_UTF8);
+		if (!nppParam.isServerAllowed(urlUTF8.c_str())) // is in the serverWhiteList.xml ?
+		{
+			if (nppParam.networkPathAlwaysAction() == NppParameters::networkPathAlwaysAsk)
+			{
+				NetworkPathWarningBox networkPathWarningBox;
+				networkPathWarningBox.init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), url, "title2");
+				networkPathWarningBox.doDialog(_nativeLangSpeaker.isRTL());
+				int buttonID = networkPathWarningBox.getClickedButtonId();
+
+				networkPathWarningBox.destroy();
+
+				if (buttonID == IDCANCEL || buttonID == IDNO) // Skip once or Always skip
+				{
+					return true;
+				}
+			}
+			else if (nppParam.networkPathAlwaysAction() == NppParameters::networkPathAlwaysSkip)
+			{
+				return true;
+			}
+			else if (nppParam.networkPathAlwaysAction() == NppParameters::networkPathAlwaysLoad)
+			{
+				// do nothing, continue to load the file
+			}
+		}
+	}
+	::ShellExecute(_pPublicInterface->getHSelf(), L"open", url.c_str(), NULL, NULL, SW_SHOW);
+	return true;
+}
+
 bool Notepad_plus::isConditionExprLine(intptr_t lineNumber)
 {
 	if (lineNumber < 0 || lineNumber > _pEditView->execute(SCI_GETLINECOUNT))

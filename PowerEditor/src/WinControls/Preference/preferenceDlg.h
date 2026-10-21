@@ -361,8 +361,16 @@ class CloudAndLinkSubDlg : public StaticDialog
 {
 public :
 	CloudAndLinkSubDlg() = default;
+	~CloudAndLinkSubDlg() override {
+		if (_tipCtrlClick != nullptr) // Pyre909 build
+		{
+			::DestroyWindow(_tipCtrlClick);
+			_tipCtrlClick = nullptr;
+		}
+	}
 
 private :
+	HWND _tipCtrlClick = nullptr; // Pyre909 build: of "Open with Ctrl+click"
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 };
 
