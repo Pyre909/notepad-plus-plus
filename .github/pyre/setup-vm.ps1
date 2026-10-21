@@ -1,6 +1,8 @@
 # Sets up a Windows 10/11 machine (or VM) to work on the Pyre909 build of Notepad++ with Claude Code:
-# - installs, with winget: Git for Windows, GitHub CLI, PowerShell 7, 7-Zip, NSIS and the Visual Studio 2026
-#   C++ build tools, ARM64 compiler included (or the full Visual Studio 2026 Community IDE with -WithVisualStudioIde)
+# - installs, with winget: Git for Windows, GitHub CLI, PowerShell 7, 7-Zip, NSIS, Python, LLVM (clang-format,
+#   clang-tidy), WinDbg, the Sysinternals Suite (Microsoft Store) and the Visual Studio 2026 C++ build tools, ARM64
+#   compiler and Clang tools included (or the full Visual Studio 2026 Community IDE with -WithVisualStudioIde)
+# - installs MSYS2 with the toolchains of the CI's MSYS2 jobs (MinGW GCC, Clang), to run those builds locally
 # - installs Claude Code (native installer), unless it's already there
 # - clones the fork (branch pyre) and adds the official repository as remote "upstream"
 # - adds a worktree per branch you're likely to work on, next to the clone
@@ -15,7 +17,8 @@ param(
 	[string] $Root = (Join-Path $env:USERPROFILE 'src\npp'),
 	[string] $RepoUrl = 'https://github.com/Pyre909/notepad-plus-plus.git',
 	[string] $UpstreamUrl = 'https://github.com/notepad-plus-plus/notepad-plus-plus.git',
-	[string[]] $Worktrees = @('text-rendering_20260925', 'live-rendering-switch_20260930', 'directwrite-font-names_20260930', 'scintilla-upstream_20260930'),
+	[string[]] $Worktrees = @('scintilla-upstream_20260930', 'per-monitor-dpi_20260925', 'directwrite-font-names_20260930', 'rtl-views-gdi_20261006',
+		'live-rendering-switch_20261005', 'directwrite-font-smoothing_20261006', 'function-list-caret_20261020', 'doclist-column-width_20261020'),
 	[switch] $SkipInstall,
 	[switch] $SkipClaude,
 	[switch] $WithVisualStudioIde,
@@ -75,14 +78,47 @@ if (-not $SkipInstall) {
 	Install-WingetPackage 'Microsoft.PowerShell'
 	Install-WingetPackage '7zip.7zip'
 	Install-WingetPackage 'NSIS.NSIS'
-	# Visual Studio 2026 (toolset v145), with the ARM64 compiler for native builds on ARM64 machines, without keeping the
-	# downloaded packages (several GB)
-	$vsOptions = '--add Microsoft.VisualStudio.Component.VC.Tools.ARM64 --includeRecommended --nocache'
+	# Python (Scintilla's DepGen.py, the CI's XML check), unless one is there already (py, its launcher)
+	if (-not (Get-Command py -ErrorAction SilentlyContinue)) { Install-WingetPackage 'Python.Python.3.14' }
+	Install-WingetPackage 'LLVM.LLVM'
+	Install-WingetPackage 'Microsoft.WinDbg'
+	# the Microsoft Store edition: winget's zip of the suite is replaced in place by Sysinternals, its hash goes stale
+	Install-WingetPackage '9P7KNL5RWT25' @('--source', 'msstore')
+	# Visual Studio 2026 (toolset v145), with the ARM64 compiler for native builds on ARM64 machines and the Clang tools
+	# (clang-cl, /p:PlatformToolset=ClangCL), without keeping the downloaded packages (several GB)
+	$vsComponents = @('Microsoft.VisualStudio.Component.VC.Tools.ARM64', 'Microsoft.VisualStudio.Component.VC.Llvm.Clang',
+		'Microsoft.VisualStudio.Component.VC.Llvm.ClangToolset')
+	$vsOptions = (($vsComponents | ForEach-Object { "--add $_" }) -join ' ') + ' --includeRecommended --nocache'
 	if ($WithVisualStudioIde) {
 		Install-WingetPackage 'Microsoft.VisualStudio.Community' @('--override', "--wait --quiet --add Microsoft.VisualStudio.Workload.NativeDesktop $vsOptions")
 	}
 	else {
 		Install-WingetPackage 'Microsoft.VisualStudio.BuildTools' @('--override', "--wait --quiet --add Microsoft.VisualStudio.Workload.VCTools $vsOptions")
+	}
+	# an installation that was already there gets the components it lacks (winget only installs)
+	$vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+	if (Test-Path $vswhere) {
+		$vsPath = & $vswhere -latest -products * -property installationPath
+		$missing = @($vsComponents | Where-Object { -not (& $vswhere -latest -products * -requires $_ -property installationPath) })
+		if ($vsPath -and $missing) {
+			Write-Host "Visual Studio: adding $($missing -join ', ')"
+			$vsSetup = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\setup.exe'
+			$vsArgs = @('modify', '--installPath', "`"$vsPath`"") + ($missing | ForEach-Object { '--add', $_ }) + @('--quiet', '--norestart', '--nocache')
+			$vsModify = Start-Process $vsSetup -ArgumentList $vsArgs -Wait -PassThru
+			if ($vsModify.ExitCode -ne 0) { throw "Visual Studio could not add $($missing -join ', ') (exit code $($vsModify.ExitCode))" }
+		}
+	}
+	# MSYS2 with the toolchains of the CI's MSYS2 jobs: MINGW64 GCC and make, CLANG64 Clang and make
+	Install-WingetPackage 'MSYS2.MSYS2'
+	$msysBash = 'C:\msys64\usr\bin\bash.exe'
+	if ((Test-Path $msysBash) -and -not ((Test-Path 'C:\msys64\mingw64\bin\gcc.exe') -and (Test-Path 'C:\msys64\clang64\bin\clang.exe'))) {
+		$env:MSYSTEM = 'MSYS'
+		$env:CHERE_INVOKING = '1'
+		# twice: the first run updates MSYS2's core, the second the rest
+		& $msysBash -lc 'pacman -Syuu --noconfirm'
+		& $msysBash -lc 'pacman -Syuu --noconfirm'
+		& $msysBash -lc 'pacman -S --needed --noconfirm mingw-w64-x86_64-gcc mingw-w64-x86_64-make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-make'
+		if ($LASTEXITCODE -ne 0) { throw "MSYS2 could not install the toolchains (exit code $LASTEXITCODE)" }
 	}
 	Update-SessionPath
 }
