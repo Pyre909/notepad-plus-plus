@@ -51,7 +51,7 @@ jobs:
       working-directory: PowerEditor\visual.net\
       run: msbuild notepadPlus.sln /m /p:configuration="Release" /p:platform="x64"
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: exe-x64
         path: PowerEditor\bin64\notepad++.exe
@@ -71,7 +71,7 @@ jobs:
       shell: pwsh
       run: .github\pyre\pgo.ps1 -Step Instrument -Platform ARM64
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: arm64-instrumented
         path: |
@@ -90,7 +90,7 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v6
 
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: arm64-instrumented
         path: instrumented
@@ -99,7 +99,7 @@ jobs:
       shell: pwsh
       run: .github\pyre\pgo.ps1 -Step Train -Platform ARM64 -Exe instrumented\notepad++.exe
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: arm64-profile
         path: instrumented\*.pgc
@@ -116,13 +116,13 @@ jobs:
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v3
 
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       if: inputs.pgo
       with:
         name: arm64-instrumented
         path: PowerEditor\binarm64
 
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       if: inputs.pgo
       with:
         name: arm64-profile
@@ -141,7 +141,7 @@ jobs:
       working-directory: PowerEditor\visual.net\
       run: msbuild notepadPlus.sln /m /p:configuration="Release" /p:platform="ARM64"
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: exe-arm64
         path: PowerEditor\binarm64\notepad++.exe
@@ -155,12 +155,12 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v6
 
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: exe-x64
         path: PowerEditor\bin64
 
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: exe-arm64
         path: PowerEditor\binarm64
@@ -196,7 +196,7 @@ jobs:
 
     - name: Keep the files (test run)
       if: inputs.test_only
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: release-files
         path: out\
