@@ -71,7 +71,7 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
       History; `checkDpiChange` returns whether the DPI changed and `WM_DPICHANGED_AFTERPARENT` relayouts the panel once
       (four panels' copies gone); `replaceWindowFont` for DockingCont's fonts and the search field's; the flag dropped
       where the DPI compared is the window's own (kept in `checkDpiChange`: a panel's DPI isn't set while it's created);
-      Preferences' three tips of 260 scaled. Harness: 0 FAIL after a clean rebuild (an incremental one crashed at exit,
+      Preferences' three tips of 260 scaled. CI 13/13 (run 39549370355). Harness: 0 FAIL after a clean rebuild (an incremental one crashed at exit,
       0xC0000374: stale objects after `functionListPanel.h`'s member type change; CLAUDE.md now says so), one popup-timing
       flake that passed twice. Scale session (200 -> 100 -> 150%): every panel check passes, the Project toolbar 31 -> 38 ->
       22 -> 31. Its Preferences tooltip check was wrong (Preferences opened at 150% first: closing only hides it): it now
@@ -80,7 +80,10 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
       colour updates before, 0 after; test `menu-colour-bitmaps`), `dpi-dialog-sizes_20261020` (`b759ee8`: the tooltip
       widths and Shortcut Mapper's grid metrics in upstream's per-monitor dialogs; its evidence, Preferences created at
       200%, to take in the next scale session, with the plugin prototype's).
-  - Left: kit 4's comment with the split sequence; the plugin prototype; the UDL undocked onto another monitor (needs a
+  - Kit 4's comment for #14959 now proposes the split (switch, main window, edit views, docking, tree helper and one PR
+    per panel, dialog layout helper with the incremental search bar and the docked UDL, the checkbox last) and asks
+    whether the switch comes first as a config.xml-only option: for Pyre909 to post.
+  - Left: the plugin prototype; the UDL undocked onto another monitor (needs a
     second display); the relaunch prompt (probably not needed: the setting says "restart required"). The Document List
     check by hand.
 - **The performance program (2026-10-20)**, asked by Pyre909: newer toolsets, refactoring, performance "in

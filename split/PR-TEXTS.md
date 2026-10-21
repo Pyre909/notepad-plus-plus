@@ -258,8 +258,13 @@ Why discuss first, and where: on #14959 (ozone10's hiDPI tracking issue, open), 
 splitter and the whole Panels section (title, tab control, main field, splitter, plugin support), and ozone10 wrote on
 2026-01-15 that panels are "really complex" (docked state, saving positions, plugins) and "feel free to do PR". Upstream
 is still system DPI aware (manifest) and makes its dialogs per-monitor one by one; this branch makes the whole GUI
-thread per-monitor, opt-in. Order: Pyre909 posts the comment below; the PR follows (or a split of it) if ozone10 or
-donho agree.
+thread per-monitor, opt-in. Order: Pyre909 posts the comment below; the branch is cut into the PRs they choose.
+
+The split (2026-10-20 review of the branch, 27 steps condensed below): with the option off the branch changes nothing but
+the checkbox and one config.xml attribute, so most steps can't be tried by reviewers before the switch exists; hence
+the question of the switch first (config.xml only) or last. The standalone fixes (kit 10, 12, 13) go on their own,
+any time. Optional parts left for later: pixel-exact docking grips and captions, the floating Document List on a
+monitor of another scale, the scroll width kept across scales.
 
 ### Comment on #14959
 ```
@@ -267,11 +272,23 @@ donho agree.
 
 Short version: it's an opt-in setting (MISC. > "Per-monitor DPI awareness (experimental, restart required)", off by default). When it's on, the GUI thread runs PerMonitorV2, so the main window and the panels rescale on WM_DPICHANGED instead of getting bitmap-stretched: Function List, Folder as Workspace, Project, Document List, Character panel, Clipboard History, search results, Document Map, the docked UDL, plus splitters, the panel titles/tabs, floating panels, and saved panel sizes kept right when starting on a monitor with another scale. When it's off, nothing changes. It sits on top of your dialog work (About, hash, Shortcut Mapper, Find), which keeps working the same either way.
 
-Not covered: plugin panels, since how they lay out is up to each plugin.
+It's 61 files as one commit, which is way too much for one PR, so I'd split it like this, each PR building and working on its own:
 
-It's big (61 files, mostly one rescale hook per panel), so before opening a PR I wanted to ask if the approach (opt-in, whole thread PerMonitorV2) fits what you have in mind, or if you'd rather have it split up some way. Happy to rework it.
+1. the switch: perMonitorDpiAwareness in config.xml, the GUI thread PerMonitorV2, floating panel rects (with it off, nothing changes)
+2. main window: startup placement, relayout on WM_DPICHANGED, status bar, view splitters
+3. edit views: margins and markers on a DPI change
+4. docking: splitter widths, docked sizes, the containers, and an onDpiChanged hook for panels
+5. a tree view helper (font, item height, images, indent), then one small PR per panel: Folder as Workspace, Function List, Project, Document List, Character panel, Clipboard History, Document Map
+6. a dialog layout helper (dialog units, for child dialogs that can't be recreated) for the incremental search bar, then the docked UDL
+7. the Preferences checkbox last
 
-(Written with help from an AI assistant, which I'd disclose in the PR too.)
+The question is mostly about 1: would you rather have the switch early as a config.xml-only option, so each later PR can actually be tried with it on, or the whole thing only exposed at the end?
+
+A few things I found on the way are plain bug fixes, so I'll do those separately anyway: the Document List column widths growing above 100%, a GDI leak in the main menu's colour samples (11 bitmaps per Style Configurator colour change), and some fixed pixel sizes inside your per-monitor dialogs (tooltip widths, Shortcut Mapper's grid metrics).
+
+Not covered: plugin panels, since how they lay out is up to each plugin. With the option on, plugin dialogs created on the GUI thread become PerMonitorV2 too; Windows rescales their dialog fonts, custom-drawn stuff is up to them. A notification for DPI changes could help there, open to ideas.
+
+(Written with help from an AI assistant, which I'd disclose in the PRs too.)
 ```
 
 ### Issue — title (if a separate feature request is wanted instead)
@@ -963,7 +980,7 @@ Tested (ARM64 Release on the VM, the tooling branch's `review/tests/menu-colour-
 sent 100 times, as the Style Configurator does): before, 1,100 GDI objects more and 11 new bitmaps; with the fix, none,
 and every item keeps the same bitmap.
 
-Before opening: CI on the fork (all 13 jobs); Pyre909 opens the issue, then the PR with `fix #<issue>`.
+Before opening: CI on the fork: done (run 39549374338, all 13 jobs); Pyre909 opens the issue, then the PR with `fix #<issue>`.
 
 ### Issue — title
 `GDI objects leak each time a Mark Style or tab colour is changed in the Style Configurator`
@@ -1030,7 +1047,7 @@ rescaling a dialog's tooltips), left out to keep this small.
 Tested: (to do in a scale session: Preferences created for the first time at 200% on a 150% system, its tooltips'
 maximum widths; the first session of 2026-10-20 opened it at 150% first, so it only showed the case above.)
 
-Before opening: CI on the fork (all 13 jobs); Pyre909 opens the issue, then the PR with `fix #<issue>`.
+Before opening: the scale session for the evidence; CI on the fork: done (run 39549377466, all 13 jobs); Pyre909 opens the issue, then the PR with `fix #<issue>`.
 
 ### Issue — title
 `Tooltips in Preferences wrap at the wrong width after a display scale change`
