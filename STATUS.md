@@ -121,6 +121,9 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
       process gets the clicks it posts scaled by Windows (x1.5 at 144 DPI), so tests that post clicks set per-monitor
       awareness (`pyre-rounded-popups` clicks at 5,5 of a button: unaffected).
     - For upstream: each is a possible feature request (an issue to be Accepted first); not drafted yet.
+    - Pushed with Pyre909's OK (`pyre` `cd162a0`), CI 13/13 (run 39664208581); release run 39665322657 (0 annotations),
+      **published** as Latest: `pyre-8.9.8.1-cd162a0`, its notes with "What's new since the last release (f495ad1)", the
+      Global override change included.
   - Left: the plugin prototype (only if Pyre909 wants one: their choice for plugins was to disclose they aren't covered); the UDL undocked onto another monitor (needs a
     second display); the relaunch prompt (probably not needed: the setting says "restart required"). The Document List
     checked by hand (kit 10: 48 -> 72 px before the fix, 50 -> 50 after).
