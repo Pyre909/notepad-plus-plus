@@ -202,6 +202,11 @@ Notepad_plus::~Notepad_plus()
 	delete _pDocMap;
 	delete _pFuncList;
 	delete _pFileBrowser;
+
+	for (const auto& colourBitmap : _mainMenuColourBitmaps)
+	{
+		::DeleteObject(colourBitmap.second);
+	}
 }
 
 
@@ -2833,19 +2838,12 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 		const Style * pStyle = styleArray.findByID(bitmapOnStyleMenuItemsInfo[j].styleIndic);
 		if (pStyle)
 		{
-			HBITMAP hNewBitmap = generateSolidColourMenuItemIcon(pStyle->_bgColor);
-			if (hNewBitmap)
+			HBITMAP hNewBitmap = getMainMenuColourBitmap(pStyle->_bgColor);
+			if (hNewBitmap && ::SetMenuItemBitmaps(_mainMenuHandle, bitmapOnStyleMenuItemsInfo[j].firstOfThisColorMenuId, MF_BYCOMMAND, hNewBitmap, hNewBitmap))
 			{
-				if (!::SetMenuItemBitmaps(_mainMenuHandle, bitmapOnStyleMenuItemsInfo[j].firstOfThisColorMenuId, MF_BYCOMMAND, hNewBitmap, hNewBitmap))
+				for (int relatedMenuId : bitmapOnStyleMenuItemsInfo[j].sameColorMenuIds)
 				{
-					::DeleteObject(hNewBitmap);
-				}
-				else
-				{
-					for (int relatedMenuId : bitmapOnStyleMenuItemsInfo[j].sameColorMenuIds)
-					{
-						::SetMenuItemBitmaps(_mainMenuHandle, relatedMenuId, MF_BYCOMMAND, hNewBitmap, NULL);
-					}
+					::SetMenuItemBitmaps(_mainMenuHandle, relatedMenuId, MF_BYCOMMAND, hNewBitmap, NULL);
 				}
 			}
 		}
@@ -2855,13 +2853,21 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 	for (int i = 0; i < TAB_COLORS_COUNT; ++i)
 	{
 		COLORREF colour = nppParam.getIndividualTabColor(i, NppDarkMode::isEnabled(), true);
-		HBITMAP hBitmap = generateSolidColourMenuItemIcon(colour);
+		HBITMAP hBitmap = getMainMenuColourBitmap(colour);
 		if (hBitmap)
-		{
-			if (!::SetMenuItemBitmaps(_mainMenuHandle, IDM_VIEW_TAB_COLOUR_1 + i, MF_BYCOMMAND, hBitmap, hBitmap))
-				::DeleteObject(hBitmap);
-		}
+			::SetMenuItemBitmaps(_mainMenuHandle, IDM_VIEW_TAB_COLOUR_1 + i, MF_BYCOMMAND, hBitmap, hBitmap);
 	}
+}
+
+HBITMAP Notepad_plus::getMainMenuColourBitmap(COLORREF colour)
+{
+	if (const auto it = _mainMenuColourBitmaps.find(colour); it != _mainMenuColourBitmaps.end())
+		return it->second;
+
+	HBITMAP hBitmap = generateSolidColourMenuItemIcon(colour);
+	if (hBitmap)
+		_mainMenuColourBitmaps[colour] = hBitmap;
+	return hBitmap;
 }
 
 // doCheck searches for the menu item matching the provided id across the main menu and all of its submenus,

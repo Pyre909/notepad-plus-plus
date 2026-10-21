@@ -45,6 +45,7 @@
 #include "md5Dlgs.h"
 #include "menuCmdID.h"
 #include <vector>
+#include <map>
 #include <iso646.h>
 #include <chrono>
 #include <atomic>
@@ -677,6 +678,11 @@ private:
 	void updateCommandShortcuts();
 
 	HBITMAP generateSolidColourMenuItemIcon(COLORREF colour);
+
+	// the main menu's colour samples, one per colour: set again after each colour change, never deleted before the end
+	// (the context menus share them)
+	std::map<COLORREF, HBITMAP> _mainMenuColourBitmaps;
+	HBITMAP getMainMenuColourBitmap(COLORREF colour);
 
 	void clearChangesHistory(int iView);
 	void changedHistoryGoTo(int idGoTo);
