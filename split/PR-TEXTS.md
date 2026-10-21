@@ -1044,10 +1044,12 @@ system aware. Not covered: a dialog already created that then moves to another D
 Preferences only hides it); upstream's `WM_DPICHANGED` handlers don't touch tooltips. A possible follow-up (a helper
 rescaling a dialog's tooltips), left out to keep this small.
 
-Tested: (to do in a scale session: Preferences created for the first time at 200% on a 150% system, its tooltips'
-maximum widths; the first session of 2026-10-20 opened it at 150% first, so it only showed the case above.)
+Tested (2026-10-20, ARM64 Release builds on the VM, system DPI 144, Pyre909 changing the scale to 200%; the tooling
+branch's `review/tests/pyre-dpi-scale.ps1 -Compare`): Preferences created for the first time at 200%, its 21 (16 upstream)
+tooltips' maximum widths: 200 and 260 before (`pyre` before the fix, upstream's code), 267 and 347 with it (200 and 260
+x 192/144), the same in `pyre` with and without its per-monitor option; back at 150%, every other check as before.
 
-Before opening: the scale session for the evidence; CI on the fork: done (run 39549377466, all 13 jobs); Pyre909 opens the issue, then the PR with `fix #<issue>`.
+Before opening: CI on the fork: done (run 39549377466, all 13 jobs); Pyre909 opens the issue, then the PR with `fix #<issue>`.
 
 ### Issue — title
 `Tooltips in Preferences wrap at the wrong width after a display scale change`
@@ -1055,7 +1057,7 @@ Before opening: the scale session for the evidence; CI on the fork: done (run 39
 ### Issue — body
 ```
 ### Description of the Issue
-Preferences (and the Style Configurator, Shortcut Mapper...) are per-monitor DPI aware, but some sizes inside them are still fixed pixels of the system DPI. The visible one: the tooltips' maximum width (200 px in createToolTip, 260 px for a few Preferences tips) isn't scaled, so after changing the display scale (without signing out), or on a second monitor with another scale, the tips wrap too narrow or too wide. (numbers from the test: at 200% on a 150% system, 200 px where 267 is right)
+Preferences (and the Style Configurator, Shortcut Mapper...) are per-monitor DPI aware, but some sizes inside them are still fixed pixels of the system DPI. The visible one: the tooltips' maximum width (200 px in createToolTip, 260 px for a few Preferences tips) isn't scaled, so after changing the display scale (without signing out), or on a second monitor with another scale, the tips wrap too narrow or too wide. E.g. signed in at 150%, switched to 200%, Preferences opened: the tips' max widths are 200 and 260 px where 267 and 347 would match.
 
 Same thing for Shortcut Mapper's grid, which counts its visible rows with GetSystemMetrics(SM_CYEDGE / SM_CYHSCROLL), i.e. the system DPI's values.
 
@@ -1085,7 +1087,7 @@ Two small helpers in DPIManagerV2: scaleFromSystemDpiForWindow (a system-DPI siz
 
 This fixes the sizes a dialog gets when it's created; tooltips of a dialog that's already open (or hidden, like Preferences after closing) keep their width if it moves to another DPI, same as today. That could be a follow-up if you want it.
 
-Tested on Windows 11 ARM64 with Release builds: (numbers). All 13 CI jobs pass on my fork.
+Tested on Windows 11 ARM64 with Release builds, signed in at 150%, scale switched to 200%, Preferences opened for the first time there: the tooltips' max widths were 200 and 260 before, 267 and 347 with this (200 and 260 × 192/144). Back at 150% nothing changes. All 13 CI jobs pass on my fork.
 
 AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
 

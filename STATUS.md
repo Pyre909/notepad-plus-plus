@@ -78,12 +78,12 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
       creates Preferences after the first change only.
     - New upstream bug-fix branches (kit 12, 13): `menu-colour-bitmaps_20261020` (`5903444`: +1,100 GDI objects per 100
       colour updates before, 0 after; test `menu-colour-bitmaps`), `dpi-dialog-sizes_20261020` (`b759ee8`: the tooltip
-      widths and Shortcut Mapper's grid metrics in upstream's per-monitor dialogs; its evidence, Preferences created at
-      200%, to take in the next scale session, with the plugin prototype's).
+      widths and Shortcut Mapper's grid metrics in upstream's per-monitor dialogs; scale session: Preferences created at
+      200% on the 144-DPI system, tooltip widths 200 and 260 before, 267 and 347 with it; 14/14 checks).
   - Kit 4's comment for #14959 now proposes the split (switch, main window, edit views, docking, tree helper and one PR
     per panel, dialog layout helper with the incremental search bar and the docked UDL, the checkbox last) and asks
     whether the switch comes first as a config.xml-only option: for Pyre909 to post.
-  - Left: the plugin prototype; the UDL undocked onto another monitor (needs a
+  - Left: the plugin prototype (only if Pyre909 wants one: their choice for plugins was to disclose they aren't covered); the UDL undocked onto another monitor (needs a
     second display); the relaunch prompt (probably not needed: the setting says "restart required"). The Document List
     check by hand.
 - **The performance program (2026-10-20)**, asked by Pyre909: newer toolsets, refactoring, performance "in
