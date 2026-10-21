@@ -99,7 +99,28 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     Pyre909's own themes already have MonoLisaCode there; (2) upstream's STYLE_NOT_USED bug is back with upstream's
     `setStyle` (a style without a `fontStyle` attribute turns italic and underlined when bold is forced off; no shipped
     style reaches it): parity chosen, a possible upstream issue. Local refs tidied: `per-monitor-dpi_20260925` was the
-    older `4eaa93d` (now `cf6a333`, as on GitHub), `master` at `origin/master`.
+    older `4eaa93d` (now `cf6a333`, as on GitHub), `master` at `origin/master`. Pushed with Pyre909's OK (`aca5fd5`), CI
+    13/13 (run 39636879927); both releases deleted at Pyre909's request (their `pyre-*` tags kept).
+  - Three features (2026-10-21), asked by Pyre909 ("Is there anything missing from notepad++ currently that is worth
+    adding?", then "Lets do as you recommend"): from upstream's most upvoted open issues, checked in the code and against
+    the maintainers' comments. Recommended and not done: scrollbar marks (#3116), faster opening of many files (#14000);
+    skipped: LSP (#4440, plugins exist), tab groups (#9517), print preview (#4236), the 1 px gap of a maximized window
+    (#8660). All three off by default where they change behaviour, so `pyre` stays upstream's unless chosen:
+    - `6435b2b` links opened by Ctrl+click (#9993), Preferences > Cloud & Link > "Open with Ctrl+click": taken in
+      `ScintillaEditView::ScintillaProc` before Scintilla adds a caret; upstream's double-click code shared as
+      `Notepad_plus::openLinkAt`. Review: a selected link left to Scintilla (Ctrl+drag), the double-click distance, the
+      view focused, the mouse capture respected.
+    - `94dd512` the caret's character code in the status bar (#2056): "U+00E9", "0xE9" for an invalid byte; the position
+      part 320 px at 96 DPI (+60, the code's width, so upstream's room is kept for translations; 280 clipped).
+    - `cd162a0` word wrap per document (#5232), Preferences > Editing 1 > Line Wrap > "Per document": each document's
+      wrap mode in its Buffer (set when opened from the last choice), applied on activation, in session.xml. Review: the
+      first document of each view lost its session wrap (shown before it was read; fixed), the Document Map stayed
+      wrapped, a session could wrap a large file, a plugin's char/whitespace wrap was lost; all fixed. Known: a tab's
+      hover preview in the map uses the current document's wrap.
+    - Tests: `pyre-links-charcode` (18 checks), `pyre-wrap-per-document` (13); found on the way: a DPI-unaware test
+      process gets the clicks it posts scaled by Windows (x1.5 at 144 DPI), so tests that post clicks set per-monitor
+      awareness (`pyre-rounded-popups` clicks at 5,5 of a button: unaffected).
+    - For upstream: each is a possible feature request (an issue to be Accepted first); not drafted yet.
   - Left: the plugin prototype (only if Pyre909 wants one: their choice for plugins was to disclose they aren't covered); the UDL undocked onto another monitor (needs a
     second display); the relaunch prompt (probably not needed: the setting says "restart required"). The Document List
     checked by hand (kit 10: 48 -> 72 px before the fix, 50 -> 50 after).
