@@ -130,9 +130,4 @@ private :
 	static constexpr UINT userKeywordsApplyDelay = 300; // milliseconds
 	bool _isUserKeywordsApplyPending = false;
 	void applyPendingUserKeywords();
-
-	// Pyre909 build: the font controls of the Global override show and set the font of every theme (config.xml)
-	static bool isGlobalOverrideFontCtrl(WPARAM wParam);
-	void setVisualFromGlobalOverrideFont();
-	void globalOverrideFontChanged(int ctrlID);
 };

@@ -57,10 +57,6 @@
 	#define IDC_STYLEDESCRIPTION_STATIC	(IDD_STYLER_DLG + 33)
 	#define IDC_GLOBAL_GOTOSETTINGS_LINK	(IDD_STYLER_DLG + 34)
 	#define IDC_GLOBAL_WHATISGLOBALOVERRIDE_LINK	(IDD_STYLER_DLG + 35)
-
-	// Pyre909 build: the note of the Global override (its font is the same in every theme), apart from upstream's numbers;
-	// not + 90, the note of the former row (its text may still be in a nativeLang.xml copied from english_customizable.xml)
-	#define IDC_EVERYTHEME_NOTE_STATIC	(IDD_STYLER_DLG + 91)
 	                                                    
 # define IDD_GLOBAL_STYLER_DLG	2300
     #define IDC_SAVECLOSE_BUTTON	(IDD_GLOBAL_STYLER_DLG + 1)

@@ -659,8 +659,6 @@ Translation note:
 					<Item id="2234" name="Go to settings"/>
 					<!-- Don't translate "Global override" -->
 					<Item id="2235" name="What is Global override?"/>
-					<!-- Don't translate "Global override" -->
-					<Item id="2291" name="Global override's font settings are shared by every theme."/>
 				</SubDialog>
 			</StyleConfig>
 

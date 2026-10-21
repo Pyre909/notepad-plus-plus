@@ -21,7 +21,6 @@
 
 #include <shlwapi.h>
 
-#include <algorithm>
 #include <cstdlib>
 #include <cwchar>
 #include <memory>
@@ -228,13 +227,6 @@ intptr_t CALLBACK WordStyleDlg::run_dlgProc(UINT Message, WPARAM wParam, LPARAM 
 					isTextEnabled = style._fontSize != STYLE_NOT_USED && style._fontSize < 100; // style._fontSize has only 2 digits
 				}
 
-				// Pyre909 build: the font of the Global override is the one of every theme (setVisualFromGlobalOverrideFont)
-				if (_isShownGOCtrls && ((dlgCtrlID == IDC_FONTNAME_STATIC) || (dlgCtrlID == IDC_FONTSIZE_STATIC)))
-				{
-					const GlobalOverride& go = NppParameters::getInstance().getGlobalOverrideStyle();
-					isTextEnabled = (dlgCtrlID == IDC_FONTNAME_STATIC) ? !go.fontName.empty() : ((go.fontSize > 0) && (go.fontSize < 100));
-				}
-
 				return NppDarkMode::onCtlColorDlgStaticText(hdcStatic, isTextEnabled);
 			}
 
@@ -336,13 +328,6 @@ intptr_t CALLBACK WordStyleDlg::run_dlgProc(UINT Message, WPARAM wParam, LPARAM 
 				else if (reinterpret_cast<HWND>(lParam) != ::GetDlgItem(_hSelf, IDC_USER_KEYWORDS_EDIT))
 				{
 					applyPendingUserKeywords();
-				}
-
-				// Pyre909 build: the font controls of the Global override set the font of every theme, not the theme's
-				if (_isShownGOCtrls && isGlobalOverrideFontCtrl(wParam))
-				{
-					globalOverrideFontChanged(LOWORD(wParam));
-					return TRUE;
 				}
 
 				switch (wParam)
@@ -1361,8 +1346,6 @@ void WordStyleDlg::setVisualFromStyleList()
 
 	enableFontStyle(style._isFontEnabled);
 
-	if (_isShownGOCtrls) // Pyre909 build: the font of every theme, not the theme's
-		setVisualFromGlobalOverrideFont();
 
 	//-- Default Keywords
 	bool shouldBeDisplayed = style._keywordClass != STYLE_NOT_USED;
@@ -1558,130 +1541,4 @@ void WordStyleDlg::showGlobalOverrideCtrls(bool show)
 	::ShowWindow(::GetDlgItem(_hSelf, IDC_GLOBAL_UNDERLINE_CHECK), show ? SW_SHOW : SW_HIDE);
 	::ShowWindow(::GetDlgItem(_hSelf, IDC_GLOBAL_WHATISGLOBALOVERRIDE_LINK), show ? SW_SHOW : SW_HIDE);
 	_isShownGOCtrls = show;
-
-	// Pyre909 build: the font of the Global override is the same in every theme: a note says so
-	::ShowWindow(::GetDlgItem(_hSelf, IDC_EVERYTHEME_NOTE_STATIC), show ? SW_SHOW : SW_HIDE);
-}
-
-// Pyre909 build: the font controls of the Global override show and set the font of every theme (GlobalOverride's font, in
-// config.xml), not the one of the theme's "Global override" style; its force check boxes say which of them is used. None
-// of them changes the theme: switching themes keeps them without asking to save it.
-struct GlobalOverrideFontCheck
-{
-	int _ctrlID = 0;
-	bool GlobalOverride::* _isForced = nullptr;
-};
-static constexpr GlobalOverrideFontCheck globalOverrideFontChecks[]{
-	{ IDC_GLOBAL_FONT_CHECK, &GlobalOverride::enableFont },
-	{ IDC_GLOBAL_FONTSIZE_CHECK, &GlobalOverride::enableFontSize },
-	{ IDC_GLOBAL_BOLD_CHECK, &GlobalOverride::enableBold },
-	{ IDC_GLOBAL_ITALIC_CHECK, &GlobalOverride::enableItalic },
-	{ IDC_GLOBAL_UNDERLINE_CHECK, &GlobalOverride::enableUnderLine }
-};
-
-struct FontStyleCheck
-{
-	int _ctrlID = 0;
-	int _fontStyle = FONTSTYLE_NONE;
-};
-static constexpr FontStyleCheck fontStyleChecks[]{
-	{ IDC_BOLD_CHECK, FONTSTYLE_BOLD },
-	{ IDC_ITALIC_CHECK, FONTSTYLE_ITALIC },
-	{ IDC_UNDERLINE_CHECK, FONTSTYLE_UNDERLINE }
-};
-
-// an item of the font size combo box as a number: 0 for the empty item (or more than 2 digits, as updateFontSize reads them)
-static int getFontSizeItem(HWND hCombo, LRESULT i)
-{
-	wchar_t item[4]{};
-	if (::SendMessage(hCombo, CB_GETLBTEXTLEN, i, 0) < static_cast<LRESULT>(std::size(item)))
-		::SendMessage(hCombo, CB_GETLBTEXT, i, reinterpret_cast<LPARAM>(item));
-	return _wtoi(item);
-}
-
-bool WordStyleDlg::isGlobalOverrideFontCtrl(WPARAM wParam)
-{
-	const int ctrlID = LOWORD(wParam);
-	if (HIWORD(wParam) == CBN_SELCHANGE)
-		return (ctrlID == IDC_FONT_COMBO) || (ctrlID == IDC_FONTSIZE_COMBO);
-	return (HIWORD(wParam) == BN_CLICKED) &&
-		(std::ranges::contains(fontStyleChecks, ctrlID, &FontStyleCheck::_ctrlID) || std::ranges::contains(globalOverrideFontChecks, ctrlID, &GlobalOverrideFontCheck::_ctrlID));
-}
-
-void WordStyleDlg::setVisualFromGlobalOverrideFont()
-{
-	const GlobalOverride& go = NppParameters::getInstance().getGlobalOverrideStyle();
-
-	// a font the list hasn't (not installed) shows empty, as for a style
-	LRESULT iFontName = 0;
-	if (!go.fontName.empty())
-	{
-		iFontName = ::SendMessage(_hFontNameCombo, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(go.fontName.c_str()));
-		if (iFontName == CB_ERR)
-			iFontName = 0;
-	}
-	::SendMessage(_hFontNameCombo, CB_SETCURSEL, iFontName, 0);
-
-	// a size the list hasn't (13, written in config.xml by hand) is added in its place: it stays forced as shown
-	LRESULT iFontSize = 0;
-	if ((go.fontSize > 0) && (go.fontSize < 100)) // 2 digits, as updateFontSize reads them
-	{
-		const wstring fontSize = std::to_wstring(go.fontSize);
-		iFontSize = ::SendMessage(_hFontSizeCombo, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(fontSize.c_str()));
-		if (iFontSize == CB_ERR)
-		{
-			const auto count = ::SendMessage(_hFontSizeCombo, CB_GETCOUNT, 0, 0);
-			LRESULT i = 1; // after the empty item
-			while ((i < count) && (getFontSizeItem(_hFontSizeCombo, i) <= go.fontSize))
-				++i;
-			iFontSize = ::SendMessage(_hFontSizeCombo, CB_INSERTSTRING, i, reinterpret_cast<LPARAM>(fontSize.c_str()));
-			if (iFontSize < 0)
-				iFontSize = 0;
-		}
-	}
-	::SendMessage(_hFontSizeCombo, CB_SETCURSEL, iFontSize, 0);
-
-	for (const FontStyleCheck& check : fontStyleChecks)
-		::CheckDlgButton(_hSelf, check._ctrlID, (go.fontStyle & check._fontStyle) ? BST_CHECKED : BST_UNCHECKED);
-
-	::EnableWindow(_hFontNameCombo, TRUE);
-	::EnableWindow(_hFontSizeCombo, TRUE);
-	enableFontStyle(true);
-}
-
-// the control changed only: a font shown empty (not installed) stays the one forced when the size is changed
-void WordStyleDlg::globalOverrideFontChanged(int ctrlID)
-{
-	GlobalOverride& go = NppParameters::getInstance().getGlobalOverrideStyle();
-	if (ctrlID == IDC_FONT_COMBO)
-	{
-		const auto i = ::SendMessage(_hFontNameCombo, CB_GETCURSEL, 0, 0);
-		if (i == CB_ERR)
-			return;
-		const auto* fontName = reinterpret_cast<const wchar_t*>(::SendMessage(_hFontNameCombo, CB_GETITEMDATA, i, 0));
-		go.fontName = fontName ? fontName : L"";
-		::InvalidateRect(_hFontNameStaticText, nullptr, FALSE); // greyed when empty (WM_CTLCOLORSTATIC)
-	}
-	else if (ctrlID == IDC_FONTSIZE_COMBO)
-	{
-		const auto i = ::SendMessage(_hFontSizeCombo, CB_GETCURSEL, 0, 0);
-		if (i == CB_ERR)
-			return;
-		go.fontSize = getFontSizeItem(_hFontSizeCombo, i); // 0, the empty item: not forced (see ScintillaEditView::setStyle)
-		::InvalidateRect(_hFontSizeStaticText, nullptr, FALSE);
-	}
-	else if (const auto style = std::ranges::find(fontStyleChecks, ctrlID, &FontStyleCheck::_ctrlID); style != std::end(fontStyleChecks))
-	{
-		const bool isChecked = (::IsDlgButtonChecked(_hSelf, ctrlID) == BST_CHECKED);
-		go.fontStyle = isChecked ? (go.fontStyle | style->_fontStyle) : (go.fontStyle & ~style->_fontStyle);
-	}
-	else if (const auto force = std::ranges::find(globalOverrideFontChecks, ctrlID, &GlobalOverrideFontCheck::_ctrlID); force != std::end(globalOverrideFontChecks))
-	{
-		go.*force->_isForced = (::IsDlgButtonChecked(_hSelf, ctrlID) == BST_CHECKED);
-	}
-
-	// config.xml, not the theme: Cancel restores it (see prepare2Cancel), switching themes keeps it
-	_isDirty = true;
-	::EnableWindow(::GetDlgItem(_hSelf, IDC_SAVECLOSE_BUTTON), TRUE);
-	apply(GENERAL_CHANGE);
 }

@@ -74,8 +74,6 @@ BEGIN
 
     LTEXT           "Go to settings",IDC_GLOBAL_GOTOSETTINGS_LINK,210,153,131,10,WS_TABSTOP
     LTEXT           "What is Global override?",IDC_GLOBAL_WHATISGLOBALOVERRIDE_LINK,191,173,132,10,WS_TABSTOP
-    // Pyre909 build: the font of the Global override is the same in every theme (config.xml); shown with the link above
-    LTEXT           "Global override's font settings are shared by every theme.",IDC_EVERYTHEME_NOTE_STATIC,191,187,130,18,NOT WS_VISIBLE
     
     PUSHBUTTON      "Save && Close",IDC_SAVECLOSE_BUTTON,264,222,69,14
     PUSHBUTTON      "Cancel",IDCANCEL,337,222,50,14

@@ -42,10 +42,6 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   again in the same session; a dark mode switch picks its theme by its exact name ("Solarized", not
   "Solarized-light"), and a style's font too; a font name set back to empty is saved (official issue #13919); the
   user keywords typed are applied when the typing pauses, not on each key.
-- **A font for every theme** (Settings > Style Configurator > Global Styles > Global override): the font, size,
-  bold, italic and underline that Global override forces on all styles are set once and kept when switching themes
-  (saved in config.xml, not in the theme). The dialog is upstream's: its font controls and "Force ... for all styles"
-  check boxes, with a note that the font settings are shared. The Global override style keeps its colours per theme.
 - **Redrawn "Standard icons"** (Preferences > General > Toolbar): the 32 standard toolbar icons drawn again as
   flat vector art, sharp at every scale from 100% to 300% instead of 16x16 bitmaps stretched (official issue
   #16110, where the icons alone are offered).
