@@ -25,9 +25,10 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   3 minutes, about 3 seconds now, also with the document shown in both views; the same for Remove and Cut Bookmarked
   Lines, Remove Unmarked Lines and Remove Consecutive Duplicate Lines (official issue #10301).
 - **The Function List 25 to 30 times faster**: about 6 seconds instead of over 3 minutes for 60,000 lines of C++, a
-  third of a second instead of 9.5 seconds for 3,000 (its regular expressions match faster and are compiled once).
-- **Auto-completion faster in large files**: about 30% less time per keystroke (76 instead of 108 ms in 60,000 lines
-  of C++).
+  third of a second instead of 9.5 seconds for 3,000 (its regular expressions match faster and are compiled once); with
+  it open, moving the caret takes 17 ms instead of 374 in 60,000 lines with 18,000 functions.
+- **Auto-completion faster in large files**: the words are found in one pass over the text: per keystroke in 60,000
+  lines of C++, about 6 ms of CPU instead of 50 (case-insensitive: 10 instead of 47).
 - **Profile-guided build**: the release exes are optimized from a training run; syntax highlighting is about 19%
   faster, folding and Mark All 17%, word wrap 15% (measured on ARM64).
 - **Tall glyphs drawn whole, Chinese and Japanese in their own forms** (DirectWrite): the parts of glyphs taller than
@@ -53,6 +54,9 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **Per-monitor DPI awareness** (Preferences > MISC., experimental, restart required).
 - **Font sizes 1 to 4 pt** in the font size lists.
 - **A crash guard** for DirectWrite fonts with an out-of-range weight (Scintilla bug #2520).
+- **Official bugs fixed** (offered upstream too): a GDI leak at each Mark Style or tab colour change in the Style
+  Configurator; the Document List's Ext. and Path columns growing at each layout above 100% scale; tooltips too narrow
+  or too wide in Preferences and the Style Configurator after a scale change.
 - The About box and Help > Debug Info say "(64-bit, Pyre909 build)", so bug reports can't be mistaken for
   ones about the official build.
 
