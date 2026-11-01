@@ -17,8 +17,14 @@
 
 #pragma once
 
-#include "SizeableDlg.h"
+#include <windows.h>
+
+#include <cstring>
+#include <vector>
+
 #include "ContextMenu.h"
+#include "SizeableDlg.h"
+#include "WinMgr.h"
 
 class DocTabView;
 class Buffer;
@@ -67,7 +73,7 @@ public :
 	void sortFileSizeDSC();
 	void sortDateTimeASC();
 	void sortDateTimeDSC();
-	void doRefresh(bool invalidate = false);
+	void doRefresh();
 
 public:
 	// for message hook
@@ -89,11 +95,10 @@ protected :
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	BOOL onInitDialog() override;
 	void onSize(UINT nType, int cx, int cy) override;
-	void onGetMinMaxInfo(MINMAXINFO* lpMMI) override;
 	LRESULT onWinMgr(WPARAM wp, LPARAM lp) override;
 	void destroy() override;
-	void updateColumnNames();
-	void fitColumnsToSize();
+	void updateColumnNames() const;
+	void fitColumnsToSize() const;
 	void resetSelection();
 	void doSave();
 	void doClose();

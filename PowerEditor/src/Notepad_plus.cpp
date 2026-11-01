@@ -14,37 +14,89 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #include "Notepad_plus.h"
+
+#include <windows.h>
 
 #include <shlwapi.h>
 #include <wininet.h>
 
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cctype>
+#include <chrono>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <ctime>
+#include <exception>
 #include <format>
 #include <memory>
+#include <mutex>
+#include <string>
+#include <string.h>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+#include <wchar.h>
 
-#include "NppXml.h"
-#include "Notepad_plus_Window.h"
+#include <SciLexer.h>
+#include <Sci_Position.h>
+#include <Scintilla.h>
+
+#include "AboutDlg.h"
+#include "AutoCompletion.h"
+#include "Buffer.h"
+#include "Common.h"
+#include "ContextMenu.h"
 #include "CustomFileDialog.h"
-#include "Printer.h"
-#include "FileNameStringSplitter.h"
-#include "lesDlgs.h"
-#include "Utf8_16.h"
-#include "RunDlg.h"
-#include "preferenceDlg.h"
-#include "TaskListDlg.h"
+#include "DocTabView.h"
+#include "Docking.h"
+#include "DockingCont.h"
+#include "DockingDlgInterface.h"
 #include "EncodingMapper.h"
+#include "FileNameStringSplitter.h"
+#include "FindReplaceDlg.h"
+#include "ImageListSet.h"
+#include "Notepad_plus_Window.h"
+#include "Notepad_plus_msgs.h"
+#include "NppConstants.h"
+#include "NppDarkMode.h"
+#include "NppXml.h"
+#include "Parameters.h"
+#include "PluginInterface.h"
+#include "Printer.h"
+#include "ProjectPanel.h"
+#include "RunDlg.h"
+#include "ScintillaEditView.h"
+#include "Splitter.h"
+#include "SplitterContainer.h"
+#include "StaticDialog.h"
+#include "TabBar.h"
+#include "TaskListDlg.h"
+#include "ToolBar.h"
+#include "UserDefineDialog.h"
+#include "UserDefineResource.h"
+#include "VerticalFileSwitcher.h"
+#include "Window.h"
+#include "WordStyleDlg.h"
 #include "ansiCharPanel.h"
 #include "clipboardHistoryPanel.h"
-#include "VerticalFileSwitcher.h"
-#include "ProjectPanel.h"
 #include "documentMap.h"
-#include "functionListPanel.h"
-#include "fileBrowser.h"
-#include "Common.h"
-#include "NppDarkMode.h"
 #include "dpiManagerV2.h"
-#include "ImageListSet.h"
+#include "fileBrowser.h"
+#include "functionListPanel.h"
+#include "lesDlgs.h"
+#include "localization.h"
+#include "md5Dlgs.h"
+#include "menuCmdID.h"
+#include "preferenceDlg.h"
+#include "preference_rc.h"
+#include "resource.h"
+#include "shortcut.h"
+#include "trayIconControler.h"
 
 using namespace std;
 
@@ -207,8 +259,18 @@ Notepad_plus::~Notepad_plus()
 	delete _pFuncList;
 	delete _pFileBrowser;
 
-	for (const auto& colourBitmap : _mainMenuColourBitmaps)
-		::DeleteObject(colourBitmap.second);
+	for (auto& element : _menuItemClrBitmaps)
+	{
+		if (element.second != nullptr)
+		{
+			::DeleteObject(element.second);
+			element.second = nullptr;
+		}
+	}
+	_menuItemClrBitmaps.clear();
+
+	for (HBITMAP hBitmap : _retiredMenuItemClrBitmaps) // Pyre909 build
+		::DeleteObject(hBitmap);
 }
 
 
@@ -2838,6 +2900,24 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 		{ IDM_SEARCH_GONEXTMARKER_DEF, SCE_UNIVERSAL_FOUND_STYLE, { IDM_SEARCH_GOPREVMARKER_DEF, IDM_SEARCH_MARKEDTOCLIP } }
 	};
 
+	auto getColorBitmap = [this](COLORREF color) -> HBITMAP
+	{
+		if (auto it = _menuItemClrBitmaps.find(color);
+			it != _menuItemClrBitmaps.end())
+		{
+			return it->second;
+		}
+
+		HBITMAP hBitmap = generateSolidColourMenuItemIcon(color);
+		if (hBitmap != nullptr)
+		{
+			_menuItemClrBitmaps.emplace(color, hBitmap);
+		}
+
+		return hBitmap;
+	};
+
+
 	NppParameters& nppParam = NppParameters::getInstance();
 	StyleArray& styleArray = nppParam.getMiscStylerArray();
 
@@ -2846,47 +2926,42 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 	for (size_t j = 0; j < sizeof(bitmapOnStyleMenuItemsInfo) / sizeof(bitmapOnStyleMenuItemsInfo[0]); ++j)
 	{
 		const Style * pStyle = styleArray.findByID(bitmapOnStyleMenuItemsInfo[j].styleIndic);
-		if (pStyle)
+		if (pStyle == nullptr)
 		{
-			HBITMAP hNewBitmap = getMainMenuColourBitmap(pStyle->_bgColor);
-			if (hNewBitmap && ::SetMenuItemBitmaps(_mainMenuHandle, bitmapOnStyleMenuItemsInfo[j].firstOfThisColorMenuId, MF_BYCOMMAND, hNewBitmap, hNewBitmap))
+			continue;
+		}
+
+		HBITMAP hBitmap = getColorBitmap(pStyle->_bgColor);
+		if (hBitmap == nullptr)
+		{
+			continue;
+		}
+
+		if (::SetMenuItemBitmaps(_mainMenuHandle, bitmapOnStyleMenuItemsInfo[j].firstOfThisColorMenuId, MF_BYCOMMAND, hBitmap, hBitmap) == TRUE)
+		{
+			for (int relatedMenuId : bitmapOnStyleMenuItemsInfo[j].sameColorMenuIds)
 			{
-				for (int relatedMenuId : bitmapOnStyleMenuItemsInfo[j].sameColorMenuIds)
-				{
-					::SetMenuItemBitmaps(_mainMenuHandle, relatedMenuId, MF_BYCOMMAND, hNewBitmap, NULL);
-				}
+				::SetMenuItemBitmaps(_mainMenuHandle, relatedMenuId, MF_BYCOMMAND, hBitmap, nullptr);
 			}
 		}
 	}
 
-	// Adds tab colour icons
+	// Adds tab color icons
 	for (int i = 0; i < TAB_COLORS_COUNT; ++i)
 	{
-		COLORREF colour = nppParam.getIndividualTabColor(i, NppDarkMode::isEnabled(), true);
-		HBITMAP hBitmap = getMainMenuColourBitmap(colour);
-		if (hBitmap)
+		const COLORREF color = nppParam.getIndividualTabColor(i, NppDarkMode::isEnabled(), true);
+		if (HBITMAP hBitmap = getColorBitmap(color);
+			hBitmap != nullptr)
+		{
 			::SetMenuItemBitmaps(_mainMenuHandle, IDM_VIEW_TAB_COLOUR_1 + i, MF_BYCOMMAND, hBitmap, hBitmap);
+		}
 	}
-}
-
-HBITMAP Notepad_plus::getMainMenuColourBitmap(COLORREF colour)
-{
-	const int bitmapXYsize = DPIManagerV2::scaleFromSystemDpiForWindow(colourMenuItemIconSize, _pPublicInterface->getHSelf());
-	const auto key = std::make_pair(bitmapXYsize, colour);
-
-	if (const auto it = _mainMenuColourBitmaps.find(key); it != _mainMenuColourBitmaps.end())
-		return it->second;
-
-	HBITMAP hBitmap = generateSolidColourMenuItemIcon(colour);
-	if (hBitmap)
-		_mainMenuColourBitmaps[key] = hBitmap;
-	return hBitmap;
 }
 
 // doCheck searches for the menu item matching the provided id across the main menu and all of its submenus,
 // once the target id is found, it ensures that item is checked, and all other menu items at that same level are automatically unchecked.
 // If id is -1, then all the menu items are unchecked.
-bool doCheck(HMENU mainHandle, int id)
+static bool doCheck(HMENU mainHandle, int id)
 {
 	MENUITEMINFO mii{};
 	mii.cbSize = sizeof(MENUITEMINFO);
