@@ -964,6 +964,9 @@ Windows 11 ARM64 (VM), one monitor, Release ARM64 builds. AI disclosure: an AI a
 
 ## 12. Main menu colour samples: GDI leak (bug fix)
 
+**Superseded (2026-11-01)**: upstream fixed it itself in `6abb408` ("Fix style and tab menu item GDI leaks", a cache by colour,
+`_menuItemClrBitmaps`), merged into `pyre` that day. Nothing to post; the branch is history.
+
 Branch `menu-colour-bitmaps_20261020`, one commit (`5903444`) on upstream `master` `fc40460`, 2 files, +28 −16. Found on
 2026-10-20 by the review of `per-monitor-dpi_20260925` (which had the cache, but only with its option on); `pyre` has it
 ungated since the same day.

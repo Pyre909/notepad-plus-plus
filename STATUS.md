@@ -124,6 +124,16 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     - Pushed with Pyre909's OK (`pyre` `cd162a0`), CI 13/13 (run 39664208581); release run 39665322657 (0 annotations),
       **published** as Latest: `pyre-8.9.8.1-cd162a0`, its notes with "What's new since the last release (f495ad1)", the
       Global override change included.
+  - Upstream merge (2026-11-01, asked by Pyre909: "Looks like we have some updates upstream. Lets include them?"): 37
+    commits up to `2132e15` (Scintilla 5.6.7 and Lexilla 5.5.4, security fixes, the Clipboard History list as a list
+    view, the menu items' GDI leaks, Windows dialog and document switcher fixes, CI on UCRT64, translations) merged as
+    `a7b991f`. Conflicts: upstream's own fix of the menu colour samples' leak replaces pyre's (kit 12 superseded); per-monitor
+    DPI keeps the samples of the previous DPI until exit (`_retiredMenuItemClrBitmaps`, the context menus share them); the
+    Clipboard History list view gets the icon title font of its DPI (as the ASCII panel's); the layout-segment blocks
+    patch moved onto 5.6.7's `LayoutSegments`; corsican.xml; `pyre-ci.yml` regenerated. Clean ARM64 and x64 rebuilds:
+    0 warnings. PR branches against the new upstream (`git merge-tree`): all merge cleanly except
+    `menu-colour-bitmaps_20261020` (superseded) and `per-monitor-dpi_20260925` (the same two conflicts as `pyre`: rebase
+    it with the same resolutions when it's wanted). PR #18503 still mergeable, no review yet.
   - Left: the plugin prototype (only if Pyre909 wants one: their choice for plugins was to disclose they aren't covered); the UDL undocked onto another monitor (needs a
     second display); the relaunch prompt (probably not needed: the setting says "restart required"). The Document List
     checked by hand (kit 10: 48 -> 72 px before the fix, 50 -> 50 after).
