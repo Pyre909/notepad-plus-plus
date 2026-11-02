@@ -18,6 +18,7 @@
 #pragma once
 
 #include <windows.h>
+
 #include <commctrl.h>
 
 #include "DockingDlgInterface.h"
@@ -64,4 +65,6 @@ private:
 	ScintillaEditView **_ppEditView = nullptr;
 	AsciiListView _listView;
 	UniqueFont _hFontDpi; // font of the list for its DPI (per-monitor DPI awareness)
+
+	using DockingDlgInterface::init;
 };

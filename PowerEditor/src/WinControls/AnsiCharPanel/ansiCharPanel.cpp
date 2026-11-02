@@ -17,10 +17,25 @@
 
 #include "ansiCharPanel.h"
 
-#include <iterator>
+#include <windows.h>
 
+#include <cstdlib>
+#include <iterator>
+#include <string>
+#include <string.h>
+
+#include <Scintilla.h>
+
+#include "DockingDlgInterface.h"
+#include "ListView.h"
+#include "Parameters.h"
 #include "ScintillaEditView.h"
+#include "ansiCharPanel_rc.h"
+#include "dockingResource.h"
+#include "dpiManagerV2.h"
 #include "localization.h"
+#include "menuCmdID.h"
+#include "resource.h"
 
 using namespace std;
 
@@ -57,7 +72,7 @@ intptr_t CALLBACK AnsiCharPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			_listView.addColumn(columnInfo(htmlNumberStr, _dpiManager.scale(columnWidths[4])));
 			_listView.addColumn(columnInfo(htmlHexNbStr, _dpiManager.scale(columnWidths[5])));
 
-			_listView.init(_hInst, _hSelf);
+			_listView.init(_hInst, _hSelf, IDC_LIST_ANSICHAR);
 
 			DPIManagerV2::initIconTitleFont(_listView.getHSelf(), _dpiManager.getDpi(), _hFontDpi);
 
@@ -65,15 +80,12 @@ intptr_t CALLBACK AnsiCharPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			_listView.setValues(codepage==-1?0:codepage);
 			_listView.display();
 
-			NppDarkMode::autoSubclassAndThemeChildControls(_hSelf);
-			NppDarkMode::autoSubclassAndThemeWindowNotify(_hSelf);
-
 			return TRUE;
 		}
 
 		case NPPM_INTERNAL_REFRESHDARKMODE:
 		{
-			NppDarkMode::autoThemeChildControls(_hSelf);
+			_listView.setDarkTheme();
 			return TRUE;
 		}
 
@@ -90,7 +102,7 @@ intptr_t CALLBACK AnsiCharPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 
 				case NM_DBLCLK:
 				{
-					LPNMITEMACTIVATE lpnmitem = (LPNMITEMACTIVATE) lParam;
+					const auto lpnmitem = reinterpret_cast<LPNMITEMACTIVATE>(lParam);
 					LVHITTESTINFO pInfo{};
 					pInfo.pt = lpnmitem->ptAction;
 					ListView_SubItemHitTest(_listView.getHSelf(), &pInfo);
@@ -99,7 +111,7 @@ intptr_t CALLBACK AnsiCharPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 					int j = pInfo.iSubItem;
 					wchar_t buffer[10]{};
 					LVITEM item{};
-					item.mask = LVIF_TEXT | LVIF_PARAM;
+					item.mask = LVIF_TEXT;
 					item.iItem = i;
 					item.iSubItem = j;
 					item.cchTextMax = 10;
@@ -119,7 +131,7 @@ intptr_t CALLBACK AnsiCharPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 
 				case LVN_KEYDOWN:
 				{
-					switch (((LPNMLVKEYDOWN)lParam)->wVKey)
+					switch (reinterpret_cast<LPNMLVKEYDOWN>(lParam)->wVKey)
 					{
 						case VK_RETURN:
 						{
