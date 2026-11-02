@@ -220,17 +220,23 @@ struct FontDirectWrite : public FontWin {
 		// N++: measured like GDI, a whole pixel size like GDI's integer font height (13 px, not 13.33, for 10 points at 96 DPI)
 		const FLOAT fHeight = (measuringMode == DWRITE_MEASURING_MODE_NATURAL) ? static_cast<FLOAT>(fp.size) : std::max(1.0f, std::round(static_cast<FLOAT>(fp.size)));
 		const DWRITE_FONT_STYLE style = fp.italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL;
+		constexpr DWRITE_FONT_WEIGHT minWeight = static_cast<DWRITE_FONT_WEIGHT>(1);
+		constexpr DWRITE_FONT_WEIGHT maxWeight = static_cast<DWRITE_FONT_WEIGHT>(999);
+		const DWRITE_FONT_WEIGHT weight = std::clamp(
+			static_cast<DWRITE_FONT_WEIGHT>(fp.weight), minWeight, maxWeight);
+		const DWRITE_FONT_STRETCH stretch = std::clamp(
+			static_cast<DWRITE_FONT_STRETCH>(fp.stretch), DWRITE_FONT_STRETCH_ULTRA_CONDENSED, DWRITE_FONT_STRETCH_ULTRA_EXPANDED);
 		HRESULT hr = pIDWriteFactory->CreateTextFormat(wsFace.c_str(), nullptr,
-			static_cast<DWRITE_FONT_WEIGHT>(fp.weight),
+			weight,
 			style,
-			static_cast<DWRITE_FONT_STRETCH>(fp.stretch),
-				fHeight, wsLocale.c_str(), pTextFormat.GetAddressOf());
+			stretch,
+			fHeight, wsLocale.c_str(), pTextFormat.GetAddressOf());
 		if (hr == E_INVALIDARG) {
 			// Possibly a bad locale name like "/" so try "en-us".
 			hr = pIDWriteFactory->CreateTextFormat(wsFace.c_str(), nullptr,
-				static_cast<DWRITE_FONT_WEIGHT>(fp.weight),
+				weight,
 				style,
-				static_cast<DWRITE_FONT_STRETCH>(fp.stretch),
+				stretch,
 				fHeight, L"en-us", pTextFormat.ReleaseAndGetAddressOf());
 		}
 		if (SUCCEEDED(hr)) {
@@ -273,7 +279,7 @@ struct FontDirectWrite : public FontWin {
 	~FontDirectWrite() noexcept override = default;
 	[[nodiscard]] HFONT HFont() const noexcept override {
 		if (!pTextFormat) {
-			return {};	// N++: no font, a weight or stretch DirectWrite refuses (Scintilla bug #2520)
+			return {};
 		}
 		LOGFONTW lf = {};
 		const HRESULT hr = pTextFormat->GetFontFamilyName(lf.lfFaceName, LF_FACESIZE);
