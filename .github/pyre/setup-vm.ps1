@@ -108,16 +108,16 @@ if (-not $SkipInstall) {
 			if ($vsModify.ExitCode -ne 0) { throw "Visual Studio could not add $($missing -join ', ') (exit code $($vsModify.ExitCode))" }
 		}
 	}
-	# MSYS2 with the toolchains of the CI's MSYS2 jobs: MINGW64 GCC and make, CLANG64 Clang and make
+	# MSYS2 with the toolchains of the CI's 64-bit MSYS2 jobs: UCRT64 GCC and make (MINGW64 until 2026-11), CLANG64 Clang and make
 	Install-WingetPackage 'MSYS2.MSYS2'
 	$msysBash = 'C:\msys64\usr\bin\bash.exe'
-	if ((Test-Path $msysBash) -and -not ((Test-Path 'C:\msys64\mingw64\bin\gcc.exe') -and (Test-Path 'C:\msys64\clang64\bin\clang.exe'))) {
+	if ((Test-Path $msysBash) -and -not ((Test-Path 'C:\msys64\ucrt64\bin\gcc.exe') -and (Test-Path 'C:\msys64\clang64\bin\clang.exe'))) {
 		$env:MSYSTEM = 'MSYS'
 		$env:CHERE_INVOKING = '1'
 		# twice: the first run updates MSYS2's core, the second the rest
 		& $msysBash -lc 'pacman -Syuu --noconfirm'
 		& $msysBash -lc 'pacman -Syuu --noconfirm'
-		& $msysBash -lc 'pacman -S --needed --noconfirm mingw-w64-x86_64-gcc mingw-w64-x86_64-make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-make'
+		& $msysBash -lc 'pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-make mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-make'
 		if ($LASTEXITCODE -ne 0) { throw "MSYS2 could not install the toolchains (exit code $LASTEXITCODE)" }
 	}
 	Update-SessionPath

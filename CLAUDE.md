@@ -96,8 +96,9 @@ PR branches are named `<topic>_<YYYYMMDD>` and start from upstream `master`.
   PR branch for review, and after an upstream merge into `pyre`; MSVC catches things GCC doesn't and vice versa. By
   default every job runs: upstream's filter (only `.md`/`.txt` changed: nothing built; `[force all]` in the title)
   applies with `jobs=auto` only.
-- The CI's GCC and Clang builds also run locally (MSYS2 on the VM since 2026-10-20: MINGW64 GCC, CLANG64 Clang), in a
-  clean worktree: `$Env:MSYSTEM = 'MINGW64'` (or `CLANG64`), `C:\msys64\mingw64\bin` (or `clang64\bin`) and
+- The CI's GCC and Clang builds also run locally (MSYS2 on the VM since 2026-10-20: UCRT64 GCC, as the CI's 64-bit GCC jobs
+  since upstream's 2026-11 CI change, MINGW64 GCC too, CLANG64 Clang), in a
+  clean worktree: `$Env:MSYSTEM = 'UCRT64'` (or `CLANG64`), `C:\msys64\ucrt64\bin` (or `clang64\bin`) and
   `C:\msys64\usr\bin` first in `PATH`, then `mingw32-make -j 6 -f PowerEditor\gcc\makefile` (about 4 minutes; `DEBUG=1`
   for Debug). Also on the VM: Visual Studio's Clang tools (`/p:PlatformToolset=ClangCL`), WinDbg, Sysinternals (DebugView,
   Process Explorer), the Windows Performance Toolkit.
