@@ -2635,18 +2635,21 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, const wch
 
 			//Force in the document so we can add the markers
 			//Don't use default methods because of performance
-			Document prevDoc = _mainEditView.execute(SCI_GETDOCPOINTER);
-			unsigned long MODEVENTMASK_ON = nppParam.getScintillaModEventMask();
-			_mainEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF);
-			_mainEditView.execute(SCI_SETDOCPOINTER, 0, buf->getDocument());
-			_mainEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_ON);
-			for (size_t j = 0, len = session._mainViewFiles[i]._marks.size(); j < len ; ++j)
+			if (!session._mainViewFiles[i]._marks.empty())
 			{
-				_mainEditView.execute(SCI_MARKERADD, session._mainViewFiles[i]._marks[j], MARK_BOOKMARK);
+				Document prevDoc = _mainEditView.execute(SCI_GETDOCPOINTER);
+				unsigned long MODEVENTMASK_ON = nppParam.getScintillaModEventMask();
+				_mainEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF);
+				_mainEditView.execute(SCI_SETDOCPOINTER, 0, buf->getDocument());
+				_mainEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_ON);
+				for (size_t j = 0, len = session._mainViewFiles[i]._marks.size(); j < len ; ++j)
+				{
+					_mainEditView.execute(SCI_MARKERADD, session._mainViewFiles[i]._marks[j], MARK_BOOKMARK);
+				}
+				_mainEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF);
+				_mainEditView.execute(SCI_SETDOCPOINTER, 0, prevDoc);
+				_mainEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_ON);
 			}
-			_mainEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF);
-			_mainEditView.execute(SCI_SETDOCPOINTER, 0, prevDoc);
-			_mainEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_ON);
 			++i;
 		}
 		else
@@ -2776,18 +2779,21 @@ bool Notepad_plus::loadSession(Session & session, bool isSnapshotMode, const wch
 
 			//Force in the document so we can add the markers
 			//Don't use default methods because of performance
-			Document prevDoc = _subEditView.execute(SCI_GETDOCPOINTER);
-			unsigned long MODEVENTMASK_ON = nppParam.getScintillaModEventMask();
-			_subEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF);
-			_subEditView.execute(SCI_SETDOCPOINTER, 0, buf->getDocument());
-			_subEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_ON);
-			for (size_t j = 0, len = session._subViewFiles[k]._marks.size(); j < len ; ++j)
+			if (!session._subViewFiles[k]._marks.empty())
 			{
-				_subEditView.execute(SCI_MARKERADD, session._subViewFiles[k]._marks[j], MARK_BOOKMARK);
+				Document prevDoc = _subEditView.execute(SCI_GETDOCPOINTER);
+				unsigned long MODEVENTMASK_ON = nppParam.getScintillaModEventMask();
+				_subEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF);
+				_subEditView.execute(SCI_SETDOCPOINTER, 0, buf->getDocument());
+				_subEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_ON);
+				for (size_t j = 0, len = session._subViewFiles[k]._marks.size(); j < len ; ++j)
+				{
+					_subEditView.execute(SCI_MARKERADD, session._subViewFiles[k]._marks[j], MARK_BOOKMARK);
+				}
+				_subEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF);
+				_subEditView.execute(SCI_SETDOCPOINTER, 0, prevDoc);
+				_subEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_ON);
 			}
-			_subEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF);
-			_subEditView.execute(SCI_SETDOCPOINTER, 0, prevDoc);
-			_subEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_ON);
 
 			++k;
 		}

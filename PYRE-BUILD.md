@@ -60,6 +60,9 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **Fold markers and highlighting boxes drawn for the scale**: the fold margin's boxes and lines, the change history
   marks, the link underline and the boxes of Mark All, Find and smart highlighting are 2 pixels wide from 150% scale
   (3 from 250%) instead of 1 pixel at any scale.
+- **Many files open much faster** (a session of hundreds of files, official issue #14000): 1,000 files in about 8 seconds
+  instead of 41, 300 source files of 57 MB in 1.3 instead of 4.4 (ARM64 VM). Each file opened was looked for in the
+  tabs several times, one message per tab, and that grew with the square of the number of files.
 - **Preferences opens faster**: about 0.56 s instead of 0.75 the first time (ARM64 VM); the Print page's font lists
   are filled when the page is first shown. With several instances open (`-multiInst`), Preferences names the
   languages and encodings from its own instance's menu, not from the one in front, which may be in another language.
