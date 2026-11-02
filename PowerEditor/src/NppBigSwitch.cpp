@@ -878,6 +878,10 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 					const DWORD cmdLineParamsSize = pCopyData->cbData; // CmdLineParams size from another instance
 					if (sizeof(CmdLineParamsDTO) == cmdLineParamsSize) // make sure the structure is the same
 					{
+						// read as strings below: ended here whatever the sender put in them
+						cmdLineParam->_udlName[std::size(cmdLineParam->_udlName) - 1] = L'\0';
+						cmdLineParam->_pluginMessage[std::size(cmdLineParam->_pluginMessage) - 1] = L'\0';
+
 						if (_isAdministrator)
 							cmdLineParam->_pluginMessage[0] = L'\0';
 

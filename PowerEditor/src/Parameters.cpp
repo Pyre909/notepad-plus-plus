@@ -6905,16 +6905,16 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			_nppGUI._openSaveDir = getRangeDefaultAttribute(childNode, "value", dir_followCurrent, dir_userDef, _nppGUI._openSaveDir);
 
 			const std::wstring path = string2wstring(NppXml::attribute(childNode, "defaultDirPath", ""));
-			if (!path.empty())
+			if (!path.empty() && path.length() < MAX_PATH) // a longer one doesn't fit (and isn't a folder the dialogs can use)
 			{
-				wcsncpy_s(_nppGUI._defaultDir, MAX_PATH, path.c_str(), _TRUNCATE);
+				wcscpy_s(_nppGUI._defaultDir, MAX_PATH, path.c_str());
 				::ExpandEnvironmentStrings(_nppGUI._defaultDir, _nppGUI._defaultDirExp, MAX_PATH);
 			}
 
 			const std::wstring lastPath = string2wstring(NppXml::attribute(childNode, "lastUsedDirPath", ""));
-			if (!lastPath.empty())
+			if (!lastPath.empty() && lastPath.length() < MAX_PATH)
 			{
-				wcsncpy_s(_nppGUI._lastUsedDir, MAX_PATH, lastPath.c_str(), _TRUNCATE);
+				wcscpy_s(_nppGUI._lastUsedDir, MAX_PATH, lastPath.c_str());
 			}
 		}
 		// <GUIConfig name="titleBar" short="no" />
