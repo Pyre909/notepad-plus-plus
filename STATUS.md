@@ -148,6 +148,9 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     crash; Unicode 17) and 5.6.9 (5.6.8's XPM colours), Lexilla 5.5.5 / 5.5.6 (lexer crash and memory-safety fixes).
     Upstream PR #18588 (chcg, 2026-11-01, open) brings 5.6.8 and 5.5.5: take it with the next sync rather than updating
     Scintilla in pyre (it would conflict), then drop pyre's crash guard in `SurfaceD2D.cxx` and re-check the local patches.
+  - CI 13/13 on `e03c197` (run 41381617160, the UCRT64 jobs included); `PYRE-BUILD.md`: the menu samples' leak no longer listed
+    as ours (`b428833`); release run 41382342331 (0 annotations), **published** as Latest: `pyre-8.9.8.1-b428833`, its notes with
+    "What's new since the last release (cd162a0)".
   - Left: the plugin prototype (only if Pyre909 wants one: their choice for plugins was to disclose they aren't covered); the UDL undocked onto another monitor (needs a
     second display); the relaunch prompt (probably not needed: the setting says "restart required"). The Document List
     checked by hand (kit 10: 48 -> 72 px before the fix, 50 -> 50 after).
