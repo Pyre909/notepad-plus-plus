@@ -57,6 +57,14 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **Word wrap per document** (Preferences > Editing 1 > Line Wrap > "Per document", off by default): View > Word wrap
   wraps the current document only, each document keeps its own wrap (also in the session), and one opened or created
   takes the last choice (official issue #5232).
+- **Characters on a grid** (View > Show Symbol > "Show Characters on a Grid", also in the ¶ button's menu, off by
+  default): the text on a grid of cells, a cell being the width of a space, so that the same character always looks the
+  same, for comparing lines and finding hidden characters. Every tab is one tab size wide wherever it is, instead of
+  reaching the next tab stop, and the labels of control characters, line ends, non-printing characters and invalid bytes
+  take whole cells, their text centred. Letters keep their font's widths: in a monospaced font, one cell each. For
+  Chinese, Japanese and Korean in exactly two cells, use a font made 2:1, such as BIZ UDGothic, MS Gothic, NSimSun or the
+  Korean ...Che fonts, which come with Windows. Columns made with tabs don't line up while it's on; printing keeps the
+  tab stops.
 - **Fold markers and highlighting boxes drawn for the scale**: the fold margin's boxes and lines, the change history
   marks, the link underline and the boxes of Mark All, Find and smart highlighting are 2 pixels wide from 150% scale
   (3 from 250%) instead of 1 pixel at any scale.

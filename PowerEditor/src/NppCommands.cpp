@@ -2584,6 +2584,17 @@ void Notepad_plus::command(int id)
 			break;
 		}
 
+		case IDM_VIEW_CHARACTER_GRID: // Pyre909 build: tabs one tab size wide, representations in whole cells
+		{
+			auto& svp1 = const_cast<ScintillaViewParams&>(NppParameters::getInstance().getSVP());
+			svp1._characterGrid = !svp1._characterGrid;
+			checkMenuItem(id, svp1._characterGrid);
+
+			_mainEditView.applyCharacterGrid();
+			_subEditView.applyCharacterGrid();
+			break;
+		}
+
 		case IDM_VIEW_EOL:
 		{
 			const bool isChecked = !(::GetMenuState(_mainMenuHandle, id, MF_BYCOMMAND) == MF_CHECKED);

@@ -151,6 +151,7 @@ public:
 	int zoomLevel;
 	Scintilla::WhiteSpace viewWhitespace;
 	Scintilla::TabDrawMode tabDrawMode;
+	bool characterGrid;	// N++ (Pyre909 build): SCI_SETCHARACTERGRID, tabs and representations in whole cells (CellsWidth)
 	int whitespaceSize;
 	Scintilla::IndentView viewIndentationGuides;
 	bool viewEOL;
@@ -242,6 +243,7 @@ public:
 	bool SetWrapIndentMode(Scintilla::WrapIndentMode wrapIndentMode_) noexcept;
 
 	[[nodiscard]] bool WhiteSpaceVisible(bool inIndent) const noexcept;
+	[[nodiscard]] XYPOSITION CellsWidth(XYPOSITION width) const noexcept;	// N++ (Pyre909 build)
 
 	enum class CaretShape { invisible, line, block, bar };
 	[[nodiscard]] bool IsBlockCaretStyle() const noexcept;

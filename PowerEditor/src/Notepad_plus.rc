@@ -802,6 +802,7 @@ BEGIN
             MENUITEM SEPARATOR
             MENUITEM "Show Indent Guide",                      IDM_VIEW_INDENT_GUIDE
             MENUITEM "Show Wrap Symbol",                       IDM_VIEW_WRAP_SYMBOL
+            MENUITEM "Show Characters on a Grid",              IDM_VIEW_CHARACTER_GRID
         END
         POPUP "&Zoom"
         BEGIN

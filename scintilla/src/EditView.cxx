@@ -328,7 +328,7 @@ void EditView::CalculateSingles(const EditModel &model, Surface *surface, const 
 				representationWidth += static_cast<XWidth>(vstyle.ctrlCharPadding);
 			}
 			const unsigned char uch = ch;
-			singles[uch] = representationWidth;
+			singles[uch] = vstyle.characterGrid ? static_cast<XWidth>(vstyle.CellsWidth(representationWidth)) : representationWidth;	// N++
 		}
 	}
 
@@ -416,6 +416,9 @@ void LayoutSegments(IPositionCache *pCache,
 						if (FlagSet(ts.representation->appearance, RepresentationAppearance::Blob)) {
 							representationWidth += static_cast<XWidth>(vstyle.ctrlCharPadding);
 						}
+					}
+					if (vstyle.characterGrid) {	// N++ (Pyre909 build): whole cells
+						representationWidth = static_cast<XWidth>(vstyle.CellsWidth(representationWidth));
 					}
 				}
 				positions[0] = representationWidth;
@@ -956,7 +959,11 @@ void DrawTextBlob(Surface *surface, const ViewStyle &vsDraw, PRectangle rcSegmen
 	const PRectangle rcCentral = rcCChar.Inset(Point(0, 1));
 	surface->FillRectangleAligned(rcCentral, Fill(textFore));
 
-	const PRectangle rcChar = rcCChar.Inset(Point(1, 0));
+	PRectangle rcChar = rcCChar.Inset(Point(1, 0));
+	if (vsDraw.characterGrid) {	// N++ (Pyre909 build): the text centred in its whole cells
+		const XYPOSITION textWidth = surface->WidthTextUTF8(ctrlCharsFont, text);
+		rcChar.left += std::max(XYPOSITION{0}, std::floor((rcChar.Width() - textWidth) / 2));
+	}
 	// NOLINTNEXTLINE(readability-suspicious-call-argument) Inverted text
 	surface->DrawTextClippedUTF8(rcChar, ctrlCharsFont,
 		rcSegment.top + vsDraw.maxAscent, text,

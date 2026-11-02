@@ -328,6 +328,7 @@ static constexpr WinMenuKeyDefinition winKeyDefs[]
 	{ VK_NULL,    IDM_VIEW_NPC_CCUNIEOL,                        false, false, false, nullptr },
 	{ VK_NULL,    IDM_VIEW_INDENT_GUIDE,                        false, false, false, nullptr },
 	{ VK_NULL,    IDM_VIEW_WRAP_SYMBOL,                         false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_CHARACTER_GRID,                      false, false, false, nullptr }, // Pyre909 build
 //  { VK_NULL,    IDM_VIEW_ZOOMIN,                              false, false, false, nullptr },
 //  { VK_NULL,    IDM_VIEW_ZOOMOUT,                             false, false, false, nullptr },
 //  { VK_NULL,    IDM_VIEW_ZOOMRESTORE,                         false, false, false, nullptr },
@@ -7345,6 +7346,7 @@ void NppParameters::feedScintillaParam(const NppXml::Element& element)
 
 	// White Space visibility State
 	_svp._whiteSpaceShow = getBoolAttribute(element, "whiteSpaceShow", _svp._whiteSpaceShow, STR_BOOL_SHOWHIDE);
+	_svp._characterGrid = getBoolAttribute(element, "characterGrid", _svp._characterGrid); // Pyre909 build
 
 	// EOL visibility State
 	_svp._eolShow = getBoolAttribute(element, "eolShow", _svp._eolShow, STR_BOOL_SHOWHIDE);
@@ -7646,6 +7648,7 @@ bool NppParameters::writeScintillaParams()
 	NppXml::setAttribute(scintNode, "zoom2", _svp._zoom2);
 	setBoolAttribute(scintNode, "zoomSync", _svp._zoomSync);
 	setBoolAttribute(scintNode, "whiteSpaceShow", _svp._whiteSpaceShow, STR_BOOL_SHOWHIDE);
+	setBoolAttribute(scintNode, "characterGrid", _svp._characterGrid); // Pyre909 build
 	setBoolAttribute(scintNode, "eolShow", _svp._eolShow, STR_BOOL_SHOWHIDE);
 	NppXml::setAttribute(scintNode, "eolMode", _svp._eolMode);
 	setBoolAttribute(scintNode, "npcShow", _svp._npcShow, STR_BOOL_SHOWHIDE);

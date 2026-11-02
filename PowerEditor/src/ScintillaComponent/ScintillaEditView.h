@@ -449,6 +449,8 @@ public:
 		execute(SCI_SETWHITESPACESIZE, 2, 0);
 	}
 
+	void applyCharacterGrid(bool allowed = true); // Pyre909 build: View > Show Symbol > "Show Characters on a Grid"
+
 	bool isShownSpaceAndTab() {
 		return (execute(SCI_GETVIEWWS) != 0);
 	}

@@ -307,6 +307,7 @@
     #define    IDM_VIEW_ZOOMIN                    (IDM_VIEW + 23)
     #define    IDM_VIEW_ZOOMOUT                   (IDM_VIEW + 24)
     #define    IDM_VIEW_TAB_SPACE                 (IDM_VIEW + 25)
+    #define    IDM_VIEW_CHARACTER_GRID            (IDM_VIEW + 190) // Pyre909 build: far from upstream's next numbers
     #define    IDM_VIEW_EOL                       (IDM_VIEW + 26)
     #define    IDM_VIEW_ZOOM_SYNC                 (IDM_VIEW + 27)
     //#define    IDM_VIEW_TOOLBAR_ENLARGE_SET2      (IDM_VIEW + 28)

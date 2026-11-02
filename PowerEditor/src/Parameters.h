@@ -932,6 +932,7 @@ struct ScintillaViewParams
 	intptr_t _zoom2 = 0;
 	bool _zoomSync = false;
 	bool _whiteSpaceShow = false;
+	bool _characterGrid = false; // Pyre909 build: View > Show Symbol > "Show Characters on a Grid" (ScintillaEditView::applyCharacterGrid)
 	bool _eolShow = false;
 	enum crlfMode {plainText = 0, roundedRectangleText = 1, plainTextCustomColor = 2, roundedRectangleTextCustomColor = 3};
 	crlfMode _eolMode = roundedRectangleText;

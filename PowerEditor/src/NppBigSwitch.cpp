@@ -2335,7 +2335,7 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 						{
 							case IDM_VIEW_ALL_CHARACTERS:
 							{
-								auto cmdIDs = { IDM_VIEW_TAB_SPACE, IDM_VIEW_EOL, IDM_VIEW_NPC, IDM_VIEW_NPC_CCUNIEOL, 0, IDM_VIEW_ALL_CHARACTERS };
+								auto cmdIDs = { IDM_VIEW_TAB_SPACE, IDM_VIEW_EOL, IDM_VIEW_NPC, IDM_VIEW_NPC_CCUNIEOL, 0, IDM_VIEW_ALL_CHARACTERS, 0, IDM_VIEW_CHARACTER_GRID }; // Pyre909 build: the character grid
 								notifyTBShowMenu(lpnmtb, "view-showSymbol", cmdIDs);
 								return TBDDRET_DEFAULT;
 							}

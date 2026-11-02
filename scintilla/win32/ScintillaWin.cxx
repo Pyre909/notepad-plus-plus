@@ -2463,6 +2463,17 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 		}
 #endif
 
+		// N++ (Pyre909 build): the character grid (ScintillaFontRendering.h), whatever the technology
+		case SCI_SETCHARACTERGRID:
+			if (vs.characterGrid != (wParam != 0)) {
+				vs.characterGrid = wParam != 0;
+				InvalidateStyleRedraw();
+			}
+			return 0;
+
+		case SCI_GETCHARACTERGRID:
+			return vs.characterGrid;
+
 		case WM_GETMINMAXINFO:
 			return ::DefWindowProc(MainHWND(), msg, wParam, lParam);
 

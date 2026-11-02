@@ -1,7 +1,8 @@
 /* Scintilla source code edit control */
 /** @file ScintillaFontRendering.h
- ** N++ (Pyre909 build): the DirectWrite text rendering overrides of the Win32 platform, private messages of this copy of
- ** Scintilla (not in Scintilla.iface). Included by Scintilla.h, and by FontRenderingOverrides.h which implements them.
+ ** N++ (Pyre909 build): the DirectWrite text rendering overrides of the Win32 platform, and the character grid, private
+ ** messages of this copy of Scintilla (not in Scintilla.iface). Included by Scintilla.h, and by FontRenderingOverrides.h
+ ** which implements the overrides.
  **/
 
 #ifndef SCINTILLAFONTRENDERING_H
@@ -29,5 +30,12 @@
 #define SC_RENDERINGMODE_GDICLASSIC 2
 #define SC_RENDERINGMODE_NATURAL 4
 #define SC_RENDERINGMODE_NATURALSYMMETRIC 5
+
+/* SCI_SETCHARACTERGRID(bool grid) lays out on a grid of cells, a cell being the width of a space of STYLE_DEFAULT: a tab is
+   one tab width wide wherever it is (not up to the next tab stop), and the representations (control characters, line
+   ends, those of SCI_SETREPRESENTATION, invalid bytes) take whole cells, their text centred in a blob. The text itself
+   keeps its font's widths (in a monospaced font, a cell). SCI_GETCHARACTERGRID returns it. Whatever the technology. */
+#define SCI_SETCHARACTERGRID 5103
+#define SCI_GETCHARACTERGRID 5104
 
 #endif

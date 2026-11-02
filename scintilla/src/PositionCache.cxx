@@ -416,7 +416,8 @@ void LineLayout::CalculatePositions(Sci::Line line, const TabStopProvider &tsp, 
 		const XWidth widthChar = GetValue(i);
 		widthAccurate += widthChar;
 		if (chars[i] == '\t' && vstyle.tabDrawMode != TabDrawMode::ControlChar) {
-			widthAccurate = tsp.NextTabstopPos(line, widthAccurate, vstyle.tabWidth);
+			// N++ (Pyre909 build): with the character grid, a tab one tab width wide wherever it is
+			widthAccurate = vstyle.characterGrid ? widthAccurate + vstyle.tabWidth : tsp.NextTabstopPos(line, widthAccurate, vstyle.tabWidth);
 		}
 	}
 	SetWidthMean(widthAccurate / (numCharsInLine ? numCharsInLine : 1));
@@ -428,7 +429,7 @@ void LineLayout::CalculatePositions(Sci::Line line, const TabStopProvider &tsp, 
 		SetPosition(i, xPosition);
 		xPosition += widthChar;
 		if (chars[i] == '\t' && vstyle.tabDrawMode != TabDrawMode::ControlChar) {
-			xPosition = tsp.NextTabstopPos(line, xPosition, vstyle.tabWidth);
+			xPosition = vstyle.characterGrid ? xPosition + vstyle.tabWidth : tsp.NextTabstopPos(line, xPosition, vstyle.tabWidth);	// N++
 		}
 	}
 	SetPosition(numCharsInLine, xPosition);

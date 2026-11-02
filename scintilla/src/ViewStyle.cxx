@@ -234,6 +234,7 @@ ViewStyle::ViewStyle(size_t stylesSize_) :
 	zoomLevel = 0;
 	viewWhitespace = WhiteSpace::Invisible;
 	tabDrawMode = TabDrawMode::LongArrow;
+	characterGrid = false;	// N++ (Pyre909 build)
 	whitespaceSize = 1;
 	elementAllowsTranslucent.insert(Element::WhiteSpace);
 
@@ -308,6 +309,7 @@ ViewStyle::ViewStyle(const ViewStyle &source) : ViewStyle(source.styles.size()) 
 	zoomLevel = source.zoomLevel;
 	viewWhitespace = source.viewWhitespace;
 	tabDrawMode = source.tabDrawMode;
+	characterGrid = source.characterGrid;	// N++ (Pyre909 build)
 	whitespaceSize = source.whitespaceSize;
 	viewIndentationGuides = source.viewIndentationGuides;
 	viewEOL = source.viewEOL;
@@ -600,6 +602,15 @@ bool ViewStyle::WhiteSpaceVisible(bool inIndent) const noexcept {
 	return (!inIndent && viewWhitespace == WhiteSpace::VisibleAfterIndent) ||
 		(inIndent && viewWhitespace == WhiteSpace::VisibleOnlyInIndent) ||
 		viewWhitespace == WhiteSpace::VisibleAlways;
+}
+
+// N++ (Pyre909 build): with the character grid, a width rounded up to whole cells (a cell: the width of a space of the
+// default style, as tabWidth), at least one; a twentieth of a cell over is let through, so that a width a rounding over a
+// whole number of cells isn't one cell more
+XYPOSITION ViewStyle::CellsWidth(XYPOSITION width) const noexcept {
+	if (spaceWidth <= 0)
+		return width;
+	return std::max(XYPOSITION{1}, std::ceil(width / spaceWidth - XYPOSITION{0.05})) * spaceWidth;
 }
 
 ColourRGBA ViewStyle::WrapColour() const {

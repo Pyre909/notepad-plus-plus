@@ -5481,6 +5481,7 @@ void Notepad_plus::staticCheckMenuAndTB() const
 	checkMenuItem(IDM_VIEW_NPC_CCUNIEOL, ccUniEolShow);
 	checkMenuItem(IDM_VIEW_ALL_CHARACTERS, allShow);
 	_toolBar.setCheck(IDM_VIEW_ALL_CHARACTERS, allShow);
+	checkMenuItem(IDM_VIEW_CHARACTER_GRID, NppParameters::getInstance().getSVP()._characterGrid); // Pyre909 build
 
 	// Visibility of the indentation guide line
 	bool b = _pEditView->isShownIndentGuide();

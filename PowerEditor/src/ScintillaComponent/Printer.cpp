@@ -331,6 +331,7 @@ size_t Printer::doPrint(bool justDoIt)
 	// "Fira Code" Light of DirectWrite (see getScintillaFont)
 	const int technology = static_cast<int>(_pSEView->execute(SCI_GETTECHNOLOGY));
 	_pSEView->refreshStyleFonts(SC_TECHNOLOGY_DEFAULT, technology);
+	_pSEView->applyCharacterGrid(false); // Pyre909 build: printed with the tab stops, the representations as they are
 
 	int pageNum = 1;
 	const wchar_t pageVar[] = L"$(CURRENT_PRINTING_PAGE)";
@@ -510,6 +511,7 @@ size_t Printer::doPrint(bool justDoIt)
 	}
 
 	_pSEView->refreshStyleFonts(technology, SC_TECHNOLOGY_DEFAULT); // before the line numbers are measured again
+	_pSEView->applyCharacterGrid(); // Pyre909 build: the view's character grid again
 
 	if (!nppGUI._printSettings._printLineNumber)
 		_pSEView->showMargin(ScintillaEditView::_SC_MARGE_LINENUMBER, isShown);

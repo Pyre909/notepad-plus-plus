@@ -533,6 +533,18 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 	execute(SCI_SETMODEVENTMASK, MODEVENTMASK_ON);
 	//Get the startup document and make a buffer for it so it can be accessed like a file
 	attachDefaultDoc();
+	applyCharacterGrid(); // Pyre909 build
+}
+
+// Pyre909 build: View > Show Symbol > "Show Characters on a Grid" (ScintillaViewParams::_characterGrid), in the edit views:
+// Scintilla's character grid (pyre's SCI_SETCHARACTERGRID, ScintillaFontRendering.h), a tab one tab size wide wherever it
+// is, the representations (control characters, line ends, non-printing characters, invalid bytes) in whole cells, so that
+// the same character always looks the same (comparing lines, looking for hidden characters). A property of the view, kept
+// through document and code page changes. Not allowed (printing): off.
+void ScintillaEditView::applyCharacterGrid(bool allowed)
+{
+	if (_isMainEditZone)
+		execute(SCI_SETCHARACTERGRID, allowed && NppParameters::getInstance().getSVP()._characterGrid);
 }
 
 // Pyre909 build: the Text Rendering settings of Preferences > Editing 1
