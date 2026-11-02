@@ -1225,6 +1225,24 @@ static LRESULT CALLBACK helpTipStaticTextCtrlParentClickProc(
 	return ::DefSubclassProc(hwnd, Message, wParam, lParam);
 }
 
+// Pyre909 build: a font name combo box filled with the font list (each item's data: its name), its storage reserved and its
+// redraw off meanwhile: added one by one, 217 fonts took about 80 ms a list (Preferences has three of them)
+void fillFontNameComboBox(HWND hCombo, const std::vector<std::wstring>& fontlist)
+{
+	size_t nbChars = 0;
+	for (const std::wstring& fontName : fontlist)
+		nbChars += fontName.length() + 1;
+
+	::SendMessage(hCombo, WM_SETREDRAW, FALSE, 0);
+	::SendMessage(hCombo, CB_INITSTORAGE, fontlist.size(), nbChars * sizeof(wchar_t));
+	for (const std::wstring& fontName : fontlist)
+	{
+		const auto i = ::SendMessage(hCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(fontName.c_str()));
+		::SendMessage(hCombo, CB_SETITEMDATA, i, reinterpret_cast<LPARAM>(fontName.c_str()));
+	}
+	::SendMessage(hCombo, WM_SETREDRAW, TRUE, 0);
+}
+
 HWND createToolTip(int toolID, HWND hDlg, HINSTANCE hInst, wchar_t* pszText, bool isRTL)
 {
 	if (!toolID || !hDlg || !pszText)

@@ -452,6 +452,30 @@ void getKeyStrFromVal(UCHAR keyVal, string & str)
 		str = "Unlisted";
 }
 
+// Pyre909 build: the main window of this process, found once: FindWindow, called for each name, went through every
+// top-level window (about 0.5 ms; Preferences asks about 230 names when it opens: the New Document page's encodings and
+// languages, the Language page's languages), and with several instances (-multiInst) it could find another Notepad++'s
+// window and give the names of its menu
+static HWND getOwnNotepadPlusWindow()
+{
+	static HWND hNotepad_plus = nullptr;
+	if (hNotepad_plus && ::IsWindow(hNotepad_plus))
+		return hNotepad_plus;
+
+	hNotepad_plus = nullptr;
+	for (HWND hWnd = ::FindWindowEx(nullptr, nullptr, Notepad_plus_Window::getClassName(), nullptr); hWnd; hWnd = ::FindWindowEx(nullptr, hWnd, Notepad_plus_Window::getClassName(), nullptr))
+	{
+		DWORD processId = 0;
+		::GetWindowThreadProcessId(hWnd, &processId);
+		if (processId == ::GetCurrentProcessId())
+		{
+			hNotepad_plus = hWnd;
+			break;
+		}
+	}
+	return hNotepad_plus;
+}
+
 void getNameStrFromCmd(DWORD cmd, wstring & str)
 {
 	if ((cmd >= ID_MACRO) && (cmd < ID_MACRO_LIMIT))
@@ -482,7 +506,7 @@ void getNameStrFromCmd(DWORD cmd, wstring & str)
 	}
 	else
 	{
-		HWND hNotepad_plus = ::FindWindow(Notepad_plus_Window::getClassName(), NULL);
+		HWND hNotepad_plus = getOwnNotepadPlusWindow(); // Pyre909 build
 		wchar_t cmdName[menuItemStrLenMax];
 		HMENU m = reinterpret_cast<HMENU>(::SendMessage(hNotepad_plus, NPPM_INTERNAL_GETMENU, 0, 0));
 		int nbChar = ::GetMenuString(m, cmd, cmdName, menuItemStrLenMax, MF_BYCOMMAND);

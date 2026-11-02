@@ -154,6 +154,7 @@ bool buf2Clipboard(const std::vector<Buffer*>& buffers, bool isFullPath, HWND hw
 std::wstring GetLastErrorAsString(DWORD errorCode = 0);
 
 HWND createToolTip(int toolID, HWND hDlg, HINSTANCE hInst, wchar_t* pszText, bool isRTL);
+void fillFontNameComboBox(HWND hCombo, const std::vector<std::wstring>& fontlist); // Pyre909 build
 HWND createToolTipRect(int toolID, HWND hWnd, HINSTANCE hInst, wchar_t* pszText, const RECT rc);
 
 bool isCertificateValidated(const std::wstring & fullFilePath, const std::wstring & subjectName2check);

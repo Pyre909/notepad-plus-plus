@@ -117,11 +117,7 @@ intptr_t CALLBACK WordStyleDlg::run_dlgProc(UINT Message, WPARAM wParam, LPARAM 
 				::SendMessage(_hFontSizeCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(fontSizeStrs[i]));
 
 			const std::vector<wstring> & fontlist = nppParamInst.getFontList();
-			for (size_t i = 0, len = fontlist.size() ; i < len ; ++i)
-			{
-				auto j = ::SendMessage(_hFontNameCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(fontlist[i].c_str()));
-				::SendMessage(_hFontNameCombo, CB_SETITEMDATA, j, reinterpret_cast<LPARAM>(fontlist[i].c_str()));
-			}
+			fillFontNameComboBox(_hFontNameCombo, fontlist); // Pyre909 build
 
 			_pFgColour = std::make_unique<ColourPicker>();
 			_pBgColour = std::make_unique<ColourPicker>();

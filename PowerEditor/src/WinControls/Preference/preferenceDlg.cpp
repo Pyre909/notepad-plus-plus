@@ -824,11 +824,7 @@ intptr_t CALLBACK GeneralSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			const std::vector<wstring>& fontlist = nppParamInst.getFontList();
 
 			HWND hFontNameCombo = ::GetDlgItem(_hSelf, IDC_COMBO_DIALOG_FONT_NAME);
-			for (size_t i = 0, len = fontlist.size(); i < len; ++i)
-			{
-				auto j = ::SendMessage(hFontNameCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(fontlist[i].c_str()));
-				::SendMessage(hFontNameCombo, CB_SETITEMDATA, j, reinterpret_cast<LPARAM>(fontlist[i].c_str()));
-			}
+			fillFontNameComboBox(hFontNameCombo, fontlist); // Pyre909 build
 
 			LRESULT iFontName = 0;
 			iFontName = ::SendMessage(hFontNameCombo, CB_FINDSTRING, 1, reinterpret_cast<LPARAM>(nppParamInst.getNppGUI()._fontDlgName.c_str()));
@@ -5366,6 +5362,29 @@ intptr_t CALLBACK HighlightingSubDlg::run_dlgProc(UINT message, WPARAM wParam, L
 	return FALSE;
 }
 
+// Pyre909 build: the header and footer font name lists filled, their fonts selected; done when the page is first shown, as
+// filling them when Preferences opened took 80 ms or more (the settings are read from them only when they change)
+void PrintSubDlg::fillFontNameLists()
+{
+	_isFontNameListFilled = true;
+	const NppGUI& nppGUI = NppParameters::getInstance().getNppGUI();
+	const std::vector<wstring>& fontlist = NppParameters::getInstance().getFontList();
+	const std::pair<int, const wstring&> fontNameLists[]{
+		{ IDC_COMBO_HFONTNAME, nppGUI._printSettings._headerFontName },
+		{ IDC_COMBO_FFONTNAME, nppGUI._printSettings._footerFontName }
+	};
+	for (const auto& [comboID, fontName] : fontNameLists)
+	{
+		HWND hCombo = ::GetDlgItem(_hSelf, comboID);
+		fillFontNameComboBox(hCombo, fontlist);
+		auto index = ::SendMessage(hCombo, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(fontName.c_str()));
+		if (index == CB_ERR)
+			index = 0;
+		::SendMessage(hCombo, CB_SETCURSEL, index, 0);
+		::InvalidateRect(hCombo, nullptr, TRUE);
+	}
+}
+
 intptr_t CALLBACK PrintSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	NppParameters& nppParam = NppParameters::getInstance();
@@ -5417,24 +5436,7 @@ intptr_t CALLBACK PrintSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 				::SendDlgItemMessage(_hSelf, IDC_COMBO_HFONTSIZE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(intStr));
 				::SendDlgItemMessage(_hSelf, IDC_COMBO_FFONTSIZE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(intStr));
 			}
-			const std::vector<wstring> & fontlist = nppParam.getFontList();
-			for (size_t i = 0, len = fontlist.size() ; i < len ; ++i)
-			{
-				auto j = ::SendDlgItemMessage(_hSelf, IDC_COMBO_HFONTNAME, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(fontlist[i].c_str()));
-				::SendDlgItemMessage(_hSelf, IDC_COMBO_FFONTNAME, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(fontlist[i].c_str()));
-
-				::SendDlgItemMessage(_hSelf, IDC_COMBO_HFONTNAME, CB_SETITEMDATA, j, reinterpret_cast<LPARAM>(fontlist[i].c_str()));
-				::SendDlgItemMessage(_hSelf, IDC_COMBO_FFONTNAME, CB_SETITEMDATA, j, reinterpret_cast<LPARAM>(fontlist[i].c_str()));
-			}
-
-			auto index = ::SendDlgItemMessage(_hSelf, IDC_COMBO_HFONTNAME, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(nppGUI._printSettings._headerFontName.c_str()));
-			if (index == CB_ERR)
-				index = 0;
-			::SendDlgItemMessage(_hSelf, IDC_COMBO_HFONTNAME, CB_SETCURSEL, index, 0);
-			index = ::SendDlgItemMessage(_hSelf, IDC_COMBO_FFONTNAME, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(nppGUI._printSettings._footerFontName.c_str()));
-			if (index == CB_ERR)
-				index = 0;
-			::SendDlgItemMessage(_hSelf, IDC_COMBO_FFONTNAME, CB_SETCURSEL, index, 0);
+			// Pyre909 build: the font name lists are filled when the page is first shown (fillFontNameLists, WM_SHOWWINDOW)
 
 			wsprintf(intStr, L"%d", nppGUI._printSettings._headerFontSize);
 			::SendDlgItemMessage(_hSelf, IDC_COMBO_HFONTSIZE, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(intStr));
@@ -5465,6 +5467,13 @@ intptr_t CALLBACK PrintSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 			::SendDlgItemMessage(_hSelf, IDC_COMBO_VARLIST, CB_SETCURSEL, 0, 0);
 
 			return TRUE;
+		}
+
+		case WM_SHOWWINDOW: // Pyre909 build
+		{
+			if (wParam && !_isFontNameListFilled)
+				fillFontNameLists();
+			break;
 		}
 
 		case WM_CTLCOLOREDIT:

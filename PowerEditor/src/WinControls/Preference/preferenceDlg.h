@@ -301,6 +301,10 @@ private :
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	std::vector<std::wstring> varList;
 	int _focusedEditCtrl = 0;
+
+	// Pyre909 build: the header and footer font name lists, filled when the page is first shown (not when Preferences opens)
+	bool _isFontNameListFilled = false;
+	void fillFontNameLists();
 };
 
 class BackupSubDlg : public StaticDialog
