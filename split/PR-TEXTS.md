@@ -19,9 +19,10 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 11 | none | – | – | – | Comment: the Find dialog's black status bar was the swallowed `WM_THEMECHANGED`, so its PMv2 can come back | no: a comment on #18455 or #18462 |
 | 12 | `archive/menu-colour-bitmaps_20261020` (archived 2026-11-02) | `5903444` | 2 | none | The main menu's colour samples cached, not leaked (11 GDI objects per colour change) | **superseded**: upstream fixed it in `6abb408` (2026-11-01) |
 | 13 | `dpi-dialog-sizes_20261020` | `b759ee8` | 5 | none | Tooltip widths and Shortcut Mapper's grid metrics for the DPI of upstream's per-monitor dialogs | no: bug fix (issue to open first) |
-| 14 | `langtype-bounds_20261101` | `bbe235f` (local) | 4 | none | Crash at the next key typed after an invalid language type from `NPPM_SETCURRENTLANGTYPE` or an external language command without a lexer | no: bug fix (issue to open first) |
-| 15 | `long-strings-failfast_20261101` | `2c65c1f` (local) | 4 | none | Crash at startup with a long `-udl=`, `-pluginMessage=`, UDL name or config.xml open/save folder (MSVC's `wcsncpy_s`/`wcscat_s` failing fast) | no: bug fix (issue to open first) |
-| 16 | `session-open-speed_20261101` | `0711cfc` (local) | 4 | none | Many files opened faster: tab lookups only where a buffer can be (1,000 files 41 s to 8 s) | no: #14000 (open since 2023), comment there first |
+| 14 | `langtype-bounds_20261101` | `bbe235f` | 4 | none | Crash at the next key typed after an invalid language type from `NPPM_SETCURRENTLANGTYPE` or an external language command without a lexer | no: bug fix (issue to open first) |
+| 15 | `long-strings-failfast_20261101` | `2c65c1f` | 4 | none | Crash at startup with a long `-udl=`, `-pluginMessage=`, UDL name or config.xml open/save folder (MSVC's `wcsncpy_s`/`wcscat_s` failing fast) | no: bug fix (issue to open first) |
+| 16 | `session-open-speed_20261101` | `0711cfc` | 4 | none | Many files opened faster: tab lookups only where a buffer can be (1,000 files 41 s to 8 s) | no: #14000 (open since 2023), comment there first |
+| 17 | none | – | – | – | Issue: upstream's auto-completion icons nearly black since Scintilla 5.6.8 (XPM colour slip; 5.6.9 fixes it) | no: a report, no PR |
 
 Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs, `9f605be`, 2026-10-06; 6, 7 and 8: 13/13, 2026-10-06). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
 
@@ -1310,6 +1311,40 @@ AI disclosure: I wrote this with help from an AI assistant (Claude), then review
 - [x] I have read contributing guidelines
 
 fix #14000
+```
+
+## 17. Issue: auto-completion icons nearly black with Scintilla 5.6.8 (report only, no PR)
+
+Found on 2026-11-02 while merging upstream's `025d452` (Scintilla 5.6.8 / Lexilla 5.5.5, the same content as PR #18588)
+into `pyre`, which fixed it on 2026-11-01 when it took #18588 early. Scintilla 5.6.8's `ColourFromHex` (`XPM.cxx`)
+reads `ValueOfHex((val[0]) * 16)`: it multiplies the digit's character, not its value, so the low byte is never a hex
+digit and every colour's high digit reads as 0 (`#393939` becomes `#090909`). Notepad++'s XPM images are the
+auto-completion list's function and keyword icons (`xpmfn`, `xpmbox` and their dark versions in `AutoCompletion.cpp`),
+so they come out nearly black, almost invisible in dark mode. Scintilla 5.6.9 fixes it. No code from us: a Scintilla
+update is chcg's routine (and Scintilla takes no LLM code); the issue just points at 5.6.9. Not checked on an upstream
+build by eye yet (`pyre` has the fix): Pyre909 can build upstream `master` or ask for a screenshot before posting.
+
+### Issue — title
+`Auto-completion icons almost black since the Scintilla 5.6.8 update`
+
+### Issue — body
+```
+### Description of the Issue
+Since 025d452 (Scintilla 5.6.8 / Lexilla 5.5.5) the icons in the auto-completion list (the function and keyword ones, which Notepad++ registers as XPM images) come out nearly black. Scintilla 5.6.8 has a slip in XPM.cxx's ColourFromHex: ValueOfHex((val[0]) * 16) instead of ValueOfHex(val[0]) * 16, so the high hex digit of every colour reads as 0 (#393939 becomes #090909). Scintilla 5.6.9 fixes it, so updating to 5.6.9 should be enough.
+
+### Steps To Reproduce
+1. Build current master.
+2. Open a .cpp file, type the first letters of a keyword or function (or Ctrl+Space).
+3. Look at the icons next to the entries.
+
+### Current Behavior
+The icons are almost black (barely visible in dark mode).
+
+### Expected Behavior
+The same icons as in 8.9.8.1.
+
+### Debug Information
+(paste Help > Debug Info of the master build)
 ```
 
 ---

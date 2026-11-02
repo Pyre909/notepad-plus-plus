@@ -208,6 +208,12 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     `session-open-speed` 41410138522, `per-monitor-dpi` 41410141621. Release run 41412176617 (PGO, 0 annotations),
     **published** as Latest: `pyre-8.9.8.1-122db31`, its notes with "What's new since the last release (b428833)".
   - For Pyre909: kit 14-16 (issues, then PRs; #14000's comment first), and the earlier list above.
+  - Upstream check (2026-11-02): 2 new commits, `025d452` (Scintilla 5.6.8 / Lexilla 5.5.5 merged upstream directly,
+    chcg's PR #18588 closed; its Scintilla and Lexilla content the same as `5cd3d32`) and `8430de0` (Malayalam). Merged
+    into `pyre` as `12cee53` (conflicts, pyre's side: the two `.mak` files' `-std:c++23preview`, `XPM.cxx`'s fix): pyre
+    gets the translation only. Clean rebuilds, both start in Malayalam. Upstream master keeps 5.6.8's XPM slip, which makes
+    its auto-completion icons nearly black: kit 17, an issue pointing at 5.6.9. All ten PR branches still merge cleanly
+    onto upstream `025d452`; PR #18503 still unreviewed.
   - 8, `per-monitor-dpi_20260925` rebased on `9923cad` (`54851f3`: the same resolutions as `pyre`'s merge), both MSVC
     builds clean; CI needs it pushed (a force-push: Pyre909's OK).
   - 1, AddressSanitizer: all the tests on the final code (`asan.ps1 -Ref 885561b -Test All`, the four new tests
