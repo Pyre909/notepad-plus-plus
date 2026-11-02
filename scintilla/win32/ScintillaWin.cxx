@@ -2474,6 +2474,20 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 		case SCI_GETCHARACTERGRID:
 			return vs.characterGrid;
 
+		case SCI_GETCELLCOLUMN: {	// N++ (Pyre909 build): from the line's layout, whose positions span its sublines
+			const Sci::Position pos = PositionFromUPtr(wParam);
+			if ((pos < 0) || (pos > pdoc->Length()))
+				return 0;
+			RefreshStyleData();
+			AutoSurface surface(this);
+			const Sci::Line line = pdoc->SciLineFromPosition(pos);
+			const std::shared_ptr<LineLayout> ll = view.RetrieveLineLayout(line, *this);
+			if (!surface || !ll || (vs.spaceWidth <= 0))
+				return 0;
+			view.LayoutLine(*this, surface, vs, ll.get(), wrapWidth);
+			return std::lround(ll->XInLine(pos - pdoc->LineStart(line)) / vs.spaceWidth);
+		}
+
 		case WM_GETMINMAXINFO:
 			return ::DefWindowProc(MainHWND(), msg, wParam, lParam);
 

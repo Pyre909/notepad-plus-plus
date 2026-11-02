@@ -6130,6 +6130,14 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "StatusBar") == 0)
 		{
 			_nppGUI._statusBarShow = getBoolChildTextNode(childNode, _nppGUI._statusBarShow, STR_BOOL_SHOWHIDE);
+
+			// Pyre909 build: position="column|hex|both" lineLength="yes|no"
+			if (const char* position = NppXml::attribute(childNode, "position"))
+			{
+				using enum NppGUI::StatusBarPosition;
+				_nppGUI._statusBarPosition = (std::strcmp(position, "hex") == 0) ? hexOffset : (std::strcmp(position, "both") == 0) ? both : column;
+			}
+			_nppGUI._statusBarLineLength = getBoolAttribute(childNode, "lineLength", _nppGUI._statusBarLineLength);
 		}
 		// <GUIConfig name="MenuBar">show</GUIConfig>
 		else if (std::strcmp(nm, "MenuBar") == 0)
@@ -7771,6 +7779,12 @@ void NppParameters::createXmlTreeFromGUIParams()
 		NppXml::Element GUIConfigElement = NppXml::createChildElement(newGUIRoot, "GUIConfig");
 		NppXml::setAttribute(GUIConfigElement, "name", "StatusBar");
 		NppXml::createChildText(GUIConfigElement, _nppGUI._statusBarShow ? "show" : "hide");
+
+		// Pyre909 build
+		using enum NppGUI::StatusBarPosition;
+		const auto position = _nppGUI._statusBarPosition;
+		NppXml::setAttribute(GUIConfigElement, "position", (position == hexOffset) ? "hex" : (position == both) ? "both" : "column");
+		setBoolAttribute(GUIConfigElement, "lineLength", _nppGUI._statusBarLineLength);
 	}
 
 	// <GUIConfig name="TabBar" dragAndDrop="yes" drawTopBar="yes" drawInactiveTab="yes" reduce="yes" closeButton="yes"

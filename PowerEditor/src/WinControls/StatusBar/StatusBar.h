@@ -34,6 +34,7 @@ public:
 	void init(HINSTANCE hInst, HWND hPere, int nbParts);
 
 	bool setPartWidth(int whichPart, int width);
+	int getPartWidth(int whichPart) const; // Pyre909 build
 
 	void destroy() override;
 

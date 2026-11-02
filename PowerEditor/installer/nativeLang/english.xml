@@ -976,6 +976,8 @@ Translation note:
 					<Item id="6132" name="Hide &amp;right shortcuts ＋ ▼ ✕"/>
 					<Item id="6133" name="Status Bar"/>
 					<Item id="6134" name="Hi&amp;de"/>
+					<Item id="6197" name="Caret p&amp;osition:"/>
+					<Item id="6199" name="Line len&amp;gth"/>
 					<Item id="7165" name="Dialog Font (Need to restart Notepad++)"/>
 					<Item id="7166" name="&amp;Size:"/>
 					<Item id="7168" name="Name:"/>
@@ -1994,6 +1996,11 @@ If you select advanced mode but do not edit files in the aforementioned language
 			<statusbar-Pos value="Pos: "/>
 			<statusbar-Sel value="Sel: "/>
 			<statusbar-Sel-number value="Sel"/>
+			<statusbar-Ln value="Ln: "/>
+			<statusbar-Off value="Off: "/>
+			<statusbar-Len value="Len: "/>
+			<statusbar-char-byte value="(ch $STR_REPLACE1$, byte $STR_REPLACE2$)"/>
+			<statusbar-bytes value="($STR_REPLACE1$ bytes)"/>
 			<toolbar-accent-tip value="This option makes your toolbar icons follow Windows system accent color. Accent color is the highlight color used in buttons, borders, and Start menu tiles in Windows. To change it, go to Settings &gt; Personalization &gt; Colors, then select your preferred accent color."/>
 			<len-limit-exceeded-tip value="Length limit exceeded: Your input may exceed the limit allowed and could have been truncated, and it won't be saved for the next session."/>
 			<max-len-on-search-tip value="Your input may exceed the limit allowed and could have been truncated, and it won't be saved for the next session."/>

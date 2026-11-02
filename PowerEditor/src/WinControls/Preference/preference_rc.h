@@ -78,6 +78,9 @@
 #define IDC_CHECK_HIDERIGHTSHORTCUTSOFMENUBAR          6132
 #define IDC_STATUSBAR_GB_STATIC                        6133
 #define IDC_CHECK_HIDESTATUSBAR                        6134
+#define IDC_STATIC_STATUSBAR_POSITION                  6197 // Pyre909 build
+#define IDC_COMBO_STATUSBAR_POSITION                   6198 // Pyre909 build
+#define IDC_CHECK_STATUSBAR_LINELENGTH                 6199 // Pyre909 build
 #define IDC_CHECK_SHOWONLYPINNEDBUTTON                 6135
 
 #define IDC_TABCOMPACTLABELLEN_STATIC                  6136

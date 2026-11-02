@@ -723,6 +723,11 @@ struct NppGUI final
 	TbIconInfo _tbIconInfo{ toolBarStatusType::TB_STANDARD, FluentColor::defaultColor, 0, false };
 	bool _toolbarShow = true;
 	bool _statusBarShow = true;
+	// Pyre909 build: the status bar's caret position as its column (1-based; with the character grid, the cell), as its
+	// offset in the line in hex (0-based, in bytes of the file's encoding), or both; and the line's length
+	enum class StatusBarPosition { column, hexOffset, both };
+	StatusBarPosition _statusBarPosition = StatusBarPosition::column;
+	bool _statusBarLineLength = false;
 	bool _menuBarShow = true;
 
 	// The 16 custom color slots of the Windows color picker (ChooseColor), persisted

@@ -612,6 +612,8 @@ private:
 	void activateDoc(size_t pos);
 
 	void updateStatusBar();
+	void fitStatusBarPosition(const std::wstring& text); // Pyre909 build: the caret position part as wide as its text
+	int _statusBarPositionWidth = 0; // Pyre909 build: that part's width (0: its base width, 320 at 96 DPI)
 	size_t getSelectedCharNumber(UniMode);
 	size_t getCurrentDocCharCount(UniMode u);
 	size_t getSelectedAreas();

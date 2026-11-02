@@ -75,6 +75,11 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   labelled too: the combining grapheme joiner, the Mongolian variation selectors, the Hangul fillers, the musical and
   shorthand formatting characters, the language tag. Preferences' custom colours of non-printing characters and line
   ends still apply.
+- **The status bar's caret position, exact** (Preferences > General > Status Bar): with the character grid, Col is the
+  cell the caret is in; beside it, the caret's character and byte positions in the line when they differ from it (after
+  a tab, an accented or a CJK character; bytes of the file's encoding, UTF-16's too), and a selection's bytes beside its
+  characters. "Caret position" shows the column, the offset in the line in hex (0-based, in bytes: `Off: X'24'`), or
+  both; "Line length" adds the line's length (with its bytes when they differ), for fixed-length records.
 - **Fold markers and highlighting boxes drawn for the scale**: the fold margin's boxes and lines, the change history
   marks, the link underline and the boxes of Mark All, Find and smart highlighting are 2 pixels wide from 150% scale
   (3 from 250%) instead of 1 pixel at any scale.

@@ -287,6 +287,12 @@ bool StatusBar::setPartWidth(int whichPart, int width)
 	return false;
 }
 
+// Pyre909 build
+int StatusBar::getPartWidth(int whichPart) const
+{
+	return (static_cast<size_t>(whichPart) < _partWidthArray.size()) ? _partWidthArray[whichPart] : 0;
+}
+
 
 void StatusBar::destroy()
 {

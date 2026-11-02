@@ -3997,6 +3997,7 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 
 			_statusBar.setPartWidth(STATUSBAR_DOC_SIZE, DPIManagerV2::scale(220, dpi));
 			_statusBar.setPartWidth(STATUSBAR_CUR_POS, DPIManagerV2::scale(320, dpi)); // Pyre909 build: 260 + the character's code ("    U+1F600": 58 px in Segoe UI 9 pt)
+			_statusBarPositionWidth = 0; // Pyre909 build: refitted to its text at the next update (fitStatusBarPosition)
 			_statusBar.setPartWidth(STATUSBAR_EOF_FORMAT, DPIManagerV2::scale(110, dpi));
 			_statusBar.setPartWidth(STATUSBAR_UNICODE_TYPE, DPIManagerV2::scale(120, dpi));
 			_statusBar.setPartWidth(STATUSBAR_TYPING_MODE, DPIManagerV2::scale(45, dpi));
@@ -4087,6 +4088,13 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 				_pDocMap->initWrapMap();
 				_pDocMap->wrapMap();
 			}
+			return TRUE;
+		}
+
+		case NPPM_INTERNAL_STATUSBARPOSITION: // Pyre909 build: the caret position's form or the line length (Preferences > General)
+		{
+			_statusBarPositionWidth = 0; // refitted to the new text, narrower too
+			updateStatusBar();
 			return TRUE;
 		}
 

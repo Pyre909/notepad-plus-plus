@@ -4716,6 +4716,16 @@ void Notepad_plus::updateStatusBar()
 
 	_statusBar.setText(statusbarLengthLinesStr.c_str(), STATUSBAR_DOC_SIZE);
 
+	// Pyre909 build: bytes in the file's encoding: the document's (UTF-8 or ANSI); UTF-16, held as UTF-8, by its code units
+	const UniMode uniMode = _pEditView->getCurrentBuffer()->getUnicodeMode();
+	const bool isUtf16 = (uniMode == uni16BE) || (uniMode == uni16LE) || (uniMode == uni16BE_NoBOM) || (uniMode == uni16LE_NoBOM);
+	auto byteCount = [this, isUtf16](size_t start, size_t end) -> size_t {
+		return isUtf16 ? 2 * static_cast<size_t>(_pEditView->execute(SCI_COUNTCODEUNITS, start, end)) : end - start;
+	};
+	auto bytesStr = [pNativeSpeaker](size_t bytes) {
+		return stringReplace(pNativeSpeaker->getLocalizedStrFromID("statusbar-bytes", L"($STR_REPLACE1$ bytes)"), L"$STR_REPLACE1$", commafyInt(bytes));
+	};
+
 	wstring statusbarSelStr;
 
 	size_t nbSelections = _pEditView->execute(SCI_GETSELECTIONS);
@@ -4739,7 +4749,12 @@ void Notepad_plus::updateStatusBar()
 		{
 			const std::pair<size_t, size_t> oneSelCharsAndLines = _pEditView->getSelectedCharsAndLinesCount();
 			statusbarSelStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Sel", L"Sel: ");
-			statusbarSelStr += commafyInt(oneSelCharsAndLines.first) + L" | " + commafyInt(oneSelCharsAndLines.second);
+			statusbarSelStr += commafyInt(oneSelCharsAndLines.first);
+			// Pyre909 build: its bytes too when they differ
+			const size_t selBytes = byteCount(_pEditView->execute(SCI_GETSELECTIONSTART), _pEditView->execute(SCI_GETSELECTIONEND));
+			if (selBytes != oneSelCharsAndLines.first)
+				statusbarSelStr += L" " + bytesStr(selBytes);
+			statusbarSelStr += L" | " + commafyInt(oneSelCharsAndLines.second);
 		}
 	}
 	else if (_pEditView->execute(SCI_SELECTIONISRECTANGLE))
@@ -4793,13 +4808,50 @@ void Notepad_plus::updateStatusBar()
 		statusbarSelStr += L" " + nbSelectionsStr + L" : " + multipleSelChars + L" | " + multipleSelLines;
 	}
 
-	wstring lnStr = commafyInt(_pEditView->getCurrentLineNumber() + 1);
-	wstring colStr = commafyInt(_pEditView->getCurrentColumnNumber() + 1);
-	wstring statusbarLnColStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Ln-Col", L"Ln: $STR_REPLACE1$    Col: $STR_REPLACE2$");
-	statusbarLnColStr = stringReplace(statusbarLnColStr, L"$STR_REPLACE1$", lnStr);
-	statusbarLnColStr = stringReplace(statusbarLnColStr, L"$STR_REPLACE2$", colStr);
+	// Pyre909 build (Preferences > General > Status Bar): the caret's column, with the character grid the cell it's drawn
+	// in, its character and byte positions in the line beside it when they differ; and/or its offset in the line in hex
+	// (0-based, bytes); the line's length
+	const NppGUI& nppGUI = NppParameters::getInstance().getNppGUI();
+	const auto caretPos = static_cast<size_t>(_pEditView->execute(SCI_GETCURRENTPOS));
+	const auto caretLine = static_cast<size_t>(_pEditView->execute(SCI_LINEFROMPOSITION, caretPos));
+	const auto lineStart = static_cast<size_t>(_pEditView->execute(SCI_POSITIONFROMLINE, caretLine));
+	wstring lnStr = commafyInt(caretLine + 1);
+	wstring statusbarLnColStr;
+	if (nppGUI._statusBarPosition != NppGUI::StatusBarPosition::hexOffset)
+	{
+		const bool isGrid = _pEditView->execute(SCI_GETCHARACTERGRID) != 0;
+		const auto colNumber = static_cast<size_t>(isGrid ? _pEditView->execute(SCI_GETCELLCOLUMN, caretPos) : _pEditView->getCurrentColumnNumber()) + 1;
+		const auto charPos = static_cast<size_t>(_pEditView->execute(SCI_COUNTCHARACTERS, lineStart, caretPos)) + 1;
+		const size_t bytePos = byteCount(lineStart, caretPos) + 1;
+		wstring colStr = commafyInt(colNumber);
+		if ((charPos != colNumber) || (bytePos != colNumber))
+		{
+			wstring charByteStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-char-byte", L"(ch $STR_REPLACE1$, byte $STR_REPLACE2$)");
+			charByteStr = stringReplace(charByteStr, L"$STR_REPLACE1$", commafyInt(charPos));
+			colStr += L" " + stringReplace(charByteStr, L"$STR_REPLACE2$", commafyInt(bytePos));
+		}
+		statusbarLnColStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Ln-Col", L"Ln: $STR_REPLACE1$    Col: $STR_REPLACE2$");
+		statusbarLnColStr = stringReplace(statusbarLnColStr, L"$STR_REPLACE1$", lnStr);
+		statusbarLnColStr = stringReplace(statusbarLnColStr, L"$STR_REPLACE2$", colStr);
+	}
+	else
+	{
+		statusbarLnColStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Ln", L"Ln: ") + lnStr;
+	}
+	if (nppGUI._statusBarPosition != NppGUI::StatusBarPosition::column)
+		statusbarLnColStr += L"    " + pNativeSpeaker->getLocalizedStrFromID("statusbar-Off", L"Off: ") + std::format(L"X'{:02X}'", byteCount(lineStart, caretPos));
+	if (nppGUI._statusBarLineLength)
+	{
+		const auto lineEnd = static_cast<size_t>(_pEditView->execute(SCI_GETLINEENDPOSITION, caretLine));
+		const auto lengthChars = static_cast<size_t>(_pEditView->execute(SCI_COUNTCHARACTERS, lineStart, lineEnd));
+		const size_t lengthBytes = byteCount(lineStart, lineEnd);
+		statusbarLnColStr += L"    " + pNativeSpeaker->getLocalizedStrFromID("statusbar-Len", L"Len: ") + commafyInt(lengthChars);
+		if (lengthBytes != lengthChars)
+			statusbarLnColStr += L" " + bytesStr(lengthBytes);
+	}
 	wstring statusbarLnColSelStr = statusbarLnColStr + L"    " + statusbarSelStr;
 
+	fitStatusBarPosition(statusbarLnColSelStr);
 	_statusBar.setText(statusbarLnColSelStr.c_str(), STATUSBAR_CUR_POS);
 
 	_statusBar.setText(_pEditView->execute(SCI_GETOVERTYPE) ? L"OVR" : L"INS", STATUSBAR_TYPING_MODE);
@@ -4807,6 +4859,40 @@ void Notepad_plus::updateStatusBar()
 	if (_goToLineDlg.isCreated() && _goToLineDlg.isVisible())
 	{
 		_goToLineDlg.updateLinesNumbers();
+	}
+}
+
+// Pyre909 build: the status bar's caret position part at its base width (320 at 96 DPI), wider when its text needs it
+// (characters and bytes, the offset, the line's length): it only grows, back to the base when Preferences' forms or the
+// DPI change (_statusBarPositionWidth = 0); never so wide that the document type's part, the first, has less than 60
+void Notepad_plus::fitStatusBarPosition(const wstring& text)
+{
+	const HWND hStatusBar = _statusBar.getHSelf();
+	if (!hStatusBar)
+		return;
+	const UINT dpi = DPIManagerV2::getDpiForWindow(_pPublicInterface->getHSelf());
+	const int baseWidth = DPIManagerV2::scale(320, dpi);
+	int width = std::max(_statusBarPositionWidth, baseWidth);
+	if (const HDC hdc = ::GetDC(hStatusBar))
+	{
+		const HGDIOBJ hOldFont = ::SelectObject(hdc, reinterpret_cast<HFONT>(::SendMessage(hStatusBar, WM_GETFONT, 0, 0)));
+		SIZE size{};
+		if (::GetTextExtentPoint32W(hdc, text.c_str(), static_cast<int>(text.length()), &size))
+			width = std::max(width, static_cast<int>(size.cx) + DPIManagerV2::scale(16, dpi));
+		::SelectObject(hdc, hOldFont);
+		::ReleaseDC(hStatusBar, hdc);
+	}
+	RECT rc{};
+	_pPublicInterface->getClientRect(rc);
+	int otherParts = 20; // StatusBar::adjustParts' margin
+	for (const int part : { STATUSBAR_DOC_SIZE, STATUSBAR_EOF_FORMAT, STATUSBAR_UNICODE_TYPE, STATUSBAR_TYPING_MODE })
+		otherParts += _statusBar.getPartWidth(part);
+	width = std::max(baseWidth, std::min(width, static_cast<int>(rc.right) - otherParts - DPIManagerV2::scale(60, dpi)));
+	if (width != _statusBarPositionWidth)
+	{
+		_statusBarPositionWidth = width;
+		_statusBar.setPartWidth(STATUSBAR_CUR_POS, width);
+		_statusBar.adjustParts(rc.right);
 	}
 }
 

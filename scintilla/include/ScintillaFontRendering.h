@@ -40,4 +40,9 @@
 #define SCI_SETCHARACTERGRID 5103
 #define SCI_GETCHARACTERGRID 5104
 
+/* SCI_GETCELLCOLUMN(position pos) returns the cell pos is drawn in, counted from the start of its line (0 for the first,
+   wrapped or not): where it starts in the line's layout, in widths of a space of STYLE_DEFAULT, rounded. With the
+   character grid, what the view shows. */
+#define SCI_GETCELLCOLUMN 5105
+
 #endif

@@ -783,6 +783,11 @@ intptr_t CALLBACK GeneralSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			bool hideRightShortcutsFromMenu = nppGUI._hideMenuRightShortcuts;
 
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_HIDESTATUSBAR, BM_SETCHECK, !showStatus, 0);
+			// Pyre909 build: the caret position's form (in the order of NppGUI::StatusBarPosition), the line's length
+			for (const wchar_t* positionForm : { L"Column", L"Offset in hex", L"Column and offset in hex" })
+				::SendDlgItemMessage(_hSelf, IDC_COMBO_STATUSBAR_POSITION, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(positionForm));
+			::SendDlgItemMessage(_hSelf, IDC_COMBO_STATUSBAR_POSITION, CB_SETCURSEL, static_cast<WPARAM>(nppGUI._statusBarPosition), 0);
+			::SendDlgItemMessage(_hSelf, IDC_CHECK_STATUSBAR_LINELENGTH, BM_SETCHECK, nppGUI._statusBarLineLength, 0);
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_HIDEMENUBAR, BM_SETCHECK, !showMenu, 0);
 			::SendDlgItemMessage(_hSelf, IDC_CHECK_HIDERIGHTSHORTCUTSOFMENUBAR, BM_SETCHECK, hideRightShortcutsFromMenu, 0);
 
@@ -881,6 +886,13 @@ intptr_t CALLBACK GeneralSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 				}
 				return TRUE;
 
+				case IDC_CHECK_STATUSBAR_LINELENGTH: // Pyre909 build
+				{
+					nppGUI._statusBarLineLength = isCheckedOrNot(IDC_CHECK_STATUSBAR_LINELENGTH);
+					::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_STATUSBARPOSITION, 0, 0);
+				}
+				return TRUE;
+
 				case IDC_CHECK_HIDEMENUBAR :
 				{
 					bool isChecked = isCheckedOrNot(IDC_CHECK_HIDEMENUBAR);
@@ -918,6 +930,17 @@ intptr_t CALLBACK GeneralSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 						{
 							switch (LOWORD(wParam))
 							{
+								case IDC_COMBO_STATUSBAR_POSITION: // Pyre909 build
+								{
+									const auto index = ::SendDlgItemMessage(_hSelf, IDC_COMBO_STATUSBAR_POSITION, CB_GETCURSEL, 0, 0);
+									if (index != CB_ERR)
+									{
+										nppGUI._statusBarPosition = static_cast<NppGUI::StatusBarPosition>(index);
+										::SendMessage(::GetParent(_hParent), NPPM_INTERNAL_STATUSBARPOSITION, 0, 0);
+									}
+									return TRUE;
+								}
+
 								case IDC_COMBO_LOCALIZATION:
 								{
 									LocalizationSwitcher& localizationSwitcher = nppParam.getLocalizationSwitcher();
