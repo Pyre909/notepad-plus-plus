@@ -1230,6 +1230,9 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 
 		case NPPM_SETCURRENTLANGTYPE:
 		{
+			if (lParam < L_TEXT || lParam >= nppParam.L_END) // an external language only if it's installed
+				return FALSE;
+
 			_pEditView->getCurrentBuffer()->setLangType(static_cast<LangType>(lParam));
 			return TRUE;
 		}
