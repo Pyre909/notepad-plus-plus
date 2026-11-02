@@ -8598,6 +8598,7 @@ sptr_t Editor::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 	case Message::SetRepresentation:
 		reprs->SetRepresentation(ConstCharPtrFromUPtr(wParam), ConstCharPtrFromSPtr(lParam));
 		view.llc.Invalidate(LineLayout::ValidLevel::invalid);	// N++: kept layouts have the former widths
+		view.InvalidateSingles();	// N++ (Pyre909 build): so has the control characters' table of lines over 2,000 bytes
 		break;
 
 	case Message::GetRepresentation: {
@@ -8612,16 +8613,19 @@ sptr_t Editor::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 	case Message::ClearRepresentation:
 		reprs->ClearRepresentation(ConstCharPtrFromUPtr(wParam));
 		view.llc.Invalidate(LineLayout::ValidLevel::invalid);	// N++
+		view.InvalidateSingles();	// N++ (Pyre909 build)
 		break;
 
 	case Message::ClearAllRepresentations:
 		SetRepresentations();
 		view.llc.Invalidate(LineLayout::ValidLevel::invalid);	// N++
+		view.InvalidateSingles();	// N++ (Pyre909 build)
 		break;
 
 	case Message::SetRepresentationAppearance:
 		reprs->SetRepresentationAppearance(ConstCharPtrFromUPtr(wParam), static_cast<RepresentationAppearance>(lParam));
 		view.llc.Invalidate(LineLayout::ValidLevel::invalid);	// N++: a blob's padding changes widths
+		view.InvalidateSingles();	// N++ (Pyre909 build)
 		break;
 
 	case Message::GetRepresentationAppearance: {

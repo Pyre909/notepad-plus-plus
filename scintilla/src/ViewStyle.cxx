@@ -605,12 +605,12 @@ bool ViewStyle::WhiteSpaceVisible(bool inIndent) const noexcept {
 }
 
 // N++ (Pyre909 build): with the character grid, a width rounded up to whole cells (a cell: the width of a space of the
-// default style, as tabWidth), at least one; a twentieth of a cell over is let through, so that a width a rounding over a
-// whole number of cells isn't one cell more
+// default style, as tabWidth); a twentieth of a cell over is let through, so that a width a rounding over a whole number of
+// cells isn't one cell more, and a zero width (a control character hidden by a zero width space) stays zero
 XYPOSITION ViewStyle::CellsWidth(XYPOSITION width) const noexcept {
 	if (spaceWidth <= 0)
 		return width;
-	return std::max(XYPOSITION{1}, std::ceil(width / spaceWidth - XYPOSITION{0.05})) * spaceWidth;
+	return std::max(XYPOSITION{0}, std::ceil(width / spaceWidth - XYPOSITION{0.05})) * spaceWidth;
 }
 
 ColourRGBA ViewStyle::WrapColour() const {

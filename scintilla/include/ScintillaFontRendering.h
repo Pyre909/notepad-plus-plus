@@ -33,8 +33,10 @@
 
 /* SCI_SETCHARACTERGRID(bool grid) lays out on a grid of cells, a cell being the width of a space of STYLE_DEFAULT: a tab is
    one tab width wide wherever it is (not up to the next tab stop), and the representations (control characters, line
-   ends, those of SCI_SETREPRESENTATION, invalid bytes) take whole cells, their text centred in a blob. The text itself
-   keeps its font's widths (in a monospaced font, a cell). SCI_GETCHARACTERGRID returns it. Whatever the technology. */
+   ends, those of SCI_SETREPRESENTATION, invalid bytes) take whole cells, their text centred (a representation of no width,
+   such as a zero width space, stays of no width). The text itself keeps its font's widths (in a monospaced font, a
+   cell). The edge's background mode starts at its column in cells. Explicit tab stops (SCI_ADDTABSTOP) and the
+   bidirectional mode's tabs aren't on the grid. SCI_GETCHARACTERGRID returns it. Whatever the technology. */
 #define SCI_SETCHARACTERGRID 5103
 #define SCI_GETCHARACTERGRID 5104
 

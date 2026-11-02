@@ -429,7 +429,7 @@ void LineLayout::CalculatePositions(Sci::Line line, const TabStopProvider &tsp, 
 		SetPosition(i, xPosition);
 		xPosition += widthChar;
 		if (chars[i] == '\t' && vstyle.tabDrawMode != TabDrawMode::ControlChar) {
-			xPosition = vstyle.characterGrid ? xPosition + vstyle.tabWidth : tsp.NextTabstopPos(line, xPosition, vstyle.tabWidth);	// N++
+			xPosition = vstyle.characterGrid ? xPosition + vstyle.tabWidth : tsp.NextTabstopPos(line, xPosition, vstyle.tabWidth);	// N++ (Pyre909 build)
 		}
 	}
 	SetPosition(numCharsInLine, xPosition);

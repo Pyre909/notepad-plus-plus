@@ -63,8 +63,10 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   reaching the next tab stop, and the labels of control characters, line ends, non-printing characters and invalid bytes
   take whole cells, their text centred. Letters keep their font's widths: in a monospaced font, one cell each. For
   Chinese, Japanese and Korean in exactly two cells, use a font made 2:1, such as BIZ UDGothic, MS Gothic, NSimSun or the
-  Korean ...Che fonts, which come with Windows. Columns made with tabs don't line up while it's on; printing keeps the
-  tab stops.
+  Korean ...Che fonts, which come with Windows. Columns made with tabs don't line up while it's on, and what counts
+  columns still counts them with the tab stops: the status bar's Col, the Column Editor, Go to column (`-c`), Tab and
+  Shift+Tab with spaces. A plugin's own tab stops (Elastic Tabstops) don't apply while it's on; printing keeps the tab
+  stops. Hidden control characters stay hidden (no width).
 - **Fold markers and highlighting boxes drawn for the scale**: the fold margin's boxes and lines, the change history
   marks, the link underline and the boxes of Mark All, Find and smart highlighting are 2 pixels wide from 150% scale
   (3 from 250%) instead of 1 pixel at any scale.

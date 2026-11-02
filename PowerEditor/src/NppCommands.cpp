@@ -2592,6 +2592,8 @@ void Notepad_plus::command(int id)
 
 			_mainEditView.applyCharacterGrid();
 			_subEditView.applyCharacterGrid();
+			_mainEditView.execute(SCI_CHOOSECARETX); // Up and Down from where the caret is now
+			_subEditView.execute(SCI_CHOOSECARETX);
 			break;
 		}
 

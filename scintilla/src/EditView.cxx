@@ -328,7 +328,7 @@ void EditView::CalculateSingles(const EditModel &model, Surface *surface, const 
 				representationWidth += static_cast<XWidth>(vstyle.ctrlCharPadding);
 			}
 			const unsigned char uch = ch;
-			singles[uch] = vstyle.characterGrid ? static_cast<XWidth>(vstyle.CellsWidth(representationWidth)) : representationWidth;	// N++
+			singles[uch] = vstyle.characterGrid ? static_cast<XWidth>(vstyle.CellsWidth(representationWidth)) : representationWidth;	// N++ (Pyre909 build)
 		}
 	}
 
@@ -583,6 +583,16 @@ void EditView::LayoutLine(const EditModel &model, Surface *surface, const ViewSt
 
 		// Accumulate absolute positions from relative positions within segments and expand tabs
 		ll->CalculatePositions(line, *this, vstyle);
+
+		if (vstyle.characterGrid && (vstyle.edgeState == EdgeVisualStyle::Background)) {
+			// N++ (Pyre909 build): the edge's column in cells, as its line, not counted with tab stops: the first
+			// character reaching past it (a tab or wide character across it included, as FindColumn does)
+			const XYPOSITION edgeX = vstyle.theEdge.column * vstyle.spaceWidth + vstyle.spaceWidth / 2;
+			int edgeColumn = 0;
+			while ((edgeColumn < numCharsBeforeEOL) && (ll->GetPosition(edgeColumn + 1) <= edgeX))
+				edgeColumn++;
+			ll->edgeColumn = edgeColumn;
+		}
 
 		ll->validity = LineLayout::ValidLevel::positions;
 	}
@@ -939,6 +949,14 @@ ColourRGBA TextBackground(const EditModel &model, const ViewStyle &vsDraw, const
 	return vsDraw.styles[styleMain].back;
 }
 
+// N++ (Pyre909 build): with the character grid, where a representation's text starts in its whole cells: centred
+XYPOSITION LeftInCells(Surface *surface, const ViewStyle &vsDraw, const Font *font, std::string_view text, PRectangle rc) {
+	if (!vsDraw.characterGrid)
+		return rc.left;
+	const XYPOSITION textWidth = surface->WidthTextUTF8(font, text);
+	return rc.left + std::max(XYPOSITION{0}, std::floor((rc.Width() - textWidth) / 2));
+}
+
 // Draw inverted text in a filled rectangle but omit the 4 corner pixels so appears rounded.
 void DrawTextBlob(Surface *surface, const ViewStyle &vsDraw, PRectangle rcSegment,
 	std::string_view text, ColourRGBA textBack, ColourRGBA textFore, bool fillBackground) {
@@ -960,10 +978,7 @@ void DrawTextBlob(Surface *surface, const ViewStyle &vsDraw, PRectangle rcSegmen
 	surface->FillRectangleAligned(rcCentral, Fill(textFore));
 
 	PRectangle rcChar = rcCChar.Inset(Point(1, 0));
-	if (vsDraw.characterGrid) {	// N++ (Pyre909 build): the text centred in its whole cells
-		const XYPOSITION textWidth = surface->WidthTextUTF8(ctrlCharsFont, text);
-		rcChar.left += std::max(XYPOSITION{0}, std::floor((rcChar.Width() - textWidth) / 2));
-	}
+	rcChar.left = LeftInCells(surface, vsDraw, ctrlCharsFont, text, rcChar);	// N++ (Pyre909 build)
 	// NOLINTNEXTLINE(readability-suspicious-call-argument) Inverted text
 	surface->DrawTextClippedUTF8(rcChar, ctrlCharsFont,
 		rcSegment.top + vsDraw.maxAscent, text,
@@ -1144,7 +1159,9 @@ void EditView::DrawEOL(Surface *surface, const EditModel &model, const ViewStyle
 			if (FlagSet(appearance, RepresentationAppearance::Blob)) {
 				DrawTextBlob(surface, vsDraw, rcBlob, ctrlChar, blobText, textFore, phasesDraw == PhasesDraw::One);
 			} else {
-				surface->DrawTextTransparentUTF8(rcBlob, vsDraw.styles[StyleControlChar].font.get(),
+				PRectangle rcText = rcBlob;	// N++ (Pyre909 build): centred with the character grid
+				rcText.left = LeftInCells(surface, vsDraw, vsDraw.styles[StyleControlChar].font.get(), ctrlChar, rcBlob);
+				surface->DrawTextTransparentUTF8(rcText, vsDraw.styles[StyleControlChar].font.get(),
 					rcBlob.top + vsDraw.maxAscent, ctrlChar, textFore);
 			}
 			if (drawEOLSelection && (vsDraw.selection.layer == Layer::OverText)) {
@@ -2286,7 +2303,10 @@ void EditView::DrawForeground(Surface *surface, const EditModel &model, const Vi
 							DrawTextBlob(surface, vsDraw, rcSegment, ts.representation->stringRep,
 								textBack, textFore, phasesDraw == PhasesDraw::One);
 						} else {
-							surface->DrawTextTransparentUTF8(rcSegment, vsDraw.styles[StyleControlChar].font.get(),
+							PRectangle rcText = rcSegment;	// N++ (Pyre909 build): centred with the character grid
+							rcText.left = LeftInCells(surface, vsDraw, vsDraw.styles[StyleControlChar].font.get(),
+								ts.representation->stringRep, rcSegment);
+							surface->DrawTextTransparentUTF8(rcText, vsDraw.styles[StyleControlChar].font.get(),
 								ybase, ts.representation->stringRep, textFore);
 						}
 					}
