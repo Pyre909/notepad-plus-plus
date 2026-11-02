@@ -202,6 +202,12 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     exactly 260 characters with no space (no crash seen). Test: `plugin-api-bounds.ps1` (`03b9d4e`), 25 checks; ARM64 and
     x64 pass, with `pyre-style-configurator`, `function-list` and `session-load`. Upstream: a follow-up PR after kit 15,
     not yet on a branch. The session archived, its worktree and branch removed.
+  - Pushed with Pyre909's OK (2026-11-02): `pyre` fast-forwarded to `122db31`, this branch, the three new PR branches,
+    `per-monitor-dpi_20260925` force-pushed (`cf6a333` -> `54851f3`, with a lease); the old tag `pyre-8.9.8.1-cd162a0`
+    deleted. CI 13/13 on each: `pyre` 41410127730, `langtype-bounds` 41410131131, `long-strings-failfast` 41410134858,
+    `session-open-speed` 41410138522, `per-monitor-dpi` 41410141621. Release run 41412176617 (PGO, 0 annotations),
+    **published** as Latest: `pyre-8.9.8.1-122db31`, its notes with "What's new since the last release (b428833)".
+  - For Pyre909: kit 14-16 (issues, then PRs; #14000's comment first), and the earlier list above.
   - 8, `per-monitor-dpi_20260925` rebased on `9923cad` (`54851f3`: the same resolutions as `pyre`'s merge), both MSVC
     builds clean; CI needs it pushed (a force-push: Pyre909's OK).
   - 1, AddressSanitizer: all the tests on the final code (`asan.ps1 -Ref 885561b -Test All`, the four new tests
