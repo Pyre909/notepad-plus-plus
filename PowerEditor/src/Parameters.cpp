@@ -6907,14 +6907,14 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			const std::wstring path = string2wstring(NppXml::attribute(childNode, "defaultDirPath", ""));
 			if (!path.empty())
 			{
-				std::wcsncpy(_nppGUI._defaultDir, path.c_str(), MAX_PATH);
+				wcsncpy_s(_nppGUI._defaultDir, MAX_PATH, path.c_str(), _TRUNCATE);
 				::ExpandEnvironmentStrings(_nppGUI._defaultDir, _nppGUI._defaultDirExp, MAX_PATH);
 			}
 
 			const std::wstring lastPath = string2wstring(NppXml::attribute(childNode, "lastUsedDirPath", ""));
 			if (!lastPath.empty())
 			{
-				std::wcsncpy(_nppGUI._lastUsedDir, lastPath.c_str(), MAX_PATH);
+				wcsncpy_s(_nppGUI._lastUsedDir, MAX_PATH, lastPath.c_str(), _TRUNCATE);
 			}
 		}
 		// <GUIConfig name="titleBar" short="no" />

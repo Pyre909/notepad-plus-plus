@@ -67,6 +67,10 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **Font sizes 1 to 4 pt** in the font size lists.
 - **Official bugs fixed** (offered upstream too): the Document List's Ext. and Path columns growing at each layout
   above 100% scale; tooltips too narrow or too wide in Preferences and the Style Configurator after a scale change.
+  Crashes: the next key typed after a plugin set a language that doesn't exist (or after a Language menu command for an
+  external language with no external lexer installed); the startup with a `-udl=` or `-pluginMessage=` too long and a
+  file to open, a user defined language name of more than about 210 characters, or a folder of more than 260 characters
+  in config.xml.
 - The About box and Help > Debug Info say "(64-bit, Pyre909 build)", so bug reports can't be mistaken for
   ones about the official build.
 
