@@ -441,6 +441,9 @@ void ViewStyle::Refresh(Surface &surface, int tabInChars) {
 		controlCharWidth = surface.WidthText(styles[StyleControlChar].font.get(), cc);
 	}
 
+	// N++ (Pyre909 build): the room around a label's text (DrawTextBlob's box, a pixel's gap each side) grows with its font
+	ctrlCharPadding = std::max(3, static_cast<int>(std::lround(styles[StyleControlChar].capitalHeight)) + 2);
+
 	CalculateMarginWidthAndMask();
 	textStart = marginInside ? fixedColumnWidth : leftMarginWidth;
 }

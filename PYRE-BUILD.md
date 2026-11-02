@@ -67,6 +67,14 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   columns still counts them with the tab stops: the status bar's Col, the Column Editor, Go to column (`-c`), Tab and
   Shift+Tab with spaces. A plugin's own tab stops (Elastic Tabstops) don't apply while it's on; printing keeps the tab
   stops. Hidden control characters stay hidden (no width).
+- **Special characters labelled alike**: control characters, line ends, invisible characters (View > Show Symbol > Show
+  Non-Printing Characters) and invalid bytes all show as the same kind of label, a box with rounded corners in a font of
+  its own (Segoe UI Semibold, three quarters of the text's size), coloured by kind: slate for control characters, teal
+  for line ends (NEL, LS and PS too), purple for invisible characters, red for invalid bytes, in tones for a light or a
+  dark theme. Their names throughout (BOM rather than ZWNBSP), and the invisible characters Notepad++ didn't label are
+  labelled too: the combining grapheme joiner, the Mongolian variation selectors, the Hangul fillers, the musical and
+  shorthand formatting characters, the language tag. Preferences' custom colours of non-printing characters and line
+  ends still apply.
 - **Fold markers and highlighting boxes drawn for the scale**: the fold margin's boxes and lines, the change history
   marks, the link underline and the boxes of Mark All, Find and smart highlighting are 2 pixels wide from 150% scale
   (3 from 250%) instead of 1 pixel at any scale.

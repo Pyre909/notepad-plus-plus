@@ -958,6 +958,8 @@ XYPOSITION LeftInCells(Surface *surface, const ViewStyle &vsDraw, const Font *fo
 }
 
 // Draw inverted text in a filled rectangle but omit the 4 corner pixels so appears rounded.
+// N++ (Pyre909 build): a label: a box with rounded corners, padded as much above the text's capitals as below its
+// baseline, a pixel's gap each side, the text centred in it (ViewStyle::Refresh sizes ctrlCharPadding for it)
 void DrawTextBlob(Surface *surface, const ViewStyle &vsDraw, PRectangle rcSegment,
 	std::string_view text, ColourRGBA textBack, ColourRGBA textFore, bool fillBackground) {
 	if (rcSegment.Empty())
@@ -966,23 +968,20 @@ void DrawTextBlob(Surface *surface, const ViewStyle &vsDraw, PRectangle rcSegmen
 		surface->FillRectangleAligned(rcSegment, Fill(textBack));
 	}
 	const Font *ctrlCharsFont = vsDraw.styles[StyleControlChar].font.get();
-	const int normalCharHeight = static_cast<int>(std::ceil(vsDraw.styles[StyleControlChar].capitalHeight));
-	PRectangle rcCChar = rcSegment;
-	rcCChar.left = rcCChar.left + 1;
-	rcCChar.top = rcSegment.top + vsDraw.maxAscent - normalCharHeight;
-	rcCChar.bottom = rcSegment.top + vsDraw.maxAscent + 1;
+	const XYPOSITION capital = std::ceil(vsDraw.styles[StyleControlChar].capitalHeight);
+	const XYPOSITION padding = std::round(capital * 0.45);
+	const XYPOSITION baseline = rcSegment.top + vsDraw.maxAscent;
+	PRectangle rcBox = rcSegment.Inset(Point(1, 0));
+	rcBox.top = std::max(rcSegment.top + 1, baseline - capital - padding);
+	rcBox.bottom = std::min(rcSegment.bottom - 1, baseline + padding);
+	const XYPOSITION corner = std::round(std::min(capital * 0.4, rcBox.Height() / 2));
+	surface->AlphaRectangle(rcBox, corner, FillStroke(textFore));
 
-	// Ensure pixels to left and right coloured for central part avoiding top and bottom
-	// pixels which will be drawn by DrawTextClippedUTF8.
-	const PRectangle rcCentral = rcCChar.Inset(Point(0, 1));
-	surface->FillRectangleAligned(rcCentral, Fill(textFore));
-
-	PRectangle rcChar = rcCChar.Inset(Point(1, 0));
-	rcChar.left = LeftInCells(surface, vsDraw, ctrlCharsFont, text, rcChar);	// N++ (Pyre909 build)
-	// NOLINTNEXTLINE(readability-suspicious-call-argument) Inverted text
-	surface->DrawTextClippedUTF8(rcChar, ctrlCharsFont,
-		rcSegment.top + vsDraw.maxAscent, text,
-		textBack, textFore);
+	PRectangle rcText = rcBox;
+	const XYPOSITION textWidth = surface->WidthTextUTF8(ctrlCharsFont, text);
+	rcText.left += std::max(XYPOSITION{0}, std::floor((rcBox.Width() - textWidth) / 2));
+	// Inverted text: the background's colour on the label
+	surface->DrawTextTransparentUTF8(rcText, ctrlCharsFont, baseline, text, textBack);
 }
 
 void FillLineRemainder(Surface *surface, const EditModel &model, const ViewStyle &vsDraw, const LineLayout *ll,

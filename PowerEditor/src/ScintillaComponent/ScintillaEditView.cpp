@@ -279,7 +279,11 @@ static constexpr std::array<std::array<const char*, 3>, 64> g_ccUniEolChars{ {
 	{"\xE2\x80\xA9", "PS", "U+2029"}         // U+2029 : Paragraph Separator
 } };
 
-static constexpr std::array<std::array<const char*, 3>, 49> g_nonPrintingChars{ {
+// Pyre909 build: the last entries of g_ccUniEolChars, the Unicode line ends (their labels coloured as line ends)
+static constexpr size_t g_nbUniEolChars = 3;
+static_assert(std::string_view(g_ccUniEolChars[g_ccUniEolChars.size() - g_nbUniEolChars][1]) == "NEL");
+
+static constexpr std::array<std::array<const char*, 3>, 73> g_nonPrintingChars{ {
 	{"\xC2\xA0", "NBSP", "U+00A0"},          // U+00A0 : no-break space
 	{"\xC2\xAD", "SHY", "U+00AD"},           // U+00AD : soft hyphen
 	{"\xD8\x9C", "ALM", "U+061C"},           // U+061C : arabic letter mark
@@ -325,10 +329,36 @@ static constexpr std::array<std::array<const char*, 3>, 49> g_nonPrintingChars{ 
 	{"\xE2\x81\xAE", "NADS", "U+206E"},      // U+206E : national digit shapes
 	{"\xE2\x81\xAF", "NODS", "U+206F"},      // U+206F : nominal digit shapes
 	{"\xE3\x80\x80", "IDSP", "U+3000"},      // U+3000 : ideographic space
-	{"\xEF\xBB\xBF", "ZWNBSP", "U+FEFF"},    // U+FEFF : zero-width no-break space
+	{"\xEF\xBB\xBF", "BOM", "U+FEFF"},       // U+FEFF : zero-width no-break space (Pyre909 build: named BOM)
 	{"\xEF\xBF\xB9", "IAA", "U+FFF9"},       // U+FFF9 : interlinear annotation anchor
 	{"\xEF\xBF\xBA", "IAS", "U+FFFA"},       // U+FFFA : interlinear annotation separator
-	{"\xEF\xBF\xBB", "IAT", "U+FFFB"}        // U+FFFB : interlinear annotation terminator
+	{"\xEF\xBF\xBB", "IAT", "U+FFFB"},       // U+FFFB : interlinear annotation terminator
+	// Pyre909 build: the other invisible characters (default ignorable, fillers), by Unicode's abbreviation, else their code
+	// point; not the variation selectors and tags, which belong to the character before them (emoji, ideographs, flags)
+	{"\xCD\x8F", "CGJ", "U+034F"},           // U+034F : combining grapheme joiner
+	{"\xE1\x85\x9F", "U+115F", "U+115F"},    // U+115F : hangul choseong filler
+	{"\xE1\x85\xA0", "U+1160", "U+1160"},    // U+1160 : hangul jungseong filler
+	{"\xE1\x9E\xB4", "U+17B4", "U+17B4"},    // U+17B4 : khmer vowel inherent aq
+	{"\xE1\x9E\xB5", "U+17B5", "U+17B5"},    // U+17B5 : khmer vowel inherent aa
+	{"\xE1\xA0\x8B", "FVS1", "U+180B"},      // U+180B : mongolian free variation selector one
+	{"\xE1\xA0\x8C", "FVS2", "U+180C"},      // U+180C : mongolian free variation selector two
+	{"\xE1\xA0\x8D", "FVS3", "U+180D"},      // U+180D : mongolian free variation selector three
+	{"\xE1\xA0\x8F", "FVS4", "U+180F"},      // U+180F : mongolian free variation selector four
+	{"\xE3\x85\xA4", "U+3164", "U+3164"},    // U+3164 : hangul filler
+	{"\xEF\xBE\xA0", "U+FFA0", "U+FFA0"},    // U+FFA0 : halfwidth hangul filler
+	{"\xF0\x9B\xB2\xA0", "U+1BCA0", "U+1BCA0"}, // U+1BCA0 : shorthand format letter overlap
+	{"\xF0\x9B\xB2\xA1", "U+1BCA1", "U+1BCA1"}, // U+1BCA1 : shorthand format continuing overlap
+	{"\xF0\x9B\xB2\xA2", "U+1BCA2", "U+1BCA2"}, // U+1BCA2 : shorthand format down step
+	{"\xF0\x9B\xB2\xA3", "U+1BCA3", "U+1BCA3"}, // U+1BCA3 : shorthand format up step
+	{"\xF0\x9D\x85\xB3", "U+1D173", "U+1D173"}, // U+1D173 : musical symbol begin beam
+	{"\xF0\x9D\x85\xB4", "U+1D174", "U+1D174"}, // U+1D174 : musical symbol end beam
+	{"\xF0\x9D\x85\xB5", "U+1D175", "U+1D175"}, // U+1D175 : musical symbol begin tie
+	{"\xF0\x9D\x85\xB6", "U+1D176", "U+1D176"}, // U+1D176 : musical symbol end tie
+	{"\xF0\x9D\x85\xB7", "U+1D177", "U+1D177"}, // U+1D177 : musical symbol begin slur
+	{"\xF0\x9D\x85\xB8", "U+1D178", "U+1D178"}, // U+1D178 : musical symbol end slur
+	{"\xF0\x9D\x85\xB9", "U+1D179", "U+1D179"}, // U+1D179 : musical symbol begin phrase
+	{"\xF0\x9D\x85\xBA", "U+1D17A", "U+1D17A"}, // U+1D17A : musical symbol end phrase
+	{"\xF3\xA0\x80\x81", "U+E0001", "U+E0001"}  // U+E0001 : language tag
 } };
 
 size_t getNbDigits(size_t aNum, size_t base)
@@ -1264,6 +1294,12 @@ void ScintillaEditView::clearAllStyles()
 	execute(SCI_STYLECLEARALL);
 	// every other style now has the font of STYLE_DEFAULT (see setSpecialStyle): filled from a copy of it
 	std::ranges::fill(_styleFonts, StyleFont{ _styleFonts[STYLE_DEFAULT] });
+
+	// Pyre909 build: the labels of special characters (control characters, line ends, invisible characters, invalid bytes)
+	// in a font of their own, the same whatever the text's font, at three quarters of its size
+	_styleFonts[STYLE_CONTROLCHAR] = StyleFont{ L"Segoe UI Semibold" };
+	setStyleFont(STYLE_CONTROLCHAR, _styleFonts[STYLE_CONTROLCHAR]);
+	execute(SCI_STYLESETSIZEFRACTIONAL, STYLE_CONTROLCHAR, execute(SCI_STYLEGETSIZEFRACTIONAL, STYLE_DEFAULT) * 3 / 4);
 }
 
 void ScintillaEditView::setStyleFont(int styleID, const StyleFont& styleFont) const
@@ -2042,6 +2078,8 @@ void ScintillaEditView::setCRLF(long color) const
 	execute(SCI_SETREPRESENTATIONAPPEARANCE, reinterpret_cast<WPARAM>(cr), appearance);
 	execute(SCI_SETREPRESENTATIONAPPEARANCE, reinterpret_cast<WPARAM>(lf), appearance);
 
+	colourSpecialCharLabels(); // Pyre909 build
+
 	redraw();
 }
 
@@ -2087,7 +2125,53 @@ void ScintillaEditView::setNpcAndCcUniEOL(long color) const
 		}
 	}
 
+	colourSpecialCharLabels(); // Pyre909 build
+
 	redraw();
+}
+
+// Pyre909 build: the labels of special characters coloured by their kind, in tones for the theme's background (dark on a
+// light one, light on a dark one: the label's text is the background's colour): control characters, line ends (also the
+// Unicode ones), invisible characters (the non-printing characters), invalid bytes; not those Preferences gives a custom
+// colour or shows as plain text, nor hidden control characters. Called wherever the representations are set again
+void ScintillaEditView::colourSpecialCharLabels() const
+{
+	const ScintillaViewParams& svp = NppParameters::getInstance().getSVP();
+	const auto back = static_cast<COLORREF>(execute(SCI_STYLEGETBACK, STYLE_DEFAULT));
+	const bool isDarkBack = (GetRValue(back) * 299 + GetGValue(back) * 587 + GetBValue(back) * 114) / 1000 < 128;
+	constexpr LPARAM opaque = 0xFF000000; // the alpha of the representation colours: drawn with DirectWrite too
+	const LPARAM controlColour = (isDarkBack ? RGB(0x9D, 0xB2, 0xD3) : RGB(0x3B, 0x4A, 0x63)) | opaque;
+	const LPARAM lineEndColour = (isDarkBack ? RGB(0x6C, 0xC3, 0xBA) : RGB(0x24, 0x6E, 0x68)) | opaque;
+	const LPARAM invisibleColour = (isDarkBack ? RGB(0xC4, 0xA6, 0xF0) : RGB(0x6A, 0x3F, 0xA0)) | opaque;
+	const LPARAM invalidColour = (isDarkBack ? RGB(0xF2, 0x8B, 0x82) : RGB(0xB3, 0x26, 0x1E)) | opaque;
+	auto setColour = [this](const char* charBytes, LPARAM colour) {
+		execute(SCI_SETREPRESENTATIONCOLOUR, reinterpret_cast<WPARAM>(charBytes), colour);
+	};
+
+	if (svp._ccUniEolShow && !(svp._npcIncludeCcUniEol && svp._npcCustomColor))
+	{
+		for (size_t i = 0; i < g_ccUniEolChars.size(); ++i)
+			setColour(g_ccUniEolChars[i][0], (i < g_ccUniEolChars.size() - g_nbUniEolChars) ? controlColour : lineEndColour);
+	}
+
+	if (svp._npcShow && !svp._npcCustomColor)
+	{
+		for (const auto& invChar : g_nonPrintingChars)
+			setColour(invChar[0], invisibleColour);
+	}
+
+	if (svp._eolMode == ScintillaViewParams::roundedRectangleText)
+	{
+		setColour("\r", lineEndColour);
+		setColour("\n", lineEndColour);
+	}
+
+	// the bytes of invalid UTF-8, and the ones a DBCS code page has no character for: Scintilla's "x80" to "xFF"
+	for (int byte = 0x80; byte <= 0xFF; ++byte)
+	{
+		const char charBytes[2] = { static_cast<char>(byte), '\0' };
+		setColour(charBytes, invalidColour);
+	}
 }
 
 
@@ -3848,6 +3932,7 @@ void ScintillaEditView::showNpc(bool willBeShown, bool isSearchResult)
 		{
 			setNpcAndCcUniEOL();
 		}
+		colourSpecialCharLabels(); // Pyre909 build
 
 		// in some case npc representation is not redrawn correctly on first line
 		// therefore use of showEOL(isShownEol()) instead of redraw()
@@ -3906,6 +3991,8 @@ void ScintillaEditView::showCcUniEol(bool willBeShown, bool isSearchResult)
 			return; // showEOL(isShownEol()) already in showNpc()
 		}
 	}
+
+	colourSpecialCharLabels(); // Pyre909 build
 
 	// in some case C0, C1 and  Unicode EOL representations are not redrawn correctly on first line
 	// therefore use of showEOL(isShownEol()) instead of redraw()
