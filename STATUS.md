@@ -1,11 +1,11 @@
-# Status (2026-10-19)
+# Status (2026-11-01)
 
 Where the Notepad++ text rendering, DPI and font work stands: branches, upstream PRs and tickets, the Pyre909
 build, and what's next. A Claude Code session starts with `CLAUDE.md` on `pyre` (rules, build, code map). The PR kit with every issue/PR/ticket text is `split/PR-TEXTS.md`; the Scintilla side is
 `scintilla/SCINTILLA-UPSTREAM.md`, and how Scintilla's maintainer decides (a survey of 792 tickets, compared with
 ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md`.
 
-## Handoff (2026-10-20): read this first
+## Handoff (2026-11-01): read this first
 
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
@@ -155,6 +155,38 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     second display); the relaunch prompt (probably not needed: the setting says "restart required"). The Document List
     checked by hand (kit 10: 48 -> 72 px before the fix, 50 -> 50 after).
   - For Pyre909: post kit 4's comment (#14959) and kit 11's (#18455); open the issues of kits 12, 9, 13 and 10, then their PRs.
+- **The "1 to 8" round (2026-11-01)**, asked by Pyre909 ("go ahead with 1 - 8"; on PR #18588: "It will definitely get
+  merged. It's just waiting to get merged."). `pyre` commits on `b428833`, local until Pyre909's OK:
+  - 7, Scintilla 5.6.8 / Lexilla 5.5.5: upstream PR #18588 (chcg's `5cd3d32`, `refs/remotes/upstream-pr/18588`) merged
+    ahead of upstream (`07a7c00`), 5.6.8's XPM regression fixed as in 5.6.9, the #2520 crash guard dropped (5.6.8's own).
+  - 3, stroke widths at high DPI (`c6092bd`): Notepad++'s markers 21-31 and indicators 8, 21-31 in whole pixels for the
+    DPI (`setStrokeWidthsForDpi`; 1.5 px looked like 1); plugins' 9-20 and Scintilla's own left alone. Test
+    `pyre-stroke-widths.ps1`.
+  - 4, Preferences open speed (`2531842`): 760 -> 573 ms first opening (Style Configurator 212 -> 193): font lists with
+    `CB_INITSTORAGE` and redraw off, the Print page's lists filled at its first showing, `getNameStrFromCmd` with this
+    process's window found once (FindWindow per name, ~0.5 ms each, ~230 names; with `-multiInst` it could take another
+    instance's menu names: an upstream bug too). Left: `autoSubclassAndTheme` 75 ms, the Editing page 58 ms. Test
+    `pyre-preferences-open.ps1` (release `b428833`: 2 of 6 fail).
+  - 2, audit of the plugin messages and WM_COPYDATA (an agent, its two findings reproduced before any fix): `d229f5e`
+    `NPPM_SETCURRENTLANGTYPE` / external language commands out of range crash at the next key (0xC000041D); `759e1f7` the
+    DTO's `wcsncpy` is MSVC's `wcsncpy_s` and fails fast (0xC0000409) with a long `-udl=` / `-pluginMessage=`, and the same
+    in `AutoCompletion::setLanguage` (a UDL name over ~210 characters) and config.xml's open/save folders (stacks with
+    cdb on the ASan build). Test `plugin-api-bounds.ps1` (13 checks; release: 11 fail). The other ~80 `wcscpy_s` /
+    `wcscat_s` into arrays: a sweep suggested as its own task (not done).
+  - 6, buffered drawing: only GDI buffers (Scintilla turns it off for DirectWrite itself); off is 13-38% slower with GDI
+    (repaint, scrolls, caret, typing; ARM64 and x64): nothing changed.
+  - 5, startup with many files (#14000): timers in `loadSession` (not committed) put 64% in
+    `DocTabView::getIndexByBuffer` (TCM_GETITEM per tab, several lookups per file, mostly before it's in a tab):
+    `885561b` skips buffers that can't be in the tabs, looks from the last tab, drops `addBuffer`'s second check, adds
+    bookmarks only to files that have some. 1,000 files 41.4 -> 8.1 s, 298 files of 57 MB 4.43 -> 1.33 s. Left: the tab
+    control's own insert/set work (~5 s at 1,000; redraw off during the load gave 5.8 s once, not kept: multi-line tabs).
+    Test `session-load.ps1`.
+  - Upstream candidates, one commit each on `9923cad`, local, no CI yet: `langtype-bounds_20261101` (`d1f1a7b`),
+    `long-strings-failfast_20261101` (`c842335`), `session-open-speed_20261101` (`2eded46`); texts in kit 14-16.
+  - 8, `per-monitor-dpi_20260925` rebased on `9923cad` (`54851f3`: the same resolutions as `pyre`'s merge), both MSVC
+    builds clean; CI needs it pushed (a force-push: Pyre909's OK).
+  - 1, AddressSanitizer: all the tests on the final code (`asan.ps1 -Ref 885561b -Test All`, the four new tests
+    included): no memory error (the run's only FAILs are the upstream-PR rules, which a `pyre` commit always trips).
 - **The performance program (2026-10-20)**, asked by Pyre909: newer toolsets, refactoring, performance "in
   sections/parts", every language feature that helps, Windows 11 polish. Their choices: upstream code changed only where
   a measurement shows a gain (small marked patches), Windows 10 1809 minimum, C++23 everywhere, Windows 11 polish (not a

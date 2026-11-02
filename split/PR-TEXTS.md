@@ -9,7 +9,7 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 1 | `font-size-1pt_20260925` | `faaeb59` | 2 | +0 | Font sizes 1–4 pt in the size lists | #18412; **PR closed, not accepted** |
 | 2 | `text-rendering_20260925` | `a485acc` + `bb32194` | 20 + 29 xml | +15 KB | Text Rendering group in Editing 1 | #18414; **PR #18418 closed** (2026-10-02: too large a change) |
 | 3 | `text-rendering-translations_20260925` | `1aa8b0e` | 29 xml | – | Label capitalisation (stacked on 2) | no (`[xml]`); on hold, 2 is closed |
-| 4 | `per-monitor-dpi_20260925` | `cf6a333` | 61 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
+| 4 | `per-monitor-dpi_20260925` | `54851f3` (rebased on `9923cad` 2026-11-01, local; pushed: `cf6a333`) | 61 | +23 KB | Opt-in per-monitor DPI awareness | yes, discuss first |
 | 5 | `directwrite-font-names_20260930` | `ace29cd` | 7 (Notepad++ only) | not measured | Fonts of a weight ("Fira Code Light") drawn with DirectWrite | no: bug fix of #9951 (open since 2021) and #12393. Replaces `font-weight-names_20260925` (the Scintilla version, declined by precedent) |
 | 6 | `rtl-views-gdi_20261006` | `9fdd356` | 4 | small | Right-to-left views drawn with GDI (DirectWrite can't mirror them) | no: bug fix of #17865 and #17518 (both open); open it first |
 | 7 | `live-rendering-switch_20261005` | `9fdd356` + `61eccb1` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
@@ -17,8 +17,11 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 9 | `function-list-caret_20261020` | `398b2c2` | 2 | none | Function List caret tracking: a binary search, not a walk of the tree per caret move | no: bug fix (issue to open first) |
 | 10 | `doclist-column-width_20261020` | `20f0a90` | 1 | none | Document List column widths stored for 96 DPI, as they are read | no: bug fix (checked by hand: 48 -> 72 px before, 50 -> 50 after; issue to open first) |
 | 11 | none | – | – | – | Comment: the Find dialog's black status bar was the swallowed `WM_THEMECHANGED`, so its PMv2 can come back | no: a comment on #18455 or #18462 |
-| 12 | `menu-colour-bitmaps_20261020` | `5903444` | 2 | none | The main menu's colour samples cached, not leaked (11 GDI objects per colour change) | no: bug fix (issue to open first) |
+| 12 | `menu-colour-bitmaps_20261020` | `5903444` | 2 | none | The main menu's colour samples cached, not leaked (11 GDI objects per colour change) | **superseded**: upstream fixed it in `6abb408` (2026-11-01) |
 | 13 | `dpi-dialog-sizes_20261020` | `b759ee8` | 5 | none | Tooltip widths and Shortcut Mapper's grid metrics for the DPI of upstream's per-monitor dialogs | no: bug fix (issue to open first) |
+| 14 | `langtype-bounds_20261101` | `d1f1a7b` (local) | 4 | none | Crash at the next key typed after an invalid language type from `NPPM_SETCURRENTLANGTYPE` or an external language command without a lexer | no: bug fix (issue to open first) |
+| 15 | `long-strings-failfast_20261101` | `c842335` (local) | 3 | none | Crash at startup with a long `-udl=`, `-pluginMessage=`, UDL name or config.xml open/save folder (MSVC's `wcsncpy_s`/`wcscat_s` failing fast) | no: bug fix (issue to open first) |
+| 16 | `session-open-speed_20261101` | `2eded46` (local) | 3 | none | Many files opened faster: tab lookups only where a buffer can be (1,000 files 41 s to 8 s) | no: #14000 (open since 2023), comment there first |
 
 Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs, `9f605be`, 2026-10-06; 6, 7 and 8: 13/13, 2026-10-06). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
 
@@ -1096,6 +1099,208 @@ AI disclosure: I wrote this with help from an AI assistant (Claude), then review
 - [x] I have read contributing guidelines
 
 fix #<issue>
+```
+
+## 14. Crash on an invalid language type from a plugin (bug fix)
+
+Branch `langtype-bounds_20261101`, one commit (`d1f1a7b`) on upstream `master` `9923cad`, 4 files, +8 −4; `pyre` has it
+as `d229f5e`. Found on 2026-11-01 by an AI audit of the plugin message handlers (the class of upstream's recent
+`NPPM_MENUCOMMAND` index fix), reproduced on the VM with release `pyre-8.9.8.1-b428833` (upstream's code there).
+
+What happens: `NPPM_SETCURRENTLANGTYPE` stores any type from `L_TEXT` up (`Buffer::setLangType` rejects only lower
+ones), while its sibling `NPPM_SETBUFFERLANGTYPE` refuses invalid types. The Language menu's external language commands
+(`IDM_LANG_EXTERNAL` + n, also reached with `NPPM_MENUCOMMAND`) set `L_EXTERNAL + n` even with no external lexer n. The
+next character typed crashes in `maintainIndentation`: for any type from `L_EXTERNAL` up it takes
+`getELCFromIndex(type - L_EXTERNAL)->_autoIndentMode`, a null pointer (no such lexer) or a read past the 30 entries of
+`_externalLangArray` (0xC000041D). And `docOpenInNewInstance` (Move/Open in a new instance) reads
+`_langNameInfoArray[lt]`, which has entries up to `L_EXTERNAL` only, for a document in the second external language or
+later. Fix: the message returns FALSE out of `L_TEXT..L_END` (its comment in `Notepad_plus_msgs.h` says so), the menu
+commands apply only to installed external lexers, and `docOpenInNewInstance` passes no `-l` for an external language
+(`-l` takes Notepad++'s own languages anyway).
+
+Tested (2026-11-01, ARM64 and x64 Release builds on the VM; the tooling branch's `review/tests/plugin-api-bounds.ps1`,
+7 checks for this part): `NPPM_SETCURRENTLANGTYPE` with 100000, then with `L_EXTERNAL` (no external lexer installed),
+then a character typed: crash before, refused (FALSE) and the character added with the fix; `L_PHP` still applied; the
+first external language command without an external lexer: crash before, nothing with the fix.
+
+Before opening: CI on the fork (not run yet: the branch is local), then Pyre909 opens the issue, then the PR with
+`fix #<issue>`.
+
+### Issue — title
+`Crash when a plugin sets a language type that doesn't exist (NPPM_SETCURRENTLANGTYPE)`
+
+### Issue — body
+```
+### Description of the Issue
+NPPM_SETCURRENTLANGTYPE doesn't check the language type it gets: anything from L_TEXT up is stored in the buffer. NPPM_SETBUFFERLANGTYPE does check (it refuses L_USER, L_EXTERNAL and out of range values). With a type of L_EXTERNAL or more and no external lexer for it, Notepad++ crashes at the next key typed: maintainIndentation() does getELCFromIndex(type - L_EXTERNAL)->_autoIndentMode with no upper bound, so it dereferences a null entry (or reads past _externalLangArray).
+
+Same crash without a bad plugin value: the Language menu's external language command IDs (IDM_LANG_EXTERNAL + n) set L_EXTERNAL + n even when lexer n isn't installed, e.g. through NPPM_MENUCOMMAND.
+
+### Steps To Reproduce
+1. Install NppExec, open its console.
+2. Run: NPP_SENDMSG NPPM_SETCURRENTLANGTYPE 0 200
+3. Type a character in the document.
+
+### Current Behavior
+Notepad++ crashes (0xC000041D).
+
+### Expected Behavior
+The message fails (returns FALSE) and nothing changes, like NPPM_SETBUFFERLANGTYPE.
+
+### Debug Information
+(paste Help > Debug Info)
+```
+
+### PR — title
+`Fix crash on an invalid language type from NPPM_SETCURRENTLANGTYPE`
+
+### PR — body
+```
+NPPM_SETCURRENTLANGTYPE stored any language type from L_TEXT up, and the external language menu commands set L_EXTERNAL + n with no lexer n installed. The next character typed then crashed in maintainIndentation(), which takes the external language's container for any type from L_EXTERNAL up (null, or past the end of _externalLangArray).
+
+- NPPM_SETCURRENTLANGTYPE returns FALSE for a type outside L_TEXT..L_END (so an external language has to be installed), like NPPM_SETBUFFERLANGTYPE already does. The comment in Notepad_plus_msgs.h says so.
+- The external language commands only apply to the external lexers that are installed.
+- docOpenInNewInstance() doesn't add -l for an external language: _langNameInfoArray stops at L_EXTERNAL (it read past it with 2+ external lexers), and -l only takes Notepad++'s own languages anyway.
+
+Tested on Windows 11 ARM64 and x64 Release builds: the message with 100000 and with L_EXTERNAL (no external lexer) then a character typed: crashed before, now refused and the character is just added; a valid type (L_PHP) still works; the first external language command without a lexer: crashed before, nothing now.
+
+AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+
+- [x] I have read contributing guidelines
+
+fix #<issue>
+```
+
+## 15. Crash at startup with a long `-udl=`, `-pluginMessage=`, UDL name or open/save folder (bug fix)
+
+Branch `long-strings-failfast_20261101`, one commit (`c842335`) on upstream `master` `9923cad`, 3 files, +11 −10;
+`pyre` has it as `759e1f7`. Found on 2026-11-01 while checking the audit's finding that `CmdLineParamsDTO`'s strings
+could be left unterminated: with MSVC it's worse, a crash, and the same pattern shows up in two more places.
+
+What happens: the UCRT's secure C++ template overloads turn `wcsncpy(array, src, n)` into `wcsncpy_s(array,
+sizeof array, src, n)`; when `n` is the array's size and the string as long or longer, there's no room for the `L'\0'`,
+and the invalid parameter handler ends the process (0xC0000409, `FAST_FAIL_INVALID_ARG`; GCC builds leave the array
+unterminated instead). `wcscat_s` does the same when the result doesn't fit. Stacks taken with cdb on the ASan build
+(which links with `/DEBUG`). Places: `CmdLineParamsDTO::FromCmdLineParams` (`-udl=` of 260 characters or more,
+`-pluginMessage=` of 2048 or more, with a file to open or sent to a running instance); `AutoCompletion::setLanguage`, the
+auto-completion file's path in a `MAX_PATH` array (`<exe dir>\autoCompletion\<UDL name>.xml`: a UDL name of more than
+about 210 characters with a `C:\Program Files\Notepad++` install, from `-udl=` or `userDefineLang.xml`); config.xml's
+`openSaveDir` `defaultDirPath` / `lastUsedDirPath` of 260 characters or more. Fix: `wcsncpy_s(..., _TRUNCATE)` as
+`Buffer.cpp` already does (builds on every CI toolchain), and the path in a `std::wstring`.
+
+Tested (2026-11-01, ARM64 and x64 Release builds; `review/tests/plugin-api-bounds.ps1`, 6 checks for this part): each
+case crashed at startup before (release `b428833` and an unfixed build), starts normally with the fix. Not covered: the
+other `wcscpy_s` / `wcscat_s` into fixed arrays (about 80); a follow-up sweep was suggested as its own task.
+
+Before opening: CI on the fork, then Pyre909 opens the issue, then the PR with `fix #<issue>`.
+
+### Issue — title
+`Crash at startup with a long -udl= or -pluginMessage= argument (or a long folder in config.xml)`
+
+### Issue — body
+```
+### Description of the Issue
+A few strings are copied into fixed arrays with wcsncpy(array, src, size of the array). With MSVC that becomes wcsncpy_s (the secure template overloads), and when the string is as long as the array there's no room for the terminating zero, so the CRT's invalid parameter handler kills Notepad++ right away (0xC0000409). On other compilers the array is just left unterminated.
+
+Where:
+- CmdLineParamsDTO::FromCmdLineParams: -udl= of 260+ characters, -pluginMessage= of 2048+.
+- AutoCompletion::setLanguage: builds <exe dir>\autoCompletion\<UDL name>.xml in a MAX_PATH array with wcscat_s, so a UDL name over ~210 characters (with the default install path) crashes too, from -udl= or from userDefineLang.xml.
+- config.xml, <GUIConfig name="openSaveDir" defaultDirPath="..." lastUsedDirPath="...">: 260+ characters.
+
+### Steps To Reproduce
+1. Close Notepad++.
+2. Run: notepad++.exe -udl="(260 times the letter a)" some-file.txt
+   (or put a 300 character path in lastUsedDirPath in config.xml and start Notepad++)
+
+### Current Behavior
+Notepad++ exits at startup with 0xC0000409.
+
+### Expected Behavior
+It starts (the too-long value just doesn't match anything).
+
+### Debug Information
+(paste Help > Debug Info)
+```
+
+### PR — title
+`Fix crash at startup with a long -udl, -pluginMessage, UDL name or open/save folder`
+
+### PR — body
+```
+With MSVC, wcsncpy on an array is turned into wcsncpy_s with the array's size by the secure template overloads, and it fails fast (0xC0000409) when the string leaves no room for the zero. wcscat_s does the same when the result doesn't fit. Three places did that with values from outside:
+
+- CmdLineParamsDTO::FromCmdLineParams: -udl= of 260+ characters or -pluginMessage= of 2048+ (with a file to open, or sent to a running instance). Now truncated with wcsncpy_s(..., _TRUNCATE), like Buffer.cpp does.
+- AutoCompletion::setLanguage: the auto-completion file's path was built in a MAX_PATH array, so a UDL name over ~210 characters crashed. Now a std::wstring.
+- config.xml's openSaveDir defaultDirPath / lastUsedDirPath of 260+ characters: truncated the same way.
+
+Tested on Windows 11 ARM64 and x64 Release builds: each case crashed at startup before and starts fine with this.
+
+AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+
+- [x] I have read contributing guidelines
+
+fix #<issue>
+```
+
+## 16. Many files opened faster: tab lookups (#14000, performance)
+
+Branch `session-open-speed_20261101`, one commit (`2eded46`) on upstream `master` `9923cad`, 3 files, +39 −23;
+`pyre` has it as `885561b`. Upstream issue #14000 (open since 2023: "Notepad++ opens slowly with many files", ~270 files,
+about 30 s): a comment there with the measurements first, then the PR.
+
+What happens: timers in `loadSession` (temporary, not committed) showed `DocTabView::getIndexByBuffer` taking most of the
+time, 3.05 s of 4.8 for 298 files and 19.7 s of 27.4 for 1,000: it asks each tab with `TCM_GETITEM` (about 10 µs
+each on the VM), and each file opened was looked up several times in both tab bars, mostly before it was in either: by
+each buffer notification while the file is loaded (encoding, language, EOL: the buffer isn't even in the file
+manager's list yet), by `loadBufferIntoView`, then by `addBuffer`'s duplicate check. So it grew with the square of the
+number of files. Fix: `getIndexByBuffer` returns -1 at once for a buffer the file manager doesn't have, or that the tab
+bar's view doesn't reference (`Buffer::isReferencedBy`; the reference is added before the tab and removed after it,
+checked in `loadBufferIntoView`, `removeBufferFromView`, `setBuffer`'s callers), then looks from the last tab;
+`addBuffer` drops its duplicate check (its only caller has just looked); `loadSession` sets a file's document in the view
+for its bookmarks only when it has some. Left: the tab control's own work at each insert (`TCM_INSERTITEM`,
+`TCM_SETITEM`: about 5 s of the 8 at 1,000 files); turning the tab bars' redraw off during the session took 1,000 files
+to 5.8 s in one try, not kept (multi-line tabs would need checking).
+
+Measured (2026-11-01, ARM64 Release on the VM, `-loadingTime`'s "Last session loading", scratch script
+`session-startup.ps1`): 298 files (the repository's C++ sources plus ten 5 MB files, 57 MB) 4.43 s to 1.33 s (median of
+3); 1,000 small files 41.4 s to 8.1 s. Tested: `review/tests/session-load.ps1` (90 files in two views with bookmarks:
+order, active tabs, bookmarks, a tab closed and one moved afterwards) passes before and after, ARM64 and x64.
+
+Before opening: CI on the fork; Pyre909 posts the comment on #14000, then the PR.
+
+### Comment for #14000
+```
+I looked into this one. With a big session most of the time isn't reading the files, it's Notepad++ looking for each
+new file in the tab bars: DocTabView::getIndexByBuffer() asks every tab (one TCM_GETITEM per tab), and each file gets
+looked up several times while it opens (every buffer notification during loading, loadBufferIntoView, addBuffer's
+duplicate check), in both tab bars, mostly before it's even in one. So it grows with the square of the number of files.
+
+Numbers from my machine (Windows 11 ARM64 VM, Release build, "Last session loading" from -loadingTime):
+- 1,000 small files: 41 s
+- 300 C++ files, 57 MB in total: 4.4 s
+
+Skipping the lookup when the buffer can't be in that tab bar (the view doesn't reference it, or the file manager doesn't
+have it yet) brings that to 8 s and 1.3 s. I can open a PR if that sounds OK.
+```
+
+### PR — title
+`Open many files faster: look a buffer up only in the tabs it can be in`
+
+### PR — body
+```
+Opening a lot of files (a session with hundreds) grew with the square of their number. Most of it was DocTabView::getIndexByBuffer(), which asks each tab with TCM_GETITEM, and each file being opened was looked up several times in both tab bars, mostly before it was in either one.
+
+- getIndexByBuffer() returns -1 right away for a buffer that can't be in its tabs: one the file manager doesn't have yet (a file still loading; a buffer's tabs are removed before it's closed), or one its view doesn't reference (the reference is added before the tab and removed after it). Then it looks from the last tab, where a file just opened is.
+- addBuffer() drops its duplicate check: loadBufferIntoView(), its only caller, has just looked.
+- loadSession() only swaps a file's document into the view to add bookmarks when the file has some.
+
+On a Windows 11 ARM64 VM (Release, "Last session loading" from -loadingTime): 1,000 small files 41 s -> 8 s, 300 source files (57 MB) 4.4 s -> 1.3 s. What still grows is the tab control's own work on each insert. Session restore checked with 90 files in two views: tab order, active tabs, bookmarks, and closing/moving tabs afterwards.
+
+AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+
+- [x] I have read contributing guidelines
+
+fix #14000
 ```
 
 ---
