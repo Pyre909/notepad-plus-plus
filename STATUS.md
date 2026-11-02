@@ -237,6 +237,8 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     (a data race; same values). The test now 14 checks (3 new fail on `3163c84`); ARM64 and x64 pass. A PEP 8 sample
     (`inventory_report.py`, pycodestyle and ruff clean) and the reports it writes compared pixel by pixel, grid off vs
     on: code, space-aligned and Markdown reports identical; tab-aligned columns no longer line up (by design).
+    Harness again on both commits: 0 FAIL. Pushed with Pyre909's OK: `pyre` fast-forwarded to `975bc6f`, CI 13/13 (run
+    41505721464). No release yet (Pyre909's choice): `pyre-8.9.8.1-122db31` stays the latest.
   - 8, `per-monitor-dpi_20260925` rebased on `9923cad` (`54851f3`: the same resolutions as `pyre`'s merge), both MSVC
     builds clean; CI needs it pushed (a force-push: Pyre909's OK).
   - 1, AddressSanitizer: all the tests on the final code (`asan.ps1 -Ref 885561b -Test All`, the four new tests
