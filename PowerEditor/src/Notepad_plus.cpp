@@ -5266,7 +5266,8 @@ void Notepad_plus::docOpenInNewInstance(FileTransferMode mode, int x, int y)
 	// it works in the most of case, except if user applies an UDL manually. 
 	// For example,  this workaround won't work under the following situation:
 	// user applies Markdown to a file named "myMarkdown.abc".
-	if (lt != L_USER)
+	// The same for an external language: "-l" takes the languages of Notepad++ only, and _langNameInfoArray has no other.
+	if (lt != L_USER && lt < L_EXTERNAL)
 	{
 		cmdLine += L" -l";
 		cmdLine += ScintillaEditView::_langNameInfoArray[lt]._langName;

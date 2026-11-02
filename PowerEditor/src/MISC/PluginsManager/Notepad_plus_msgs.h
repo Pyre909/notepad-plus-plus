@@ -70,8 +70,8 @@ enum Platform { PF_UNKNOWN, PF_X86, PF_X64, PF_IA64, PF_ARM64 };
 	// BOOL NPPM_SETCURRENTLANGTYPE(0, int langType)
 	// Set a new programming language type to the current used document.
 	// wParam: 0 (not used)
-	// lParam[in]: langType - see "enum LangType" for all valid values
-	// return TRUE
+	// lParam[in]: langType - see "enum LangType" for all valid values (an external language: one installed)
+	// return TRUE, or FALSE if langType isn't valid
 
 	#define NPPM_GETNBOPENFILES (NPPMSG + 7)
 		#define ALL_OPEN_FILES   0
