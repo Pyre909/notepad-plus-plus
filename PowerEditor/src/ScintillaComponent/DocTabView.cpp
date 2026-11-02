@@ -84,7 +84,7 @@ void DocTabView::addBuffer(BufferID buffer)
 	tie.pszText = const_cast<wchar_t*>(buf->getCompactFileName());
 	tie.lParam = reinterpret_cast<LPARAM>(buffer);
 	::SendMessage(_hSelf, TCM_INSERTITEM, _nbItem++, reinterpret_cast<LPARAM>(&tie));
-	bufferUpdated(buf, BufferChangeMask);
+	updateTab(_nbItem - 1, buf, BufferChangeMask);
 
 	::SendMessage(_hParent, WM_SIZE, 0, 0);
 }
@@ -187,6 +187,12 @@ void DocTabView::bufferUpdated(const Buffer* buffer, int mask)
 	if (index == -1)
 		return;
 
+	updateTab(static_cast<size_t>(index), buffer, mask);
+}
+
+
+void DocTabView::updateTab(size_t index, const Buffer* buffer, int mask)
+{
 	TCITEM tie{};
 	tie.lParam = -1;
 	tie.mask = 0;
@@ -258,7 +264,7 @@ void DocTabView::setBuffer(size_t index, BufferID id)
 	tie.mask = TCIF_PARAM;
 	::SendMessage(_hSelf, TCM_SETITEM, index, reinterpret_cast<LPARAM>(&tie));
 
-	bufferUpdated(MainFileManager.getBufferByID(id), BufferChangeMask);	//update tab, everything has changed
+	updateTab(index, MainFileManager.getBufferByID(id), BufferChangeMask);	//update tab, everything has changed
 
 	::SendMessage(_hParent, WM_SIZE, 0, 0);
 }

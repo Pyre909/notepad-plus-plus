@@ -96,6 +96,10 @@ public:
 	}
 
 private :
+	// the tab at index shows the buffer's name and icon (setBuffer and addBuffer know the index: while tabs are sorted, a
+	// buffer can be in two tabs for a moment, and a lookup could find the other one)
+	void updateTab(size_t index, const Buffer* buffer, int mask);
+
 	ScintillaEditView *_pView = nullptr;
 
 	IconList _docTabIconList;
