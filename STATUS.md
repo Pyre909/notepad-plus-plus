@@ -134,6 +134,20 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     0 warnings. PR branches against the new upstream (`git merge-tree`): all merge cleanly except
     `menu-colour-bitmaps_20261020` (superseded) and `per-monitor-dpi_20260925` (the same two conflicts as `pyre`: rebase
     it with the same resolutions when it's wanted). PR #18503 still mergeable, no review yet.
+  - Second merge (2026-11-01): 5 more upstream commits up to `9923cad` (Boost 1.92.0, the internal list views' highlight
+    styles #18563, auto-completion and call tips left behind on a window move, the UDL of new documents, CI) as `4164177`;
+    conflict in the ASCII panel (upstream's list view init and includes, pyre's DPI parts kept); `pyre-ci.yml` regenerated.
+    Harness: 1 FAIL, `pyre-text-rendering-config` (a config.xml not saved within 30 s), from my MSYS2 update running at the
+    same time; alone it passes 4 runs in 4. Pushed with Pyre909's OK.
+  - Toolchains and dependencies (2026-11-01, asked by Pyre909): VS Build Tools 2026 18.11.1 -> 18.11.3 (MSVC 14.51.36231;
+    `setup.exe update` exits 8006 while MSBuild worker nodes or mspdbsrv of earlier builds are alive: stop them first),
+    Git 2.55 -> 2.56, MSYS2 updated (Clang 23.1.4, GCC 16.2.0) plus UCRT64 GCC and make, as the CI's 64-bit GCC jobs moved
+    there (`setup-vm.ps1` and CLAUDE.md follow, `e03c197`); the release workflow on `actions/checkout@v7`. MSVC still has
+    only `/std:c++23preview`. Libraries in the tree are current (Boost 1.92.0, pugixml 1.16, nlohmann/json 3.12.0) except
+    Scintilla 5.6.7 / Lexilla 5.5.4: 5.6.8 (2026-10-31; fixes #2520, the crash pyre guards, and a change history undo
+    crash; Unicode 17) and 5.6.9 (5.6.8's XPM colours), Lexilla 5.5.5 / 5.5.6 (lexer crash and memory-safety fixes).
+    Upstream PR #18588 (chcg, 2026-11-01, open) brings 5.6.8 and 5.5.5: take it with the next sync rather than updating
+    Scintilla in pyre (it would conflict), then drop pyre's crash guard in `SurfaceD2D.cxx` and re-check the local patches.
   - Left: the plugin prototype (only if Pyre909 wants one: their choice for plugins was to disclose they aren't covered); the UDL undocked onto another monitor (needs a
     second display); the relaunch prompt (probably not needed: the setting says "restart required"). The Document List
     checked by hand (kit 10: 48 -> 72 px before the fix, 50 -> 50 after).
