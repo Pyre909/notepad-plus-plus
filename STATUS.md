@@ -181,8 +181,18 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     bookmarks only to files that have some. 1,000 files 41.4 -> 8.1 s, 298 files of 57 MB 4.43 -> 1.33 s. Left: the tab
     control's own insert/set work (~5 s at 1,000; redraw off during the load gave 5.8 s once, not kept: multi-line tabs).
     Test `session-load.ps1`.
-  - Upstream candidates, one commit each on `9923cad`, local, no CI yet: `langtype-bounds_20261101` (`d1f1a7b`),
-    `long-strings-failfast_20261101` (`c842335`), `session-open-speed_20261101` (`2eded46`); texts in kit 14-16.
+  - Upstream candidates, one commit each on `9923cad`, local, no CI yet: `langtype-bounds_20261101` (`bbe235f`),
+    `long-strings-failfast_20261101` (`2c65c1f`), `session-open-speed_20261101` (`0711cfc`); texts in kit 14-16.
+  - Harness on the 8 commits (against `origin/pyre`, ARM64/x64/Win32): 0 FAIL, 7 WARN (Scintilla/Lexilla 5.6.8 code
+    style, the bookmark block re-indented), 25 tests pass; the CI's UCRT64 GCC build passes locally.
+  - Independent review (an agent, read-only): one real regression, verified and fixed: sorting tabs (Window > Sort By,
+    the Windows dialog) set each tab in turn, a buffer is in two tabs for a moment, and 885561b's lookup from the last tab
+    labelled the old one ("c | b | c", the first showing a): `setBuffer` / `addBuffer` now label the tab at the index they
+    know (`updateTab`, `119a4db`; `session-load.ps1` sorts 78 tabs and checks each label, 9 checks). Also taken: the
+    receiver of `COPYDATA_PARAMS` ends the strings, over-long config.xml folders ignored rather than truncated
+    (`64fff16`); a wrong comment (`c857068`); `gNppHWND` instead of a cached handle (`9265299`). Left (noted): the stroke
+    widths also overwrite a plugin's own widths on markers 21-31 at a DPI change; bookmarks could be added through the
+    scratch view instead of swapping the edit view's document.
   - 8, `per-monitor-dpi_20260925` rebased on `9923cad` (`54851f3`: the same resolutions as `pyre`'s merge), both MSVC
     builds clean; CI needs it pushed (a force-push: Pyre909's OK).
   - 1, AddressSanitizer: all the tests on the final code (`asan.ps1 -Ref 885561b -Test All`, the four new tests

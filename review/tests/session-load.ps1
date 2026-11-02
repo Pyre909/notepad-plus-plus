@@ -3,7 +3,8 @@
 # tab in the session's order, the active tabs, the bookmarks of each file (Notepad++ adds them with the document set in the
 # view for a moment, only for the files that have some), and the tab lookups after the session (DocTabView::getIndexByBuffer
 # asks only the tab bar whose view references the buffer, looking from the last tab): a tab closed, a file moved to the
-# other view. Prints the session's loading time (INFO, -loadingTime).
+# other view; the tabs sorted (each set in turn: a buffer in two tabs for a moment), each labelled with its own file. Prints
+# the session's loading time (INFO, -loadingTime).
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
 param([Parameter(Mandatory)] [string] $Exe)
 $ErrorActionPreference = 'Stop'
@@ -17,6 +18,13 @@ public delegate bool EnumProc(IntPtr h, IntPtr l);
 [DllImport("user32.dll")] public static extern IntPtr SendMessageTimeout(IntPtr h, uint m, IntPtr w, IntPtr l, uint flags, uint timeout, out IntPtr result);
 [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
 [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+[DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindowEx(IntPtr p, IntPtr after, string cls, string title);
+[DllImport("kernel32.dll")] public static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
+[DllImport("kernel32.dll")] public static extern IntPtr VirtualAllocEx(IntPtr p, IntPtr addr, UIntPtr size, uint type, uint protect);
+[DllImport("kernel32.dll")] public static extern bool VirtualFreeEx(IntPtr p, IntPtr addr, UIntPtr size, uint type);
+[DllImport("kernel32.dll")] public static extern bool WriteProcessMemory(IntPtr p, IntPtr addr, byte[] buf, UIntPtr size, out UIntPtr written);
+[DllImport("kernel32.dll")] public static extern bool ReadProcessMemory(IntPtr p, IntPtr addr, byte[] buf, UIntPtr size, out UIntPtr read);
+[DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr h);
 '@
 $script:results = [Collections.Generic.List[string]]::new(); $script:fails = 0
 function Check([string] $name, [bool] $ok, [string] $detail = '') {
@@ -100,6 +108,30 @@ try {
 	Check 'a file moved to the other view: 78 and 11 tabs' (((Send $hMain $NPPM_GETNBOPENFILES 0 1) -eq 78) -and ((Send $hMain $NPPM_GETNBOPENFILES 0 2) -eq 11)) "main $(Send $hMain $NPPM_GETNBOPENFILES 0 1), second $(Send $hMain $NPPM_GETNBOPENFILES 0 2)"
 	[void](Send $hMain $NPPM_ACTIVATEDOC 1 10)
 	Check '  it is the last tab of the other view, active there' (((Send $hMain $NPPM_GETCURRENTDOCINDEX 0 1) -eq 10) -and (Get-Title $hMain).Contains($main[21])) "index $(Send $hMain $NPPM_GETCURRENTDOCINDEX 0 1), title has main-22: $((Get-Title $hMain).Contains($main[21]))"
+
+	# the main view's tabs sorted Z to A (Window > Sort By: each tab set in turn, a buffer in two tabs for a moment): each
+	# tab's label (TCM_GETITEMW, through memory in the process) the name of the file it shows
+	[void](Send $hMain $NPPM_ACTIVATEDOC 0 0); [void](Send $hMain 0x0111 11003) # IDM_WINDOW_SORT_FN_DSC
+	Start-Sleep -Milliseconds 500
+	$tab = [IntPtr]::Zero; $h = [IntPtr]::Zero
+	while (($h = [SL.U]::FindWindowEx($hMain, $h, 'SysTabControl32', [NullString]::Value)) -ne [IntPtr]::Zero) { if ([SL.U]::IsWindowVisible($h) -and (Send $h 0x1304) -eq 78) { $tab = $h; break } } # TCM_GETITEMCOUNT
+	$proc = [SL.U]::OpenProcess(0x0038, $false, $p.Id); $mem = [SL.U]::VirtualAllocEx($proc, [IntPtr]::Zero, [UIntPtr]4096, 0x3000, 0x04)
+	$wrongLabels = @(); $previous = $null; $descending = $true
+	for ($i = 0; $tab -ne [IntPtr]::Zero -and $i -lt 78; $i++) {
+		$item = [byte[]]::new(40); [BitConverter]::GetBytes([uint32]1).CopyTo($item, 0) # TCITEMW (64-bit): mask TCIF_TEXT, pszText at 16, cchTextMax at 24
+		[BitConverter]::GetBytes([int64]($mem.ToInt64() + 256)).CopyTo($item, 16); [BitConverter]::GetBytes([int32]256).CopyTo($item, 24)
+		$n = [UIntPtr]::Zero; [void][SL.U]::WriteProcessMemory($proc, $mem, $item, [UIntPtr]40, [ref]$n)
+		[void](Send $tab 0x133C $i $mem.ToInt64()) # TCM_GETITEMW
+		$text = [byte[]]::new(512); [void][SL.U]::ReadProcessMemory($proc, [IntPtr]($mem.ToInt64() + 256), $text, [UIntPtr]512, [ref]$n)
+		$label = [Text.Encoding]::Unicode.GetString($text).Split([char]0)[0]
+		[void](Send $hMain $NPPM_ACTIVATEDOC 0 $i)
+		$shown = [IO.Path]::GetFileName(((Get-Title $hMain) -split ' - ')[0])
+		if ($label -ne $shown) { $wrongLabels += "$i '$label' shows '$shown'" }
+		if ($previous -and [string]::CompareOrdinal($shown, $previous) -gt 0) { $descending = $false }
+		$previous = $shown
+	}
+	[void][SL.U]::VirtualFreeEx($proc, $mem, [UIntPtr]::Zero, 0x8000); [void][SL.U]::CloseHandle($proc)
+	Check 'tabs sorted Z to A: in that order, each labelled with the file it shows' (($tab -ne [IntPtr]::Zero) -and $descending -and $wrongLabels.Count -eq 0) $(if ($wrongLabels) { ($wrongLabels | Select-Object -First 3) -join '; ' } elseif (-not $descending) { 'not in descending order' } else { '78 tabs' })
 }
 finally {
 	if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
