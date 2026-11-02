@@ -1105,12 +1105,13 @@ bool AutoCompletion::setLanguage(LangType language)
 
 	_curLang = language;
 
-	wchar_t path[MAX_PATH];
-	::GetModuleFileNameW(nullptr, path, MAX_PATH);
-	PathRemoveFileSpec(path);
-	wcscat_s(path, L"\\autoCompletion\\");
-	wcscat_s(path, getApiFileName());
-	wcscat_s(path, L".xml");
+	wchar_t nppDir[MAX_PATH];
+	::GetModuleFileNameW(nullptr, nppDir, MAX_PATH);
+	PathRemoveFileSpec(nppDir);
+	std::wstring path = nppDir; // not a MAX_PATH array: a long name of user defined language didn't fit, and wcscat_s failed fast
+	path += L"\\autoCompletion\\";
+	path += getApiFileName();
+	path += L".xml";
 
 	if (_pXmlFile)
 		delete _pXmlFile;
