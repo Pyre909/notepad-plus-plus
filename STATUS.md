@@ -193,6 +193,15 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     (`64fff16`); a wrong comment (`c857068`); `gNppHWND` instead of a cached handle (`9265299`). Left (noted): the stroke
     widths also overwrite a plugin's own widths on markers 21-31 at a DPI change; bookmarks could be added through the
     scratch view instead of swapping the edit view's document.
+  - The `wcscpy_s` / `wcscat_s` sweep (a separate session started from a suggestion; merged 2026-11-02 as `eb6b143`, with
+    two guards added: `NPPM_RELOADFILE` with a null path, an empty Folder as Workspace root): `NPPM_RELOADFILE` with a
+    path of `MAX_PATH` or more refused; translations longer than their arrays (Shortcut Mapper's grid, Find in Files
+    progress, Find All result, Folder as Workspace and Function List tooltips) and a theme's long language description
+    truncated; a `\\?\` Folder as Workspace root of `MAX_PATH` or more a `std::wstring`; a project workspace that long
+    refused. Each reproduced as a crash first. Left: RunDlg's `extractArgs`, one `L'\0'` past `cmdPure` for a command of
+    exactly 260 characters with no space (no crash seen). Test: `plugin-api-bounds.ps1` (`03b9d4e`), 25 checks; ARM64 and
+    x64 pass, with `pyre-style-configurator`, `function-list` and `session-load`. Upstream: a follow-up PR after kit 15,
+    not yet on a branch. The session archived, its worktree and branch removed.
   - 8, `per-monitor-dpi_20260925` rebased on `9923cad` (`54851f3`: the same resolutions as `pyre`'s merge), both MSVC
     builds clean; CI needs it pushed (a force-push: Pyre909's OK).
   - 1, AddressSanitizer: all the tests on the final code (`asan.ps1 -Ref 885561b -Test All`, the four new tests

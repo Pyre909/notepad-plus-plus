@@ -1192,8 +1192,10 @@ folders ignored (truncated, they'd be no usable folder and saved back); and, fro
 `COPYDATA_PARAMS` ends the two strings itself (the digest isn't keyed: a message needn't come from our sender).
 
 Tested (2026-11-01, ARM64 and x64 Release builds; `review/tests/plugin-api-bounds.ps1`, 6 checks for this part): each
-case crashed at startup before (release `b428833` and an unfixed build), starts normally with the fix. Not covered: the
-other `wcscpy_s` / `wcscat_s` into fixed arrays (about 80); a follow-up sweep was suggested as its own task.
+case crashed at startup before (release `b428833` and an unfixed build), starts normally with the fix. The other
+`wcscpy_s` / `wcscat_s` into fixed arrays (about 80) were swept separately: `pyre`'s `eb6b143` fixes the ones outside
+input can reach (`NPPM_RELOADFILE`, long translations and a theme's language description, `\\?\` workspace folders; 10
+more checks in the same test). Not in this PR, to keep it small: a second PR after this one, with its own issue.
 
 Before opening: CI on the fork, then Pyre909 opens the issue, then the PR with `fix #<issue>`.
 
