@@ -75,8 +75,8 @@ void DocTabView::addBuffer(BufferID buffer)
 {
 	if (buffer == BUFFER_INVALID)	//valid only
 		return;
-	if (getIndexByBuffer(buffer) != -1)	//no duplicates
-		return;
+	// No duplicates: loadBufferIntoView, the only caller, has just looked for it, before the buffer's reference to the
+	// view (looking again here, after it, asked each tab: most of the time of opening many files)
 	const Buffer* buf = MainFileManager.getBufferByID(buffer);
 	TCITEM tie{};
 	tie.mask = TCIF_TEXT | TCIF_IMAGE | TCIF_PARAM;
@@ -88,7 +88,7 @@ void DocTabView::addBuffer(BufferID buffer)
 	tie.pszText = const_cast<wchar_t*>(buf->getCompactFileName());
 	tie.lParam = reinterpret_cast<LPARAM>(buffer);
 	::SendMessage(_hSelf, TCM_INSERTITEM, _nbItem++, reinterpret_cast<LPARAM>(&tie));
-	bufferUpdated(buf, BufferChangeMask);
+	updateTab(_nbItem - 1, buf, BufferChangeMask);
 
 	::SendMessage(_hParent, WM_SIZE, 0, 0);
 }
@@ -153,10 +153,18 @@ BufferID DocTabView::findBufferByName(const wchar_t * fullfilename) //-1 if not 
 
 int DocTabView::getIndexByBuffer(BufferID id)
 {
+	// Each tab is asked with a message, and with many files open these lookups took most of the time of opening them:
+	// each file is looked up several times while it's opened, before it's in a tab bar. A buffer can be in the tabs only
+	// if it's one of the file manager's (a file being loaded isn't yet, a buffer's tabs are removed before it's closed)
+	// and this tab bar's view references it (the reference is added before its tab, and removed after it). And the tabs
+	// are looked through from the last, where a file just opened is.
+	if (id == BUFFER_INVALID || MainFileManager.getBufferIndexByID(id) == -1 || (_pView && !id->isReferencedBy(_pView)))
+		return -1;
+
 	TCITEM tie{};
 	tie.lParam = -1;
 	tie.mask = TCIF_PARAM;
-	for (size_t i = 0; i < _nbItem; ++i)
+	for (size_t i = _nbItem; i-- > 0; )
 	{
 		::SendMessage(_hSelf, TCM_GETITEM, i, reinterpret_cast<LPARAM>(&tie));
 		if (reinterpret_cast<BufferID>(tie.lParam) == id)
@@ -183,6 +191,12 @@ void DocTabView::bufferUpdated(const Buffer* buffer, int mask)
 	if (index == -1)
 		return;
 
+	updateTab(static_cast<size_t>(index), buffer, mask);
+}
+
+
+void DocTabView::updateTab(size_t index, const Buffer* buffer, int mask)
+{
 	TCITEM tie{};
 	tie.lParam = -1;
 	tie.mask = 0;
@@ -254,7 +268,7 @@ void DocTabView::setBuffer(size_t index, BufferID id)
 	tie.mask = TCIF_PARAM;
 	::SendMessage(_hSelf, TCM_SETITEM, index, reinterpret_cast<LPARAM>(&tie));
 
-	bufferUpdated(MainFileManager.getBufferByID(id), BufferChangeMask);	//update tab, everything has changed
+	updateTab(index, MainFileManager.getBufferByID(id), BufferChangeMask);	//update tab, everything has changed
 
 	::SendMessage(_hParent, WM_SIZE, 0, 0);
 }

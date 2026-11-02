@@ -432,6 +432,8 @@ public:
 	bool isPinned() const { return _isPinned; }
 	void setPinned(bool isPinned) { _isPinned = isPinned; }
 
+	bool isReferencedBy(const ScintillaEditView* identifier) const { return indexOfReference(identifier) != -1; }
+
 private:
 	int indexOfReference(const ScintillaEditView * identifier) const;
 
