@@ -17,7 +17,7 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 9 | `function-list-caret_20261020` | `398b2c2` | 2 | none | Function List caret tracking: a binary search, not a walk of the tree per caret move | no: bug fix (issue to open first) |
 | 10 | `doclist-column-width_20261020` | `20f0a90` | 1 | none | Document List column widths stored for 96 DPI, as they are read | no: bug fix (checked by hand: 48 -> 72 px before, 50 -> 50 after; issue to open first) |
 | 11 | none | – | – | – | Comment: the Find dialog's black status bar was the swallowed `WM_THEMECHANGED`, so its PMv2 can come back | no: a comment on #18455 or #18462 |
-| 12 | `menu-colour-bitmaps_20261020` | `5903444` | 2 | none | The main menu's colour samples cached, not leaked (11 GDI objects per colour change) | **superseded**: upstream fixed it in `6abb408` (2026-11-01) |
+| 12 | `archive/menu-colour-bitmaps_20261020` (archived 2026-11-02) | `5903444` | 2 | none | The main menu's colour samples cached, not leaked (11 GDI objects per colour change) | **superseded**: upstream fixed it in `6abb408` (2026-11-01) |
 | 13 | `dpi-dialog-sizes_20261020` | `b759ee8` | 5 | none | Tooltip widths and Shortcut Mapper's grid metrics for the DPI of upstream's per-monitor dialogs | no: bug fix (issue to open first) |
 | 14 | `langtype-bounds_20261101` | `bbe235f` (local) | 4 | none | Crash at the next key typed after an invalid language type from `NPPM_SETCURRENTLANGTYPE` or an external language command without a lexer | no: bug fix (issue to open first) |
 | 15 | `long-strings-failfast_20261101` | `2c65c1f` (local) | 4 | none | Crash at startup with a long `-udl=`, `-pluginMessage=`, UDL name or config.xml open/save folder (MSVC's `wcsncpy_s`/`wcscat_s` failing fast) | no: bug fix (issue to open first) |
@@ -970,7 +970,7 @@ Windows 11 ARM64 (VM), one monitor, Release ARM64 builds. AI disclosure: an AI a
 **Superseded (2026-11-01)**: upstream fixed it itself in `6abb408` ("Fix style and tab menu item GDI leaks", a cache by colour,
 `_menuItemClrBitmaps`), merged into `pyre` that day. Nothing to post; the branch is history.
 
-Branch `menu-colour-bitmaps_20261020`, one commit (`5903444`) on upstream `master` `fc40460`, 2 files, +28 −16. Found on
+Branch `archive/menu-colour-bitmaps_20261020` (renamed from `menu-colour-bitmaps_20261020` on 2026-11-02), one commit (`5903444`) on upstream `master` `fc40460`, 2 files, +28 −16. Found on
 2026-10-20 by the review of `per-monitor-dpi_20260925` (which had the cache, but only with its option on); `pyre` has it
 ungated since the same day.
 
