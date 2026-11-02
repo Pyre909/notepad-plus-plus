@@ -57,6 +57,9 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **Word wrap per document** (Preferences > Editing 1 > Line Wrap > "Per document", off by default): View > Word wrap
   wraps the current document only, each document keeps its own wrap (also in the session), and one opened or created
   takes the last choice (official issue #5232).
+- **Fold markers and highlighting boxes drawn for the scale**: the fold margin's boxes and lines, the change history
+  marks, the link underline and the boxes of Mark All, Find and smart highlighting are 2 pixels wide from 150% scale
+  (3 from 250%) instead of 1 pixel at any scale.
 - **Per-monitor DPI awareness** (Preferences > MISC., experimental, restart required).
 - **Font sizes 1 to 4 pt** in the font size lists.
 - **A crash guard** for DirectWrite fonts with an out-of-range weight (Scintilla bug #2520).

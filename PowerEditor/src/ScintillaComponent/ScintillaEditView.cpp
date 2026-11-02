@@ -434,6 +434,7 @@ void ScintillaEditView::init(HINSTANCE hInst, HWND hPere)
 
 	setMarkerImagesForDpi(DPIManagerV2::getDpiForWindow(_hParent));
 	_viewDpi = DPIManagerV2::getDpiForWindow(_hSelf);
+	setStrokeWidthsForDpi(_viewDpi); // Pyre909 build
 
     execute(SCI_SETMARGINSENSITIVEN, _SC_MARGE_FOLDER, true); // Make margin sensitive for getting notification on mouse click
     execute(SCI_SETMARGINSENSITIVEN, _SC_MARGE_SYMBOL, true); // Make margin sensitive for getting notification on mouse click
@@ -3451,6 +3452,21 @@ void ScintillaEditView::setMarkerImagesForDpi(UINT dpi)
 	}
 }
 
+// Pyre909 build: the strokes of Notepad++'s markers (change history, folding: 21 to 31) and indicators (the links: 8, the
+// find, mark and smart highlighting boxes: SCE_UNIVERSAL_*, 21 to 31; plugins have 9 to 20, see INDICATOR_PLUGINS) for the
+// DPI: Scintilla draws them 1 pixel wide at any scale. Whole pixels (in hundredths): a fold marker is drawn on whole pixels,
+// 1.5 looks like 1; 2 from 150%, 3 from 250%, as the strokes of the text grow.
+void ScintillaEditView::setStrokeWidthsForDpi(UINT dpi)
+{
+	const int strokeWidth = ((DPIManagerV2::scale(100, dpi) + 50) / 100) * 100;
+	for (int marker = SC_MARKNUM_HISTORY_REVERTED_TO_ORIGIN; marker <= SC_MARKNUM_FOLDEROPEN; ++marker)
+		execute(SCI_MARKERSETSTROKEWIDTH, marker, strokeWidth);
+
+	execute(SCI_INDICSETSTROKEWIDTH, URL_INDIC, strokeWidth);
+	for (int indicator = SCE_UNIVERSAL_FOUND_STYLE_EXT5; indicator <= SCE_UNIVERSAL_FOUND_STYLE; ++indicator)
+		execute(SCI_INDICSETSTROKEWIDTH, indicator, strokeWidth);
+}
+
 void ScintillaEditView::updateForDpi()
 {
 	if (!_hSelf || !_pScintillaFunc)
@@ -3469,6 +3485,7 @@ void ScintillaEditView::updateForDpi()
 	applyLineSpacing(); // Pyre909 build
 
 	setMarkerImagesForDpi(DPIManagerV2::getDpiForWindow(_hParent));
+	setStrokeWidthsForDpi(dpi); // Pyre909 build
 
 	// only the margins whose width is still the one set by Notepad++
 	auto isNppMargin = [this](int whichMarge) -> bool {

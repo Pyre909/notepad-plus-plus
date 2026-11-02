@@ -753,6 +753,7 @@ protected:
 	int _markerImagesSize = 0; // size of the RGBA images of the bookmark & hide lines markers
 	UINT _viewDpi = 0; // DPI of the view, for its pixel sizes (scroll width, x offset) after a DPI change
 	void setMarkerImagesForDpi(UINT dpi);
+	void setStrokeWidthsForDpi(UINT dpi); // Pyre909 build
 	void updateForDpi(); // after WM_DPICHANGED_AFTERPARENT: the Notepad++ pixel sizes (margins, markers) for the new DPI
 	void applyLineSpacing(); // Pyre909 build: see applyTextRenderingSettings
 	void applyLayoutCache(); // Pyre909 build: the layout cache and drawing phases of an edit view for its document
