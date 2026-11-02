@@ -239,6 +239,37 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     on: code, space-aligned and Markdown reports identical; tab-aligned columns no longer line up (by design).
     Harness again on both commits: 0 FAIL. Pushed with Pyre909's OK: `pyre` fast-forwarded to `975bc6f`, CI 13/13 (run
     41505721464). No release yet (Pyre909's choice): `pyre-8.9.8.1-122db31` stays the latest.
+  - Presentation and counting, the plan Pyre909 agreed (2026-11-02), after a long talk (their wishes: consistency in every
+    font; what the status bar says and what's shown agree; they work with mainframe data and offsets):
+    1. **Special-character labels** (done, not pushed): one label style (a rounded box, its own font: Segoe UI Semibold
+       at three quarters of the text's size), a colour by kind (control characters slate, line ends teal, invisible
+       characters purple, invalid bytes red; light or dark tones from the theme's background), names everywhere (BOM),
+       every invisible character labelled (24 added). Pyre909 chose readable labels in whole cells over one cell each,
+       and names over code points. Test `pyre-special-labels.ps1`, 12 checks: ARM64 and x64 pass, release `122db31`
+       fails 11. Seen: the mock-up, then the build's own rendering, light and dark.
+    2. **Status bar**: Col the cell the caret is in (the grid's rule), the character and byte positions beside it when
+       they differ, offsets as 1-based columns, 0-based hex or both (Pyre909 wants both available).
+    3. **Fonts**: CJK and emoji fitted in their cells (centred, scaled down when wider; Unicode's East Asian Width, not
+       the font, decides the cells: measured, fonts disagree, e.g. Greek and box drawing 2 cells in BIZ UDGothic, 1 in
+       MonoLisa); whole-pixel cells with the grid; crisper labels (done in 1); a comparison of pyre's rendering settings
+       in Pyre909's font. A wide-character font setting deferred: no single font covers Japanese, Chinese and Korean
+       (BIZ UDGothic has no Hangul nor simplified Chinese), so it'd be a font list, as Vim's `guifontwide`.
+    - Decided along the way: right-to-left and complex scripts in data order with the grid; line ends one cell each was
+      chosen, then superseded by readable labels in whole cells. Researched: VS Code (status bar Col = visible column,
+      CJK and emoji 2, graphemes; `fullwidthCharacterWidth` font/twoCells), Vim (`%c`/`%v`, `ambiwidth`, `guifontwide`),
+      Emacs (glyphless characters as a hex box), Sublime, EmEditor, UltraEdit, jEdit/Visual Studio (file and screen
+      columns), ISPF (HEX ON: two rows of nibbles under each byte), hex editors.
+    - **Parked: a mainframe record view** (Pyre909: later). Binary EBCDIC records can't be shown accurately as text:
+      `X'25'` is LF, `X'0D'` CR, `X'15'` NEL, `X'05'` tab in EBCDIC 037/500/1140, and a packed field holds any of them
+      (+12.50 is `00 01 25 0C`), so a text view splits records; FB files have no line ends, z/OS FTP drops RDWs unless
+      `QUOTE SITE RDW` and trailing blanks of fixed records unless `TRAILINGBLANKS`, and a text transfer destroys packed
+      fields. Design: open a file as records (code page: every EBCDIC one, Pyre909 wants them all; format FB with LRECL,
+      VB with RDWs, or lines; detected, then asked), each byte one cell (non-printables as stacked hex nibbles, ISPF's
+      vertical hex), each record one line whatever bytes it holds, lossless save (all 256 bytes per code page tested),
+      FB overwrite-only, VB RDWs recomputed, an ISPF HEX ON toggle, the status bar with record, column, offset in hex,
+      file offset; then copybook layouts (fields shaded, the field and its decoded value at the caret, bad packed signs
+      flagged). Pyre909 needs view, edit and save; files come by binary and text transfer; medium sizes. Samples:
+      `customers-fb.bin`, `-vb.bin`, `-text.txt` (made by `record_examples.py`, not kept in the repository).
   - 8, `per-monitor-dpi_20260925` rebased on `9923cad` (`54851f3`: the same resolutions as `pyre`'s merge), both MSVC
     builds clean; CI needs it pushed (a force-push: Pyre909's OK).
   - 1, AddressSanitizer: all the tests on the final code (`asan.ps1 -Ref 885561b -Test All`, the four new tests
