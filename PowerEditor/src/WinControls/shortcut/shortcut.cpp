@@ -452,28 +452,23 @@ void getKeyStrFromVal(UCHAR keyVal, string & str)
 		str = "Unlisted";
 }
 
-// Pyre909 build: the main window of this process, found once: FindWindow, called for each name, went through every
-// top-level window (about 0.5 ms; Preferences asks about 230 names when it opens: the New Document page's encodings and
-// languages, the Language page's languages), and with several instances (-multiInst) it could find another Notepad++'s
-// window and give the names of its menu
+// Pyre909 build: the main window of this process: FindWindow, called for each name, went through every top-level window
+// (about 0.5 ms; Preferences asks about 230 names when it opens: the New Document page's encodings and languages, the
+// Language page's languages), and with several instances (-multiInst) it could find another Notepad++'s window and give
+// the names of its menu. Before gNppHWND is set (while the window is created), this process's window is looked for.
 static HWND getOwnNotepadPlusWindow()
 {
-	static HWND hNotepad_plus = nullptr;
-	if (hNotepad_plus && ::IsWindow(hNotepad_plus))
-		return hNotepad_plus;
+	if (Notepad_plus_Window::gNppHWND)
+		return Notepad_plus_Window::gNppHWND;
 
-	hNotepad_plus = nullptr;
 	for (HWND hWnd = ::FindWindowEx(nullptr, nullptr, Notepad_plus_Window::getClassName(), nullptr); hWnd; hWnd = ::FindWindowEx(nullptr, hWnd, Notepad_plus_Window::getClassName(), nullptr))
 	{
 		DWORD processId = 0;
 		::GetWindowThreadProcessId(hWnd, &processId);
 		if (processId == ::GetCurrentProcessId())
-		{
-			hNotepad_plus = hWnd;
-			break;
-		}
+			return hWnd;
 	}
-	return hNotepad_plus;
+	return nullptr;
 }
 
 void getNameStrFromCmd(DWORD cmd, wstring & str)
