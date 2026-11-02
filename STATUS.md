@@ -216,6 +216,27 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     onto upstream `025d452`; PR #18503 still unreviewed. Harness 0 FAIL (3 WARN in upstream's Malayalam code); pushed
     with Pyre909's OK ("push if passes"), the fork's `master` synced to `025d452`; CI 13/13 on `pyre` (run 41474122409).
     No new release: the translation is the only change since `pyre-8.9.8.1-122db31`.
+  - Characters on a grid (2026-11-02, asked by Pyre909: tabs looked uneven in their session, a tab after one character
+    narrower than the one before; that's the tab stops, upstream's behaviour too). View > Show Symbol > "Show Characters
+    on a Grid" (`3163c84`, not pushed): a cell is a space's width, a tab one tab size wide wherever it is, every
+    representation (control characters, line ends, NPC labels, invalid bytes) in whole cells, centred; letters keep their
+    font's widths. Pyre909's choice after talking it over: the grid plus a 2:1 font for CJK (BIZ UDGothic, MS Gothic,
+    NSimSun and the Korean ...Che fonts come with Windows), not glyphs squeezed into cells (layer 3, not done: emoji and
+    CJK taken from a fallback font in a font without CJK, as MonoLisa, stay off the grid). It replaces the first idea,
+    "Show Tabs at Fixed Width" (a tab representation, never pushed). Test `pyre-character-grid.ps1`, 11 checks: ARM64 and
+    x64 pass, release `122db31` fails 9. Before/after previews of 8 samples (code, INI, Makefile, TSV, CJK, control and
+    invisible characters, invalid bytes, scripts and emoji) in MonoLisa Code and BIZ UDGothic, shown to Pyre909.
+    Harness 0 FAIL (7 WARN: the Scintilla patch, its style, comment prose). Independent review: fixes in `975bc6f` (hidden
+    control characters took a blank cell; Scintilla's `singles` table of control characters' widths, used by every line
+    once a line over 2,000 bytes fills it, stale after a representation change: reset beside pyre's `llc` reset in
+    `Editor.cxx`; the edge's background mode in cells; plain labels centred; `SCI_CHOOSECARETX` after a toggle). Rejected:
+    the label measured on each paint (23.4 vs 23.7 ms for 1,800 labels). Left, documented: document columns (status bar
+    Col, Column Editor, Tab with spaces) count tab stops; explicit tab stops and the bidirectional mode's tabs
+    (`ScreenLine::TabPositionAfter`, plugins only) aren't on the grid. Upstream Scintilla, for a bug report (not code):
+    `WrapBlock`'s threads lay out lines under 4,000 bytes, and `LayoutLine` fills `singles` for those over 2,000, unlocked
+    (a data race; same values). The test now 14 checks (3 new fail on `3163c84`); ARM64 and x64 pass. A PEP 8 sample
+    (`inventory_report.py`, pycodestyle and ruff clean) and the reports it writes compared pixel by pixel, grid off vs
+    on: code, space-aligned and Markdown reports identical; tab-aligned columns no longer line up (by design).
   - 8, `per-monitor-dpi_20260925` rebased on `9923cad` (`54851f3`: the same resolutions as `pyre`'s merge), both MSVC
     builds clean; CI needs it pushed (a force-push: Pyre909's OK).
   - 1, AddressSanitizer: all the tests on the final code (`asan.ps1 -Ref 885561b -Test All`, the four new tests
