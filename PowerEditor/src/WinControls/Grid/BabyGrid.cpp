@@ -1480,7 +1480,7 @@ LRESULT CALLBACK GridProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (iDataType == 5) { wcscat_s(buffer, L"G"); }
 
 			wcscat_s(buffer, L"|");
-			wcscat_s(buffer, (wchar_t*)lParam);
+			wcsncat_s(buffer, bufferLen, (wchar_t*)lParam, _TRUNCATE);
 			int FindResult = static_cast<int32_t>(SendMessage(BGHS[SelfIndex].hlist1, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(buffer)));
 
 			if (FindResult == LB_ERR)
@@ -1541,7 +1541,7 @@ LRESULT CALLBACK GridProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					int count = 1;
 					wchar_t tbuffer[255] = { '\0' };
-					wcscpy_s(tbuffer, (wchar_t*)lParam);
+					wcsncpy_s(tbuffer, _countof(tbuffer), (wchar_t*)lParam, _TRUNCATE);
 					for (int j = 0; j < (int)lstrlen(tbuffer); j++)
 					{
 						if (tbuffer[j] == '\n') { count++; }

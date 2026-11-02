@@ -73,7 +73,10 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   Crashes: the next key typed after a plugin set a language that doesn't exist (or after a Language menu command for an
   external language with no external lexer installed); the startup with a `-udl=` or `-pluginMessage=` too long and a
   file to open, a user defined language name of more than about 210 characters, or a folder of more than 260 characters
-  in config.xml.
+  in config.xml; a plugin reloading a file by a path of 260 characters or more; a translation's string too long for
+  the Shortcut Mapper's column names, the Find in Files progress title, the Find All result, or the Folder as Workspace
+  and Function List tooltips; a language description of about 250 characters in a theme (Style Configurator); a Folder
+  as Workspace root (session file) or a project workspace (config.xml) of 260 characters or more, given with `\\?\`.
 - The About box and Help > Debug Info say "(64-bit, Pyre909 build)", so bug reports can't be mistaken for
   ones about the official build.
 

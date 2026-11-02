@@ -673,6 +673,8 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 
 			wchar_t longNameFullpath[MAX_PATH]{};
 			const wchar_t* pFilePath = reinterpret_cast<const wchar_t*>(lParam);
+			if (!pFilePath || wcslen(pFilePath) >= MAX_PATH) // no document has a path that long
+				return FALSE;
 			wcscpy_s(longNameFullpath, MAX_PATH, pFilePath);
 			if (wcschr(longNameFullpath, '~'))
 			{

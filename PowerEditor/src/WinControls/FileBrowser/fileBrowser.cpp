@@ -571,15 +571,15 @@ void FileBrowser::notified(LPNMHDR notification)
 
 		if (notification->idFrom == FB_CMD_AIMFILE)
 		{
-			wcscpy_s(lpttt->szText, _locateCurrentFile.c_str());
+			wcsncpy_s(lpttt->szText, _countof(lpttt->szText), _locateCurrentFile.c_str(), _TRUNCATE);
 		}
 		else if (notification->idFrom == FB_CMD_FOLDALL)
 		{
-			wcscpy_s(lpttt->szText, _collapseAllFolders.c_str());
+			wcsncpy_s(lpttt->szText, _countof(lpttt->szText), _collapseAllFolders.c_str(), _TRUNCATE);
 		}
 		else if (notification->idFrom == FB_CMD_EXPANDALL)
 		{
-			wcscpy_s(lpttt->szText, _expandAllFolders.c_str());
+			wcsncpy_s(lpttt->szText, _countof(lpttt->szText), _expandAllFolders.c_str(), _TRUNCATE);
 		}
 	}
 	else if (notification->hwndFrom == _treeView.getHSelf())
@@ -1124,11 +1124,9 @@ HTREEITEM FileBrowser::createFolderItemsFromDirStruct(HTREEITEM hParentItem, con
 	HTREEITEM hFolderItem = nullptr;
 	if (directoryStructure._parent == nullptr && hParentItem == nullptr)
 	{
-		wchar_t rootPath[MAX_PATH] = { '\0' };
-		wcscpy_s(rootPath, directoryStructure._rootPath.c_str());
-		size_t len = lstrlen(rootPath);
-		if (rootPath[len - 1] == '\\')
-			rootPath[len - 1] = '\0';
+		wstring rootPath = directoryStructure._rootPath;
+		if (!rootPath.empty() && rootPath.back() == '\\')
+			rootPath.pop_back();
 
 		SortingData4lParam* customData = new SortingData4lParam(rootPath, L"", true);
 		_sortingDataArray.push_back(customData);

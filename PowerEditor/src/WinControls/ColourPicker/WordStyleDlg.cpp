@@ -1259,8 +1259,8 @@ void WordStyleDlg::setVisualFromStyleList()
 	if (static_cast<size_t>(lbTextLen) > styleNameLen)
 		return;
 	::SendDlgItemMessage(_hSelf, IDC_STYLES_LIST, LB_GETTEXT, i, reinterpret_cast<LPARAM>(styleName));
-	wcscat_s(str, L": ");
-	wcscat_s(str, styleName);
+	wcsncat_s(str, _countof(str), L": ", _TRUNCATE);
+	wcsncat_s(str, _countof(str), styleName, _TRUNCATE);
 
 	::SetWindowText(_hStyleInfoStaticText, str);
 

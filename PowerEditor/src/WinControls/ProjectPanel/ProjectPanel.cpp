@@ -402,7 +402,7 @@ void ProjectPanel::destroyMenus() const
 
 bool ProjectPanel::openWorkSpace(const wchar_t* projectFileName, bool force)
 {
-	if (!projectFileName)
+	if (!projectFileName || wcslen(projectFileName) >= MAX_PATH) // its folder is copied to MAX_PATH arrays (getAbsoluteFilePath, addFilesFromDirectory)
 		return false;
 
 	if ((!force) && (_workSpaceFilePath.length() > 0))
@@ -479,6 +479,8 @@ bool ProjectPanel::writeWorkSpace(const wchar_t* projectFileName, bool doUpdateG
 {
 	//write <NotepadPlus>: use the default file name if new file name is not given
 	const wchar_t* fn2write = projectFileName ? projectFileName : _workSpaceFilePath.c_str();
+	if (wcslen(fn2write) >= MAX_PATH) // its folder is copied to a MAX_PATH array (getRelativePath)
+		return false;
 	NppXml::NewDocument projDoc{};
 	NppXml::Element root = NppXml::createChildElement(projDoc, "NotepadPlus");
 

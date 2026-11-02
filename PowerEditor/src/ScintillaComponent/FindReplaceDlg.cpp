@@ -3997,7 +3997,7 @@ void FindReplaceDlg::findAllIn(InWhat op)
 	if (::SendMessage(_hParent, cmdid, static_cast<WPARAM>(limitSearchScopeToSelection ? 1 : 0), 0))
 	{
 		wstring text = _pFinder->getHitsString(_findAllResult);
-		wcscpy_s(_findAllResultStr, sizeof(_findAllResultStr) / sizeof(wchar_t), text.c_str());
+		wcsncpy_s(_findAllResultStr, sizeof(_findAllResultStr) / sizeof(wchar_t), text.c_str(), _TRUNCATE);
 
 		if (_findAllResult)
 		{
@@ -6908,7 +6908,7 @@ HWND Progress::open(HWND hCallerWnd, const wchar_t* header)
 		::UpdateWindow(hwnd);
 
 	if (header)
-		wcscpy_s(_header, _countof(_header), header);
+		wcsncpy_s(_header, _countof(_header), header, _TRUNCATE);
 	else
 		wcscpy_s(_header, _countof(_header), cDefaultHeader);
 

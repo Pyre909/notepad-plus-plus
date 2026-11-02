@@ -500,15 +500,15 @@ void FunctionListPanel::notified(LPNMHDR notification)
 
 		if (notification->idFrom == IDC_SORTBUTTON_FUNCLIST)
 		{
-			wcscpy_s(lpttt->szText, _sortTipStr.c_str());
+			wcsncpy_s(lpttt->szText, _countof(lpttt->szText), _sortTipStr.c_str(), _TRUNCATE);
 		}
 		else if (notification->idFrom == IDC_RELOADBUTTON_FUNCLIST)
 		{
-			wcscpy_s(lpttt->szText, _reloadTipStr.c_str());
+			wcsncpy_s(lpttt->szText, _countof(lpttt->szText), _reloadTipStr.c_str(), _TRUNCATE);
 		}
 		else if (notification->idFrom == IDC_PREFERENCEBUTTON_FUNCLIST)
 		{
-			wcscpy_s(lpttt->szText, _preferenceTipStr.c_str());
+			wcsncpy_s(lpttt->szText, _countof(lpttt->szText), _preferenceTipStr.c_str(), _TRUNCATE);
 		}
 	}
 	else if (notification->hwndFrom == _treeView.getHSelf() || notification->hwndFrom == _treeViewSearchResult.getHSelf())
