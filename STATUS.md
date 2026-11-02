@@ -213,7 +213,9 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     into `pyre` as `12cee53` (conflicts, pyre's side: the two `.mak` files' `-std:c++23preview`, `XPM.cxx`'s fix): pyre
     gets the translation only. Clean rebuilds, both start in Malayalam. Upstream master keeps 5.6.8's XPM slip, which makes
     its auto-completion icons nearly black: kit 17, an issue pointing at 5.6.9. All ten PR branches still merge cleanly
-    onto upstream `025d452`; PR #18503 still unreviewed.
+    onto upstream `025d452`; PR #18503 still unreviewed. Harness 0 FAIL (3 WARN in upstream's Malayalam code); pushed
+    with Pyre909's OK ("push if passes"), the fork's `master` synced to `025d452`; CI 13/13 on `pyre` (run 41474122409).
+    No new release: the translation is the only change since `pyre-8.9.8.1-122db31`.
   - 8, `per-monitor-dpi_20260925` rebased on `9923cad` (`54851f3`: the same resolutions as `pyre`'s merge), both MSVC
     builds clean; CI needs it pushed (a force-push: Pyre909's OK).
   - 1, AddressSanitizer: all the tests on the final code (`asan.ps1 -Ref 885561b -Test All`, the four new tests
