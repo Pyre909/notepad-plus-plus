@@ -734,8 +734,8 @@ The generator, the scripts and the review sheets of both versions are in `icons/
 
 | Branch | Head | What |
 |---|---|---|
-| `master` | `37f76d4` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
-| `pyre` | `5771464` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
+| `master` | `025d452` | Mirror of official Notepad++ (kept in sync with GitHub's Sync fork; never add commits here) |
+| `pyre` | `da42676` | **Your own Notepad++ (the Pyre909 build)**: everything below, the build name in the About box, and the private release workflow (installers + portable zips, x64 and ARM64). The fork's default branch since 2026-10-01 |
 | `claude/awesome-darwin-bsud9v` | `357fec9` | The cloud session's branch: the combined development branch, all the features (pyre is built on it) |
 | `text-rendering_20260925` | `bb32194` | Upstream PR #18418, closed by donho on 2026-10-02: Text Rendering settings in Editing 1 |
 | `text-rendering-translations_20260925` | `1aa8b0e` | Follow-up of #18418: label capitalisation in 29 translations (on hold: #18418 closed) |
@@ -826,7 +826,9 @@ The generator, the scripts and the review sheets of both versions are in `icons/
   its exe is ARM64 with the build name; `pyre-character-grid` 20, `pyre-special-labels` 14, `pyre-status-position` 10
   checks pass on it; started as a user would (its folder's settings): the plugins load, no updater entries, the grid's
   menu item, DirectWrite, a normal close. **Published** as Latest the same day (the tag on `da42676`; it started no
-  workflow). The older drafts (`aee7bbf`, `ea151ae`) are gone; `122db31` and `b428833` stay as published history.
+  workflow). It is now the only release: Pyre909 deleted `pyre-8.9.8.1-122db31` and `pyre-8.9.8.1-b428833` with their
+  tags on 2026-11-03; `5771464` and the drafts `aee7bbf` and `ea151ae` were gone already. The releases and tags named
+  above and in the tests' notes ("release `122db31` fails ...") are history: those builds can't be downloaded any more.
 
 ## Next
 
