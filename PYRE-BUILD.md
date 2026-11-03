@@ -58,8 +58,8 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   wraps the current document only, each document keeps its own wrap (also in the session), and one opened or created
   takes the last choice (official issue #5232).
 - **Characters on a grid** (View > Show Symbol > "Show Characters on a Grid", also in the ¶ button's menu, off by
-  default): the text on a grid of cells, a cell being the width of a space, so that the same character always looks the
-  same, for comparing lines and finding hidden characters. Every tab is one tab size wide wherever it is, instead of
+  default): the text on a grid of cells, a cell being the width of a space in whole pixels, so that the same character
+  always looks the same, drawn alike in every cell, for comparing lines and finding hidden characters. Every tab is one tab size wide wherever it is, instead of
   reaching the next tab stop, and the labels of control characters, line ends, non-printing characters and invalid bytes
   take whole cells, their text centred. Every character takes the cells Unicode gives it, in any font: Chinese, Japanese,
   Korean and emoji two (also a character followed by the emoji selector U+FE0F, such as a keycap), combining accents

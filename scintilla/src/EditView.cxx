@@ -1124,9 +1124,10 @@ bool ReordersInRun(std::string_view text) noexcept {
 }
 
 // N++ (Pyre909 build): a segment of text on the character grid (SetCellWidths laid it out, LayoutSegments kept the font's
-// widths): as a run where the font's widths are its cells already (ASCII in a monospaced font), else each character, with
-// the ones of no width after it (combining marks), centred in its cells, narrowed where the font draws it wider (scaled
-// down if two cells or more: emoji); a combining mark with no character before it on a dotted circle
+// widths): as a run where the font's widths are its cells already (ASCII in a monospaced font whose advance is whole
+// pixels: GDI, DirectWrite's GDI classic), else each character, with the ones of no width after it (combining marks),
+// centred in its cells (on whole pixels: drawn alike in every cell), narrowed where the font draws it wider (scaled down
+// if two cells or more: emoji); a combining mark with no character before it on a dotted circle
 void DrawTextInCells(Surface *surface, const ViewStyle &vsDraw, const LineLayout *ll, int start, int length, bool unicode,
 	PRectangle rcSegment, XYPOSITION ybase, const Font *font, ColourRGBA textFore, ColourRGBA textBack, bool fillBackground) {
 	const std::string_view text(&ll->chars[start], length);
@@ -1137,7 +1138,7 @@ void DrawTextInCells(Surface *surface, const ViewStyle &vsDraw, const LineLayout
 		XYPOSITION fontX = 0;
 		for (int b = 0; fits && (b < length); b++) {
 			fontX += ll->fontWidths[start + b];
-			fits = std::abs((ll->XInLine(start + b + 1) - x0) - fontX) < 0.5;
+			fits = std::abs((ll->XInLine(start + b + 1) - x0) - fontX) < 0.01;
 		}
 	}
 	if (fits) {

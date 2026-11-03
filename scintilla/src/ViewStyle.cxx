@@ -433,9 +433,10 @@ void ViewStyle::Refresh(Surface &surface, int tabInChars) {
 
 	aveCharWidth = styles[StyleDefault].aveCharWidth;
 	spaceWidth = styles[StyleDefault].spaceWidth;
-	if (characterGrid) {	// N++ (Pyre909 build): the grid's cell, a space, or a digit where it's wider (a proportional font);
-		// every style's space a cell (virtual space)
-		spaceWidth = std::max(spaceWidth, surface.WidthText(styles[StyleDefault].font.get(), "0"));
+	if (characterGrid) {	// N++ (Pyre909 build): the grid's cell, a space, or a digit where it's wider (a proportional font),
+		// in whole pixels (each glyph drawn alike in every cell: from fractional cells, DirectWrite drew a character six
+		// ways across a line); every style's space a cell (virtual space)
+		spaceWidth = std::max(1.0, std::round(std::max(spaceWidth, surface.WidthText(styles[StyleDefault].font.get(), "0"))));
 		for (Style &style : styles) {
 			style.spaceWidth = spaceWidth;
 		}
