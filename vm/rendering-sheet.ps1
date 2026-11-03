@@ -90,4 +90,3 @@ foreach ($theme in 'Pyre Daylight', 'Pyre Night') {
 }
 $manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $OutDir 'sheet.json') -Encoding utf8
 "$n captures in $OutDir"
-

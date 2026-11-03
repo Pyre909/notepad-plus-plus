@@ -294,7 +294,7 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
        an m drawn six ways across 24 columns (GDI: 13 px, one way); the cell rounded to whole pixels and a run drawn
        as one only when its advances are the cells within 0.01 px: one way, CJK too; cost a screen of CJK 23 -> 26 ms,
        ASCII code unchanged. `pyre-character-grid.ps1` 20 checks (Consolas zoomed to a fractional advance: one way, 8
-       without the grid). Pushed (`da42676`). The rendering settings comparison: `vm\rendering-sheet.ps1`, sheets in
+       without the grid). Pushed (`da42676`; CI run 41565163490: 13/13). The rendering settings comparison: `vm\rendering-sheet.ps1`, sheets in
        `vm\shots\rendering-settings-pyre-*.png` (14 settings in Pyre Daylight, 5 in Pyre Night). Pyre909's settings
        (DirectWrite, Automatic, antialiasing and contrast Follow Windows: Windows has ClearType on, contrast 1200) on the
        plain-text line: colour fringing 73, solid ink 52%. Natural ClearType 80 / 62%; GDI classic ClearType 81 / 67%
