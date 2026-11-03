@@ -820,10 +820,13 @@ The generator, the scripts and the review sheets of both versions are in `icons/
   runs were cancelled. To avoid it, the workflow could skip a tag that already has a release (not done). Its ARM64
   installer is installed on the VM (silent install, exit 0; the standard toolbar at 150% shows the new icons, greyed
   when disabled). The drafts `aee7bbf` and `ea151ae` are still there.
-- Draft `pyre-8.9.8.1-da42676` (run 41566167144, 2026-11-03, PGO, 8 files) at Pyre909's request: the character grid
+- Release `pyre-8.9.8.1-da42676` (run 41566167144, 2026-11-03, PGO, 8 files) at Pyre909's request: the character grid
   with every character in its Unicode cells and whole-pixel cells, the special-character labels, the status bar's
-  caret position (steps 1 to 3 of 2026-11-02). Not published (Pyre909's call: publishing creates the tag); `122db31`
-  stays Latest until then.
+  caret position (steps 1 to 3 of 2026-11-02). Smoke-tested from the draft: the ARM64 portable zip's SHA-256 matches,
+  its exe is ARM64 with the build name; `pyre-character-grid` 20, `pyre-special-labels` 14, `pyre-status-position` 10
+  checks pass on it; started as a user would (its folder's settings): the plugins load, no updater entries, the grid's
+  menu item, DirectWrite, a normal close. **Published** as Latest the same day (the tag on `da42676`; it started no
+  workflow). The older drafts (`aee7bbf`, `ea151ae`) are gone; `122db31` and `b428833` stay as published history.
 
 ## Next
 
