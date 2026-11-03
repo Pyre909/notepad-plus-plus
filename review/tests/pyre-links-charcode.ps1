@@ -157,7 +157,7 @@ try {
 	[void](Send $view $SCI_SETSEL 1 3); Start-Sleep -Milliseconds 250; $t = Get-PosText $proc
 	Check '  a selection: Sel, no code' (($t -match 'Sel') -and ((Get-Code $t) -eq '(none)')) $t
 	$t = Move-Caret $proc $view 6
-	Check '  the text: Ln, Col, Pos and the code' ($t -match '^Ln: 1\s+Col: \d+\s+Pos: 7\s+U\+1F600$') $t
+	Check '  the text: Ln, Col (and its character and byte positions when they differ), Pos and the code' ($t -match '^Ln: 1\s+Col: \d+( \(ch \d+, byte \d+\))?\s+Pos: 7\s+U\+1F600$') $t
 	Stop-Npp $proc
 
 	$proc = Start-Npp $settings @($ansi)

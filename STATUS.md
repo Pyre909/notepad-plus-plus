@@ -246,9 +246,25 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
        characters purple, invalid bytes red; light or dark tones from the theme's background), names everywhere (BOM),
        every invisible character labelled (24 added). Pyre909 chose readable labels in whole cells over one cell each,
        and names over code points. Test `pyre-special-labels.ps1`, 12 checks: ARM64 and x64 pass, release `122db31`
-       fails 11. Seen: the mock-up, then the build's own rendering, light and dark.
-    2. **Status bar**: Col the cell the caret is in (the grid's rule), the character and byte positions beside it when
-       they differ, offsets as 1-based columns, 0-based hex or both (Pyre909 wants both available).
+       fails 11. Seen: the mock-up, then the build's own rendering, light and dark. Independent review (10 findings),
+       verified and fixed: the label font made lines taller (Courier New, DirectWrite: 30 -> 31 px at zoom +3, 47 -> 51
+       at +10): `StyleControlChar` left out of `FindMaxAscentDescent`, and its size set against the zoom (`SCN_ZOOM`);
+       GDI drew each box through an alpha-blended bitmap (a screen of 1,900 NUL labels 2.2 -> 42.1 ms a paint, now
+       4.5): opaque rows where the surface can't blend, GDI and printing; the box pixel-aligned, skipped when no room,
+       the text's width from the layout unless the grid rounded it; the label's text black or white by its box (the
+       background's colour lacked contrast on styles with their own background); the Finder's labels coloured and in
+       their font after a theme change; printing: the labels at their unzoomed size, the light tones on paper unless
+       printed as shown; the Preferences tooltip's BOM; UTF-8 keys of two bytes and more set only in UTF-8 documents (in
+       GBK, CD 8F and C2 80 are characters: the release labels C2 80 PAD and hides it as a control character by default,
+       an upstream bug); CLAUDE.md's "every reset" claim narrowed (Document Map, Peeker, the other view after a Reload,
+       NPPM_DECODESCI already lose Show Non-Printing Characters upstream). The test now 14 checks (release 13 fail).
+       Not tested: the Finder after a theme change, printing.
+    2. **Status bar** (done, not pushed): Col the cell the caret is in with the grid (`SCI_GETCELLCOLUMN`), the
+       character and byte positions beside it when they differ (bytes of the file's encoding, UTF-16's too), a
+       selection's bytes; Preferences > General > Status Bar: "Caret position" column / offset in hex (`Off: X'17'`) /
+       both, "Line length"; the part grows to its text, never leaving the document type under 60 px. Test
+       `pyre-status-position.ps1`, 10 checks: ARM64 and x64 pass, release fails 8 of 9. `pyre-links-charcode`'s status
+       text check now allows the "(ch, byte)" annotation.
     3. **Fonts**: CJK and emoji fitted in their cells (centred, scaled down when wider; Unicode's East Asian Width, not
        the font, decides the cells: measured, fonts disagree, e.g. Greek and box drawing 2 cells in BIZ UDGothic, 1 in
        MonoLisa); whole-pixel cells with the grid; crisper labels (done in 1); a comparison of pyre's rendering settings

@@ -67,14 +67,14 @@ $file = Write-Sample 'labels.txt' @('ESC[', $k.ESC, '] NUL[', $k.NUL, '] DEL[', 
 	'NEL[', $k.NEL, '] LS[', $k.LS, "]`r`n", 'Bad[', $k.xE9, '] [', $k.xFF, "]`r`n")
 $second = Write-Sample 'second.txt' @('Second', $k.NBSP, 'document [', $k.xE9, "]`r`n")
 
-function Start-Npp([string] $name, [string] $themeFile = '') {
+function Start-Npp([string] $name, [string] $themeFile = '', [string[]] $open = @($second, $file)) {
 	$settings = Join-Path $root $name; New-Item -ItemType Directory -Force $settings | Out-Null
 	if (-not (Test-Path (Join-Path $settings 'stylers.xml'))) {
 		$model = [IO.File]::ReadAllText($(if ($themeFile) { $themeFile } else { Join-Path (Split-Path $Exe) 'stylers.model.xml' }))
 		$model = [regex]::Replace($model, '(<WidgetStyle name="Default Style" styleID="32"[^>]*?fontName=")[^"]*("[^>]*?fontSize=")[^"]*"', "`${1}Consolas`${2}10`"")
 		[IO.File]::WriteAllText((Join-Path $settings 'stylers.xml'), $model, [Text.UTF8Encoding]::new($false))
 	}
-	$p = Start-Process $Exe -ArgumentList '-multiInst', '-nosession', "-settingsDir=$settings", '-titleAdd=REVIEW-TEST', "`"$second`"", "`"$file`"" -PassThru
+	$p = Start-Process $Exe -ArgumentList (@('-multiInst', '-nosession', "-settingsDir=$settings", '-titleAdd=REVIEW-TEST') + @($open | ForEach-Object { "`"$_`"" })) -PassThru
 	for ($i = 0; $i -lt 100 -and $p.MainWindowHandle -eq 0; $i++) { Start-Sleep -Milliseconds 100; $p.Refresh() }
 	Start-Sleep -Milliseconds 1500
 	$script:main = $p.MainWindowHandle; $script:settings = $settings
@@ -133,6 +133,12 @@ try {
 	$len = Send $script:sc 2486 36 ([Int64]$script:mem + 256); $font = Text-At 256 $len
 	$weight = Send $script:sc 2064 36; $size = Send $script:sc 2062 36; $defaultSize = Send $script:sc 2062 32
 	Check 'the labels'' font: Segoe UI Semibold (or Segoe UI at weight 600 with DirectWrite), three quarters of the text''s size' (($font -eq 'Segoe UI Semibold' -or ($font -eq 'Segoe UI' -and $weight -eq 600)) -and $size -eq [Math]::Floor($defaultSize * 3 / 4)) "font '$font', weight $weight, size $size of $defaultSize"
+	$heights = foreach ($z in 0, 10) { [void](Send $script:sc 2373 $z); Start-Sleep -Milliseconds 200; Send $script:sc 2279 0 }
+	$zoomedSize = Send $script:sc 2062 36
+	[void](Send $script:sc 2373 10); [void](Send $script:sc 2055 36 40); Start-Sleep -Milliseconds 200 # SCI_STYLESETSIZE 40 pt
+	$bigLabelHeight = Send $script:sc 2279 0
+	[void](Send $script:sc 2373 0); Start-Sleep -Milliseconds 200
+	Check '  zoomed (+10): three quarters of the zoomed text (set against the 10 points Scintilla adds); the labels never make a line taller' (($zoomedSize -eq [Math]::Floor(($defaultSize + 1000) * 3 / 4) - 1000) -and ($bigLabelHeight -eq $heights[1])) "label size $zoomedSize; line height at zoom 0 / +10: $($heights -join ' / '), +10 with a 40 pt label font: $bigLabelHeight"
 	$escPos = (Send $script:sc 2167 0) + 4
 	foreach ($tech in @(@(1, 'DirectWrite'), @(0, 'GDI'))) {
 		[void](Send $script:sc 2630 $tech[0]); Start-Sleep -Milliseconds 400
@@ -182,6 +188,21 @@ try {
 		Stop-Npp $p
 	}
 	else { Info 'DarkModeDefault.xml not found beside the build: the dark theme checks skipped' }
+
+	# --- a GBK document: the bytes of UTF-8's CGJ (CD 8F) and PAD (C2 80) are Chinese characters there, neither labelled
+	# nor hidden. Scintilla has a DBCS code page only on a CJK Windows (elsewhere Notepad++ converts a character set to
+	# UTF-8): the view set to 936 directly, the symbols hidden and shown again so that Notepad++ sets the representations
+	$gbk = Join-Path $root 'gbk.txt'; [IO.File]::WriteAllBytes($gbk, [byte[]](0xD6, 0xD0, 0x41, 0xCD, 0x8F, 0x42, 0xC2, 0x80, 0x43, 0x0D, 0x0A))
+	$p = Start-Npp 'gbk' '' @($gbk)
+	[void](Send $script:sc 2037 936) # SCI_SETCODEPAGE: Scintilla's own representations again
+	foreach ($id in $IDM.NPC, $IDM.NPC, $IDM.CCUNIEOL, $IDM.CCUNIEOL) { [void](Send $script:main 0x0111 $id) }
+	$codePage = Send $script:sc 2137 # SCI_GETCODEPAGE
+	$shownReprs = @((Repr-Text ([byte[]](0xCD, 0x8F))), (Repr-Text ([byte[]](0xC2, 0x80))))
+	[void](Send $script:main 0x0111 $IDM.CCUNIEOL); Start-Sleep -Milliseconds 300 # control characters hidden
+	$hiddenRepr = Repr-Text ([byte[]](0xC2, 0x80))
+	[void](Send $script:main 0x0111 $IDM.CCUNIEOL)
+	Check 'GBK (code page 936): its characters CD 8F and C2 80 neither labelled (CGJ, PAD) nor hidden as control characters' (($codePage -eq 936) -and (($shownReprs -join '') -eq '') -and ($hiddenRepr -eq '')) "code page $codePage; shown: '$($shownReprs -join "', '")'; with control characters hidden: '$hiddenRepr'"
+	Stop-Npp $p -Kill
 }
 finally {
 	foreach ($q in @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $Exe -and $_.MainWindowTitle -match 'REVIEW-TEST' })) { Stop-Process -Id $q.Id -Force }
