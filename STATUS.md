@@ -288,8 +288,13 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
        DirectWrite 23 ms a paint, as with the grid off, GDI 12 (16 off): one call for the characters a run neither shapes
        nor reorders (`DrawTextTransparentAt`: GDI `lpDx`, Direct2D `SetCharacterSpacing`); Segoe UI code with GDI 6 ms.
        `pyre-character-grid.ps1` 19 checks (keycap, Hangul, mark after a tab; a hidden RLO by pixels, which differ
-       without the grid; ANSI and GBK; virtual space in Segoe UI). Not done yet: whole-pixel cells (measure first), the
-       rendering settings comparison. Found on the way: the test's widths in cells must be rounded
+       without the grid; ANSI and GBK; virtual space in Segoe UI). Pushed 2026-11-02 (`996f6ba`, `956ed4e`; CI run
+       41562948153: 13/13, its Win32 Debug job left "in progress" by GitHub with every step done). Whole-pixel cells,
+       measured first: in MonoLisa Code 10 pt with DirectWrite (Pyre909's settings) the cell was 12.794 px and a 0 or
+       an m drawn six ways across 24 columns (GDI: 13 px, one way); the cell rounded to whole pixels and a run drawn
+       as one only when its advances are the cells within 0.01 px: one way, CJK too; cost a screen of CJK 23 -> 26 ms,
+       ASCII code unchanged. `pyre-character-grid.ps1` 20 checks (Consolas zoomed to a fractional advance: one way, 8
+       without the grid). Not done yet: the rendering settings comparison. Found on the way: the test's widths in cells must be rounded
        (`SCI_POINTXFROMPOSITION` truncates: 21.98 -> 21); keyboard moves into virtual space need SCVS_USERACCESSIBLE and
        the caret's x chosen (`SCI_CHOOSECARETX` after `SCI_GOTOPOS`); `sed -i` in Git Bash wrote a CRLF file as LF.
     - Decided along the way: right-to-left and complex scripts in data order with the grid; line ends one cell each was

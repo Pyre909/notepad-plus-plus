@@ -10,7 +10,7 @@
 # Characters off) keep no width, also on a line over 2,000 bytes (Scintilla's table of their widths, reset when the
 # representations change); Down after a toggle goes below where the caret is now. Unicode's widths (CJK, emoji, keycaps,
 # combining marks, decomposed Hangul); a hidden RLO reorders nothing (pixels compared, DirectWrite and GDI); an ANSI and
-# a GBK document; virtual space in Segoe UI in cells. Not driven: printing (printed without it), the edge's background
+# a GBK document; virtual space in Segoe UI in cells; whole-pixel cells (each 0 of a line drawn alike). Not driven: printing (printed without it), the edge's background
 # mode, the centring and narrowing of glyphs and the block caret (screenshots only).
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
 param([Parameter(Mandatory)] [string] $Exe)
@@ -103,22 +103,31 @@ function Get-Chars([int] $line) {
 	$out
 }
 function On-Grid([double] $v, [double] $cell) { [Math]::Abs($v - [Math]::Round($v / $cell) * $cell) -le 1.01 }
-# the pixels of cells from two positions compared (the view drawn by PrintWindow, in its pixels: per-monitor aware meanwhile)
-function Different-Pixels([long] $a, [long] $b, [int] $cells) {
+# the view drawn by PrintWindow, in its pixels (per-monitor aware meanwhile), and where a position's pixels are in it
+function Get-Capture {
 	$old = [CG.U]::SetThreadDpiAwarenessContext([IntPtr](-4))
 	try {
 		$r = [CG.U+RECT]::new(); [void][CG.U]::GetWindowRect($script:main, [ref]$r)
 		$o = [CG.U+POINT]::new(); [void][CG.U]::ClientToScreen($script:sc, [ref]$o)
 		$bmp = [Drawing.Bitmap]::new($r.Right - $r.Left, $r.Bottom - $r.Top)
 		$g = [Drawing.Graphics]::FromImage($bmp); $hdc = $g.GetHdc(); [void][CG.U]::PrintWindow($script:main, $hdc, 2); $g.ReleaseHdc($hdc); $g.Dispose()
-		$height = Send $script:sc 2279 (Send $script:sc $SCI.LINEFROMPOSITION $a); $width = [int]($cells * (Get-Cell)); $diff = 0
-		$ax = $o.X - $r.Left + (Send $script:sc $SCI.POINTX 0 $a); $ay = $o.Y - $r.Top + (Send $script:sc $SCI.POINTY 0 $a)
-		$bx = $o.X - $r.Left + (Send $script:sc $SCI.POINTX 0 $b); $by = $o.Y - $r.Top + (Send $script:sc $SCI.POINTY 0 $b)
-		for ($y = 0; $y -lt $height; $y++) { for ($x = 0; $x -lt $width; $x++) { if ($bmp.GetPixel($ax + $x, $ay + $y) -ne $bmp.GetPixel($bx + $x, $by + $y)) { $diff++ } } }
-		$bmp.Dispose()
-		$diff
+		[pscustomobject]@{ Bitmap = $bmp; X = $o.X - $r.Left; Y = $o.Y - $r.Top }
 	}
 	finally { [void][CG.U]::SetThreadDpiAwarenessContext($old) }
+}
+function Cell-Pixels($capture, [long] $pos, [int] $width, [int] $height) {
+	$x0 = $capture.X + (Send $script:sc $SCI.POINTX 0 $pos); $y0 = $capture.Y + (Send $script:sc $SCI.POINTY 0 $pos)
+	$sb = [Text.StringBuilder]::new()
+	for ($y = 0; $y -lt $height; $y++) { for ($x = 0; $x -lt $width; $x++) { [void]$sb.Append($capture.Bitmap.GetPixel($x0 + $x, $y0 + $y).ToArgb()).Append(',') } }
+	$sb.ToString()
+}
+# the pixels of cells from two positions compared
+function Different-Pixels([long] $a, [long] $b, [int] $cells) {
+	$capture = Get-Capture
+	$height = Send $script:sc 2279 (Send $script:sc $SCI.LINEFROMPOSITION $a); $width = [int]($cells * (Get-Cell))
+	$pa = (Cell-Pixels $capture $a $width $height) -split ','; $pb = (Cell-Pixels $capture $b $width $height) -split ','
+	$capture.Bitmap.Dispose()
+	@(for ($i = 0; $i -lt $pa.Count; $i++) { if ($pa[$i] -ne $pb[$i]) { 1 } }).Count
 }
 # the characters of the lines that start off the grid (x within a pixel of whole cells), and the tabs not tabSize cells
 function Test-Lines([int[]] $lines, [double] $cell, [switch] $OnlyTabsAndReps) {
@@ -206,11 +215,12 @@ try {
 	# lines 5 to 12: Unicode's widths, an x after each: half-width katakana, a combining accent, U+2764 U+FE0F, an emoji,
 	# an emoji with its skin tone (its parts: 2 + 2 cells), a keycap (# U+FE0F U+20E3), a decomposed Hangul syllable (U+1112
 	# U+1161 U+11AB: its vowel and final consonant with the first), a combining accent after a tab (one cell: seen);
-	# lines 13 and 14: "ab cd ef", then the same after a hidden RLO (U+202E): drawn alike, in the characters' order
+	# lines 13 and 14: "ab cd ef", then the same after a hidden RLO (U+202E): drawn alike, in the characters' order;
+	# line 15: 24 zeros, each drawn alike (whole-pixel cells)
 	$widthLines = @(([string][char]0xFF76 + [char]0xFF80 + 'x'), ('e' + [char]0x301 + 'x'), ([string][char]0x2764 + [char]0xFE0F + 'x'),
 		([char]::ConvertFromUtf32(0x1F600) + 'x'), ([char]::ConvertFromUtf32(0x1F44D) + [char]::ConvertFromUtf32(0x1F3FD) + 'x'),
 		('#' + [char]0xFE0F + [char]0x20E3 + 'x'), ([string][char]0x1112 + [char]0x1161 + [char]0x11AB + 'x'), ($T + [char]0x301 + 'x'),
-		'ab cd ef', ([string][char]0x202E + 'ab cd ef'))
+		'ab cd ef', ([string][char]0x202E + 'ab cd ef'), ('0' * 24))
 	[IO.File]::WriteAllText($ccFile, ($gridLines[0] + "`r`na" + [char]0 + "b`r`n" + ('x' * 2500) + [char]0 + "b`r`nab${T}c`r`n0123456789`r`n" + ($widthLines -join "`r`n") + "`r`n"), $utf8)
 	$p = Start-Npp 'Consolas' $ccFile
 	if (-not (Grid-On)) { [void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID) }
@@ -245,7 +255,27 @@ try {
 	$scintillaOwn = foreach ($tech in 1, 0) { [void](Send $script:sc $SCI.SETTECHNOLOGY $tech); Start-Sleep -Milliseconds 400; Different-Pixels $a13 $a14 8 }
 	[void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID)
 	Check 'a hidden RLO (U+202E) reorders nothing: "ab cd ef" after it drawn as without it, DirectWrite and GDI' (($reordered -join ',') -eq '0,0' -and $rloWidth -eq 0 -and @($scintillaOwn | Where-Object { $_ -gt 0 }).Count -eq 2) "pixels that differ: $($reordered -join ' / ') (without the grid, reordered: $($scintillaOwn -join ' / ')); the RLO $rloWidth px wide"
+	# whole-pixel cells: with DirectWrite, at a zoom where Consolas' advance is well between two pixels, each 0 of the line
+	# drawn alike with the grid (without it, as many ways as the phases of the pixel each starts in: the check sees them)
 	[void](Send $script:sc $SCI.SETTECHNOLOGY 1)
+	[void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID) # off
+	$zoom = 0; $advance = 0
+	foreach ($z in 0, 1, 2, 3, -1, 4, 5, -2, 6, 7) {
+		[void](Send $script:sc $SCI.SETZOOM $z); $advance = Get-Cell
+		if ((($advance - [Math]::Floor($advance)) -gt 0.25) -and (($advance - [Math]::Floor($advance)) -lt 0.75)) { $zoom = $z; break }
+	}
+	$zeros = Send $script:sc $SCI.POSITIONFROMLINE 15
+	function Zero-Renderings { # the cell measured on line 0, then the zeros' line scrolled to the top (zoomed, it's low)
+		$w = [int][Math]::Floor((Get-Cell)); [void](Send $script:sc 2613 15); Start-Sleep -Milliseconds 400 # SCI_SETFIRSTVISIBLELINE
+		$capture = Get-Capture
+		$n = @(0..23 | ForEach-Object { Cell-Pixels $capture ($zeros + $_) $w (Send $script:sc 2279 15) } | Sort-Object -Unique).Count
+		$capture.Bitmap.Dispose(); [void](Send $script:sc 2613 0); $n
+	}
+	$kindsOff = Zero-Renderings
+	[void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID) # on
+	$cell = Get-Cell; $kinds = Zero-Renderings
+	[void](Send $script:sc $SCI.SETZOOM 0)
+	Check 'DirectWrite: the cell a whole number of pixels, and each 0 of a line drawn alike in its cell' (($cell -eq [Math]::Round($cell)) -and ($kinds -eq 1) -and ($kindsOff -gt 1)) ("zoom {0}: Consolas' advance {1:N3} px, the cell {2} px; 24 zeros drawn {3} way(s) (without the grid: {4})" -f $zoom, $advance, $cell, $kinds, $kindsOff)
 	Stop-Npp $p
 
 	# --- an ANSI document: every byte one cell, also those the font gives no width (C1 controls in windows-1252); in GBK
