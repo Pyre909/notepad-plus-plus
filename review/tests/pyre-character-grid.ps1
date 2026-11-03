@@ -8,8 +8,10 @@
 # the tabs and representations in whole cells, letters as wide as the font makes them). Off: the tab stops; off again:
 # the same positions as before it was on; saved in config.xml and read back. Hidden control characters (Show Control
 # Characters off) keep no width, also on a line over 2,000 bytes (Scintilla's table of their widths, reset when the
-# representations change); Down after a toggle goes below where the caret is now. Not driven: printing (printed without
-# it), the edge's background mode and the labels' centring (pixels only).
+# representations change); Down after a toggle goes below where the caret is now. Unicode's widths (CJK, emoji, keycaps,
+# combining marks, decomposed Hangul); a hidden RLO reorders nothing (pixels compared, DirectWrite and GDI); an ANSI and
+# a GBK document; virtual space in Segoe UI in cells. Not driven: printing (printed without it), the edge's background
+# mode, the centring and narrowing of glyphs and the block caret (screenshots only).
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
 param([Parameter(Mandatory)] [string] $Exe)
 $ErrorActionPreference = 'Stop'
@@ -24,6 +26,12 @@ Add-Type -Namespace CG -Name U -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
 [DllImport("user32.dll")] public static extern IntPtr GetMenu(IntPtr h);
 [DllImport("user32.dll")] public static extern uint GetMenuState(IntPtr m, uint id, uint flags);
+[DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint flags);
+[DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+[DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr h, ref POINT p);
+[DllImport("user32.dll")] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr c);
+[StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+[StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
 '@
 $script:results = [Collections.Generic.List[string]]::new(); $script:fails = 0
 function Check([string] $name, [bool] $ok, [string] $detail = '') {
@@ -32,7 +40,7 @@ function Check([string] $name, [bool] $ok, [string] $detail = '') {
 }
 function Info([string] $text) { $script:results.Add("INFO  $text") }
 function Send([IntPtr] $h, [int] $m, [long] $w = 0, [long] $l = 0) { $r = [IntPtr]::Zero; [void][CG.U]::SendMessageTimeout($h, $m, [IntPtr]$w, [IntPtr]$l, 2, 10000, [ref]$r); $r.ToInt64() }
-$IDM_VIEW_CHARACTER_GRID = 44190; $IDM_VIEW_ALL_CHARACTERS = 44019; $IDM_VIEW_GOTO_ANOTHER_VIEW = 10001; $IDM_VIEW_NPC_CCUNIEOL = 44131
+$IDM_VIEW_CHARACTER_GRID = 44190; $IDM_VIEW_ALL_CHARACTERS = 44019; $IDM_VIEW_GOTO_ANOTHER_VIEW = 10001; $IDM_VIEW_NPC_CCUNIEOL = 44131; $IDM_VIEW_NPC = 44130
 $SCI = @{ GETLINECOUNT = 2154; POSITIONFROMLINE = 2167; GETLINEENDPOSITION = 2136; POINTX = 2164; POSITIONRELATIVE = 2418; GETCHARAT = 2007
 	SETTECHNOLOGY = 2630; SETZOOM = 2373; SETWRAPMODE = 2268; LINEFROMPOSITION = 2166; POINTY = 2165; GETCHARACTERGRID = 5104; GETTABWIDTH = 2121 }
 
@@ -95,6 +103,23 @@ function Get-Chars([int] $line) {
 	$out
 }
 function On-Grid([double] $v, [double] $cell) { [Math]::Abs($v - [Math]::Round($v / $cell) * $cell) -le 1.01 }
+# the pixels of cells from two positions compared (the view drawn by PrintWindow, in its pixels: per-monitor aware meanwhile)
+function Different-Pixels([long] $a, [long] $b, [int] $cells) {
+	$old = [CG.U]::SetThreadDpiAwarenessContext([IntPtr](-4))
+	try {
+		$r = [CG.U+RECT]::new(); [void][CG.U]::GetWindowRect($script:main, [ref]$r)
+		$o = [CG.U+POINT]::new(); [void][CG.U]::ClientToScreen($script:sc, [ref]$o)
+		$bmp = [Drawing.Bitmap]::new($r.Right - $r.Left, $r.Bottom - $r.Top)
+		$g = [Drawing.Graphics]::FromImage($bmp); $hdc = $g.GetHdc(); [void][CG.U]::PrintWindow($script:main, $hdc, 2); $g.ReleaseHdc($hdc); $g.Dispose()
+		$height = Send $script:sc 2279 (Send $script:sc $SCI.LINEFROMPOSITION $a); $width = [int]($cells * (Get-Cell)); $diff = 0
+		$ax = $o.X - $r.Left + (Send $script:sc $SCI.POINTX 0 $a); $ay = $o.Y - $r.Top + (Send $script:sc $SCI.POINTY 0 $a)
+		$bx = $o.X - $r.Left + (Send $script:sc $SCI.POINTX 0 $b); $by = $o.Y - $r.Top + (Send $script:sc $SCI.POINTY 0 $b)
+		for ($y = 0; $y -lt $height; $y++) { for ($x = 0; $x -lt $width; $x++) { if ($bmp.GetPixel($ax + $x, $ay + $y) -ne $bmp.GetPixel($bx + $x, $by + $y)) { $diff++ } } }
+		$bmp.Dispose()
+		$diff
+	}
+	finally { [void][CG.U]::SetThreadDpiAwarenessContext($old) }
+}
 # the characters of the lines that start off the grid (x within a pixel of whole cells), and the tabs not tabSize cells
 function Test-Lines([int[]] $lines, [double] $cell, [switch] $OnlyTabsAndReps) {
 	$tab = Send $script:sc $SCI.GETTABWIDTH; $bad = @()
@@ -178,10 +203,14 @@ try {
 
 	# --- hidden control characters, a line over 2,000 bytes (Scintilla's table of control characters' widths), the caret
 	$ccFile = Join-Path $root 'control.txt'
-	# lines 5 to 9: Unicode's widths, an x after each: half-width katakana, a combining accent, U+2764 U+FE0F, an emoji,
-	# an emoji with its skin tone (its parts: 2 + 2 cells)
+	# lines 5 to 12: Unicode's widths, an x after each: half-width katakana, a combining accent, U+2764 U+FE0F, an emoji,
+	# an emoji with its skin tone (its parts: 2 + 2 cells), a keycap (# U+FE0F U+20E3), a decomposed Hangul syllable (U+1112
+	# U+1161 U+11AB: its vowel and final consonant with the first), a combining accent after a tab (one cell: seen);
+	# lines 13 and 14: "ab cd ef", then the same after a hidden RLO (U+202E): drawn alike, in the characters' order
 	$widthLines = @(([string][char]0xFF76 + [char]0xFF80 + 'x'), ('e' + [char]0x301 + 'x'), ([string][char]0x2764 + [char]0xFE0F + 'x'),
-		([char]::ConvertFromUtf32(0x1F600) + 'x'), ([char]::ConvertFromUtf32(0x1F44D) + [char]::ConvertFromUtf32(0x1F3FD) + 'x'))
+		([char]::ConvertFromUtf32(0x1F600) + 'x'), ([char]::ConvertFromUtf32(0x1F44D) + [char]::ConvertFromUtf32(0x1F3FD) + 'x'),
+		('#' + [char]0xFE0F + [char]0x20E3 + 'x'), ([string][char]0x1112 + [char]0x1161 + [char]0x11AB + 'x'), ($T + [char]0x301 + 'x'),
+		'ab cd ef', ([string][char]0x202E + 'ab cd ef'))
 	[IO.File]::WriteAllText($ccFile, ($gridLines[0] + "`r`na" + [char]0 + "b`r`n" + ('x' * 2500) + [char]0 + "b`r`nab${T}c`r`n0123456789`r`n" + ($widthLines -join "`r`n") + "`r`n"), $utf8)
 	$p = Start-Npp 'Consolas' $ccFile
 	if (-not (Grid-On)) { [void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID) }
@@ -198,13 +227,55 @@ try {
 	$column = (Send $script:sc 2008) - (Send $script:sc $SCI.POSITIONFROMLINE 4) # SCI_GETCURRENTPOS
 	Check 'Down after the grid is turned on: below where the caret is now ("ab<TAB>c": column 6, not the tab stop''s 4)' ($column -eq 6) "column $column"
 	$cell = Get-Cell
-	$xPixels = foreach ($line in 5..9) {
+	$xPixels = foreach ($line in 5..12) {
 		$start = Send $script:sc $SCI.POSITIONFROMLINE $line; $x = (Send $script:sc $SCI.GETLINEENDPOSITION $line) - 1 # the x, last before the line end
 		(Send $script:sc $SCI.POINTX 0 $x) - (Send $script:sc $SCI.POINTX 0 $start)
 	}
 	$xCells = $xPixels | ForEach-Object { [Math]::Round($_ / $cell) }
 	$onGrid = @($xPixels | Where-Object { -not (On-Grid $_ $cell) }).Count -eq 0
-	Check 'Unicode''s widths: half-width katakana 1 cell, a combining accent 0, U+2764 U+FE0F 2, an emoji 2, an emoji with its skin tone 4 (its parts)' ((($xCells -join ',') -eq '2,1,2,2,4') -and $onGrid) "the x after each at cell $($xCells -join ', ') ($($xPixels -join ', ') px, cell {0:N2})" -f $cell
+	$expected = '2,1,2,2,4,2,2,' + ((Send $script:sc $SCI.GETTABWIDTH) + 1)
+	Check 'Unicode''s widths: half-width katakana 1 cell, a combining accent 0, U+2764 U+FE0F 2, an emoji 2, an emoji with its skin tone 4 (its parts), a keycap 2, a decomposed Hangul syllable 2, a combining accent after a tab 1' ((($xCells -join ',') -eq $expected) -and $onGrid) ("the x after each at cell $($xCells -join ', ') ($($xPixels -join ', ') px, cell {0:N2})" -f $cell)
+	# the RLO hidden (Show Non-Printing Characters off; the settings may keep it on): "ab cd ef" compared from its a
+	if (([CG.U]::GetMenuState([CG.U]::GetMenu($script:main), $IDM_VIEW_NPC, 0) -band 8) -ne 0) { [void](Send $script:main 0x0111 $IDM_VIEW_NPC) }
+	$a13 = Send $script:sc $SCI.POSITIONFROMLINE 13; $a14 = (Send $script:sc $SCI.POSITIONFROMLINE 14) + 3
+	$rloWidth = (Send $script:sc $SCI.POINTX 0 $a14) - (Send $script:sc $SCI.POINTX 0 ($a14 - 3))
+	$reordered = foreach ($tech in 1, 0) { [void](Send $script:sc $SCI.SETTECHNOLOGY $tech); Start-Sleep -Milliseconds 400; Different-Pixels $a13 $a14 8 }
+	# the comparison sees a reordering: without the grid, Scintilla draws the text after the RLO right to left
+	[void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID)
+	$scintillaOwn = foreach ($tech in 1, 0) { [void](Send $script:sc $SCI.SETTECHNOLOGY $tech); Start-Sleep -Milliseconds 400; Different-Pixels $a13 $a14 8 }
+	[void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID)
+	Check 'a hidden RLO (U+202E) reorders nothing: "ab cd ef" after it drawn as without it, DirectWrite and GDI' (($reordered -join ',') -eq '0,0' -and $rloWidth -eq 0 -and @($scintillaOwn | Where-Object { $_ -gt 0 }).Count -eq 2) "pixels that differ: $($reordered -join ' / ') (without the grid, reordered: $($scintillaOwn -join ' / ')); the RLO $rloWidth px wide"
+	[void](Send $script:sc $SCI.SETTECHNOLOGY 1)
+	Stop-Npp $p
+
+	# --- an ANSI document: every byte one cell, also those the font gives no width (C1 controls in windows-1252); in GBK
+	# (a DBCS code page, only on a CJK Windows: set directly), a double-byte character two
+	$cpFile = Join-Path $root 'codepages.txt'
+	[IO.File]::WriteAllBytes($cpFile, [byte[]]((@(0x20) * 160) + 0x58 + 0x0D + 0x0A + 0x61 + 0xD6 + 0xD0 + 0x62 + 0x0D + 0x0A + 0x61 + 0x81 + 0x8D + 0x8F + 0x90 + 0x9D + 0x62 + 0x0D + 0x0A))
+	$p = Start-Npp 'Consolas' $cpFile
+	if (-not (Grid-On)) { [void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID) }
+	if ((Send $script:sc 2137) -ne 0) { [void](Send $script:main 0x0111 45004); Start-Sleep -Milliseconds 400 } # IDM_FORMAT_ANSI
+	$l1 = Send $script:sc $SCI.POSITIONFROMLINE 1; $l2 = Send $script:sc $SCI.POSITIONFROMLINE 2
+	if (((Send $script:sc 2137) -eq 0) -and ((Send $script:sc $SCI.GETCHARAT ($l2 + 1)) -band 0xFF) -eq 0x81) {
+		$cell = Get-Cell
+		$ansiX = (Send $script:sc $SCI.POINTX 0 ($l2 + 6)) - (Send $script:sc $SCI.POINTX 0 $l2)
+		[void](Send $script:sc 2037 936); Start-Sleep -Milliseconds 300 # SCI_SETCODEPAGE
+		$gbkX = (Send $script:sc $SCI.POINTX 0 ($l1 + 3)) - (Send $script:sc $SCI.POINTX 0 $l1)
+		$ansiB = [Math]::Round($ansiX / $cell); $gbkB = [Math]::Round($gbkX / $cell)
+		Check 'ANSI (windows-1252): every byte one cell, C1 controls 81 8D 8F 90 9D too; GBK: a double-byte character two (D6 D0)' (($ansiB -eq 6) -and ($gbkB -eq 3) -and (On-Grid $ansiX $cell) -and (On-Grid $gbkX $cell)) ("ANSI: the b after five bytes at cell $ansiB ($ansiX px); GBK: the b after one character at cell $gbkB ($gbkX px), cell {0:N2}" -f $cell)
+	}
+	else { Info "the code page file didn't open as ANSI (code page $(Send $script:sc 2137)): the ANSI and GBK check skipped" }
+	Stop-Npp $p
+
+	# --- virtual space in a proportional font: a space of every style a cell (Segoe UI's space is narrower than its "0")
+	$vsFile = Join-Path $root 'virtual.txt'; [IO.File]::WriteAllText($vsFile, ($gridLines[0] + "`r`nabcdef`r`na`r`n"), $utf8)
+	$p = Start-Npp 'Segoe UI' $vsFile
+	if (-not (Grid-On)) { [void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID) }
+	# SCI_SETVIRTUALSPACEOPTIONS (rectangular selection, and the keys too: Preferences' virtual space), SCI_GOTOPOS,
+	# SCI_CHOOSECARETX, SCI_LINEDOWNRECTEXTEND
+	[void](Send $script:sc 2596 3); [void](Send $script:sc 2025 (Send $script:sc $SCI.GETLINEENDPOSITION 1)); [void](Send $script:sc 2399); [void](Send $script:sc 2426)
+	$virtual = Send $script:sc 2593 # SCI_GETRECTANGULARSELECTIONCARETVIRTUALSPACE
+	Check 'Segoe UI: a rectangular selection down from the end of "abcdef" to "a" ends in the same cell (5 cells of virtual space)' ($virtual -eq 5) "virtual space: $virtual"
 	Stop-Npp $p
 }
 finally {

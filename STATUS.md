@@ -274,10 +274,24 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
        `SetCellWidths` in the layout, `DrawTextInCells` drawing, `DrawTextTransparentScaled` on both surfaces), emoji
        sequences as their parts (Pyre909's choice), U+FE0F making a character two cells, a proportional font's cell its
        "0". `pyre-character-grid.ps1` now 16 checks (CJK in Consolas on the grid, 0 off it instead of 47; Unicode's
-       widths; Segoe UI every character on the grid). Cost (a screen of CJK in MonoLisa): DirectWrite 21 -> 37 ms a
-       paint, GDI 16 -> 99 (an `ExtTextOut` a character; to do: a run with `lpDx`); monospaced ASCII unchanged. Not
-       done yet: whole-pixel cells (each glyph would be drawn alone: measure first), the rendering settings comparison.
-       Found on the way: the test's widths in cells must be rounded (`SCI_POINTXFROMPOSITION` truncates: 21.98 -> 21).
+       widths; Segoe UI every character on the grid). Committed as `996f6ba`; harness 0 FAIL.
+       The independent review (no crash or memory finding; the table equal to Unicode 17's) found, fixed in a second
+       commit: glyphs wider than one cell shrunk in height too (Segoe UI's m at 2/3; a CJK font's Ambiguous characters,
+       box drawing, at half: now narrowed only, scaled both ways from two cells); every paint measured its text again
+       (the position cache keeps strings under 40 bytes only: now the layout's `fontWidths`); virtual space in a
+       proportional font in the font's spaces (Segoe UI: 9 instead of 5); the block caret drew its character the old
+       way; keycaps (`#` U+FE0F U+20E3) one cell; decomposed Hangul 4 cells (its vowel and final consonant now 0); in
+       ANSI a byte the font gives no width (C1 controls) joined the one before; a combining mark after a tab drawn over
+       it (now a cell, on U+25CC); a run with a right-to-left letter or a hidden RLO reordered by the font (now each
+       character, in order); the italic end-of-line hack off the grid. Kept: U+00AD one cell (as terminals); Ambiguous
+       characters one cell (an "Ambiguous is wide" option possible). Cost now (a screen of CJK in MonoLisa, ARM64):
+       DirectWrite 23 ms a paint, as with the grid off, GDI 12 (16 off): one call for the characters a run neither shapes
+       nor reorders (`DrawTextTransparentAt`: GDI `lpDx`, Direct2D `SetCharacterSpacing`); Segoe UI code with GDI 6 ms.
+       `pyre-character-grid.ps1` 19 checks (keycap, Hangul, mark after a tab; a hidden RLO by pixels, which differ
+       without the grid; ANSI and GBK; virtual space in Segoe UI). Not done yet: whole-pixel cells (measure first), the
+       rendering settings comparison. Found on the way: the test's widths in cells must be rounded
+       (`SCI_POINTXFROMPOSITION` truncates: 21.98 -> 21); keyboard moves into virtual space need SCVS_USERACCESSIBLE and
+       the caret's x chosen (`SCI_CHOOSECARETX` after `SCI_GOTOPOS`); `sed -i` in Git Bash wrote a CRLF file as LF.
     - Decided along the way: right-to-left and complex scripts in data order with the grid; line ends one cell each was
       chosen, then superseded by readable labels in whole cells. Researched: VS Code (status bar Col = visible column,
       CJK and emoji 2, graphemes; `fullwidthCharacterWidth` font/twoCells), Vim (`%c`/`%v`, `ambiwidth`, `guifontwide`),
