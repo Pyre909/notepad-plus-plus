@@ -820,6 +820,10 @@ The generator, the scripts and the review sheets of both versions are in `icons/
   runs were cancelled. To avoid it, the workflow could skip a tag that already has a release (not done). Its ARM64
   installer is installed on the VM (silent install, exit 0; the standard toolbar at 150% shows the new icons, greyed
   when disabled). The drafts `aee7bbf` and `ea151ae` are still there.
+- Draft `pyre-8.9.8.1-da42676` (run 41566167144, 2026-11-03, PGO, 8 files) at Pyre909's request: the character grid
+  with every character in its Unicode cells and whole-pixel cells, the special-character labels, the status bar's
+  caret position (steps 1 to 3 of 2026-11-02). Not published (Pyre909's call: publishing creates the tag); `122db31`
+  stays Latest until then.
 
 ## Next
 
