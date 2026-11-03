@@ -241,7 +241,7 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     41505721464). No release yet (Pyre909's choice): `pyre-8.9.8.1-122db31` stays the latest.
   - Presentation and counting, the plan Pyre909 agreed (2026-11-02), after a long talk (their wishes: consistency in every
     font; what the status bar says and what's shown agree; they work with mainframe data and offsets):
-    1. **Special-character labels** (done, not pushed): one label style (a rounded box, its own font: Segoe UI Semibold
+    1. **Special-character labels** (done, pushed 2026-11-02): one label style (a rounded box, its own font: Segoe UI Semibold
        at three quarters of the text's size), a colour by kind (control characters slate, line ends teal, invisible
        characters purple, invalid bytes red; light or dark tones from the theme's background), names everywhere (BOM),
        every invisible character labelled (24 added). Pyre909 chose readable labels in whole cells over one cell each,
@@ -259,18 +259,18 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
        an upstream bug); CLAUDE.md's "every reset" claim narrowed (Document Map, Peeker, the other view after a Reload,
        NPPM_DECODESCI already lose Show Non-Printing Characters upstream). The test now 14 checks (release 13 fail).
        Not tested: the Finder after a theme change, printing.
-    2. **Status bar** (done, not pushed): Col the cell the caret is in with the grid (`SCI_GETCELLCOLUMN`), the
+    2. **Status bar** (done, pushed 2026-11-02): Col the cell the caret is in with the grid (`SCI_GETCELLCOLUMN`), the
        character and byte positions beside it when they differ (bytes of the file's encoding, UTF-16's too), a
        selection's bytes; Preferences > General > Status Bar: "Caret position" column / offset in hex (`Off: X'17'`) /
        both, "Line length"; the part grows to its text, never leaving the document type under 60 px. Test
        `pyre-status-position.ps1`, 10 checks: ARM64 and x64 pass, release fails 8 of 9. `pyre-links-charcode`'s status
        text check now allows the "(ch, byte)" annotation.
-    3. **Fonts**: CJK and emoji fitted in their cells (centred, scaled down when wider; Unicode's East Asian Width, not
+    3. **Fonts** (done, pushed 2026-11-02; the rendering settings Pyre909's to choose): CJK and emoji fitted in their cells (centred, scaled down when wider; Unicode's East Asian Width, not
        the font, decides the cells: measured, fonts disagree, e.g. Greek and box drawing 2 cells in BIZ UDGothic, 1 in
        MonoLisa); whole-pixel cells with the grid; crisper labels (done in 1); a comparison of pyre's rendering settings
        in Pyre909's font. A wide-character font setting deferred: no single font covers Japanese, Chinese and Korean
        (BIZ UDGothic has no Hangul nor simplified Chinese), so it'd be a font list, as Vim's `guifontwide`.
-       Done (not pushed): every character in its Unicode cells with the grid (`CellsOfCharacter`, a Unicode 17 table;
+       Done: every character in its Unicode cells with the grid (`CellsOfCharacter`, a Unicode 17 table;
        `SetCellWidths` in the layout, `DrawTextInCells` drawing, `DrawTextTransparentScaled` on both surfaces), emoji
        sequences as their parts (Pyre909's choice), U+FE0F making a character two cells, a proportional font's cell its
        "0". `pyre-character-grid.ps1` now 16 checks (CJK in Consolas on the grid, 0 off it instead of 47; Unicode's
@@ -294,7 +294,17 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
        an m drawn six ways across 24 columns (GDI: 13 px, one way); the cell rounded to whole pixels and a run drawn
        as one only when its advances are the cells within 0.01 px: one way, CJK too; cost a screen of CJK 23 -> 26 ms,
        ASCII code unchanged. `pyre-character-grid.ps1` 20 checks (Consolas zoomed to a fractional advance: one way, 8
-       without the grid). Not done yet: the rendering settings comparison. Found on the way: the test's widths in cells must be rounded
+       without the grid). Pushed (`da42676`). The rendering settings comparison: `vm\rendering-sheet.ps1`, sheets in
+       `vm\shots\rendering-settings-pyre-*.png` (14 settings in Pyre Daylight, 5 in Pyre Night). Pyre909's settings
+       (DirectWrite, Automatic, antialiasing and contrast Follow Windows: Windows has ClearType on, contrast 1200) on the
+       plain-text line: colour fringing 73, solid ink 52%. Natural ClearType 80 / 62%; GDI classic ClearType 81 / 67%
+       (whole-pixel advances: 13 px instead of 12.79, the grid's cell anyway); ClearType with less color 37 / 55%;
+       Grayscale 9 / 55%; GDI classic Grayscale 11 / 62%; contrast Very high +17% ink; GDI ClearType 75 / 57%, GDI
+       Grayscale 8 / 65% but 16% lighter; None 100% solid, jagged. Pyre Night alike (current 59 / 52%, Grayscale 11 /
+       51%, Natural 70 / 63%). Suggested to Pyre909: ClearType's colours are made for the screen's own sub-pixels, and
+       the VM is seen through Parallels on a Mac screen, which may rescale it; GDI classic with Grayscale is the
+       crispest without colours (setting 11 of the sheet), ClearType with less color the middle way. Pyre909's choice,
+       by eye, inside Windows. Found on the way: the test's widths in cells must be rounded
        (`SCI_POINTXFROMPOSITION` truncates: 21.98 -> 21); keyboard moves into virtual space need SCVS_USERACCESSIBLE and
        the caret's x chosen (`SCI_CHOOSECARETX` after `SCI_GOTOPOS`); `sed -i` in Git Bash wrote a CRLF file as LF.
     - Decided along the way: right-to-left and complex scripts in data order with the grid; line ends one cell each was

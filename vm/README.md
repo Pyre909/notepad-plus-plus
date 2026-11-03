@@ -33,6 +33,17 @@ Used for the test round in `STATUS.md` (handoff section), on Pyre909's Windows 1
   printer the default, so ask Pyre909 first.
 - `pdf-fonts.ps1`: the fonts a PDF embeds by their own name table and weight class (Microsoft Print to PDF names them
   CIDFont+F1...).
+- `rendering-sheet.ps1`: Pyre909's text in Pyre909's themes (Pyre Daylight and Pyre Night from their Notepad++ themes
+  folder: MonoLisa Code 10 pt) under each Text Rendering setting of Preferences > Editing 1, set in config.xml as
+  Preferences writes it (a settings folder of its own, a restart each), captured at 1:1 with a 4x detail of "0O 1lI|";
+  `rendering-sheet-compose.ps1` puts them on one sheet a theme, `rendering-sheet-metrics.ps1` measures the plain-text
+  line of each: colour fringing (the ink pixels' mean spread between R, G and B), solid ink (the share of the ink in
+  pixels at least 90% covered: crisper stems), ink (to the theme's first: weight). The 2026-11-02 sheets are
+  `shots\rendering-settings-pyre-daylight.png` and `-pyre-night.png` (results in `STATUS.md`). PowerShell 7 (cast
+  sizes to `[int]`: with an Int64 or a Double, `[Drawing.Bitmap]::new` takes the file name constructor).
+- `grid-cell-phase.ps1`: the character grid's cell width and how many ways one character (0, m, CJK) is drawn across 24
+  columns, DirectWrite and GDI, grid off and on (`-Zoom`, `-SaveTo` for the crops); `grid-paint.ps1`: the paint time of
+  a screen of CJK and of ASCII code, grid off and on, DirectWrite and GDI (median of 5 rounds of 20 paints).
 
 Start the build under test with its own settings:
 
