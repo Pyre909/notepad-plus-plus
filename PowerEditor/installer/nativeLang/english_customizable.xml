@@ -1949,7 +1949,7 @@ Click on this button to open website with User Manual."/>
 			<npcAbbreviation-tip value="Abbreviation : name
 NBSP : no-break space
 ZWSP : zero-width space
-ZWNBSP : zero-width no-break space
+BOM : byte order mark (zero-width no-break space)
 
 For the full list check User Manual.
 Click on &quot;?&quot; button on right to open website with User Manual."/>

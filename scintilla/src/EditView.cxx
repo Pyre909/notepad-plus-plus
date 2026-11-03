@@ -957,9 +957,16 @@ XYPOSITION LeftInCells(Surface *surface, const ViewStyle &vsDraw, const Font *fo
 	return rc.left + std::max(XYPOSITION{0}, std::floor((rc.Width() - textWidth) / 2));
 }
 
+// N++ (Pyre909 build): a label's text, black or white, whichever reads on its box
+ColourRGBA LabelText(ColourRGBA box) noexcept {
+	const unsigned int luminance = (box.GetRed() * 299 + box.GetGreen() * 587 + box.GetBlue() * 114) / 1000;
+	return (luminance >= 140) ? ColourRGBA(0x1E, 0x1E, 0x1E) : ColourRGBA(0xFF, 0xFF, 0xFF);
+}
+
 // Draw inverted text in a filled rectangle but omit the 4 corner pixels so appears rounded.
 // N++ (Pyre909 build): a label: a box with rounded corners, padded as much above the text's capitals as below its
-// baseline, a pixel's gap each side, the text centred in it (ViewStyle::Refresh sizes ctrlCharPadding for it)
+// baseline, a pixel's gap each side, the text centred in it (ViewStyle::Refresh sizes ctrlCharPadding for it). Drawn
+// opaque in rows where the surface can't blend (GDI, printing): an alpha blended box costs a bitmap each with GDI
 void DrawTextBlob(Surface *surface, const ViewStyle &vsDraw, PRectangle rcSegment,
 	std::string_view text, ColourRGBA textBack, ColourRGBA textFore, bool fillBackground) {
 	if (rcSegment.Empty())
@@ -974,14 +981,28 @@ void DrawTextBlob(Surface *surface, const ViewStyle &vsDraw, PRectangle rcSegmen
 	PRectangle rcBox = rcSegment.Inset(Point(1, 0));
 	rcBox.top = std::max(rcSegment.top + 1, baseline - capital - padding);
 	rcBox.bottom = std::min(rcSegment.bottom - 1, baseline + padding);
+	rcBox = PixelAlign(rcBox, surface->PixelDivisions());
+	if ((rcBox.Height() < 1) || (rcBox.Width() < 1))
+		return;
 	const XYPOSITION corner = std::round(std::min(capital * 0.4, rcBox.Height() / 2));
-	surface->AlphaRectangle(rcBox, corner, FillStroke(textFore));
+	if (surface->SupportsFeature(Supports::TranslucentStroke)) {
+		surface->AlphaRectangle(rcBox, corner, FillStroke(textFore));
+	} else {
+		// the corners' rows, each inset to the circle, then the rows between
+		for (int row = 0; row < corner; row++) {
+			const XYPOSITION dy = corner - row - 0.5;
+			const XYPOSITION inset = std::round(corner - std::sqrt(corner * corner - dy * dy));
+			surface->FillRectangleAligned(PRectangle(rcBox.left + inset, rcBox.top + row, rcBox.right - inset, rcBox.top + row + 1), Fill(textFore));
+			surface->FillRectangleAligned(PRectangle(rcBox.left + inset, rcBox.bottom - row - 1, rcBox.right - inset, rcBox.bottom - row), Fill(textFore));
+		}
+		surface->FillRectangleAligned(PRectangle(rcBox.left, rcBox.top + corner, rcBox.right, rcBox.bottom - corner), Fill(textFore));
+	}
 
+	// the text's width: the layout's (the segment less the padding), measured only where the grid rounded it to cells
+	const XYPOSITION textWidth = vsDraw.characterGrid ? surface->WidthTextUTF8(ctrlCharsFont, text) : rcSegment.Width() - vsDraw.ctrlCharPadding;
 	PRectangle rcText = rcBox;
-	const XYPOSITION textWidth = surface->WidthTextUTF8(ctrlCharsFont, text);
 	rcText.left += std::max(XYPOSITION{0}, std::floor((rcBox.Width() - textWidth) / 2));
-	// Inverted text: the background's colour on the label
-	surface->DrawTextTransparentUTF8(rcText, ctrlCharsFont, baseline, text, textBack);
+	surface->DrawTextTransparentUTF8(rcText, ctrlCharsFont, baseline, text, LabelText(textFore));
 }
 
 void FillLineRemainder(Surface *surface, const EditModel &model, const ViewStyle &vsDraw, const LineLayout *ll,

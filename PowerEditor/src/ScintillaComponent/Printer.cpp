@@ -332,6 +332,11 @@ size_t Printer::doPrint(bool justDoIt)
 	const int technology = static_cast<int>(_pSEView->execute(SCI_GETTECHNOLOGY));
 	_pSEView->refreshStyleFonts(SC_TECHNOLOGY_DEFAULT, technology);
 	_pSEView->applyCharacterGrid(false); // Pyre909 build: printed with the tab stops, the representations as they are
+	// Pyre909 build: the labels of special characters printed at their size without the view's zoom, and in the tones for
+	// white paper unless printed as shown
+	_pSEView->setSpecialCharLabelSize(true);
+	if (nppGUI._printSettings._printOption != SC_PRINT_NORMAL)
+		_pSEView->colourSpecialCharLabels(true);
 
 	int pageNum = 1;
 	const wchar_t pageVar[] = L"$(CURRENT_PRINTING_PAGE)";
@@ -512,6 +517,8 @@ size_t Printer::doPrint(bool justDoIt)
 
 	_pSEView->refreshStyleFonts(technology, SC_TECHNOLOGY_DEFAULT); // before the line numbers are measured again
 	_pSEView->applyCharacterGrid(); // Pyre909 build: the view's character grid again
+	_pSEView->setSpecialCharLabelSize(); // Pyre909 build: and the labels as shown
+	_pSEView->colourSpecialCharLabels();
 
 	if (!nppGUI._printSettings._printLineNumber)
 		_pSEView->showMargin(ScintillaEditView::_SC_MARGE_LINENUMBER, isShown);

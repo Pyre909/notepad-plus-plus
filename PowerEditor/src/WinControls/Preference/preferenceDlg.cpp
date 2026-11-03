@@ -2379,7 +2379,7 @@ intptr_t CALLBACK Editing2SubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARA
 				L"Abbreviation : name\n"\
 				L"NBSP : no-break space\n"\
 				L"ZWSP : zero-width space\n"\
-				L"ZWNBSP : zero-width no-break space\n\n"\
+				L"BOM : byte order mark (zero-width no-break space)\n\n"\
 				L"For the full list check User Manual.\n"\
 				L"Click on \"?\" button on right to open website with User Manual.");
 

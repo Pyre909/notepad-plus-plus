@@ -706,7 +706,9 @@ public:
 	void setWordChars() const;
 	void setCRLF(long color = -1) const;
 	void setNpcAndCcUniEOL(long color = -1) const;
-	void colourSpecialCharLabels() const; // Pyre909 build: by kind (control, line end, invisible, invalid byte)
+	void colourSpecialCharLabels(bool isForLightBack = false) const; // Pyre909 build: by kind (control, line end, invisible, invalid byte)
+	void setSpecialCharLabelFont() const; // Pyre909 build
+	void setSpecialCharLabelSize(bool forPrinting = false) const; // Pyre909 build
 
 	void setTabSettings(Lang* lang);
 	bool isWrapRestoreNeeded() const { return _wrapRestoreNeeded; }

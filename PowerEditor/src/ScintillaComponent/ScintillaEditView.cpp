@@ -283,6 +283,13 @@ static constexpr std::array<std::array<const char*, 3>, 64> g_ccUniEolChars{ {
 static constexpr size_t g_nbUniEolChars = 3;
 static_assert(std::string_view(g_ccUniEolChars[g_ccUniEolChars.size() - g_nbUniEolChars][1]) == "NEL");
 
+// Pyre909 build: whether a document of this code page can hold the character of a representation's key: a UTF-8 sequence
+// only a UTF-8 document; in a DBCS one (GBK, Shift-JIS, Big5) the same bytes are another character (GBK's C2 A0, CD 8F)
+static bool isReprKeyFor(const char* charBytes, bool isUtf8)
+{
+	return isUtf8 || (charBytes[0] == '\0') || (charBytes[1] == '\0');
+}
+
 static constexpr std::array<std::array<const char*, 3>, 73> g_nonPrintingChars{ {
 	{"\xC2\xA0", "NBSP", "U+00A0"},          // U+00A0 : no-break space
 	{"\xC2\xAD", "SHY", "U+00AD"},           // U+00AD : soft hyphen
@@ -334,7 +341,8 @@ static constexpr std::array<std::array<const char*, 3>, 73> g_nonPrintingChars{ 
 	{"\xEF\xBF\xBA", "IAS", "U+FFFA"},       // U+FFFA : interlinear annotation separator
 	{"\xEF\xBF\xBB", "IAT", "U+FFFB"},       // U+FFFB : interlinear annotation terminator
 	// Pyre909 build: the other invisible characters (default ignorable, fillers), by Unicode's abbreviation, else their code
-	// point; not the variation selectors and tags, which belong to the character before them (emoji, ideographs, flags)
+	// point; not the variation selectors of emoji and ideographs and the tags, parts of the sequences they're in (Mongolian's
+	// FVS1-4 shown, as MVS and ZWJ: shown, they break the shaping around them, which is what showing them means)
 	{"\xCD\x8F", "CGJ", "U+034F"},           // U+034F : combining grapheme joiner
 	{"\xE1\x85\x9F", "U+115F", "U+115F"},    // U+115F : hangul choseong filler
 	{"\xE1\x85\xA0", "U+1160", "U+1160"},    // U+1160 : hangul jungseong filler
@@ -1295,11 +1303,26 @@ void ScintillaEditView::clearAllStyles()
 	// every other style now has the font of STYLE_DEFAULT (see setSpecialStyle): filled from a copy of it
 	std::ranges::fill(_styleFonts, StyleFont{ _styleFonts[STYLE_DEFAULT] });
 
-	// Pyre909 build: the labels of special characters (control characters, line ends, invisible characters, invalid bytes)
-	// in a font of their own, the same whatever the text's font, at three quarters of its size
+	setSpecialCharLabelFont(); // Pyre909 build
+}
+
+// Pyre909 build: the labels of special characters (control characters, line ends, invisible characters, invalid bytes) in
+// a font of their own, the same whatever the text's font (STYLE_CONTROLCHAR, which Scintilla leaves out of the line's
+// height), at three quarters of the text's size
+void ScintillaEditView::setSpecialCharLabelFont() const
+{
 	_styleFonts[STYLE_CONTROLCHAR] = StyleFont{ L"Segoe UI Semibold" };
 	setStyleFont(STYLE_CONTROLCHAR, _styleFonts[STYLE_CONTROLCHAR]);
-	execute(SCI_STYLESETSIZEFRACTIONAL, STYLE_CONTROLCHAR, execute(SCI_STYLEGETSIZEFRACTIONAL, STYLE_DEFAULT) * 3 / 4);
+	setSpecialCharLabelSize();
+}
+
+// Pyre909 build: three quarters of the text's size zoomed too: Scintilla adds the zoom's points to every style, so the
+// labels' size is set against it (again at each SCN_ZOOM); printed without the view's zoom
+void ScintillaEditView::setSpecialCharLabelSize(bool forPrinting) const
+{
+	const intptr_t textSize = execute(SCI_STYLEGETSIZEFRACTIONAL, STYLE_DEFAULT);
+	const intptr_t zoom = forPrinting ? 0 : execute(SCI_GETZOOM) * SC_FONT_SIZE_MULTIPLIER;
+	execute(SCI_STYLESETSIZEFRACTIONAL, STYLE_CONTROLCHAR, std::max<intptr_t>(SC_FONT_SIZE_MULTIPLIER, (textSize + zoom) * 3 / 4 - zoom));
 }
 
 void ScintillaEditView::setStyleFont(int styleID, const StyleFont& styleFont) const
@@ -2131,14 +2154,15 @@ void ScintillaEditView::setNpcAndCcUniEOL(long color) const
 }
 
 // Pyre909 build: the labels of special characters coloured by their kind, in tones for the theme's background (dark on a
-// light one, light on a dark one: the label's text is the background's colour): control characters, line ends (also the
+// light one, light on a dark one; DrawTextBlob writes in black or white, whichever reads): control characters, line ends (also the
 // Unicode ones), invisible characters (the non-printing characters), invalid bytes; not those Preferences gives a custom
-// colour or shows as plain text, nor hidden control characters. Called wherever the representations are set again
-void ScintillaEditView::colourSpecialCharLabels() const
+// colour or shows as plain text, nor hidden control characters. Called wherever Notepad++ sets the representations again;
+// the tones for a light background also when printing on white (isForLightBack)
+void ScintillaEditView::colourSpecialCharLabels(bool isForLightBack) const
 {
 	const ScintillaViewParams& svp = NppParameters::getInstance().getSVP();
 	const auto back = static_cast<COLORREF>(execute(SCI_STYLEGETBACK, STYLE_DEFAULT));
-	const bool isDarkBack = (GetRValue(back) * 299 + GetGValue(back) * 587 + GetBValue(back) * 114) / 1000 < 128;
+	const bool isDarkBack = !isForLightBack && ((GetRValue(back) * 299 + GetGValue(back) * 587 + GetBValue(back) * 114) / 1000 < 128);
 	constexpr LPARAM opaque = 0xFF000000; // the alpha of the representation colours: drawn with DirectWrite too
 	const LPARAM controlColour = (isDarkBack ? RGB(0x9D, 0xB2, 0xD3) : RGB(0x3B, 0x4A, 0x63)) | opaque;
 	const LPARAM lineEndColour = (isDarkBack ? RGB(0x6C, 0xC3, 0xBA) : RGB(0x24, 0x6E, 0x68)) | opaque;
@@ -3923,9 +3947,11 @@ void ScintillaEditView::showNpc(bool willBeShown, bool isSearchResult)
 	if (willBeShown)
 	{
 		const auto& mode = static_cast<size_t>(svp._npcMode);
+		const bool isUtf8 = execute(SCI_GETCODEPAGE) == SC_CP_UTF8; // Pyre909 build
 		for (const auto& invChar : g_nonPrintingChars)
 		{
-			execute(SCI_SETREPRESENTATION, reinterpret_cast<WPARAM>(invChar.at(0)), reinterpret_cast<LPARAM>(invChar.at(mode)));
+			if (isReprKeyFor(invChar.at(0), isUtf8))
+				execute(SCI_SETREPRESENTATION, reinterpret_cast<WPARAM>(invChar.at(0)), reinterpret_cast<LPARAM>(invChar.at(mode)));
 		}
 
 		if (svp._npcCustomColor)
@@ -3956,12 +3982,14 @@ void ScintillaEditView::showCcUniEol(bool willBeShown, bool isSearchResult)
 {
 	const auto& svp = NppParameters::getInstance().getSVP();
 
+	const bool isUtf8 = execute(SCI_GETCODEPAGE) == SC_CP_UTF8; // Pyre909 build
 	if (willBeShown)
 	{
 		const auto& mode = static_cast<size_t>(svp._npcIncludeCcUniEol ? svp._npcMode : ScintillaViewParams::npcMode::abbreviation);
 		for (const auto& invChar : g_ccUniEolChars)
 		{
-			execute(SCI_SETREPRESENTATION, reinterpret_cast<WPARAM>(invChar.at(0)), reinterpret_cast<LPARAM>(invChar.at(mode)));
+			if (isReprKeyFor(invChar.at(0), isUtf8))
+				execute(SCI_SETREPRESENTATION, reinterpret_cast<WPARAM>(invChar.at(0)), reinterpret_cast<LPARAM>(invChar.at(mode)));
 		}
 
 		if (svp._npcIncludeCcUniEol && svp._npcCustomColor)
@@ -3975,6 +4003,8 @@ void ScintillaEditView::showCcUniEol(bool willBeShown, bool isSearchResult)
 
 		for (const auto& invChar : g_ccUniEolChars)
 		{
+			if (!isReprKeyFor(invChar.at(0), isUtf8)) // Pyre909 build: not to hide a DBCS document's characters
+				continue;
 			execute(SCI_SETREPRESENTATION, reinterpret_cast<WPARAM>(invChar.at(0)), reinterpret_cast<LPARAM>(g_ZWSP));
 			execute(SCI_SETREPRESENTATIONAPPEARANCE, reinterpret_cast<WPARAM>(invChar.at(0)), SC_REPRESENTATION_PLAIN);
 		}

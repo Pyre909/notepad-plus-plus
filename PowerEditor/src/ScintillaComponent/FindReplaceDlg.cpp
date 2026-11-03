@@ -6219,6 +6219,10 @@ void Finder::setFinderStyle()
 	// finder fold style follows user preference but use box when user selects none
 	const ScintillaViewParams& svp = NppParameters::getInstance().getSVP();
 	_scintView.setMakerStyle(svp._folderStyle == FOLDER_STYLE_NONE ? FOLDER_STYLE_BOX : svp._folderStyle);
+
+	// Pyre909 build: the special characters' labels in their font, coloured for the background set above (a theme change)
+	_scintView.setSpecialCharLabelFont();
+	_scintView.colourSpecialCharLabels();
 }
 
 void Finder::setFinderStyleForNpc(bool onlyColor)

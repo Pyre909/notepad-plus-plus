@@ -455,6 +455,8 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 		{
 			if (!notifyView) return FALSE;
 
+			notifyView->setSpecialCharLabelSize(); // Pyre909 build: three quarters of the zoomed text
+
 			ScintillaEditView* unfocusView = isFromPrimary ? &_subEditView : &_mainEditView;
 			_smartHighlighter.highlightView(notifyView, unfocusView);
 

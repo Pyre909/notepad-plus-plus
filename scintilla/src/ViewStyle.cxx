@@ -815,6 +815,8 @@ void ViewStyle::FindMaxAscentDescent() noexcept {
 		if (i == StyleCallTip ||
 		   (autocStyle != StyleDefault && i == static_cast<size_t>(autocStyle)))
 			continue;
+		if (i == StyleControlChar)	// N++ (Pyre909 build): a label's font, smaller than the text, never makes lines taller
+			continue;
 
 		const auto &style = styles[i];
 
