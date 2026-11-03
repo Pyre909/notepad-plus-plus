@@ -197,7 +197,8 @@ public:
 	void DrawTextNoClip(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) override;
 	void DrawTextClipped(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) override;
 	void DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore) override;
-	void DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, XYPOSITION scale) override;	// N++ (Pyre909 build)
+	void DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, XYPOSITION scaleX, XYPOSITION scaleY) override;	// N++ (Pyre909 build)
+	bool DrawTextTransparentAt(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, const XYPOSITION *xs) override;	// N++ (Pyre909 build)
 	void MeasureWidths(const Font *font_, std::string_view text, XYPOSITION *positions) override;
 	XYPOSITION WidthText(const Font *font_, std::string_view text) override;
 
@@ -695,17 +696,55 @@ void SurfaceGDI::DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITIO
 
 // N++ (Pyre909 build): a world transform scaling around the text's origin meanwhile (advanced graphics mode, back after)
 void SurfaceGDI::DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text,
-	ColourRGBA fore, XYPOSITION scale) {
+	ColourRGBA fore, XYPOSITION scaleX, XYPOSITION scaleY) {
 	const int previousMode = ::SetGraphicsMode(hdc, GM_ADVANCED);
 	XFORM previous {};
 	::GetWorldTransform(hdc, &previous);
-	const FLOAT scaleF = static_cast<FLOAT>(scale);
-	const XFORM scaling { scaleF, 0.0f, 0.0f, scaleF,
-		static_cast<FLOAT>(std::floor(rc.left) * (1.0 - scale)), static_cast<FLOAT>(std::floor(ybase) * (1.0 - scale)) };
+	const XFORM scaling { static_cast<FLOAT>(scaleX), 0.0f, 0.0f, static_cast<FLOAT>(scaleY),
+		static_cast<FLOAT>(std::floor(rc.left) * (1.0 - scaleX)), static_cast<FLOAT>(std::floor(ybase) * (1.0 - scaleY)) };
 	::ModifyWorldTransform(hdc, &scaling, MWT_LEFTMULTIPLY);
-	DrawTextTransparent(rc, font_, ybase, text, fore);
+	try {
+		DrawTextTransparent(rc, font_, ybase, text, fore);
+	} catch (...) {
+		::SetWorldTransform(hdc, &previous);
+		::SetGraphicsMode(hdc, previousMode);
+		throw;
+	}
 	::SetWorldTransform(hdc, &previous);
 	::SetGraphicsMode(hdc, previousMode);
+}
+
+// N++ (Pyre909 build): one ExtTextOutW, each character's advance the distance to the next one's x (a call a character
+// cost five times as much: a screen of CJK in a font that borrows it, each call finding the other font again)
+bool SurfaceGDI::DrawTextTransparentAt(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text,
+	ColourRGBA fore, const XYPOSITION *xs) {
+	if ((mode.codePage != CpUtf8) || text.empty())
+		return false;
+	const TextWide tbuf(text, CpUtf8);
+	VarBuffer<int, stackBufferLength> dx(tbuf.tlen);
+	const int x0 = static_cast<int>(rc.left + xs[0]);
+	int x = x0;
+	int unit = 0;
+	size_t i = 0;
+	while (i < text.length()) {
+		const int status = UTF8Classify(text.substr(i));
+		const size_t length = static_cast<size_t>(status & UTF8MaskWidth);
+		if ((status & UTF8MaskInvalid) || (length > 3) || (unit >= tbuf.tlen))
+			return false;	// one UTF-16 unit a character only
+		const int xNext = (i + length < text.length()) ? static_cast<int>(rc.left + xs[i + length]) : x;
+		dx.buffer[unit++] = xNext - x;
+		x = xNext;
+		i += length;
+	}
+	if (unit != tbuf.tlen)
+		return false;
+	SetFont(font_);
+	::SetTextColor(hdc, fore.OpaqueRGB());
+	::SetBkMode(hdc, TRANSPARENT);
+	const RECT rcw = RectFromPRectangle(rc);
+	::ExtTextOutW(hdc, x0, static_cast<int>(ybase), 0, &rcw, tbuf.buffer, tbuf.tlen, dx.buffer);
+	::SetBkMode(hdc, OPAQUE);
+	return true;
 }
 
 void SurfaceGDI::MeasureWidths(const Font *font_, std::string_view text, XYPOSITION *positions) {

@@ -135,6 +135,7 @@ void LineLayout::Resize(int maxLineLength_) {
 		SetSize(lineAllocation + 1);
 		lineStarts.reset();
 		bidiData.reset();
+		fontWidths.reset();	// N++ (Pyre909 build)
 		lenLineStarts = 0;
 		maxLineLength = maxLineLength_;
 	}
@@ -151,6 +152,15 @@ void LineLayout::EnsureBidiData() {
 	if (!bidiData) {
 		bidiData = std::make_unique<BidiData>();
 		bidiData->Resize(maxLineLength);
+	}
+}
+
+// N++ (Pyre909 build): allocated for the character grid, zeroed at each layout (labels and hidden text keep no width)
+void LineLayout::ClearFontWidths() {
+	if (!fontWidths) {
+		fontWidths = std::make_unique<XWidth[]>(maxLineLength + 1);
+	} else {
+		std::fill(fontWidths.get(), fontWidths.get() + maxLineLength + 1, 0.0f);
 	}
 }
 
@@ -439,7 +449,7 @@ void LineLayout::CalculatePositions(Sci::Line line, const TabStopProvider &tsp, 
 		vstyle.styles[styles[numCharsBeforeEOL - 1]].italic;
 
 	// Small hack to make lines that end with italics not cut off the edge of the last character
-	if (lastSegItalics) {
+	if (lastSegItalics && !vstyle.characterGrid) {	// N++ (Pyre909 build): the grid's line ends in whole cells
 		SetPosition(numCharsInLine, xPosition + vstyle.lastSegItalicsOffset);
 	}
 

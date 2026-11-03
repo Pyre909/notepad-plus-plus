@@ -238,8 +238,13 @@ public:
 	virtual void DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore) = 0;
 	// N++ (Pyre909 build): the text scaled around (rc.left, ybase), to fit a glyph in the character grid's cells; without a
 	// transform, drawn as it is
-	virtual void DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, [[maybe_unused]] XYPOSITION scale) {
+	virtual void DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, [[maybe_unused]] XYPOSITION scaleX, [[maybe_unused]] XYPOSITION scaleY) {
 		DrawTextTransparent(rc, font_, ybase, text, fore);
+	}
+	// N++ (Pyre909 build): UTF-8 characters of the Basic Multilingual Plane, each at its own x from rc.left (xs[i] for the
+	// one starting at byte i), in one call, for the character grid; false where a surface can't (drawn one by one then)
+	virtual bool DrawTextTransparentAt([[maybe_unused]] PRectangle rc, [[maybe_unused]] const Font *font_, [[maybe_unused]] XYPOSITION ybase, [[maybe_unused]] std::string_view text, [[maybe_unused]] ColourRGBA fore, [[maybe_unused]] const XYPOSITION *xs) {
+		return false;
 	}
 	virtual void MeasureWidths(const Font *font_, std::string_view text, XYPOSITION *positions) = 0;
 	virtual XYPOSITION WidthText(const Font *font_, std::string_view text) = 0;

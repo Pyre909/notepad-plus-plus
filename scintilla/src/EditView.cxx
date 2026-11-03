@@ -374,8 +374,9 @@ inline char CaseForce(Style::CaseForce caseForce, char chDoc, char chPrevious) n
 }
 
 // N++ (Pyre909 build): the character grid's cells of a character: two for East Asian Wide and Fullwidth (Unicode 17.0,
-// generated from its data), none for the combining and format characters (drawn with the one before them, or invisible),
-// one for the others; an emoji sequence shows as its parts, each in its cells
+// generated from its data), none for the combining and format characters (drawn with the one before them, or invisible)
+// and the Hangul vowels and final consonants (a syllable with the consonant before them), one for the others (the soft
+// hyphen U+00AD too, as terminals give it); an emoji sequence shows as its parts, each in its cells
 constexpr std::pair<int, int> wideCharacters[] = {
 	{0x1100, 0x115F}, {0x231A, 0x231B}, {0x2329, 0x232A}, {0x23E9, 0x23EC}, {0x23F0, 0x23F0}, {0x23F3, 0x23F3},
 	{0x25FD, 0x25FE}, {0x2614, 0x2615}, {0x2630, 0x2637}, {0x2648, 0x2653}, {0x267F, 0x267F}, {0x268A, 0x268F},
@@ -400,11 +401,17 @@ constexpr std::pair<int, int> wideCharacters[] = {
 	{0x1FAEF, 0x1FAF8}, {0x20000, 0x2FFFD}, {0x30000, 0x3FFFD},
 };
 
+bool IsCombiningMark(int character) noexcept {
+	const CharacterCategory category = CategoriseCharacter(character);
+	return (category == ccMn) || (category == ccMe);
+}
+
 int CellsOfCharacter(int character) noexcept {
 	if (character < 0x300)
 		return 1;
-	const CharacterCategory category = CategoriseCharacter(character);
-	if ((category == ccMn) || (category == ccMe) || (category == ccCf))
+	if (((character >= 0x1160) && (character <= 0x11FF)) || ((character >= 0xD7B0) && (character <= 0xD7FF)))
+		return 0;
+	if (IsCombiningMark(character) || (CategoriseCharacter(character) == ccCf))
 		return 0;
 	const auto *after = std::upper_bound(std::begin(wideCharacters), std::end(wideCharacters), character,
 		[](int ch, const std::pair<int, int> &range) noexcept { return ch < range.first; });
@@ -412,27 +419,36 @@ int CellsOfCharacter(int character) noexcept {
 }
 
 // N++ (Pyre909 build): a text segment's widths on the character grid: each character's cells on its first byte, none on
-// its others: in UTF-8 by CellsOfCharacter, else by its bytes (a DBCS character two, its trail measured with no width)
-void SetCellWidths(std::string_view text, XWidth *widths, bool unicode, XYPOSITION cell) noexcept {
+// its others: in UTF-8 by CellsOfCharacter, in a DBCS code page by its bytes (a double-byte character two), else one a
+// byte. A character followed by VS16 (U+FE0F, an emoji's presentation) takes two, as terminals give it (U+2764 U+FE0F, a
+// keycap); a combining mark with no character before it in the segment (after a tab, a label) one, to be seen
+void SetCellWidths(std::string_view text, XWidth *widths, const Document *pdoc, XYPOSITION cell) noexcept {
 	size_t i = 0;
 	while (i < text.length()) {
 		size_t length = 1;
 		int cells = 1;
-		if (unicode) {
+		if (pdoc->dbcsCodePage == CpUtf8) {
+			int character = static_cast<unsigned char>(text[i]);
+			bool valid = true;
 			if (!UTF8IsAscii(text[i])) {
 				const int status = UTF8Classify(text.substr(i));
-				if (!(status & UTF8MaskInvalid)) {
+				valid = !(status & UTF8MaskInvalid);
+				if (valid) {
 					length = status & UTF8MaskWidth;
-					cells = CellsOfCharacter(UnicodeFromUTF8(text.substr(i, length)));
-					// followed by VS16 (U+FE0F), an emoji's presentation: two cells, as terminals give it (U+2764 U+FE0F)
-					if ((cells == 1) && (text.substr(i + length, 3) == "\xEF\xB8\x8F"))
-						cells = 2;
+					character = UnicodeFromUTF8(text.substr(i, length));
 				}
 			}
-		} else {
-			while ((i + length < text.length()) && (widths[i + length] == 0))
-				length++;
-			cells = static_cast<int>(length);
+			if (valid) {
+				cells = CellsOfCharacter(character);
+				if ((cells == 1) && (i + length < text.length()) && (text[i + length] == '\xEF') &&
+					(text.substr(i + length, 3) == "\xEF\xB8\x8F"))
+					cells = 2;
+				else if ((cells == 0) && (i == 0) && IsCombiningMark(character))
+					cells = 1;
+			}
+		} else if (pdoc->dbcsCodePage && pdoc->IsDBCSLeadByteNoExcept(text[i]) && (i + 1 < text.length())) {
+			length = 2;
+			cells = 2;
 		}
 		widths[i] = static_cast<XWidth>(cells * cell);
 		std::fill(widths + i + 1, widths + i + length, 0.0f);
@@ -447,6 +463,7 @@ void LayoutSegments(IPositionCache *pCache,
 	const std::vector<TextSegment> &segments,
 	std::atomic<uint32_t> &nextIndex,
 	const bool textUnicode,
+	const Document *pdoc,	// N++ (Pyre909 build): its code page, for the character grid
 	const bool multiThreaded,
 	const uint32_t segmentsPerBlock) {
 	// N++: the segments are taken in blocks (see LayoutLine). Taken one by one, the threads contended for nextIndex and
@@ -503,8 +520,10 @@ void LayoutSegments(IPositionCache *pCache,
 						positions[ib] = static_cast<XWidth>(positionsMeasured[ib] - positionsMeasured[ib-1]);
 					}
 				}
-				if (vstyle.characterGrid) {	// N++ (Pyre909 build): each character in its cells, whatever the font's width
-					SetCellWidths(std::string_view(&ll->chars[ts.start], ts.length), positions, textUnicode, vstyle.spaceWidth);
+				if (vstyle.characterGrid && ll->fontWidths && (vstyle.spaceWidth > 0)) {
+					// N++ (Pyre909 build): each character in its cells, whatever the font's width, kept for drawing
+					std::copy(positions, positions + ts.length, &ll->fontWidths[ts.start]);
+					SetCellWidths(std::string_view(&ll->chars[ts.start], ts.length), positions, pdoc, vstyle.spaceWidth);
 				}
 			}
 		} else if (vstyle.styles[styleSegment].invisibleRepresentation[0]) {
@@ -635,16 +654,20 @@ void EditView::LayoutLine(const EditModel &model, Surface *surface, const ViewSt
 			std::atomic<uint32_t> nextIndex = 0;
 
 			const bool textUnicode = CpUtf8 == model.pdoc->dbcsCodePage;
+			const Document *pdoc = model.pdoc;
 			const bool multiThreadedContext = (threads > 1) || callerMultiThreaded;
 			IPositionCache *pCache = posCache.get();
+			if (vstyle.characterGrid) {
+				ll->ClearFontWidths();	// N++ (Pyre909 build)
+			}
 
 			// N++: blocks of up to 64 segments, about 4 blocks or more per thread: a line of a few long segments (prose,
 			// a comment) still keeps every thread busy
 			const uint32_t segmentsPerBlock = static_cast<uint32_t>(std::clamp<size_t>(segments.size() / (threads * 4), 1, 64));
 
 			// If only 1 thread needed then use the main thread, else spin up multiple
-			RunThreads(threads, [pCache, surface, &vstyle, ll, &segments, &nextIndex, textUnicode, multiThreadedContext, segmentsPerBlock]() {
-				LayoutSegments(pCache, surface, vstyle, ll, segments, nextIndex, textUnicode, multiThreadedContext, segmentsPerBlock);
+			RunThreads(threads, [pCache, surface, &vstyle, ll, &segments, &nextIndex, textUnicode, pdoc, multiThreadedContext, segmentsPerBlock]() {
+				LayoutSegments(pCache, surface, vstyle, ll, segments, nextIndex, textUnicode, pdoc, multiThreadedContext, segmentsPerBlock);
 				});
 		}
 
@@ -1075,21 +1098,47 @@ void DrawTextBlob(Surface *surface, const ViewStyle &vsDraw, PRectangle rcSegmen
 	surface->DrawTextTransparentUTF8(rcText, ctrlCharsFont, baseline, text, LabelText(textFore));
 }
 
-// N++ (Pyre909 build): a segment of text on the character grid (SetCellWidths laid it out): as a run where the font's
-// widths are its cells already (ASCII in a monospaced font), else each character, with the ones of no width after it
-// (combining marks), centred in its cells, scaled down where the font draws it wider
-void DrawTextInCells(Surface *surface, const ViewStyle &vsDraw, IPositionCache *pCache, const LineLayout *ll, int start,
-	int length, unsigned int style, bool unicode, PRectangle rcSegment, XYPOSITION ybase, const Font *font,
-	ColourRGBA textFore, ColourRGBA textBack, bool fillBackground) {
+// N++ (Pyre909 build): the first character of UTF-8 text, or -1
+int FirstCharacter(std::string_view text) noexcept {
+	const int status = UTF8Classify(text);
+	return (status & UTF8MaskInvalid) ? -1 : UnicodeFromUTF8(text.substr(0, status & UTF8MaskWidth));
+}
+
+// N++ (Pyre909 build): UTF-8 text with a character a run would draw out of the characters' order (a right-to-left letter,
+// a bidirectional control): drawn a character at a time, so that the grid shows them in their order
+bool ReordersInRun(std::string_view text) noexcept {
+	size_t i = 0;
+	while (i < text.length()) {
+		if (UTF8IsAscii(text[i])) {
+			i++;
+			continue;
+		}
+		const int ch = FirstCharacter(text.substr(i));
+		if (((ch >= 0x590) && (ch <= 0x8FF)) || ((ch >= 0xFB1D) && (ch <= 0xFDFF)) || ((ch >= 0xFE70) && (ch <= 0xFEFE)) ||
+			((ch >= 0x10800) && (ch <= 0x10FFF)) || ((ch >= 0x1E800) && (ch <= 0x1EFFF)) || (ch == 0x200F) ||
+			((ch >= 0x202A) && (ch <= 0x202E)) || ((ch >= 0x2066) && (ch <= 0x2069)))
+			return true;
+		i += std::max(1, UTF8Classify(text.substr(i)) & UTF8MaskWidth);
+	}
+	return false;
+}
+
+// N++ (Pyre909 build): a segment of text on the character grid (SetCellWidths laid it out, LayoutSegments kept the font's
+// widths): as a run where the font's widths are its cells already (ASCII in a monospaced font), else each character, with
+// the ones of no width after it (combining marks), centred in its cells, narrowed where the font draws it wider (scaled
+// down if two cells or more: emoji); a combining mark with no character before it on a dotted circle
+void DrawTextInCells(Surface *surface, const ViewStyle &vsDraw, const LineLayout *ll, int start, int length, bool unicode,
+	PRectangle rcSegment, XYPOSITION ybase, const Font *font, ColourRGBA textFore, ColourRGBA textBack, bool fillBackground) {
 	const std::string_view text(&ll->chars[start], length);
-	std::array<XYPOSITION, lengthStartSubdivision> drawn {};	// the font's positions, cached by the layout's measuring
-	bool fits = static_cast<size_t>(length) > drawn.size();	// a longer segment can't be measured here: drawn as a run
-	if (!fits) {
-		pCache->MeasureWidths(surface, vsDraw, style, unicode, text, drawn.data(), false);
-		const XYPOSITION x0 = ll->XInLine(start);
-		fits = true;
-		for (int b = 0; fits && (b < length); b++)
-			fits = std::abs((ll->XInLine(start + b + 1) - x0) - drawn[b]) < 0.5;
+	const XYPOSITION x0 = ll->XInLine(start);
+	bool fits = true;
+	if (ll->fontWidths) {
+		fits = !(unicode && ReordersInRun(text));
+		XYPOSITION fontX = 0;
+		for (int b = 0; fits && (b < length); b++) {
+			fontX += ll->fontWidths[start + b];
+			fits = std::abs((ll->XInLine(start + b + 1) - x0) - fontX) < 0.5;
+		}
 	}
 	if (fits) {
 		if (fillBackground)
@@ -1100,7 +1149,25 @@ void DrawTextInCells(Surface *surface, const ViewStyle &vsDraw, IPositionCache *
 	}
 	if (fillBackground)
 		surface->FillRectangleAligned(rcSegment, Fill(textBack));
-	const XYPOSITION x0 = ll->XInLine(start);
+	// the centred characters that a run neither shapes nor reorders (one UTF-16 unit, below U+0590 or two cells wide: CJK)
+	// drawn together where the surface can, as they come
+	std::string batch;
+	std::vector<XYPOSITION> batchXs;
+	auto drawBatch = [&]() {
+		if (!batch.empty() && !surface->DrawTextTransparentAt(rcSegment, font, ybase, batch, textFore, batchXs.data())) {
+			const std::string_view batched(batch);
+			size_t i = 0;
+			while (i < batched.length()) {
+				const size_t lengthCharacter = static_cast<size_t>(std::max(1, UTF8Classify(batched.substr(i)) & UTF8MaskWidth));
+				PRectangle rcCharacter = rcSegment;
+				rcCharacter.left += batchXs[i];
+				surface->DrawTextTransparent(rcCharacter, font, ybase, batched.substr(i, lengthCharacter), textFore);
+				i += lengthCharacter;
+			}
+		}
+		batch.clear();
+		batchXs.clear();
+	};
 	int b = 0;
 	while (b < length) {
 		// the character's bytes and the characters of no width after it (the layout's positions are rounded: not exact)
@@ -1109,19 +1176,41 @@ void DrawTextInCells(Surface *surface, const ViewStyle &vsDraw, IPositionCache *
 			(unicode && UTF8IsTrailByte(static_cast<unsigned char>(text[e])))))
 			e++;
 		const XYPOSITION cells = ll->XInLine(start + e) - ll->XInLine(start + b);
-		const XYPOSITION width = drawn[e - 1] - ((b > 0) ? drawn[b - 1] : 0);
+		XYPOSITION width = 0;
+		for (int f = b; f < e; f++)
+			width += ll->fontWidths[start + f];
+		std::string_view character = text.substr(b, e - b);
+		std::string onCircle;
+		if (unicode && (cells > 0.5) && !UTF8IsAscii(character[0]) && IsCombiningMark(FirstCharacter(character))) {
+			onCircle = "\xE2\x97\x8C";	// U+25CC
+			onCircle += character;
+			character = onCircle;
+			width = surface->WidthText(font, character);
+		}
 		PRectangle rcCharacter = rcSegment;
 		rcCharacter.left = rcSegment.left + (ll->XInLine(start + b) - x0);
 		rcCharacter.right = rcCharacter.left + std::max(cells, width);
-		const std::string_view character = text.substr(b, e - b);
 		if ((width <= cells + 0.5) || (cells <= 0) || (width <= 0)) {
 			rcCharacter.left += std::max(XYPOSITION{0}, std::round((cells - width) / 2));
-			surface->DrawTextTransparent(rcCharacter, font, ybase, character, textFore);
+			const int status = UTF8Classify(character);
+			const int ch = (unicode && onCircle.empty() && !(status & UTF8MaskInvalid) &&
+				(static_cast<size_t>(status & UTF8MaskWidth) == character.length())) ? FirstCharacter(character) : -1;
+			if ((ch >= 0) && (ch < 0x10000) && ((ch < 0x590) || (CellsOfCharacter(ch) == 2))) {
+				batchXs.resize(batch.length() + character.length(), rcCharacter.left - rcSegment.left);
+				batch += character;
+			} else {
+				drawBatch();
+				surface->DrawTextTransparent(rcCharacter, font, ybase, character, textFore);
+			}
 		} else {
-			surface->DrawTextTransparentScaled(rcCharacter, font, ybase, character, textFore, cells / width);
+			drawBatch();
+			const XYPOSITION scale = cells / width;
+			surface->DrawTextTransparentScaled(rcCharacter, font, ybase, character, textFore, scale,
+				(cells > vsDraw.spaceWidth * 1.5) ? scale : 1.0);
 		}
 		b = e;
 	}
+	drawBatch();
 }
 
 void FillLineRemainder(Surface *surface, const EditModel &model, const ViewStyle &vsDraw, const LineLayout *ll,
@@ -1680,6 +1769,15 @@ void DrawBlockCaret(Surface *surface, const EditModel &model, const ViewStyle &v
 	const int styleMain = ll->styles[offsetFirstChar];
 	const Font *fontText = vsDraw.styles[styleMain].font.get();
 	const std::string_view text(&ll->chars[offsetFirstChar], numCharsToDraw);
+	if (vsDraw.characterGrid) {	// N++ (Pyre909 build): the character as the grid draws it
+		surface->FillRectangleAligned(rcCaret, Fill(caretColour));
+		surface->SetClip(rcCaret);
+		DrawTextInCells(surface, vsDraw, ll, static_cast<int>(offsetFirstChar), static_cast<int>(numCharsToDraw),
+			CpUtf8 == model.pdoc->dbcsCodePage, rcCaret, rcCaret.top + vsDraw.maxAscent, fontText,
+			vsDraw.styles[styleMain].back, caretColour, false);
+		surface->PopClip();
+		return;
+	}
 	surface->DrawTextClipped(rcCaret, fontText,
 		rcCaret.top + vsDraw.maxAscent, text, vsDraw.styles[styleMain].back,
 		caretColour);
@@ -2455,8 +2553,8 @@ void EditView::DrawForeground(Surface *surface, const EditModel &model, const Vi
 				if (vsDraw.styles[styleMain].visible) {
 					const std::string_view text(&ll->chars[ts.start], i - ts.start + 1);
 					if (vsDraw.characterGrid) {	// N++ (Pyre909 build): each character in its cells
-						DrawTextInCells(surface, vsDraw, posCache.get(), ll, ts.start, static_cast<int>(i - ts.start + 1),
-							static_cast<unsigned int>(styleMain), CpUtf8 == model.pdoc->dbcsCodePage, rcSegment, ybase, textFont, textFore, textBack,
+						DrawTextInCells(surface, vsDraw, ll, ts.start, static_cast<int>(i - ts.start + 1),
+							CpUtf8 == model.pdoc->dbcsCodePage, rcSegment, ybase, textFont, textFore, textBack,
 							phasesDraw == PhasesDraw::One);
 					} else if (phasesDraw != PhasesDraw::One) {
 						surface->DrawTextTransparent(rcSegment, textFont,

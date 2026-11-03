@@ -62,14 +62,15 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   same, for comparing lines and finding hidden characters. Every tab is one tab size wide wherever it is, instead of
   reaching the next tab stop, and the labels of control characters, line ends, non-printing characters and invalid bytes
   take whole cells, their text centred. Every character takes the cells Unicode gives it, in any font: Chinese, Japanese,
-  Korean and emoji two (also a character followed by the emoji selector U+FE0F), combining accents none, the others one;
-  a glyph narrower than its cells is centred in them (CJK borrowed from another font), a wider one scaled down (emoji).
-  An emoji made of several characters shows as its parts (👍🏽 as 👍 and the skin tone), right-to-left and complex scripts
-  in the order of their characters; in a proportional font the cell is as wide as its "0". Columns made with tabs don't
-  line up while it's on, and what counts
-  columns still counts them with the tab stops: the status bar's Col, the Column Editor, Go to column (`-c`), Tab and
-  Shift+Tab with spaces. A plugin's own tab stops (Elastic Tabstops) don't apply while it's on; printing keeps the tab
-  stops. Hidden control characters stay hidden (no width).
+  Korean and emoji two (also a character followed by the emoji selector U+FE0F, such as a keycap), combining accents
+  none (one, on a dotted circle, with no letter before them), the others one; a glyph narrower than its cells is centred
+  in them (CJK borrowed from another font), a wider one narrowed (scaled down for emoji). An emoji made of several
+  characters shows as its parts (👍🏽 as 👍 and the skin tone); right-to-left and complex scripts show their characters
+  one by one, in the order they're stored, and a hidden bidirectional control (RLO) reorders nothing. In a proportional
+  font the cell is as wide as its "0"; in an ANSI document every byte is a cell. Columns made with tabs don't line up
+  while it's on, and what counts columns other than the status bar still counts them with the tab stops: the Column
+  Editor, Go to column (`-c`), Tab and Shift+Tab with spaces. A plugin's own tab stops (Elastic Tabstops) don't apply
+  while it's on; printing keeps the tab stops. Hidden control characters stay hidden (no width).
 - **Special characters labelled alike**: control characters, line ends, invisible characters (View > Show Symbol > Show
   Non-Printing Characters) and invalid bytes all show as the same kind of label, a box with rounded corners in a font of
   its own (Segoe UI Semibold, three quarters of the text's size), coloured by kind: slate for control characters, teal

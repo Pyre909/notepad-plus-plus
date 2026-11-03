@@ -103,6 +103,9 @@ public:
 
 	std::unique_ptr<BidiData> bidiData;
 
+	// N++ (Pyre909 build): with the character grid, each byte's width in its font, before its cells replaced it
+	std::unique_ptr<XWidth[]> fontWidths;
+
 	// Wrapped line support
 	int widthLine = wrapWidthInfinite;
 	int lines = 1;
@@ -112,6 +115,7 @@ public:
 	void Resize(int maxLineLength_);
 	void ReSet(Sci::Line lineNumber_, Sci::Position maxLineLength_);
 	void EnsureBidiData();
+	void ClearFontWidths();	// N++ (Pyre909 build)
 	void ClearPositions();
 	void Invalidate(ValidLevel validity_) noexcept;
 	Sci::Line LineNumber() const noexcept;

@@ -431,7 +431,8 @@ public:
 	void DrawTextNoClip(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) override;
 	void DrawTextClipped(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) override;
 	void DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore) override;
-	void DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, XYPOSITION scale) override;	// N++ (Pyre909 build)
+	void DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, XYPOSITION scaleX, XYPOSITION scaleY) override;	// N++ (Pyre909 build)
+	bool DrawTextTransparentAt(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, const XYPOSITION *xs) override;	// N++ (Pyre909 build)
 	void MeasureWidths(const Font *font_, std::string_view text, XYPOSITION *positions) override;
 	XYPOSITION WidthText(const Font *font_, std::string_view text) override;
 
@@ -1434,16 +1435,67 @@ void SurfaceD2D::DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITIO
 
 // N++ (Pyre909 build): the render target's transform scaled around the text's origin meanwhile
 void SurfaceD2D::DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text,
-	ColourRGBA fore, XYPOSITION scale) {
+	ColourRGBA fore, XYPOSITION scaleX, XYPOSITION scaleY) {
 	if (!pRenderTarget)
 		return;
 	D2D1_MATRIX_3X2_F transform {};
 	pRenderTarget->GetTransform(&transform);
-	const FLOAT scaleF = static_cast<FLOAT>(scale);
-	pRenderTarget->SetTransform(D2D1::Matrix3x2F::Scale(scaleF, scaleF, DPointFromPoint(Point(rc.left, ybase))) *
-		*D2D1::Matrix3x2F::ReinterpretBaseType(&transform));
-	DrawTextTransparent(rc, font_, ybase, text, fore);
+	pRenderTarget->SetTransform(D2D1::Matrix3x2F::Scale(static_cast<FLOAT>(scaleX), static_cast<FLOAT>(scaleY),
+		DPointFromPoint(Point(rc.left, ybase))) * *D2D1::Matrix3x2F::ReinterpretBaseType(&transform));
+	try {
+		DrawTextTransparent(rc, font_, ybase, text, fore);
+	} catch (...) {
+		pRenderTarget->SetTransform(transform);
+		throw;
+	}
 	pRenderTarget->SetTransform(transform);
+}
+
+// N++ (Pyre909 build): one text layout, each character's advance made the distance to the next one's x by spacing after
+// it (from its own advance, a cluster each: the caller's characters are neither combined nor shaped)
+bool SurfaceD2D::DrawTextTransparentAt(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text,
+	ColourRGBA fore, const XYPOSITION *xs) {
+	const FontDirectWrite *pfm = FontDirectWrite::Cast(font_);
+	if ((mode.codePage != CpUtf8) || text.empty() || !pfm->pTextFormat || !pRenderTarget || !pBrush)
+		return false;
+	const TextWide tbuf(text, CpUtf8);
+	TextLayout pTextLayout = LayoutCreateMeasured(tbuf.AsView(), pfm->pTextFormat.Get(), pfm->measuringMode,
+		pfm->pTypography.Get(), 100000.0f, static_cast<FLOAT>(rc.Height()));
+	ComPtr<IDWriteTextLayout1> pTextLayout1;
+	if (!pTextLayout || FAILED(pTextLayout.As(&pTextLayout1)))
+		return false;
+	std::vector<DWRITE_CLUSTER_METRICS> clusters(tbuf.tlen);
+	UINT32 count = 0;
+	if (FAILED(pTextLayout->GetClusterMetrics(clusters.data(), static_cast<UINT32>(clusters.size()), &count)) ||
+		(count != clusters.size()))
+		return false;
+	// the spacing after each character, set once for each run of characters that take the same
+	UINT32 unit = 0;
+	UINT32 runStart = 0;
+	FLOAT runSpacing = 0.0f;
+	size_t i = 0;
+	while (i < text.length()) {
+		const int status = UTF8Classify(text.substr(i));
+		const size_t length = static_cast<size_t>(status & UTF8MaskWidth);
+		if ((status & UTF8MaskInvalid) || (length > 3) || (unit >= count) || (clusters[unit].length != 1))
+			return false;	// one UTF-16 unit and cluster a character only
+		const FLOAT spacing = (i + length < text.length()) ?
+			static_cast<FLOAT>(xs[i + length] - xs[i]) - clusters[unit].width : 0.0f;
+		if ((unit > runStart) && (std::abs(spacing - runSpacing) > 0.001f)) {
+			pTextLayout1->SetCharacterSpacing(0.0f, runSpacing, 0.0f, DWRITE_TEXT_RANGE{ runStart, unit - runStart });
+			runStart = unit;
+		}
+		runSpacing = spacing;
+		unit++;
+		i += length;
+	}
+	pTextLayout1->SetCharacterSpacing(0.0f, runSpacing, 0.0f, DWRITE_TEXT_RANGE{ runStart, unit - runStart });
+	D2DPenColourAlpha(fore);
+	const FLOAT intensity = 0.25f * penColour.r + 0.5f * penColour.g + 0.25f * penColour.b;
+	SetFontQuality(pfm->extraFontFlag, (intensity >= lightTextMinIntensity) ? renderingVariantLight : 0);
+	const D2D1_POINT_2F origin = DPointFromPoint(Point(rc.left + xs[0], ybase - pfm->yAscent));
+	pRenderTarget->DrawTextLayout(origin, pTextLayout.Get(), pBrush.Get(), d2dDrawTextOptions);
+	return true;
 }
 
 HRESULT MeasurePositions(TextPositions &poses, const TextWide &tbuf, IDWriteTextFormat *pTextFormat, DWRITE_MEASURING_MODE measuringMode,
