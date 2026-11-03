@@ -61,9 +61,12 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   default): the text on a grid of cells, a cell being the width of a space, so that the same character always looks the
   same, for comparing lines and finding hidden characters. Every tab is one tab size wide wherever it is, instead of
   reaching the next tab stop, and the labels of control characters, line ends, non-printing characters and invalid bytes
-  take whole cells, their text centred. Letters keep their font's widths: in a monospaced font, one cell each. For
-  Chinese, Japanese and Korean in exactly two cells, use a font made 2:1, such as BIZ UDGothic, MS Gothic, NSimSun or the
-  Korean ...Che fonts, which come with Windows. Columns made with tabs don't line up while it's on, and what counts
+  take whole cells, their text centred. Every character takes the cells Unicode gives it, in any font: Chinese, Japanese,
+  Korean and emoji two (also a character followed by the emoji selector U+FE0F), combining accents none, the others one;
+  a glyph narrower than its cells is centred in them (CJK borrowed from another font), a wider one scaled down (emoji).
+  An emoji made of several characters shows as its parts (👍🏽 as 👍 and the skin tone), right-to-left and complex scripts
+  in the order of their characters; in a proportional font the cell is as wide as its "0". Columns made with tabs don't
+  line up while it's on, and what counts
   columns still counts them with the tab stops: the status bar's Col, the Column Editor, Go to column (`-c`), Tab and
   Shift+Tab with spaces. A plugin's own tab stops (Elastic Tabstops) don't apply while it's on; printing keeps the tab
   stops. Hidden control characters stay hidden (no width).

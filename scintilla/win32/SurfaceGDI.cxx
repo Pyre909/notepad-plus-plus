@@ -197,6 +197,7 @@ public:
 	void DrawTextNoClip(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) override;
 	void DrawTextClipped(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) override;
 	void DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore) override;
+	void DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, XYPOSITION scale) override;	// N++ (Pyre909 build)
 	void MeasureWidths(const Font *font_, std::string_view text, XYPOSITION *positions) override;
 	XYPOSITION WidthText(const Font *font_, std::string_view text) override;
 
@@ -690,6 +691,21 @@ void SurfaceGDI::DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITIO
 			return;
 		}
 	}
+}
+
+// N++ (Pyre909 build): a world transform scaling around the text's origin meanwhile (advanced graphics mode, back after)
+void SurfaceGDI::DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text,
+	ColourRGBA fore, XYPOSITION scale) {
+	const int previousMode = ::SetGraphicsMode(hdc, GM_ADVANCED);
+	XFORM previous {};
+	::GetWorldTransform(hdc, &previous);
+	const FLOAT scaleF = static_cast<FLOAT>(scale);
+	const XFORM scaling { scaleF, 0.0f, 0.0f, scaleF,
+		static_cast<FLOAT>(std::floor(rc.left) * (1.0 - scale)), static_cast<FLOAT>(std::floor(ybase) * (1.0 - scale)) };
+	::ModifyWorldTransform(hdc, &scaling, MWT_LEFTMULTIPLY);
+	DrawTextTransparent(rc, font_, ybase, text, fore);
+	::SetWorldTransform(hdc, &previous);
+	::SetGraphicsMode(hdc, previousMode);
 }
 
 void SurfaceGDI::MeasureWidths(const Font *font_, std::string_view text, XYPOSITION *positions) {

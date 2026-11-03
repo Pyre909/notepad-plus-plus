@@ -433,6 +433,9 @@ void ViewStyle::Refresh(Surface &surface, int tabInChars) {
 
 	aveCharWidth = styles[StyleDefault].aveCharWidth;
 	spaceWidth = styles[StyleDefault].spaceWidth;
+	if (characterGrid) {	// N++ (Pyre909 build): the grid's cell, a space, or a digit where it's wider (a proportional font)
+		spaceWidth = std::max(spaceWidth, surface.WidthText(styles[StyleDefault].font.get(), "0"));
+	}
 	tabWidth = spaceWidth * tabInChars;
 
 	controlCharWidth = 0.0;

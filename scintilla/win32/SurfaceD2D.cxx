@@ -431,6 +431,7 @@ public:
 	void DrawTextNoClip(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) override;
 	void DrawTextClipped(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) override;
 	void DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore) override;
+	void DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, XYPOSITION scale) override;	// N++ (Pyre909 build)
 	void MeasureWidths(const Font *font_, std::string_view text, XYPOSITION *positions) override;
 	XYPOSITION WidthText(const Font *font_, std::string_view text) override;
 
@@ -1429,6 +1430,20 @@ void SurfaceD2D::DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITIO
 			return;
 		}
 	}
+}
+
+// N++ (Pyre909 build): the render target's transform scaled around the text's origin meanwhile
+void SurfaceD2D::DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text,
+	ColourRGBA fore, XYPOSITION scale) {
+	if (!pRenderTarget)
+		return;
+	D2D1_MATRIX_3X2_F transform {};
+	pRenderTarget->GetTransform(&transform);
+	const FLOAT scaleF = static_cast<FLOAT>(scale);
+	pRenderTarget->SetTransform(D2D1::Matrix3x2F::Scale(scaleF, scaleF, DPointFromPoint(Point(rc.left, ybase))) *
+		*D2D1::Matrix3x2F::ReinterpretBaseType(&transform));
+	DrawTextTransparent(rc, font_, ybase, text, fore);
+	pRenderTarget->SetTransform(transform);
 }
 
 HRESULT MeasurePositions(TextPositions &poses, const TextWide &tbuf, IDWriteTextFormat *pTextFormat, DWRITE_MEASURING_MODE measuringMode,
