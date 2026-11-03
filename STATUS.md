@@ -270,6 +270,14 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
        MonoLisa); whole-pixel cells with the grid; crisper labels (done in 1); a comparison of pyre's rendering settings
        in Pyre909's font. A wide-character font setting deferred: no single font covers Japanese, Chinese and Korean
        (BIZ UDGothic has no Hangul nor simplified Chinese), so it'd be a font list, as Vim's `guifontwide`.
+       Done (not pushed): every character in its Unicode cells with the grid (`CellsOfCharacter`, a Unicode 17 table;
+       `SetCellWidths` in the layout, `DrawTextInCells` drawing, `DrawTextTransparentScaled` on both surfaces), emoji
+       sequences as their parts (Pyre909's choice), U+FE0F making a character two cells, a proportional font's cell its
+       "0". `pyre-character-grid.ps1` now 16 checks (CJK in Consolas on the grid, 0 off it instead of 47; Unicode's
+       widths; Segoe UI every character on the grid). Cost (a screen of CJK in MonoLisa): DirectWrite 21 -> 37 ms a
+       paint, GDI 16 -> 99 (an `ExtTextOut` a character; to do: a run with `lpDx`); monospaced ASCII unchanged. Not
+       done yet: whole-pixel cells (each glyph would be drawn alone: measure first), the rendering settings comparison.
+       Found on the way: the test's widths in cells must be rounded (`SCI_POINTXFROMPOSITION` truncates: 21.98 -> 21).
     - Decided along the way: right-to-left and complex scripts in data order with the grid; line ends one cell each was
       chosen, then superseded by readable labels in whole cells. Researched: VS Code (status bar Col = visible column,
       CJK and emoji 2, graphemes; `fullwidthCharacterWidth` font/twoCells), Vim (`%c`/`%v`, `ambiwidth`, `guifontwide`),

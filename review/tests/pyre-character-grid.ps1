@@ -141,8 +141,11 @@ try {
 	$script:sc = Get-View; $cell = Get-Cell; $bad = Test-Lines $monoLines $cell
 	Check '  the second view too' ((Grid-On) -and $bad.Count -eq 0) $(if ($bad) { ($bad | Select-Object -First 4) -join '; ' } else { 'ok' })
 	[void](Send $script:main 0x0111 $IDM_VIEW_GOTO_ANOTHER_VIEW); Start-Sleep -Milliseconds 500; $script:sc = Get-View
-	$cjkOff = Test-Lines ($cjkFirst..($cjkFirst + $cjkLines.Count - 1)) (Get-Cell)
-	Info ("Consolas has no CJK: its CJK comes from another font, {0} characters off the grid (a 2:1 font puts them on it)" -f $cjkOff.Count)
+	$cell = Get-Cell
+	$cjkOff = Test-Lines ($cjkFirst..($cjkFirst + $cjkLines.Count - 1)) $cell
+	# (positions are whole pixels, truncated: widths in cells rounded, the positions checked on the grid within a pixel above)
+	$cjkWide = @((Get-Chars ($cjkFirst + 1)) | Where-Object { $_.Ch -lt 0 -and $_.W -gt 0 } | ForEach-Object { [Math]::Round($_.W / $cell) } | Sort-Object -Unique)
+	Check 'Consolas, which has no CJK (another font draws it): every CJK character on the grid, two cells each (fitted in them)' ($cjkOff.Count -eq 0 -and ($cjkWide -join ',') -eq '2') $(if ($cjkOff) { ($cjkOff | Select-Object -First 4) -join '; ' } else { "CJK widths: $($cjkWide -join ', ') cells" })
 	[void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID)
 	$cell = Get-Cell; $again = ($monoLines | ForEach-Object { (Get-Chars $_).X }) -join ','
 	Check 'off again: every position as before it was on' ((-not (Grid-On)) -and $again -eq $offPositions)
@@ -169,13 +172,17 @@ try {
 	$p = Start-Npp 'Segoe UI'
 	[void](Send $script:main 0x0111 $IDM_VIEW_ALL_CHARACTERS)
 	if (-not (Grid-On)) { [void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID) }
-	$cell = Get-Cell; $bad = Test-Lines $monoLines $cell -OnlyTabsAndReps
-	Check 'Segoe UI (proportional): tabs one tab size wide, representations in whole cells, letters as the font makes them' ($bad.Count -eq 0) $(if ($bad) { ($bad | Select-Object -First 4) -join '; ' } else { "cell {0:N2} px" -f $cell })
+	$cell = Get-Cell; $bad = Test-Lines $monoLines $cell
+	Check 'Segoe UI (proportional): every character on the grid too, letters fitted in their cells (a cell as wide as its "0")' ($bad.Count -eq 0) $(if ($bad) { ($bad | Select-Object -First 4) -join '; ' } else { "cell {0:N2} px" -f $cell })
 	Stop-Npp $p
 
 	# --- hidden control characters, a line over 2,000 bytes (Scintilla's table of control characters' widths), the caret
 	$ccFile = Join-Path $root 'control.txt'
-	[IO.File]::WriteAllText($ccFile, ($gridLines[0] + "`r`na" + [char]0 + "b`r`n" + ('x' * 2500) + [char]0 + "b`r`nab${T}c`r`n0123456789`r`n"), $utf8)
+	# lines 5 to 9: Unicode's widths, an x after each: half-width katakana, a combining accent, U+2764 U+FE0F, an emoji,
+	# an emoji with its skin tone (its parts: 2 + 2 cells)
+	$widthLines = @(([string][char]0xFF76 + [char]0xFF80 + 'x'), ('e' + [char]0x301 + 'x'), ([string][char]0x2764 + [char]0xFE0F + 'x'),
+		([char]::ConvertFromUtf32(0x1F600) + 'x'), ([char]::ConvertFromUtf32(0x1F44D) + [char]::ConvertFromUtf32(0x1F3FD) + 'x'))
+	[IO.File]::WriteAllText($ccFile, ($gridLines[0] + "`r`na" + [char]0 + "b`r`n" + ('x' * 2500) + [char]0 + "b`r`nab${T}c`r`n0123456789`r`n" + ($widthLines -join "`r`n") + "`r`n"), $utf8)
 	$p = Start-Npp 'Consolas' $ccFile
 	if (-not (Grid-On)) { [void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID) }
 	$short = (Send $script:sc $SCI.POSITIONFROMLINE 1) + 1; $long = (Send $script:sc $SCI.POSITIONFROMLINE 2) + 2500
@@ -190,6 +197,14 @@ try {
 	[void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID); [void](Send $script:sc 2300) # on, SCI_LINEDOWN
 	$column = (Send $script:sc 2008) - (Send $script:sc $SCI.POSITIONFROMLINE 4) # SCI_GETCURRENTPOS
 	Check 'Down after the grid is turned on: below where the caret is now ("ab<TAB>c": column 6, not the tab stop''s 4)' ($column -eq 6) "column $column"
+	$cell = Get-Cell
+	$xPixels = foreach ($line in 5..9) {
+		$start = Send $script:sc $SCI.POSITIONFROMLINE $line; $x = (Send $script:sc $SCI.GETLINEENDPOSITION $line) - 1 # the x, last before the line end
+		(Send $script:sc $SCI.POINTX 0 $x) - (Send $script:sc $SCI.POINTX 0 $start)
+	}
+	$xCells = $xPixels | ForEach-Object { [Math]::Round($_ / $cell) }
+	$onGrid = @($xPixels | Where-Object { -not (On-Grid $_ $cell) }).Count -eq 0
+	Check 'Unicode''s widths: half-width katakana 1 cell, a combining accent 0, U+2764 U+FE0F 2, an emoji 2, an emoji with its skin tone 4 (its parts)' ((($xCells -join ',') -eq '2,1,2,2,4') -and $onGrid) "the x after each at cell $($xCells -join ', ') ($($xPixels -join ', ') px, cell {0:N2})" -f $cell
 	Stop-Npp $p
 }
 finally {
