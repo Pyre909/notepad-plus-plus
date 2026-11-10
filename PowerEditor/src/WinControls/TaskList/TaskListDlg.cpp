@@ -19,6 +19,7 @@
 
 #include <windows.h>
 
+#include "DirectWriteText.h"
 #include "Notepad_plus_msgs.h"
 #include "NppConstants.h"
 #include "NppDarkMode.h"
@@ -260,5 +261,5 @@ void TaskListDlg::drawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 	// DRAW TEXT
 	//
 	::SetTextColor(hDC, textColor);
-	::DrawText(hDC, label, -1, &rect, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+	drawUiText(hDC, label, -1, &rect, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX); // Pyre909 build: DirectWrite
 }

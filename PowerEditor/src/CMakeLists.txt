@@ -74,6 +74,7 @@ SET(src_files
 			./MISC/sha2/sha-256.cpp
 			./MISC/sha512/sha512.cpp
 			./NppDarkMode.cpp
+			./DirectWriteText.cpp
 			./dpiManagerV2.cpp
 			./MISC/Process/Processus.cpp
 			./WinControls/AboutDlg/AboutDlg.cpp
@@ -199,6 +200,7 @@ SET(include_files
 			./DarkMode/DarkMode.h
 			./DarkMode/IatHook.h
 			./DarkMode/UAHMenuBar.h
+			./DirectWriteText.h
 			./dpiManagerV2.h
 			./keys.h
 			./localizationString.h

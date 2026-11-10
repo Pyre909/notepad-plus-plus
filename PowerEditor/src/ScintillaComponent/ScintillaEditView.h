@@ -280,6 +280,9 @@ public:
 	// to the view, or to every live Notepad++ Scintilla (edit views, Finders, Document Map, Peeker, plugins' Scintillas...)
 	void applyTextRenderingSettings();
 	static void applyTextRenderingSettingsToAll();
+	// Pyre909 build: Notepad++'s windows drawn again after a change of the rendering (technology, antialiasing, DirectWrite
+	// mode, contrast): the text Notepad++ draws itself follows the editor's (drawUiText in DirectWriteText.h)
+	static void redrawUiText();
 	static std::wstring getDefaultFontName(); // Pyre909 build: the font of an edit view's STYLE_DEFAULT, as drawn
 	static void applyBoldWeightToAll(int previousBoldWeight); // Pyre909 build: Preferences > Fonts' bold weight changed
 	// Pyre909 build: the Rendering mode setting changed: the views on the previous one switch (setTechnologyToAll), then each

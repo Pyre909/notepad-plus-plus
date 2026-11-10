@@ -28,6 +28,7 @@
 
 #include "Buffer.h"
 #include "Common.h"
+#include "DirectWriteText.h"
 #include "DoubleBuffer/DoubleBuffer.h"
 #include "NppConstants.h"
 #include "NppDarkMode.h"
@@ -1827,7 +1828,7 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode)
 
 	::SetTextColor(hDC, textColor);
 
-	::DrawText(hDC, decodedLabel, static_cast<int>(std::wcslen(decodedLabel)), &rect, flags);
+	drawUiText(hDC, decodedLabel, static_cast<int>(std::wcslen(decodedLabel)), &rect, flags); // Pyre909 build: DirectWrite
 	::RestoreDC(hDC, nSavedDC);
 }
 

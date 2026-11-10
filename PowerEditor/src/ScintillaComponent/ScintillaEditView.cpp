@@ -731,6 +731,16 @@ void ScintillaEditView::applyTextRenderingSettingsToAll()
 		pView->applyTextRenderingSettings();
 }
 
+void ScintillaEditView::redrawUiText()
+{
+	// the windows of this thread: the main window, floating panels, the Find dialog...
+	::EnumThreadWindows(::GetCurrentThreadId(), [](HWND hWnd, LPARAM) -> BOOL {
+		if (::IsWindowVisible(hWnd))
+			::RedrawWindow(hWnd, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
+		return TRUE;
+	}, 0);
+}
+
 // Pyre909 build: the font name of the first edit view's STYLE_DEFAULT, the Default Style's (or Global override's) font as
 // Scintilla draws it (see getScintillaFont); empty without an edit view
 std::wstring ScintillaEditView::getDefaultFontName()
@@ -762,6 +772,7 @@ void ScintillaEditView::switchTechnologyOfAll(writeTechnologyEngine technology)
 	setTechnologyToAll(previous, technology);
 	for (const auto& [pView, previousTechnology] : previousTechnologies)
 		pView->technologyChanged(previousTechnology);
+	redrawUiText(); // GDI or DirectWrite there too
 }
 
 void ScintillaEditView::technologyChanged(int previousTechnology)

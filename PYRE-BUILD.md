@@ -17,6 +17,10 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   on whole pixels); the font features, weights and fallback fonts above are DirectWrite's. GDI is listed for a setting
   of an older version (to leave it), where DirectWrite isn't available (Wine), or with `offerGdiRendering="yes"` in
   config.xml's MISC settings, written by hand. Right-to-left documents are still drawn with GDI.
+- **The tab bar, the panels and the Ctrl+Tab list drawn like the editor**: their text drawn with DirectWrite and the
+  Text Rendering settings above (antialiasing, contrast, DirectWrite mode) while the editor is, applied at once when
+  they change; the status bar too in dark mode (Windows draws it in light mode, as its menus and dialogs). Vertical
+  tabs and right-to-left languages stay with GDI.
 - **Line spacing and font ligatures** (Preferences > Editing 1 > Text Rendering): extra space between the lines
   of the editor, +1 to +10 pixels at 100% scale (official issue #971), and the fonts' ligatures, such as the
   arrows and operators of Cascadia Code or Fira Code, turned off when unwanted (DirectWrite; official issue #14764).

@@ -16,6 +16,7 @@
 
 #include "dockingResource.h"
 #include "DockingCont.h"
+#include "DirectWriteText.h"
 
 #include "SplitterContainer.h"
 #include "ToolTip.h"
@@ -567,7 +568,7 @@ void DockingCont::drawCaptionItem(DRAWITEMSTRUCT *pDrawItemStruct)
 		rc.top		+= scaleFromSystemDpi(1);
 		rc.right	-= scaleFromSystemDpi(16);
 		hOldFont = static_cast<HFONT>(::SelectObject(hDc, _hFontCaption));
-		::DrawText(hDc, _pszCaption.c_str(), length, &rc, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX);
+		drawUiText(hDc, _pszCaption.c_str(), length, &rc, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX); // Pyre909 build: DirectWrite
 
 		// calculate text size and if its trankated...
 		SIZE	size	= {};
@@ -664,7 +665,7 @@ void DockingCont::drawCaptionItem(DRAWITEMSTRUCT *pDrawItemStruct)
 			::SetTextColor(hDc, RGB(0xFF, 0xFF, 0xFF));
 		}
 
-		::DrawText(hDc, L"✕", 1, &rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE);
+		drawUiText(hDc, L"✕", 1, &rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE); // Pyre909 build: DirectWrite
 		::SelectObject(hDc, hOld);
 	}
 	else
@@ -1153,7 +1154,7 @@ void DockingCont::drawTabItem(DRAWITEMSTRUCT* pDrawItemStruct)
 
 		// draw text
 		::SelectObject(hDc, _hFont);
-		::DrawText(hDc, text, length, &rc, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+		drawUiText(hDc, text, length, &rc, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX); // Pyre909 build: DirectWrite
 	}
 
 	::RestoreDC(hDc, nSavedDC);

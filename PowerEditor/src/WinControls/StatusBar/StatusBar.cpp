@@ -28,6 +28,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "DirectWriteText.h"
 #include "DoubleBuffer/DoubleBuffer.h"
 #include "NppConstants.h"
 #include "NppDarkMode.h"
@@ -153,7 +154,7 @@ LRESULT CALLBACK StatusBar::StatusBarSubclass(
 				}
 				else
 				{
-					DrawText(hdc, str.c_str(), static_cast<int>(str.size()), &rcPart, DT_SINGLELINE | DT_VCENTER | DT_LEFT);
+					drawUiText(hdc, str.c_str(), static_cast<int>(str.size()), &rcPart, DT_SINGLELINE | DT_VCENTER | DT_LEFT); // Pyre909 build: DirectWrite
 				}
 
 				if (!isSizeGrip && i < (nParts - 1))

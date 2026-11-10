@@ -2326,6 +2326,8 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 									svp._lineSpacing = selIndex;
 
 								ScintillaEditView::applyTextRenderingSettingsToAll();
+								if (ctrlId != IDC_COMBO_LINESPACING)
+									ScintillaEditView::redrawUiText(); // the text Notepad++ draws itself too
 								return TRUE;
 							}
 						}
