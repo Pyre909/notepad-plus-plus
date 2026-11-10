@@ -1241,8 +1241,8 @@ void ScintillaEditView::setSpecialStyle(const Style& styleToSet) const
 			execute(SCI_STYLESETUNDERLINE, styleID, fontStyle & FONTSTYLE_UNDERLINE);
 	}
 
-	if (styleToSet._fontSize > 0)
-		execute(SCI_STYLESETSIZE, styleID, styleToSet._fontSize);
+	if (styleToSet._fontSize > 0) // Pyre909 build: with its hundredths ("10.5")
+		execute(SCI_STYLESETSIZEFRACTIONAL, styleID, styleToSet._fontSize * SC_FONT_SIZE_MULTIPLIER + styleToSet._fontSizeHundredths);
 }
 
 void ScintillaEditView::setStyle(Style styleToSet) const
@@ -1288,7 +1288,10 @@ void ScintillaEditView::setStyle(Style styleToSet) const
 			if (go.enableFont && !pStyle->_fontName.empty())
 				styleToSet._fontName = pStyle->_fontName;
 			if (go.enableFontSize && (pStyle->_fontSize > 0))
+			{
 				styleToSet._fontSize = pStyle->_fontSize;
+				styleToSet._fontSizeHundredths = pStyle->_fontSizeHundredths; // Pyre909 build
+			}
 
 			if (pStyle->_fontStyle != STYLE_NOT_USED)
 			{
@@ -2405,7 +2408,10 @@ void ScintillaEditView::defineDocType(LangType typeDoc)
 						nfoStyle._fontName = pDefStyle->_fontName;
 
 						if (pDefStyle->_fontSize != STYLE_NOT_USED)
+						{
 							nfoStyle._fontSize = pDefStyle->_fontSize;
+							nfoStyle._fontSizeHundredths = pDefStyle->_fontSizeHundredths; // Pyre909 build
+						}
 
 						if (pDefStyle->_fontStyle != STYLE_NOT_USED)
 							nfoStyle._fontStyle = pDefStyle->_fontStyle;

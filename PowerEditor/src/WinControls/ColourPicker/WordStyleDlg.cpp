@@ -113,8 +113,12 @@ intptr_t CALLBACK WordStyleDlg::run_dlgProc(UINT Message, WPARAM wParam, LPARAM 
 			}
 			::SendMessage(_hSwitch2ThemeCombo, CB_SETCURSEL, _currentThemeIndex, 0);
 
-			for (size_t i = 0 ; i < sizeof(fontSizeStrs)/(3*sizeof(wchar_t)) ; ++i)
-				::SendMessage(_hFontSizeCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(fontSizeStrs[i]));
+			// Pyre909 build: fontSizeStrs' sizes and the half points of the usual ones (stylers.xml fontSize="10.5")
+			static constexpr const wchar_t* fontSizeChoices[]{ L"", L"1", L"2", L"3", L"4", L"5", L"6", L"6.5", L"7", L"7.5",
+				L"8", L"8.5", L"9", L"9.5", L"10", L"10.5", L"11", L"11.5", L"12", L"12.5", L"13", L"13.5", L"14", L"16", L"18", L"20",
+				L"22", L"24", L"26", L"28" };
+			for (const wchar_t* fontSize : fontSizeChoices)
+				::SendMessage(_hFontSizeCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(fontSize));
 
 			const std::vector<wstring> & fontlist = nppParamInst.getFontList();
 			fillFontNameComboBox(_hFontNameCombo, fontlist); // Pyre909 build
@@ -851,7 +855,7 @@ void WordStyleDlg::updateFontSize()
 
 	if (iFontSizeSel != 0)
 	{
-		static constexpr size_t intStrLen = 3;
+		static constexpr size_t intStrLen = 6; // Pyre909 build: "10.5"
 		wchar_t intStr[intStrLen]{};
 
 		auto lbTextLen = ::SendMessage(_hFontSizeCombo, CB_GETLBTEXTLEN, iFontSizeSel, 0);
@@ -860,18 +864,17 @@ void WordStyleDlg::updateFontSize()
 
 		::SendMessage(_hFontSizeCombo, CB_GETLBTEXT, iFontSizeSel, reinterpret_cast<LPARAM>(intStr));
 
-		if (!intStr[0])
-			style._fontSize = STYLE_NOT_USED;
-		else
+		if (!intStr[0] || !style.setFontSizeText(intStr))
 		{
-			wchar_t *finStr = nullptr;
-			style._fontSize = wcstol(intStr, &finStr, 10);
-			if (*finStr != '\0')
-				style._fontSize = STYLE_NOT_USED;
+			style._fontSize = STYLE_NOT_USED;
+			style._fontSizeHundredths = 0;
 		}
 	}
 	else
+	{
 		style._fontSize = 0;
+		style._fontSizeHundredths = 0; // Pyre909 build
+	}
 }
 
 void WordStyleDlg::updateExtension()
@@ -1310,13 +1313,13 @@ void WordStyleDlg::setVisualFromStyleList()
 	InvalidateRect(_hFontNameStaticText, NULL, FALSE);
 
 	//-- font size
-	static constexpr size_t intStrLen = 3;
 	LRESULT iFontSize = 0;
 	if (style._fontSize != STYLE_NOT_USED && style._fontSize < 100) // style._fontSize has only 2 digits
 	{
-		wchar_t intStr[intStrLen]{};
-		wsprintf(intStr, L"%d", style._fontSize);
-		iFontSize = ::SendMessage(_hFontSizeCombo, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(intStr)); // exact: "1" isn't "10"
+		const std::wstring sizeText = style.getFontSizeText(); // Pyre909 build: "10.5"
+		iFontSize = ::SendMessage(_hFontSizeCombo, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(sizeText.c_str())); // exact: "1" isn't "10"
+		if (iFontSize == CB_ERR)
+			iFontSize = 0; // a size the list hasn't (from stylers.xml): shown empty, kept until another is chosen
 	}
 	::SendMessage(_hFontSizeCombo, CB_SETCURSEL, iFontSize, 0);
 	::EnableWindow(_hFontSizeCombo, style._isFontEnabled);

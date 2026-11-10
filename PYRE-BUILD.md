@@ -103,7 +103,8 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   are filled when the page is first shown. With several instances open (`-multiInst`), Preferences names the
   languages and encodings from its own instance's menu, not from the one in front, which may be in another language.
 - **Per-monitor DPI awareness** (Preferences > MISC., experimental, restart required).
-- **Font sizes 1 to 4 pt** in the font size lists.
+- **Font sizes 1 to 4 pt** in the font size lists, and **half points** in the Style Configurator's (6.5 to 13.5: 10.5
+  between 10 and 11), any hundredth in a theme file (`fontSize="10.25"`), saved as chosen.
 - **Official bugs fixed** (offered upstream too): tooltips too narrow or too wide in Preferences and the Style
   Configurator after a scale change.
   Crashes: the next key typed after a plugin set a language that doesn't exist (or after a Language menu command for an

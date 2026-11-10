@@ -763,6 +763,45 @@ template <typename T>
 	return static_cast<T>(val);
 }
 
+// Pyre909 build: a style's size, its points with their hundredths ("10.5"), as stylers.xml writes it
+std::wstring Style::getFontSizeText() const
+{
+	std::wstring text = std::to_wstring(_fontSize);
+	if (_fontSizeHundredths > 0)
+	{
+		const int tenths = _fontSizeHundredths / 10;
+		const int lastDigit = _fontSizeHundredths % 10;
+		text += L'.';
+		text += static_cast<wchar_t>(L'0' + tenths);
+		if (lastDigit != 0)
+			text += static_cast<wchar_t>(L'0' + lastDigit);
+	}
+	return text;
+}
+
+// Pyre909 build: a size of 1 to 3 digits of points and up to 2 decimals ("10", "10.5", "9.25"); false otherwise
+bool Style::setFontSizeText(const std::wstring& text)
+{
+	const auto isDigit = [](wchar_t ch) { return (ch >= L'0') && (ch <= L'9'); };
+	size_t i = 0;
+	int size = 0;
+	while ((i < text.length()) && (i < 3) && isDigit(text[i]))
+		size = size * 10 + (text[i++] - L'0');
+	if ((i == 0) || (size == 0))
+		return false;
+	int hundredths = 0;
+	if (i < text.length())
+	{
+		const std::wstring decimals = text.substr(i + 1);
+		if ((text[i] != L'.') || decimals.empty() || (decimals.length() > 2) || !std::all_of(decimals.begin(), decimals.end(), isDigit))
+			return false;
+		hundredths = (decimals[0] - L'0') * 10 + ((decimals.length() == 2) ? (decimals[1] - L'0') : 0);
+	}
+	_fontSize = size;
+	_fontSizeHundredths = hundredths;
+	return true;
+}
+
 // Pyre909 build: the Text Rendering settings (Preferences > Editing 1) of <GUIConfig name="ScintillaPrimaryView">,
 // fontAntialiasing="0" fontRenderingMode="0" fontContrast="0" fontLigatures="yes" fontFeatures="" boldWeight="700"
 // (Preferences > Fonts) lineSpacing="0". smoothFont="yes"
@@ -5557,6 +5596,8 @@ void StyleArray::addStyler(int styleID, const NppXml::Element& styleNode)
 
 		s._fontStyle = NppXml::intAttribute(styleNode, "fontStyle", STYLE_NOT_USED);
 		s._fontSize = NppXml::intAttribute(styleNode, "fontSize", STYLE_NOT_USED);
+		if (const char* size = NppXml::attribute(styleNode, "fontSize"); size && (s._fontSize > 0))
+			s.setFontSizeText(string2wstring(size)); // Pyre909 build: "10.5"
 
 		s._nesting = NppXml::intAttribute(styleNode, "nesting", static_cast<int>(FontStyle::FONTSTYLE_NONE));
 
@@ -9115,6 +9156,8 @@ void NppParameters::writeStyle2Element(const Style& style2Write, Style& style2Sy
 	{
 		if (style2Write._fontSize == 0)
 			NppXml::setAttribute(element, "fontSize", "");
+		else if (style2Write._fontSizeHundredths != 0) // Pyre909 build: "10.5"
+			NppXml::setAttribute(element, "fontSize", wstring2string(style2Write.getFontSizeText()).c_str());
 		else
 			NppXml::setAttribute(element, "fontSize", style2Write._fontSize);
 	}
@@ -9225,6 +9268,8 @@ void NppParameters::insertUserLang2Tree(NppXml::Element& node, const UserLangCon
 		{
 			if (style2Write._fontSize == 0)
 				NppXml::setAttribute(styleElement, "fontSize", "");
+			else if (style2Write._fontSizeHundredths != 0) // Pyre909 build: "10.5"
+				NppXml::setAttribute(styleElement, "fontSize", wstring2string(style2Write.getFontSizeText()).c_str());
 			else
 				NppXml::setAttribute(styleElement, "fontSize", style2Write._fontSize);
 		}

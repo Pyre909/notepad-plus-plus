@@ -347,6 +347,11 @@ struct Style final
 	std::wstring _fontName;
 	int _fontStyle = STYLE_NOT_USED;
 	int _fontSize = STYLE_NOT_USED;
+	int _fontSizeHundredths = 0; // Pyre909 build: the fraction of a size of points (fontSize="10.5": 10 and 50)
+
+	// Pyre909 build: the size as stylers.xml writes it ("10", "10.5"), and set from such a text (false if it isn't one)
+	std::wstring getFontSizeText() const;
+	bool setFontSizeText(const std::wstring& text);
 
 	int _nesting = FONTSTYLE_NONE;
 
