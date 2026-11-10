@@ -15,14 +15,16 @@ All branches are in `Pyre909/notepad-plus-plus`. Each one is a single commit on 
 | 7 | `live-rendering-switch_20261005` | `9fdd356` + `61eccb1` (on 6) | 5 | small | Rendering mode applied at once, no restart | yes (feature request in section 7); the PR after 6 is merged. Replaces `live-rendering-switch_20260930` (stacked on 2) |
 | 8 | `directwrite-font-smoothing_20261006` | `5dff07b` | 4 | small | DirectWrite following the Windows font smoothing | no: bug fix of #14954 (open since 2024) |
 | 9 | `function-list-caret_20261020` | `398b2c2` | 2 | none | Function List caret tracking: a binary search, not a walk of the tree per caret move | no: bug fix (issue to open first) |
-| 10 | `doclist-column-width_20261020` | `20f0a90` | 1 | none | Document List column widths stored for 96 DPI, as they are read | no: bug fix (checked by hand: 48 -> 72 px before, 50 -> 50 after; issue to open first) |
+| 10 | `doclist-column-width_20261020` | `20f0a90` | 1 | none | Document List column widths stored for 96 DPI, as they are read | **superseded**: upstream fixed it in `37482a9` (2026-11-05, "fix wrongly saved dpi scaled column width"), in 8.9.9 |
 | 11 | none | – | – | – | Comment: the Find dialog's black status bar was the swallowed `WM_THEMECHANGED`, so its PMv2 can come back | no: a comment on #18455 or #18462 |
 | 12 | `archive/menu-colour-bitmaps_20261020` (archived 2026-11-02) | `5903444` | 2 | none | The main menu's colour samples cached, not leaked (11 GDI objects per colour change) | **superseded**: upstream fixed it in `6abb408` (2026-11-01) |
 | 13 | `dpi-dialog-sizes_20261020` | `b759ee8` | 5 | none | Tooltip widths and Shortcut Mapper's grid metrics for the DPI of upstream's per-monitor dialogs | no: bug fix (issue to open first) |
 | 14 | `langtype-bounds_20261101` | `bbe235f` | 4 | none | Crash at the next key typed after an invalid language type from `NPPM_SETCURRENTLANGTYPE` or an external language command without a lexer | no: bug fix (issue to open first) |
 | 15 | `long-strings-failfast_20261101` | `2c65c1f` | 4 | none | Crash at startup with a long `-udl=`, `-pluginMessage=`, UDL name or config.xml open/save folder (MSVC's `wcsncpy_s`/`wcscat_s` failing fast) | no: bug fix (issue to open first) |
 | 16 | `session-open-speed_20261101` | `0711cfc` | 4 | none | Many files opened faster: tab lookups only where a buffer can be (1,000 files 41 s to 8 s) | no: #14000 (open since 2023), comment there first |
-| 17 | none | – | – | – | Issue: upstream's auto-completion icons nearly black since Scintilla 5.6.8 (XPM colour slip; 5.6.9 fixes it) | no: a report, no PR |
+| 17 | none | – | – | – | Issue: upstream's auto-completion icons nearly black since Scintilla 5.6.8 (XPM colour slip; 5.6.9 fixes it) | **moot**: upstream took Scintilla 5.6.9 with 8.9.9 (`96a516e`), which fixes it |
+
+**Upstream's AGENTS.md (2026-11, in 8.9.9)**, on top of CONTRIBUTING.md: disclose AI assistance *including the model* (and the prompt if possible) — the texts below name it; the AI agent as a co-author with a `Co-Authored-By` trailer — every branch's commit has `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`; contributors write their own comments and replies, and are encouraged to write their own PR descriptions (these texts are drafts for Pyre909 to rewrite in their words); a PR only after all required build workflows pass on the fork (Pyre909 CI runs upstream's 13 jobs); no changes to `scintilla/` or `lexilla/`; no refactoring-only or typo-only PRs. PR #18503 (6) was opened before it and says only "Claude": a comment naming the model would do.
 
 Sizes are for the MSVC x64 Release exe that the fork's GitHub Actions CI built for each branch, compared with official master (8,525,312 bytes). All pushed branches pass CI on every job (5: 13/13 jobs, `9f605be`, 2026-10-06; 6, 7 and 8: 13/13, 2026-10-06). 6, 7 and 8 change a few dozen lines each: not measured. Branch 5 is compared with the fork's master CI build at `37f76d4` (8,525,824 bytes).
 
@@ -108,7 +110,7 @@ Testing (this branch alone, MinGW-w64 GCC 13 x64 build run under Wine 9):
 - GitHub Actions (this repository's CI_build workflow, on the fork): all 13 jobs pass. That covers the MSVC x64/Win32/ARM64 Release and Debug builds, the CMake build, the MinGW and Clang builds, XML validation, and the Function List and URL detection tests.
 - <your Windows check: choose 1-4 pt for a style, Save & Close, reopen Style Configurator: the size shows as set>
 
-AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
+AI disclosure: this change was written with the help of an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested.
 
 - [x] I have read contributing guidelines
 
@@ -152,7 +154,7 @@ https://github.com/notepad-plus-plus/notepad-plus-plus/compare/master...Pyre909:
 - It also fixes #17461: under DirectWrite, "Follow Windows" honours the Windows "Smooth edges of screen fonts" switch again, at once and after a restart (checked on Windows).
 - May help #17180 (narrower characters with DirectWrite): the "GDI classic" mode measures like GDI, with whole-pixel font sizes and advances.
 - It passes the full CI on the fork. It includes a small Scintilla patch (Win32, marked "N++"): private messages 5101/5102 for the DirectWrite rendering parameters.
-- Written with the help of an AI assistant (Claude), then reviewed and tested.
+- Written with the help of an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested.
 
 Screenshot of the new group in Preferences > Editing 1:
 ```
@@ -195,7 +197,7 @@ Testing (this branch alone, on master 37f76d4, MinGW-w64 GCC 13 x64 build run un
 - Windows, DirectWrite, Antialiasing Follow Windows (#17461): unticking "Smooth edges of screen fonts" turns the text unsmoothed at once and after a restart; ticking it again draws it as before.
 - Not tested on real Windows beyond that: the other antialiasing, DirectWrite mode and contrast choices (Wine's DirectWrite differs).
 
-AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
+AI disclosure: this change was written with the help of an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested.
 
 - [x] I have read contributing guidelines
 
@@ -217,7 +219,7 @@ Translators, please correct any wording that doesn't read naturally as a label.
 
 Testing: the 29 files parse (XML), and the repository's CI XML validation passes; one Item text changed per file, encoding and line endings kept.
 
-AI disclosure: prepared with the help of an AI assistant (Claude).
+AI disclosure: prepared with the help of an AI assistant (Claude Opus 5.5, by Anthropic).
 ```
 
 Before opening, rebase it onto master once PR 2 (#18418) is merged: `git rebase --onto upstream/master
@@ -321,7 +323,7 @@ Testing:
 
 Known: with the option off, upstream's always-PerMonitorV2 dialogs (Shortcut Mapper, About...) on a monitor of another scale still get system-DPI metrics from getSystemMetricsForWindow, same as master today.
 
-AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+AI disclosure: I wrote this with help from an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
@@ -436,7 +438,7 @@ Tested on Windows 11 ARM64, Release builds for ARM64, x64 and Win32, no warnings
 - Printing with DirectWrite on, "Segoe UI Light" to Microsoft Print to PDF: the PDF embeds Segoe UI Light (weight 300), same as GDI prints it.
 - All 13 CI jobs pass on my fork (MSVC x64, Win32 and ARM64 Release and Debug, CMake, MinGW, Clang).
 
-AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+AI disclosure: I wrote this with help from an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
@@ -589,7 +591,7 @@ Tested on Windows 11 ARM64 with Release builds of this branch, fresh config so D
 
 Two things I know about and left alone: with an RTL UI, a Scintilla a plugin creates is mirrored from the start like the others, so it starts on GDI too, and a plugin's SCI_SETBIDIRECTIONAL gets cleared when its view switches to GDI (that's Scintilla's doing).
 
-AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+AI disclosure: I wrote this with help from an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
@@ -684,7 +686,7 @@ Tested on Windows 11 ARM64 with Release builds of this branch (all 13 CI jobs pa
 
 Known: a plugin view set to the same mode as the previous setting is switched too, plugins get no notification, and switching to GDI clears a plugin's SCI_SETBIDIRECTIONAL (Scintilla does that).
 
-AI disclosure: this change was written with the help of an AI assistant (Claude), then reviewed and tested.
+AI disclosure: this change was written with the help of an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested.
 
 - [x] I have read contributing guidelines
 
@@ -780,7 +782,7 @@ Things to know:
 - The Document Map, the tab preview, extra search results windows and plugins' views only pick up a change of the Windows setting after a restart, since Notepad++ doesn't pass WM_SETTINGCHANGE on to them.
 - The autocompletion list stays smoothed (Scintilla draws it without the font quality).
 
-AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+AI disclosure: I wrote this with help from an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
@@ -855,7 +857,7 @@ Tested on Windows 11 ARM64 with Release builds:
 - 60,000 lines of C++ with ~18,000 functions: a caret move went from 374 ms to 16.6 ms, the same as with the panel closed (CPU 363 ms -> 5.7 ms, 4.0 ms with the panel closed)
 - all 13 CI jobs pass on my fork
 
-AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+AI disclosure: I wrote this with help from an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
@@ -920,7 +922,7 @@ Now the width is stored for 96 DPI (DPIManagerV2::unscale with the panel's windo
 
 Tested on Windows 11 ARM64 at 150% with Release builds, by hand: Ext. column dragged narrower, then the window resized. Before: 48 px came back 72 px. With this: 50 px stayed 50 px. All 13 CI jobs pass on my fork.
 
-AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+AI disclosure: I wrote this with help from an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
@@ -963,7 +965,7 @@ Current master with the two setThreadDpiAwarenessContext lines in FindReplaceDlg
 
 So it should be safe to turn PMv2 back on for the Find dialog. I didn't try putting the WM_GETDPISCALEDSIZE handler back.
 
-Windows 11 ARM64 (VM), one monitor, Release ARM64 builds. AI disclosure: an AI assistant (Claude) helped me set up the test builds and the measuring script; the scale changes were done by hand.
+Windows 11 ARM64 (VM), one monitor, Release ARM64 builds. AI disclosure: an AI assistant (Claude Opus 5.5, by Anthropic) helped me set up the test builds and the measuring script; the scale changes were done by hand.
 ```
 
 ## 12. Main menu colour samples: GDI leak (bug fix)
@@ -1025,7 +1027,7 @@ Now they're cached by colour (one bitmap per colour) and deleted when Notepad++ 
 
 Tested on Windows 11 ARM64 with Release builds: WM_UPDATEMAINMENUBITMAPS sent 100 times (what the Style Configurator sends): before, +1,100 GDI objects and 11 new bitmaps each time; after, no growth and the same bitmaps. All 13 CI jobs pass on my fork.
 
-AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+AI disclosure: I wrote this with help from an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
@@ -1095,7 +1097,7 @@ This fixes the sizes a dialog gets when it's created; tooltips of a dialog that'
 
 Tested on Windows 11 ARM64 with Release builds, signed in at 150%, scale switched to 200%, Preferences opened for the first time there: the tooltips' max widths were 200 and 260 before, 267 and 347 with this (200 and 260 × 192/144). Back at 150% nothing changes. All 13 CI jobs pass on my fork.
 
-AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+AI disclosure: I wrote this with help from an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
@@ -1166,7 +1168,7 @@ NPPM_SETCURRENTLANGTYPE stored any language type from L_TEXT up, and the externa
 
 Tested on Windows 11 ARM64 and x64 Release builds: the message with 100000 and with L_EXTERNAL (no external lexer) then a character typed: crashed before, now refused and the character is just added; a valid type (L_PHP) still works; the first external language command without a lexer: crashed before, nothing now.
 
-AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+AI disclosure: I wrote this with help from an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
@@ -1242,7 +1244,7 @@ With MSVC, wcsncpy on an array is turned into wcsncpy_s with the array's size by
 
 Tested on Windows 11 ARM64 and x64 Release builds: each case crashed at startup before and starts fine with this.
 
-AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+AI disclosure: I wrote this with help from an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
@@ -1306,7 +1308,7 @@ Opening a lot of files (a session with hundreds) grew with the square of their n
 
 On a Windows 11 ARM64 VM (Release, "Last session loading" from -loadingTime): 1,000 small files 41 s -> 8 s, 300 source files (57 MB) 4.4 s -> 1.3 s. What still grows is the tab control's own work on each insert. Session restore checked with 90 files in two views: tab order, active tabs, bookmarks, then closing, moving and sorting tabs (each label matches its file).
 
-AI disclosure: I wrote this with help from an AI assistant (Claude), then reviewed and tested it myself.
+AI disclosure: I wrote this with help from an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested it myself.
 
 - [x] I have read contributing guidelines
 
@@ -1451,7 +1453,7 @@ Test: a Scintilla window drawing "iiiii" and "WWWWW" in each family name, regula
 
 Builds with g++ --std=c++17 -Wpedantic -Wall -Wextra without warnings; scripts/HeaderCheck.py is clean; Scintilla.dll links with MinGW-w64. The same code has been used in Notepad++ builds, tested with static and variable fonts and their named instances, and on Windows ("Bahnschrift Light" with DirectWrite draws its Light weight).
 
-This patch was prepared with the help of an AI assistant (Claude), then reviewed and tested.
+This patch was prepared with the help of an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested.
 ```
 
 Windows check done: "Bahnschrift Light" with DirectWrite draws its Light weight (in the description).
@@ -1520,7 +1522,7 @@ The patch applies on its own to 5.6.7. It touches the same DirectWrite font cons
 
 Two further options Notepad++ uses, a rendering mode that switches to natural for small text and a separate gamma for light text on dark backgrounds, are left out and could be proposed separately.
 
-This patch was prepared with the help of an AI assistant (Claude), then reviewed and tested.
+This patch was prepared with the help of an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested.
 ```
 
 An optional one-line heads-up to https://groups.google.com/g/scintilla-interest with the ticket link can help
@@ -1566,5 +1568,5 @@ The attached patch returns no HFONT when there's no text format, as HFont() alre
 
 The attached hfontcrash.cpp reproduces it: "hfontcrash 1000" crashes, "hfontcrash 400" works (build line in its header).
 
-This was found and prepared with the help of an AI assistant (Claude), then reviewed and tested.
+This was found and prepared with the help of an AI assistant (Claude Opus 5.5, by Anthropic), then reviewed and tested.
 ```

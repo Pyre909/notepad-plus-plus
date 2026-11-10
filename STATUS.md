@@ -10,6 +10,37 @@ ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
+- **2026-11-10: upstream 8.9.9, fonts, DirectWrite.** Pyre909 asked: sync with upstream; better OpenType and static font
+  support (they use MonoLisa); "full DirectWrite" (GDI said to be deprecated); other improvements.
+  - Sync: the fork's `master` synced to upstream `37482a9` (`gh repo sync`: Notepad++ 8.9.9, Scintilla 5.6.9, 16
+    commits); merged into `pyre` on the session branch as `e696855` (4 conflicts: the Taiwanese translation's rendering
+    mode combo kept in Editing 1 with the translator's new wording; SCN_ZOOM: upstream's `setWhitespaceSize` and pyre's
+    label size; `ScintillaEditView.h`; the Document List's includes and column widths). **Not pushed: Pyre909 said
+    wait.** Harness on the merge: builds and tests pass; its FAIL "version line changed" and the whitespace WARNs are
+    upstream's own (a merge); `live-rendering-switch-scroll` failed one check during the run (line 1498 instead of 1500
+    after tab switches) and passed twice alone: flaky under the harness's load, the second time (see 2026-11-02).
+  - Upstream news: Scintilla 5.6.9's `XPM.cxx` is pyre's former fix (one local patch less); upstream fixed the
+    Document List's column widths itself (`37482a9`): kit 10 superseded, kit 17 moot; per-monitor DPI for two more
+    dialogs (the `per-monitor-dpi` branch will need a rebase); an `AGENTS.md`: AI use disclosed with the model (and the
+    prompt if possible), the AI agent as `Co-Authored-By` (every branch has it), contributors write their own comments.
+    The kit's 20 disclosures now name the model; PR #18503 says only "Claude": a comment naming the model would do.
+  - "GDI deprecated": not found. The Scintilla author wrote (2024-08-20, scintilla-interest "Issues with GDI Scaling in
+    Windows") that SC_TECHNOLOGY_DIRECTWRITE "is now the focus of development effort"; no plan to remove GDI.
+  - MonoLisa as installed: static, MonoLisa Code and MonoLisa Text 3.000, 10 weights (Hairline to Black) upright and
+    italic (40 files in C:\Windows\Fonts); GSUB: ss01 "Script variant" (italic only), ss02-ss15 (alt i r, g, @, *, $,
+    &, (), {}, backslash, hex x, seven, plain zero), cv01-cv12 (unnamed: the coding ligatures since v3), dlig (all of
+    them), liga, calt, zero, frac...; Text: kern, pnum/tnum. Pyre909's settings: DirectWrite, Automatic, Follow
+    Windows, theme Pyre Daylight (comments italic) / Pyre Night.
+  - Plan Pyre909 chose: fonts A to D, then DirectWrite stage 1 (the only choice in Preferences, GDI classic for GDI's
+    look, GDI kept as a hidden fallback) and research for right-to-left views and printing with DirectWrite. Item 4 (a
+    column ruler, the record view, a hex view, column-aware find/sort): no preference yet.
+    - A, **OpenType features** (done, `b5e9b83`, not pushed): Preferences > Fonts (a new page), config.xml
+      `fontFeatures`, Scintilla `SCI_SETFONTFEATURES`. Found: with a typography DirectWrite drops its default features
+      ("dlig" alone took Cascadia Code's ligatures away; Font ligatures off took kerning too): `liga`, `clig`, `calt`,
+      `kern` listed on first. `pyre-font-features.ps1` 14 checks; grid, labels, text options and live rendering tests
+      pass. Preview in MonoLisa (Pyre Daylight): ss01 script comments, dlig coding ligatures, ss14 sevens, ss05-ss11.
+    - B, weights per style and a bold weight; C, fractional font sizes; D, a fallback font list: to do.
+
 - **The review round (2026-10-20, evening)**, asked by Pyre909: sync with upstream (the fork's `master` brought to
   `b661c2b` with `gh repo sync`; `pyre` had it), a preview (`C:\npp-preview-49de091`, a portable copy of the installation
   with a copy of their settings), then: are the older PRs as good as they can be, can their restarts go, what does upstream
