@@ -39,7 +39,17 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
       ("dlig" alone took Cascadia Code's ligatures away; Font ligatures off took kerning too): `liga`, `clig`, `calt`,
       `kern` listed on first. `pyre-font-features.ps1` 14 checks; grid, labels, text options and live rendering tests
       pass. Preview in MonoLisa (Pyre Daylight): ss01 script comments, dlig coding ligatures, ss14 sevens, ss05-ss11.
-    - B, weights per style and a bold weight; C, fractional font sizes; D, a fallback font list: to do.
+    - B, **the weight of bold** (done, `c4f6d6b`): per-style weights were already there through the GDI family names
+      pyre maps ("MonoLisaCode Light", "MonoLisaCode SemiBold": all ten of MonoLisa's weights in the font list); what
+      was missing was bold's weight, changed per language before: Preferences > Fonts > Bold (Medium to Black,
+      config.xml `boldWeight`, relative for a font of another weight), applied at once.
+    - C, **half points** (done, `e88f7d8`): `Style::_fontSizeHundredths` beside `_fontSize` (whole points everywhere
+      else, the UDL dialog untouched), stylers.xml `fontSize="10.5"` read and written, `SCI_STYLESETSIZEFRACTIONAL`,
+      the Style Configurator's list with 6.5 to 13.5. `pyre-style-configurator.ps1` 11 checks.
+    - D, **fallback fonts** (done, `eb28c50`): Preferences > Fonts > Fallback Fonts, config.xml `fontFallback`,
+      Scintilla `SCI_SETFONTFALLBACK`: an `IDWriteFontFallback` of the families (each for its Unicode ranges) before
+      the system's. `pyre-font-features.ps1` 21 checks (with MS Mincho for a CJK line).
+    - Next: DirectWrite stage 1, then the research for right-to-left views and printing.
 
 - **The review round (2026-10-20, evening)**, asked by Pyre909: sync with upstream (the fork's `master` brought to
   `b661c2b` with `gh repo sync`; `pyre` had it), a preview (`C:\npp-preview-49de091`, a portable copy of the installation

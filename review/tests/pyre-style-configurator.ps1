@@ -9,6 +9,7 @@
 #   the update from the model saved, is the current theme too).
 # - The user keywords typed are applied once the typing pauses, not on each key (each application restyles the views:
 #   14.6 ms a key before, 2.7 ms after, with a 100,000-line C++ file; one restyle after the pause).
+# - A size of half a point (2026-11-10): 10.5 in the size list, saved as fontSize="10.5", drawn at 10.5, shown again.
 # Runs a copy of the build in a folder of its own with four of the installation's themes next to it (as installed), a
 # settings folder of its own (the user's themes folder in it) and a C++ file of 100,000 lines.
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
@@ -43,10 +44,11 @@ public static class SC {
 $WM_CLOSE = 0x0010; $WM_COMMAND = 0x0111; $WM_CHAR = 0x0102; $BM_SETCHECK = 0x00F1
 $CB_SETCURSEL = 0x014E; $CB_FINDSTRINGEXACT = 0x0158; $LB_SETCURSEL = 0x0186; $LB_FINDSTRINGEXACT = 0x01A2
 $IDM_SETTING_PREFERENCE = 48011; $IDM_LANGSTYLE_CONFIG_DLG = 46001
-$IDC_FONT_COMBO = 2202; $IDC_BOLD_CHECK = 2204; $IDC_USER_KEYWORDS_EDIT = 2222
+$IDC_FONT_COMBO = 2202; $IDC_FONTSIZE_COMBO = 2203; $IDC_BOLD_CHECK = 2204; $IDC_USER_KEYWORDS_EDIT = 2222
 $IDC_SAVECLOSE_BUTTON = 2301; $IDC_LANGUAGES_COMBO = 2304; $IDC_STYLES_LIST = 2305; $IDC_SWITCH2THEME_COMBO = 2307
 $IDC_RADIO_DARKMODE_LIGHTMODE = 7131; $IDC_RADIO_DARKMODE_DARKMODE = 7132
 $SCI_GETSTYLEAT = 2010; $SCI_STYLEGETBACK = 2482; $SCI_STYLEGETBOLD = 2483; $STYLE_DEFAULT = 32; $SCE_C_WORD = 5
+$SCI_STYLEGETSIZEFRACTIONAL = 2062
 
 $script:results = [Collections.Generic.List[string]]::new(); $script:fails = 0
 function Check([string] $name, [bool] $ok, [string] $detail = '') {
@@ -195,6 +197,17 @@ try {
 	[void](Select-Text $dlg $IDC_SWITCH2THEME_COMBO 'Zenburn')
 	[void](Select-Text $dlg $IDC_SWITCH2THEME_COMBO 'Monokai')
 	Check 'Monokai selected again: the saved copy (bold), not the installation''s' ((Send $view $SCI_STYLEGETBOLD $STYLE_DEFAULT) -eq 1) "bold $(Send $view $SCI_STYLEGETBOLD $STYLE_DEFAULT)"
+
+	# a size of half a point (Pyre909 build, 2026-11-10): 10.5 chosen, saved as fontSize="10.5", drawn at 10.5 points,
+	# shown again
+	[void](Select-Text $dlg $IDC_LANGUAGES_COMBO 'Global Styles'); [void](Select-Text $dlg $IDC_STYLES_LIST 'Default Style' -List)
+	$chosen = Select-Text $dlg $IDC_FONTSIZE_COMBO '10.5'
+	Save-Close $dlg
+	$size = Send $view $SCI_STYLEGETSIZEFRACTIONAL $STYLE_DEFAULT
+	Check 'a size of 10.5 points: in the list, saved as fontSize="10.5", drawn at 10.5' ($chosen -and ((Default-Style-Attr $copy 'fontSize') -eq '10.5') -and ($size -eq 1050)) "fontSize '$(Default-Style-Attr $copy 'fontSize')', $size hundredths"
+	$dlg = Open-Styler
+	[void](Select-Text $dlg $IDC_LANGUAGES_COMBO 'Global Styles'); [void](Select-Text $dlg $IDC_STYLES_LIST 'Default Style' -List)
+	Check '  shown again: 10.5' ((Get-ComboText $dlg $IDC_FONTSIZE_COMBO) -eq '10.5') "'$(Get-ComboText $dlg $IDC_FONTSIZE_COMBO)'"
 
 	# user keywords typed: applied once the typing pauses, not on each key
 	[void](Select-Text $dlg $IDC_LANGUAGES_COMBO 'C++'); [void](Select-Text $dlg $IDC_STYLES_LIST 'INSTRUCTION WORD' -List)

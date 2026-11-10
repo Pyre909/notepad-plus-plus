@@ -2,8 +2,11 @@
 # fontFeatures, pyre's SCI_SETFONTFEATURES). Cascadia Code (Windows 11) as Default Style: the page lists its features
 # (its stylistic sets, the italic's ss01 too, zero, calt...), checked as drawn (calt on by default); a list typed in the
 # page's text applies at once to both views of a document and the Document Map, checks the list, and draws differently
-# ("zero": a slashed zero; "-calt": no ligatures); what isn't a feature is ignored; cleared, the text is drawn as before;
-# saved in config.xml and read back at the next start. Without Cascadia Code, the drawing and list checks are skipped.
+# ("zero": a slashed zero; "-calt": no ligatures); what isn't a feature is ignored; cleared, the text is drawn as before.
+# The bold weight (config.xml boldWeight): SemiBold makes the bold styles 600 in both views, Bold 700 again. The fallback
+# fonts (config.xml fontFallback): a serif CJK font listed draws the CJK line (Cascadia Code has none) instead of
+# Windows' choice; a font DirectWrite doesn't know is left out. Saved in config.xml and read back at the next start.
+# Without Cascadia Code, the drawing and list checks are skipped.
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
 param([Parameter(Mandatory)] [string] $Exe, [string] $Font = 'Cascadia Code')
 $ErrorActionPreference = 'Stop'
@@ -64,8 +67,10 @@ public static class FF {
 $WM_CLOSE = 0x0010; $WM_COMMAND = 0x0111; $WM_SETTEXT = 0x000C; $LB_SETCURSEL = 0x0186; $LB_FINDSTRINGEXACT = 0x01A2
 $LVM_GETITEMCOUNT = 0x1004; $LVM_GETITEMSTATE = 0x102C; $LVIS_STATEIMAGEMASK = 0xF000
 $IDC_LIST_DLGTITLE = 6002; $IDC_LIST_FONTFEATURES = 7203; $IDC_EDIT_FONTFEATURES = 7205; $IDC_FONTFEATURES_FONT_STATIC = 7202
+$IDC_COMBO_BOLDWEIGHT = 7209; $CB_SETCURSEL = 0x014E; $CB_GETCURSEL = 0x0147; $CB_GETCOUNT = 0x0146
+$IDC_EDIT_FONTFALLBACK = 7213; $SCI_GETFONTFALLBACK = 5109
 $IDM_SETTING_PREFERENCE = 48011; $IDM_VIEW_CLONE_TO_ANOTHER_VIEW = 10002; $IDM_VIEW_DOC_MAP = 44080
-$SCI_GETFONTFEATURES = 5107; $SCI_SETCARETSTYLE = 2512
+$SCI_GETFONTFEATURES = 5107; $SCI_SETCARETSTYLE = 2512; $SCI_STYLEGETWEIGHT = 2064; $SCE_C_WORD = 5
 
 $script:results = [Collections.Generic.List[string]]::new(); $script:fails = 0
 function Check([string] $name, [bool] $ok, [string] $detail = '') {
@@ -99,7 +104,11 @@ if ($fontInstalled) {
 	[IO.File]::WriteAllText((Join-Path $settings 'stylers.xml'), $model.Replace($default, ($default -replace 'fontName="[^"]*"', "fontName=""$Font""")))
 }
 $file = Join-Path $settings 'features.cpp'
-[IO.File]::WriteAllLines($file, [string[]]@('int zeros = 0000; // O0O 1lI|', 'if (a -> b != c && d >= e || f == g) { return h <= i; }'))
+[IO.File]::WriteAllLines($file, [string[]]@('int zeros = 0000; // O0O 1lI|', 'if (a -> b != c && d >= e || f == g) { return h <= i; }',
+	"// $([char]0x4E2D)$([char]0x6587)$([char]0x6DF7)$([char]0x6392) $([char]0x65E5)$([char]0x672C)$([char]0x8A9E)"), [Text.UTF8Encoding]::new($false))
+# a CJK font that isn't Windows' usual fallback for these characters (a serif), for the fallback fonts' checks
+Add-Type -AssemblyName System.Drawing
+$cjkFont = @('MS Mincho', 'SimSun', 'MingLiU', 'Batang') | Where-Object { [Drawing.Text.InstalledFontCollection]::new().Families.Name -contains $_ } | Select-Object -First 1
 
 function Start-Npp {
 	$script:proc = Start-Process $Exe -ArgumentList '-multiInst', '-nosession', "-settingsDir=$settings", '-titleAdd=REVIEW-TEST', $file -PassThru
@@ -129,6 +138,15 @@ function Get-Checked([IntPtr] $page) {
 	$listView = [FF]::GetDlgItem($page, $IDC_LIST_FONTFEATURES)
 	$n = Send $listView $LVM_GETITEMCOUNT
 	@(0..([Math]::Max(0, $n - 1)) | Where-Object { $n -gt 0 -and ((Send $listView $LVM_GETITEMSTATE $_ $LVIS_STATEIMAGEMASK) -shr 12) -eq 2 }).Count
+}
+function Set-BoldWeight([IntPtr] $page, [int] $index) {
+	$combo = [FF]::GetDlgItem($page, $IDC_COMBO_BOLDWEIGHT)
+	[void](Send $combo $CB_SETCURSEL $index)
+	[void](Send $page $WM_COMMAND ((1 -shl 16) -bor $IDC_COMBO_BOLDWEIGHT) $combo.ToInt64()); Start-Sleep -Milliseconds 400 # CBN_SELCHANGE
+}
+function Set-Fallback([IntPtr] $page, [string] $text) {
+	[void][FF]::SendMessage([FF]::GetDlgItem($page, $IDC_EDIT_FONTFALLBACK), $WM_SETTEXT, [IntPtr]::Zero, $text) # EN_CHANGE
+	Start-Sleep -Milliseconds 400
 }
 function Set-Features([IntPtr] $page, [string] $text) {
 	[void][FF]::SendMessage([FF]::GetDlgItem($page, $IDC_EDIT_FONTFEATURES), $WM_SETTEXT, [IntPtr]::Zero, $text) # EN_CHANGE
@@ -184,12 +202,41 @@ try {
 	Set-Features $page ''
 	Check 'cleared: no features, drawn as at first' (((Get-Features $shotView) -eq 0) -and ([FF]::Differ($original, [FF]::Shot($shotView)) -eq 0))
 
+	# the bold weight: the C++ keywords (SCE_C_WORD, bold in the default theme) SemiBold in both views, then Bold again
+	$boldCombo = [FF]::GetDlgItem($page, $IDC_COMBO_BOLDWEIGHT)
+	$weights = { @($views | ForEach-Object { [int](Send $_ $SCI_STYLEGETWEIGHT $SCE_C_WORD) }) -join ',' }
+	Check 'Bold: 5 weights (Medium to Black), Bold chosen; the keywords 700' (((Send $boldCombo $CB_GETCOUNT) -eq 5) -and ((Send $boldCombo $CB_GETCURSEL) -eq 2) -and ((& $weights) -eq '700,700')) "weights $(& $weights)"
+	Set-BoldWeight $page 1
+	$semiBold = [FF]::Shot($shotView)
+	Check '  SemiBold: the keywords 600 in both views' ((& $weights) -eq '600,600') "weights $(& $weights)"
+	if ($fontInstalled) { Check "  drawn lighter ($Font has a SemiBold)" ([FF]::Differ($original, $semiBold) -gt 0) "$([FF]::Differ($original, $semiBold)) pixels changed" }
+	Set-BoldWeight $page 2
+	Check '  Bold again: 700, drawn as at first' (((& $weights) -eq '700,700') -and ([FF]::Differ($original, [FF]::Shot($shotView)) -eq 0)) "weights $(& $weights)"
+
+	# the fallback fonts: the CJK line (Cascadia Code has none) drawn with the font listed, not Windows' choice; a font
+	# DirectWrite doesn't know left out
+	$fallbackBox = [FF]::GetDlgItem($page, $IDC_EDIT_FONTFALLBACK)
+	$windowsFallback = [FF]::Shot($shotView)
+	if ($cjkFont -and $fontInstalled) {
+		Set-Fallback $page "No Such Font; $cjkFont"
+		$listed = [FF]::Shot($shotView)
+		$fallbacks = @($views | ForEach-Object { [int](Send $_ $SCI_GETFONTFALLBACK) })
+		Check "fallback fonts ""No Such Font; $cjkFont"": both views at once, the CJK drawn with $cjkFont" (((@($fallbacks | Where-Object { $_ -eq ("No Such Font; $cjkFont").Length }).Count -eq 2)) -and ([FF]::Differ($windowsFallback, $listed) -gt 0)) "lengths $($fallbacks -join ', '); $([FF]::Differ($windowsFallback, $listed)) pixels changed"
+		Set-Fallback $page 'No Such Font'
+		Check '  a font DirectWrite doesn''t know alone: Windows'' fallback' ([FF]::Differ($windowsFallback, [FF]::Shot($shotView)) -eq 0)
+	}
+	else { $script:results.Add("INFO  no serif CJK font (MS Mincho, SimSun, MingLiU, Batang) or no $Font`: the fallback fonts' drawing not checked") }
+	Set-Fallback $page ''
+	Check '  cleared: Windows'' fallback' (((Send $shotView $SCI_GETFONTFALLBACK) -eq 0) -and ([FF]::Differ($windowsFallback, [FF]::Shot($shotView)) -eq 0))
+
 	Set-Features $page 'ss02 zero'
+	Set-BoldWeight $page 1
+	Set-Fallback $page 'Segoe UI Emoji'
 	Stop-Npp
 	$config = Get-Content -LiteralPath (Join-Path $settings 'config.xml') -Raw
-	Check 'saved: config.xml fontFeatures="ss02 zero"' ($config -match 'fontFeatures="ss02 zero"')
+	Check 'saved: config.xml fontFeatures="ss02 zero" boldWeight="600" fontFallback="Segoe UI Emoji"' (($config -match 'fontFeatures="ss02 zero"') -and ($config -match 'boldWeight="600"') -and ($config -match 'fontFallback="Segoe UI Emoji"'))
 	$views = Start-Npp
-	Check '  read back at the next start: both views' (@($views | Where-Object { (Get-Features $_) -eq 9 }).Count -eq 2) "lengths $(@($views | ForEach-Object { Get-Features $_ }) -join ', ')"
+	Check '  read back at the next start: both views' ((@($views | Where-Object { ((Get-Features $_) -eq 9) -and ((Send $_ $SCI_GETFONTFALLBACK) -eq 14) }).Count -eq 2) -and ((& $weights) -eq '600,600')) "lengths $(@($views | ForEach-Object { Get-Features $_ }) -join ', '); weights $(& $weights)"
 	Stop-Npp
 }
 finally {
