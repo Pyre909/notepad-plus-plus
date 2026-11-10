@@ -8,11 +8,15 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 
 - **Needs Windows 10 version 1809 or later** (official Notepad++ runs on older versions too): the build calls
   Windows 10's functions directly, and its installer stops on an older Windows.
-- **Text rendering settings** (Preferences > Editing 1 > Text Rendering): the rendering mode (GDI or a
-  DirectWrite mode, moved here from MISC.), antialiasing (Follow Windows, ClearType, ClearType with less color
-  fringing, Grayscale, None), the DirectWrite mode (Automatic, Natural for sharper small text, Symmetric, GDI
-  classic) and the text contrast. "Follow Windows" follows the Windows font smoothing with DirectWrite
-  too (official issue #17461), and a change of it at once, the ClearType Text Tuner's included.
+- **Text rendering settings** (Preferences > Editing 1 > Text Rendering): the rendering mode (a DirectWrite mode,
+  moved here from MISC.), antialiasing (Follow Windows, ClearType, ClearType with less color fringing, Grayscale,
+  None), the DirectWrite mode (Automatic, Natural for sharper small text, Symmetric, GDI classic) and the text
+  contrast. "Follow Windows" follows the Windows font smoothing with DirectWrite too (official issue #17461), and a
+  change of it at once, the ClearType Text Tuner's included.
+- **DirectWrite only**: the rendering modes offered are DirectWrite's (its GDI classic mode looks like GDI, its glyphs
+  on whole pixels); the font features, weights and fallback fonts above are DirectWrite's. GDI is listed for a setting
+  of an older version (to leave it), where DirectWrite isn't available (Wine), or with `offerGdiRendering="yes"` in
+  config.xml's MISC settings, written by hand. Right-to-left documents are still drawn with GDI.
 - **Line spacing and font ligatures** (Preferences > Editing 1 > Text Rendering): extra space between the lines
   of the editor, +1 to +10 pixels at 100% scale (official issue #971), and the fonts' ligatures, such as the
   arrows and operators of Cascadia Code or Fira Code, turned off when unwanted (DirectWrite; official issue #14764).

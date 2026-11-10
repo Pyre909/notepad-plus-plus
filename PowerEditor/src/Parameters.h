@@ -812,6 +812,7 @@ struct NppGUI final
 	bool _perMonitorDpiAwareness = false; // experimental opt-in per-monitor v2 DPI awareness, applied at startup
 	bool _roundedPopups = true; // Pyre909 build: Windows 11 rounded corners on the popups it leaves square (NppDarkMode::setRoundedCorners)
 	writeTechnologyEngine _writeTechnologyEngine = directWriteTechnology;
+	bool _offerGdiRendering = false; // Pyre909 build: GDI in Preferences' rendering modes (config.xml MISC offerGdiRendering, by hand)
 	bool _isWordCharDefault = true;
 	std::string _customWordChars;
 	urlMode _styleURL = urlUnderLineFg;

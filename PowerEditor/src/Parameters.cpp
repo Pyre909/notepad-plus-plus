@@ -7117,6 +7117,8 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 				using enum writeTechnologyEngine;
 				_nppGUI._writeTechnologyEngine = getRangeDefaultAttribute(childNode, "writeTechnologyEngine", defaultTechnology, directWriteTechnologyUnavailable, _nppGUI._writeTechnologyEngine);
 			}
+			// Pyre909 build: GDI offered in Preferences > Editing 1 (written by hand: DirectWrite is the only choice otherwise)
+			_nppGUI._offerGdiRendering = getBoolAttribute(childNode, "offerGdiRendering", _nppGUI._offerGdiRendering);
 
 			_nppGUI._isFolderDroppedOpenFiles = getBoolAttribute(childNode, "isFolderDroppedOpenFiles");
 			_nppGUI._isDocPeekOnTab = getBoolAttribute(childNode, "docPeekOnTab");
@@ -8276,6 +8278,8 @@ void NppParameters::createXmlTreeFromGUIParams()
 		setBoolAttribute(GUIConfigElement, "fileSwitcherNoGroups", _nppGUI._fileSwitcherDisableListViewGroups);
 		setBoolAttribute(GUIConfigElement, "backSlashIsEscapeCharacterForSql", _nppGUI._backSlashIsEscapeCharacterForSql);
 		NppXml::setAttribute(GUIConfigElement, "writeTechnologyEngine", _nppGUI._writeTechnologyEngine);
+		if (_nppGUI._offerGdiRendering) // Pyre909 build: kept once written by hand
+			setBoolAttribute(GUIConfigElement, "offerGdiRendering", true);
 		setBoolAttribute(GUIConfigElement, "isFolderDroppedOpenFiles", _nppGUI._isFolderDroppedOpenFiles);
 		setBoolAttribute(GUIConfigElement, "docPeekOnTab", _nppGUI._isDocPeekOnTab);
 		setBoolAttribute(GUIConfigElement, "docPeekOnMap", _nppGUI._isDocPeekOnMap);

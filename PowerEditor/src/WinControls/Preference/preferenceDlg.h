@@ -100,6 +100,7 @@ public :
 
 private :
 	std::vector<HWND> _tips; // Pyre909 build: of the Text Rendering controls and of the line wrap's "Per document"
+	int _firstTechnology = 0; // Pyre909 build: the rendering mode of the list's first item: GDI if offered, else DirectWrite
 
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	void initScintParam();

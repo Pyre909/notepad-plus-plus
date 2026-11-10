@@ -1872,8 +1872,14 @@ void EditingSubDlg::initTextRenderingParam()
 	if ((nppGUI._writeTechnologyEngine < 0) || (nppGUI._writeTechnologyEngine > directWriteTechnologyUnavailable))
 		nppGUI._writeTechnologyEngine = directWriteTechnology;
 	const bool isDirectWriteAvailable = (nppGUI._writeTechnologyEngine != directWriteTechnologyUnavailable);
-	setComboItems(IDC_COMBO_SC_TECHNOLOGY_CHOICE, { L"GDI (most compatible)", L"DirectWrite (default)", L"DirectWrite (retain frames)",
-		L"DirectWrite (draw to GDI DC)", L"DirectWrite (DirectX 11)" }, isDirectWriteAvailable ? nppGUI._writeTechnologyEngine : defaultTechnology);
+	// Pyre909 build: DirectWrite is the only choice; GDI is listed when it's the rendering mode (an older config.xml, so
+	// that it can be left), without DirectWrite (Wine), or with config.xml's offerGdiRendering="yes" (written by hand)
+	const bool isGdiOffered = nppGUI._offerGdiRendering || (nppGUI._writeTechnologyEngine == defaultTechnology) || !isDirectWriteAvailable;
+	_firstTechnology = isGdiOffered ? defaultTechnology : directWriteTechnology;
+	if (isGdiOffered)
+		::SendDlgItemMessage(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"GDI (most compatible)"));
+	setComboItems(IDC_COMBO_SC_TECHNOLOGY_CHOICE, { L"DirectWrite (default)", L"DirectWrite (retain frames)",
+		L"DirectWrite (draw to GDI DC)", L"DirectWrite (DirectX 11)" }, (isDirectWriteAvailable ? nppGUI._writeTechnologyEngine : defaultTechnology) - _firstTechnology);
 	if (!isDirectWriteAvailable)
 		::EnableWindow(::GetDlgItem(_hSelf, IDC_COMBO_SC_TECHNOLOGY_CHOICE), false);
 
@@ -2283,7 +2289,7 @@ intptr_t CALLBACK EditingSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 									return TRUE;
 
 								// applied at once, with the style fonts of the new technology (the right-to-left views keep GDI)
-								ScintillaEditView::switchTechnologyOfAll(static_cast<writeTechnologyEngine>(selIndex));
+								ScintillaEditView::switchTechnologyOfAll(static_cast<writeTechnologyEngine>(selIndex + _firstTechnology));
 								enableDirectWriteTextRendering();
 								return TRUE;
 							}
