@@ -19,14 +19,14 @@
 
 //************ Notepad++ version **************************
 
-#define NOTEPAD_PLUS_VERSION L"Notepad++ v8.9.8.1"
+#define NOTEPAD_PLUS_VERSION L"Notepad++ v8.9.9"
 
 // should be X.Y : ie. if VERSION_DIGITALVALUE == 4, 7, 1, 0 , then X = 4, Y = 71
 // ex : #define VERSION_VALUE L"5.63\0"
-#define VERSION_INTERNAL_VALUE L"8.981\0"
+#define VERSION_INTERNAL_VALUE L"8.99\0"
 
-#define VERSION_PRODUCT_VALUE L"8.9.8.1\0"
-#define VERSION_DIGITALVALUE 8, 9, 8, 1
+#define VERSION_PRODUCT_VALUE L"8.9.9.0\0"
+#define VERSION_DIGITALVALUE 8, 9, 9, 0
 
 //**********************************************************
 
@@ -803,7 +803,7 @@
 	#define NPPM_INTERNAL_CHANGESELECTTEXTFORGROUND     (NOTEPADPLUS_USER_INTERNAL + 84)
 	#define NPPM_INTERNAL_DRAWINACTIVETAB               (NOTEPADPLUS_USER_INTERNAL + 85)
 	#define NPPM_INTERNAL_DRAWTABTOPBAR                 (NOTEPADPLUS_USER_INTERNAL + 86)
-	//#define NPPM_INTERNAL_TABDBCLK2CLOSE                (NOTEPADPLUS_USER_INTERNAL + 87)
+	#define NPPM_INTERNAL_FINDDLGHIGHLIGHT              (NOTEPADPLUS_USER_INTERNAL + 87)
 	#define NPPM_INTERNAL_VERTICALTABBAR                (NOTEPADPLUS_USER_INTERNAL + 88)
 	#define NPPM_INTERNAL_MULTILINETABBAR               (NOTEPADPLUS_USER_INTERNAL + 89)
 	#define NPPM_INTERNAL_TOOLBARREDUCE                 (NOTEPADPLUS_USER_INTERNAL + 90)
@@ -835,6 +835,7 @@
 	#define NPPM_INTERNAL_OPENLINKAT                    (NOTEPADPLUS_USER_INTERNAL + 116) // Pyre909 build: wParam: position, lParam: the view's HWND
 	#define NPPM_INTERNAL_WRAPPERDOCUMENT               (NOTEPADPLUS_USER_INTERNAL + 117) // Pyre909 build: "Word wrap per document" changed
 	#define NPPM_INTERNAL_STATUSBARPOSITION             (NOTEPADPLUS_USER_INTERNAL + 118) // Pyre909 build: the status bar's position forms changed
+
 
 // See Notepad_plus_msgs.h
 //#define NPPMSG   (WM_USER + 1000)

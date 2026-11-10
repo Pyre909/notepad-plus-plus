@@ -4062,12 +4062,14 @@ void NppParameters::feedFindHistoryParameters(const NppXml::Element& element)
 	_findHistory._dotMatchesNewline = getBoolAttribute(findHistoryRoot, "dotMatchesNewline");
 	_findHistory._isSearch2ButtonsMode = getBoolAttribute(findHistoryRoot, "isSearch2ButtonsMode");
 	_findHistory._regexBackward4PowerUser = getBoolAttribute(findHistoryRoot, "regexBackward4PowerUser");
+	_findHistory._findDlgHighlightMatches = getBoolAttribute(findHistoryRoot, "findDlgHighlightMatches");
 	_findHistory._isBookmarkLine = getBoolAttribute(findHistoryRoot, "bookmarkLine");
 	_findHistory._isPurge = getBoolAttribute(findHistoryRoot, "purge");
 
 	_findHistory._isIncrementalMatchCase = getBoolAttribute(findHistoryRoot, "incrementalMatchCase", _findHistory._isIncrementalMatchCase);
 	_findHistory._isIncrementalHighlightAll = getBoolAttribute(findHistoryRoot, "incrementalHighlightAll", _findHistory._isIncrementalHighlightAll);
 	_findHistory._isIncrementalCount = getBoolAttribute(findHistoryRoot, "incrementalCount", _findHistory._isIncrementalCount);
+	_findHistory._incrementalSearchBarAtTop = getBoolAttribute(findHistoryRoot, "incrementalSearchBarAtTop", _findHistory._incrementalSearchBarAtTop);
 }
 
 void NppParameters::feedShortcut(const NppXml::Element& element)
@@ -7036,7 +7038,9 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			_nppGUI._fillFindWhatThreshold = getRangeDefaultAttribute(childNode, "fillFindWhatThreshold", 1, FINDREPLACE_MAXLENGTH - 1, _nppGUI._fillFindWhatThreshold);
 
 			_nppGUI._fillDirFieldFromActiveDoc = getBoolAttribute(childNode, "fillDirFieldFromActiveDoc");
-			_nppGUI._incrementalSearchBarAtTop = getBoolAttribute(childNode, "incrementalSearchBarAtTop");
+
+			// Compatibility for v8.9.9 - should be removed in the future release
+			_findHistory._incrementalSearchBarAtTop = getBoolAttribute(childNode, "incrementalSearchBarAtTop", _findHistory._incrementalSearchBarAtTop);
 		}
 		// <GUIConfig name="MISC" fileSwitcherWithoutExtColumn="no" fileSwitcherExtWidth="50" fileSwitcherWithoutPathColumn="no" fileSwitcherPathWidth="50"
 		// fileSwitcherNoGroups="no" backSlashIsEscapeCharacterForSql="yes" writeTechnologyEngine="1" isFolderDroppedOpenFiles="no" docPeekOnTab="no"
@@ -8246,7 +8250,6 @@ void NppParameters::createXmlTreeFromGUIParams()
 		NppXml::setAttribute(GUIConfigElement, "inSelectionAutocheckThreshold", _nppGUI._inSelectionAutocheckThreshold);
 		NppXml::setAttribute(GUIConfigElement, "fillFindWhatThreshold", _nppGUI._fillFindWhatThreshold);
 		setBoolAttribute(GUIConfigElement, "fillDirFieldFromActiveDoc", _nppGUI._fillDirFieldFromActiveDoc);
-		setBoolAttribute(GUIConfigElement, "incrementalSearchBarAtTop", _nppGUI._incrementalSearchBarAtTop);
 	}
 
 	// <GUIConfig name="searchEngine" searchEngineChoice="2" searchEngineCustom="" />
@@ -8416,6 +8419,7 @@ bool NppParameters::writeFindHistory()
 	setBoolAttribute(findHistoryRoot, "dotMatchesNewline", _findHistory._dotMatchesNewline);
 	setBoolAttribute(findHistoryRoot, "isSearch2ButtonsMode", _findHistory._isSearch2ButtonsMode);
 	setBoolAttribute(findHistoryRoot, "regexBackward4PowerUser", _findHistory._regexBackward4PowerUser);
+	setBoolAttribute(findHistoryRoot, "findDlgHighlightMatches", _findHistory._findDlgHighlightMatches);
 
 	setBoolAttribute(findHistoryRoot, "bookmarkLine", _findHistory._isBookmarkLine);
 	setBoolAttribute(findHistoryRoot, "purge", _findHistory._isPurge);
@@ -8423,6 +8427,7 @@ bool NppParameters::writeFindHistory()
 	setBoolAttribute(findHistoryRoot, "incrementalMatchCase", _findHistory._isIncrementalMatchCase);
 	setBoolAttribute(findHistoryRoot, "incrementalHighlightAll", _findHistory._isIncrementalHighlightAll);
 	setBoolAttribute(findHistoryRoot, "incrementalCount", _findHistory._isIncrementalCount);
+	setBoolAttribute(findHistoryRoot, "incrementalSearchBarAtTop", _findHistory._incrementalSearchBarAtTop);
 
 	for (const auto& path : _findHistory._findHistoryPaths)
 	{
