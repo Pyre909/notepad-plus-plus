@@ -24,8 +24,10 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     dialogs (the `per-monitor-dpi` branch will need a rebase); an `AGENTS.md`: AI use disclosed with the model (and the
     prompt if possible), the AI agent as `Co-Authored-By` (every branch has it), contributors write their own comments.
     The kit's 20 disclosures now name the model; PR #18503 says only "Claude": a comment naming the model would do.
-  - "GDI deprecated": not found. The Scintilla author wrote (2024-08-20, scintilla-interest "Issues with GDI Scaling in
-    Windows") that SC_TECHNOLOGY_DIRECTWRITE "is now the focus of development effort"; no plan to remove GDI.
+  - "GDI deprecated": Neil Hodgson on our #2519 (2026-09-30): "DirectWrite should be treated as the default and GDI as
+    a legacy API ... Eventually GDI will be deprecated." (no timeline; already noted 2026-10-19 below, missed at first
+    on 2026-11-10). Also (2024-08-20, scintilla-interest "Issues with GDI Scaling in Windows") SC_TECHNOLOGY_DIRECTWRITE
+    "is now the focus of development effort". It's Scintilla's GDI drawing (SC_TECHNOLOGY_DEFAULT), not Windows' GDI.
   - MonoLisa as installed: static, MonoLisa Code and MonoLisa Text 3.000, 10 weights (Hairline to Black) upright and
     italic (40 files in C:\Windows\Fonts); GSUB: ss01 "Script variant" (italic only), ss02-ss15 (alt i r, g, @, *, $,
     &, (), {}, backslash, hex x, seven, plain zero), cv01-cv12 (unnamed: the coding ligatures since v3), dlig (all of
