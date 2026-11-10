@@ -4,8 +4,11 @@
 # scrolling, word wrap of 300,000 long lines, typing, Replace All, Mark All, folding, the Document Map, the Style
 # Configurator and Preferences opened. With several -Exe (and -Names), the builds alternate inside each round (the VM's
 # speed drifts between runs); the table gives each operation's median per build and the ratio to the first build.
-# -Train: one pass through every operation (each Notepad++ feature they reach becomes "hot" for PGO), then Notepad++
-# closed normally: an instrumented build writes its .pgc file at exit. Compare copies of the builds in plain folders:
+# -Train: one pass through every operation (each Notepad++ feature they reach becomes "hot" for PGO), then the per-key paths
+# the bulk operations hardly reach (caret and selection moves, document switches, typing with word completion), then
+# Notepad++ closed normally: an instrumented build writes its .pgc file at exit; then the Function List and the fork's
+# features (dark mode, all characters shown, the character grid, font features and fallback fonts, the status bar's
+# forms, a session of 200 files, mixed scripts, case-insensitive completion) in runs of their own (a .pgc each, merged). Compare copies of the builds in plain folders:
 # a build path UMDH records stacks for (review\umdh-scope.ps1) runs slower.
 param(
 	[Parameter(Mandatory)] [string[]] $Exe,
@@ -38,7 +41,8 @@ $NPPMSG = 0x0400 + 1000; $NPPM_GETNBOPENFILES = $NPPMSG + 7; $NPPM_ACTIVATEDOC =
 $SCI = @{ GOTOPOS = 2025; GETLENGTH = 2006; DOCUMENTEND = 2318; PAGEDOWN = 2322; PAGEUP = 2320; GETLINECOUNT = 2154
 	SETWRAPMODE = 2268; ENSUREVISIBLE = 2232; COLOURISE = 4003; CLEARDOCUMENTSTYLE = 2005; UNDO = 2176; SETSEL = 2160
 	EMPTYUNDOBUFFER = 2175; SETSAVEPOINT = 2014; SETFIRSTVISIBLELINE = 2613; WORDSTARTPOSITION = 2266; WORDENDPOSITION = 2267
-	GOTOLINE = 2024; NEWLINE = 2329 }
+	GOTOLINE = 2024; NEWLINE = 2329; LINEDOWN = 2300; WORDRIGHT = 2310; CHARRIGHTEXTEND = 2307; CHARLEFT = 2304
+	LINEEND = 2314; AUTOCCANCEL = 2101 }
 $IDM = @{ FILE_NEW = 41001; VIEW_WRAP = 44022; VIEW_FOLDALL = 44010; VIEW_UNFOLDALL = 44029; VIEW_DOC_MAP = 44080
 	VIEW_FUNC_LIST = 44084; SEARCH_REPLACE = 43003; SEARCH_MARKALLEXT1 = 43022; SEARCH_CLEARALLMARKS = 43032
 	LANGSTYLE_CONFIG_DLG = 46001; SETTING_PREFERENCE = 48011; VIEW_CLONE_TO_ANOTHER_VIEW = 10002; LANG_CPP = 46003 }
@@ -185,8 +189,16 @@ $allOps = [ordered]@{
 	'Style Configurator: open, close' = { param($m, $p) Time { [void][NB.U]::PostMessage($m, $WM_COMMAND, [IntPtr]$IDM.LANGSTYLE_CONFIG_DLG, [IntPtr]::Zero); $d = Find-Dialog $p.Id 'Style Configurator'; [void](Send $d $WM_COMMAND $IDCANCEL) } }
 	'Preferences: open, close' = { param($m, $p) Time { [void][NB.U]::PostMessage($m, $WM_COMMAND, [IntPtr]$IDM.SETTING_PREFERENCE, [IntPtr]::Zero); $d = Find-Dialog $p.Id 'Preferences'; [void](Send $d $WM_COMMAND $IDCANCEL) } }
 }
-# training only (not timed): a clone in the other view (the Function List: Invoke-FunctionListTraining)
+# training only (not timed): the per-key paths, each move or key painted (the status bar, brace and tag matching, smart
+# highlighting, auto-completion run then), and a clone in the other view (the Function List: Invoke-FunctionListTraining;
+# the fork's features: Invoke-FeatureTraining)
+$completionWords = 'value', 'static', 'const', 'class', 'compute', 'namespace', 'template', 'return', 'wchar_t', 'vector'
 $trainOps = [ordered]@{
+	'caret and selection: C++, HTML, XML, 600 moves each' = { param($m, $p) foreach ($i in 0, 3, 5) { Activate $m $i; $v = Get-View $m; [void](Send $v $SCI.GOTOLINE 1000)
+		foreach ($k in 1..150) { foreach ($c in $SCI.LINEDOWN, $SCI.WORDRIGHT, $SCI.CHARRIGHTEXTEND, $SCI.CHARLEFT) { [void](Send $v $c); Paint $v } } }; 0 }
+	'document switches: 300' = { param($m, $p) foreach ($k in 0..299) { Activate $m ($k % $fileNames.Count) }; 0 }
+	'type with word completion: code.cpp, 20 words' = { param($m, $p) Activate $m 0; $v = Get-View $m; [void](Send $v $SCI.GOTOLINE 30000); [void](Send $v $SCI.LINEEND)
+		foreach ($word in $completionWords + $completionWords) { foreach ($ch in " $word".ToCharArray()) { [void](Send $v $WM_CHAR ([int]$ch)); Paint $v }; [void](Send $v $SCI.AUTOCCANCEL) }; 0 }
 	'clone to the other view' = { param($m, $p) Activate $m 1; [void](Send $m $WM_COMMAND $IDM.VIEW_CLONE_TO_ANOTHER_VIEW); [void](Send $m 0); 0 }
 }
 $selected = if ($Ops.Count) { $Ops } else { @($allOps.Keys) }
@@ -197,7 +209,11 @@ function Close-Npp($p) {
 	for ($i = 0; $i -lt 240 -and -not $p.HasExited; $i++) {
 		Start-Sleep -Milliseconds 250
 		foreach ($b in @(Get-Tops ([uint32]$p.Id) | Where-Object { (Get-Cls $_) -eq '#32770' -and [NB.U]::IsWindowVisible($_) })) {
-			$no = [NB.U]::GetDlgItem($b, 7); if ($no -ne [IntPtr]::Zero) { [void][NB.U]::PostMessage($b, $WM_COMMAND, [IntPtr]7, $no) }
+			$no = [NB.U]::GetDlgItem($b, 7); if ($no -ne [IntPtr]::Zero) { [void][NB.U]::PostMessage($b, $WM_COMMAND, [IntPtr]7, $no); continue }
+			# a task dialog (dark mode's message boxes): its buttons have no IDs, its No found by its text and clicked
+			$script:kids = [Collections.Generic.List[IntPtr]]::new(); [void][NB.U]::EnumChildWindows($b, { param($h, $l) $script:kids.Add($h); $true }, [IntPtr]::Zero)
+			$noButton = $script:kids | Where-Object { (Get-Cls $_) -eq 'Button' -and (Get-Text $_) -match '^&?No$' } | Select-Object -First 1
+			if ($noButton) { [void][NB.U]::PostMessage($noButton, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero) }	# BM_CLICK
 		}
 	}
 	$p.HasExited
@@ -258,11 +274,76 @@ function Invoke-FunctionListTraining([string] $exePath, [string] $label) {
 	}
 }
 
+# training only: the fork's features in a run of their own (another .pgc). A config.xml of them (dark mode, all characters
+# shown, the character grid, font features and fallback fonts, word wrap per document, the status bar's column and offset
+# with the line's length), a session of 200 small files (its loading: loadSession, the tabs' lookups), a document of mixed
+# scripts (CJK, emoji, right-to-left, combining marks, control characters, an invalid byte: the grid's per-character
+# drawing, the labels), scrolled, its caret moved, documents switched, and typing with case-insensitive completion (SQL's
+# API ignores case)
+function Invoke-FeatureTraining([string] $exePath, [string] $label) {
+	$settings = Join-Path $WorkDir "settings-$label-features"; New-Item -ItemType Directory -Force $settings | Out-Null
+	[IO.File]::WriteAllText((Join-Path $settings 'config.xml'), '<?xml version="1.0" encoding="UTF-8" ?><NotepadPlus><GUIConfigs>' +
+		'<GUIConfig name="DarkMode" enable="yes" /><GUIConfig name="StatusBar" position="both" lineLength="yes" />' +
+		'<GUIConfig name="ScintillaPrimaryView" characterGrid="yes" whiteSpaceShow="show" eolShow="show" wrapPerDocument="yes" fontFeatures="zero ss01" fontFallback="Segoe UI Emoji; MS Mincho" />' +
+		'</GUIConfigs></NotepadPlus>')
+	$sessionDir = Join-Path $files 'session'
+	if (-not (Test-Path (Join-Path $sessionDir 'done-v1'))) {
+		New-Item -ItemType Directory -Force $sessionDir | Out-Null
+		$code = @(Get-Content (Join-Path $files 'code.cpp') -TotalCount 2000)
+		foreach ($k in 1..200) { [IO.File]::WriteAllLines((Join-Path $sessionDir ('file{0:D3}.cpp' -f $k)), [string[]]$code[(($k * 7) % 1900)..((($k * 7) % 1900) + 60)]) }
+		$c = { param([int[]] $codes) -join ($codes | ForEach-Object { [char]::ConvertFromUtf32($_) }) }
+		$mixed = foreach ($i in 1..2000) { switch ($i % 6) {
+			0 { "CJK $i " + (& $c 0x65E5,0x672C,0x8A9E,0x306E,0x30C6,0x30AD,0x30B9,0x30C8,0x3001,0x4E2D,0x6587,0x6DF7,0x6392,0x3002) + " $($i % 97)" }
+			1 { "emoji $i " + (& $c 0x1F600,0x2764,0xFE0F,0x1F44D,0x1F3FD,0x23,0xFE0F,0x20E3) + ' done' }
+			2 { "rtl $i " + (& $c 0x5E9,0x5DC,0x5D5,0x5DD,0x20,0x627,0x644,0x633,0x644,0x627,0x645) + ' end' }
+			3 { "marks $i e" + (& $c 0x301) + ' n' + (& $c 0x303) + ' ' + (& $c 0x1112,0x1161,0x11AB) + "`tTAB`t" + (& $c 0x200B) + 'x' }
+			4 { "box $i " + (& $c 0x250C,0x2500,0x2510,0x2502,0x2192,0x201C,0x201D,0x2013,0x1EA1,0xFF76) + [char]0 + [char]27 + ' ctrl' }
+			5 { "    if (value > limit) { result = compute(value, $i); } // ASCII $i" }
+		} }
+		$bytes = [Collections.Generic.List[byte]]::new($mixed.Count * 64)
+		$bytes.AddRange([Text.UTF8Encoding]::new($false).GetBytes(($mixed -join "`r`n") + "`r`nan invalid byte: ["))
+		$bytes.Add(0xFF); $bytes.AddRange([Text.Encoding]::ASCII.GetBytes("]`r`n"))
+		[IO.File]::WriteAllBytes((Join-Path $sessionDir 'mixed.txt'), $bytes.ToArray())
+		Set-Content -Path (Join-Path $sessionDir 'done-v1') -Value ''
+	}
+	$sessionFiles = @((Join-Path $sessionDir 'mixed.txt'), (Join-Path $files 'query.sql')) + @(1..200 | ForEach-Object { Join-Path $sessionDir ('file{0:D3}.cpp' -f $_) })
+	$sessionXml = '<?xml version="1.0" encoding="UTF-8" ?><NotepadPlus><Session activeView="0"><mainView activeIndex="0">' +
+		(($sessionFiles | ForEach-Object { '<File firstVisibleLine="0" xOffset="0" scrollWidth="1" startPos="0" endPos="0" selMode="0" offset="0" wrapCount="1" lang="" encoding="-1" userReadOnly="no" filename="' + [Security.SecurityElement]::Escape($_) + '" />' }) -join '') +
+		'</mainView><subView activeIndex="0" /></Session></NotepadPlus>'
+	$sessionFile = Join-Path $settings 'training-session.xml'; [IO.File]::WriteAllText($sessionFile, $sessionXml)
+	$sw = [Diagnostics.Stopwatch]::StartNew()
+	$p = Start-Process $exePath -ArgumentList '-multiInst', '-nosession', "-settingsDir=$settings", '-openSession', "`"$sessionFile`"" -PassThru
+	try {
+		while (($p.MainWindowHandle -eq 0) -and -not $p.HasExited -and ($sw.Elapsed.TotalSeconds -lt 120)) { Start-Sleep -Milliseconds 10; $p.Refresh() }
+		if ($p.MainWindowHandle -eq 0) { throw "$label (features run) showed no window" }
+		$m = $p.MainWindowHandle
+		while (((Send $m $NPPM_GETNBOPENFILES 0 0) -lt $sessionFiles.Count) -and ($sw.Elapsed.TotalSeconds -lt 600)) { Start-Sleep -Milliseconds 50 }
+		Write-Host ("  features: a session of {0} files loaded in {1:N0} ms" -f (Send $m $NPPM_GETNBOPENFILES 0 0), $sw.Elapsed.TotalMilliseconds)
+		$t = Time {
+			Activate $m 0; $v = Get-View $m; [void](Send $v $SCI.GOTOPOS 0); Paint $v
+			foreach ($k in 1..60) { [void](Send $v $SCI.PAGEDOWN); Paint $v }	# the grid, the labels, the mixed scripts, dark mode
+			[void](Send $v $SCI.GOTOLINE 200)
+			foreach ($k in 1..100) { foreach ($c in $SCI.LINEDOWN, $SCI.WORDRIGHT, $SCI.CHARRIGHTEXTEND, $SCI.CHARLEFT) { [void](Send $v $c); Paint $v } }	# the status bar's forms
+			[void](Send $m $WM_COMMAND $IDM.VIEW_WRAP); Paint $v; [void](Send $m $WM_COMMAND $IDM.VIEW_WRAP); Paint $v	# word wrap per document
+			foreach ($k in 0..299) { Activate $m ($k % $sessionFiles.Count) }	# switches: each document's wrap, the labels again
+			Activate $m 1; $v = Get-View $m; [void](Send $v $SCI.GOTOLINE 5000); [void](Send $v $SCI.LINEEND)	# SQL: completion ignoring case
+			foreach ($word in 'select', 'FROM', 'Where', 'group', 'ORDER', 'having', 'Join', 'count') { foreach ($ch in " $word".ToCharArray()) { [void](Send $v $WM_CHAR ([int]$ch)); Paint $v }; [void](Send $v $SCI.AUTOCCANCEL) }
+		}
+		Write-Host ("  features: scroll, caret, wrap, switches, completion: {0:N0} ms" -f $t)
+	}
+	finally {
+		$closed = (-not $p.HasExited) -and (Close-Npp $p)
+		if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force; [void]$p.WaitForExit(10000) }
+		if (-not $closed) { Write-Warning "$label (features run) didn't close normally: no profile written" }
+	}
+}
+
 if (-not $Names.Count) { $Names = 1..$Exe.Count | ForEach-Object { "build$_" } }
 if ($Train) {
 	foreach ($i in 0..($Exe.Count - 1)) {
 		$r = Invoke-Run $Exe[$i] $Names[$i]; "$($Names[$i]): trained ($(@($r.Keys | Where-Object { $_ -notmatch '\(CPU\)$' }).Count) operations)"
 		Invoke-FunctionListTraining $Exe[$i] $Names[$i]
+		Invoke-FeatureTraining $Exe[$i] $Names[$i]
 	}
 	return
 }

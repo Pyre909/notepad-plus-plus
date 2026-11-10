@@ -198,7 +198,7 @@ public:
 	void DrawTextClipped(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) override;
 	void DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore) override;
 	void DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, XYPOSITION scaleX, XYPOSITION scaleY) override;	// N++ (Pyre909 build)
-	bool DrawTextTransparentAt(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, const XYPOSITION *xs) override;	// N++ (Pyre909 build)
+	bool DrawTextTransparentAt(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, const XYPOSITION *xs, const XYPOSITION *advances) override;	// N++ (Pyre909 build)
 	void MeasureWidths(const Font *font_, std::string_view text, XYPOSITION *positions) override;
 	XYPOSITION WidthText(const Font *font_, std::string_view text) override;
 
@@ -717,7 +717,7 @@ void SurfaceGDI::DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYP
 // N++ (Pyre909 build): one ExtTextOutW, each character's advance the distance to the next one's x (a call a character
 // cost five times as much: a screen of CJK in a font that borrows it, each call finding the other font again)
 bool SurfaceGDI::DrawTextTransparentAt(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text,
-	ColourRGBA fore, const XYPOSITION *xs) {
+	ColourRGBA fore, const XYPOSITION *xs, [[maybe_unused]] const XYPOSITION *advances) {
 	if ((mode.codePage != CpUtf8) || text.empty())
 		return false;
 	const TextWide tbuf(text, CpUtf8);

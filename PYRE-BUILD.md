@@ -45,7 +45,13 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   file is 2 to 2.5 times faster.
 - **Replace All that adds or removes lines is much faster**: adding a line to each of 1,000,000 lines took nearly
   3 minutes, about 3 seconds now, also with the document shown in both views; the same for Remove and Cut Bookmarked
-  Lines, Remove Unmarked Lines and Remove Consecutive Duplicate Lines (official issue #10301).
+  Lines, Remove Unmarked Lines and Remove Consecutive Duplicate Lines (official issue #10301). Copy and Cut Bookmarked
+  Lines no longer slow down with the number of lines (100,000 lines: copy 3 s to 18 ms, cut 3.7 s to 0.7 s).
+- **No work when Windows changes an unrelated setting**: official Notepad++ restyles and re-wraps its documents at
+  every Windows settings broadcast (group policy, environment, taskbar...): 2 seconds of CPU with a large wrapped file
+  and the Document Map. Only font smoothing, ClearType, the mouse wheel and high contrast do that now. With padding
+  set, the Document Map no longer re-wraps itself at every paint. The character grid draws a third faster with
+  DirectWrite, and the status bar's counts on very long lines take one pass.
 - **The Function List 25 to 30 times faster**: about 6 seconds instead of over 3 minutes for 60,000 lines of C++, a
   third of a second instead of 9.5 seconds for 3,000 (its regular expressions match faster and are compiled once); with
   it open, moving the caret takes 17 ms instead of 374 in 60,000 lines with 18,000 functions.

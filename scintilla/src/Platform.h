@@ -248,8 +248,9 @@ public:
 		DrawTextTransparent(rc, font_, ybase, text, fore);
 	}
 	// N++ (Pyre909 build): UTF-8 characters of the Basic Multilingual Plane, each at its own x from rc.left (xs[i] for the
-	// one starting at byte i), in one call, for the character grid; false where a surface can't (drawn one by one then)
-	virtual bool DrawTextTransparentAt([[maybe_unused]] PRectangle rc, [[maybe_unused]] const Font *font_, [[maybe_unused]] XYPOSITION ybase, [[maybe_unused]] std::string_view text, [[maybe_unused]] ColourRGBA fore, [[maybe_unused]] const XYPOSITION *xs) {
+	// one starting at byte i), in one call, for the character grid; false where a surface can't (drawn one by one then).
+	// advances[i]: that character's advance in the font as the line's layout measured it, or no advances
+	virtual bool DrawTextTransparentAt([[maybe_unused]] PRectangle rc, [[maybe_unused]] const Font *font_, [[maybe_unused]] XYPOSITION ybase, [[maybe_unused]] std::string_view text, [[maybe_unused]] ColourRGBA fore, [[maybe_unused]] const XYPOSITION *xs, [[maybe_unused]] const XYPOSITION *advances) {
 		return false;
 	}
 	virtual void MeasureWidths(const Font *font_, std::string_view text, XYPOSITION *positions) = 0;

@@ -207,8 +207,12 @@ void DocumentMap::wrapMap(const ScintillaEditView *editView)
 		{
 			intptr_t paddingMapLeft = static_cast<intptr_t>(svp._paddingLeft / (editZoneWidth / docMapWidth));
 			intptr_t paddingMapRight = static_cast<intptr_t>(svp._paddingRight / (editZoneWidth / docMapWidth));
-			_pMapView->execute(SCI_SETMARGINLEFT, 0, paddingMapLeft);
-			_pMapView->execute(SCI_SETMARGINRIGHT, 0, paddingMapRight);
+			// Pyre909 build: set when they change only: Scintilla restyles and re-wraps the whole map at each (wrapMap runs at
+			// every paint of the edit view)
+			if (_pMapView->execute(SCI_GETMARGINLEFT) != paddingMapLeft)
+				_pMapView->execute(SCI_SETMARGINLEFT, 0, paddingMapLeft);
+			if (_pMapView->execute(SCI_GETMARGINRIGHT) != paddingMapRight)
+				_pMapView->execute(SCI_SETMARGINRIGHT, 0, paddingMapRight);
 		}
 	}
 

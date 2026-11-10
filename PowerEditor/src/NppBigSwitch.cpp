@@ -42,6 +42,7 @@
 #include "Buffer.h"
 #include "Common.h"
 #include "ContextMenu.h"
+#include "DirectWriteText.h"
 #include "DocTabView.h"
 #include "Docking.h"
 #include "DockingCont.h"
@@ -81,6 +82,29 @@ using namespace std;
 
 std::atomic<bool> g_bNppExitFlag{ false };
 const UINT WM_TASKBARCREATED = ::RegisterWindowMessage(L"TaskbarCreated");
+
+// Pyre909 build: whether a WM_SETTINGCHANGE is one the Scintilla views read (ScintillaWin's WM_SETTINGCHANGE: the font
+// smoothing and ClearType for the DirectWrite rendering parameters and "Follow Windows", the mouse wheel's scroll
+// amounts, high contrast and the colours of the light or dark theme for the base elements), or one Windows doesn't name
+static bool isSettingChangeForScintilla(WPARAM wParam, LPARAM lParam)
+{
+	switch (wParam)
+	{
+		case SPI_SETFONTSMOOTHING:
+		case SPI_SETFONTSMOOTHINGTYPE:
+		case SPI_SETFONTSMOOTHINGCONTRAST:
+		case SPI_SETFONTSMOOTHINGORIENTATION:
+		case SPI_SETCLEARTYPE:
+		case SPI_SETWHEELSCROLLLINES:
+		case SPI_SETWHEELSCROLLCHARS:
+		case SPI_SETHIGHCONTRAST:
+			return true;
+		default:
+			break;
+	}
+	const auto area = reinterpret_cast<const wchar_t*>(lParam);
+	return ((wParam == 0) && (area == nullptr)) || ((area != nullptr) && (std::wcscmp(area, L"ImmersiveColorSet") == 0));
+}
 
 
 struct SortTaskListPred final
@@ -381,7 +405,12 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 
 			// let all the Scintilla views (edit views, Finders, Document Map, Peeker...) update according to the possible changed OS settings
 			// (mouse wheel vertical & horizontal scroll amount, DirectWrite rendering params, base elements, style etc.)
-			ScintillaEditView::sendMessageToAll(WM_SETTINGCHANGE, wParam, lParam);
+			// Pyre909 build: only for the settings a view reads: each one restyles and re-wraps its whole document, and Windows
+			// broadcasts many others ("Policy", "Environment", "intl", the taskbar's...): 1.1-1.5 s of CPU each with a 4.5 MB
+			// file wrapped and the Document Map shown
+			if (isSettingChangeForScintilla(wParam, lParam))
+				ScintillaEditView::sendMessageToAll(WM_SETTINGCHANGE, wParam, lParam);
+			uiTextSettingsChanged(); // the text Notepad++ draws itself reads Windows' font smoothing again
 
 			return ::DefWindowProc(hwnd, message, wParam, lParam);
 		}

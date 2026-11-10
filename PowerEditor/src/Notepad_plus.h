@@ -598,6 +598,10 @@ private:
 	}
 
 	void copyMarkedLines();
+	// Pyre909 build: the bookmarked lines' operations without asking every line, a run of lines deleted at a time
+	std::vector<intptr_t> getBookmarkedLines() const;
+	std::wstring getBookmarkedLinesText(const std::vector<intptr_t>& lines);
+	void deleteLineRuns(const std::vector<intptr_t>& lines);
 	void cutMarkedLines();
 	void deleteMarkedLines(bool isMarked);
 	void pasteToMarkedLines();

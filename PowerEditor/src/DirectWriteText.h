@@ -27,3 +27,6 @@
 // condensed font (vertical tabs), a right-to-left DC, a scaled or transformed DC (a shifted one is drawn), more than one
 // line or a line break, '&' prefixes, tabs, word and path ellipses, DT_CALCRECT.
 int drawUiText(HDC hdc, const wchar_t* text, int length, RECT* rect, UINT format);
+
+// Pyre909 build: Windows' settings changed (WM_SETTINGCHANGE): its font smoothing is read again at the next drawUiText
+void uiTextSettingsChanged();

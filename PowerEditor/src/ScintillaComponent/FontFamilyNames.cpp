@@ -23,6 +23,8 @@
 #include <map>
 #include <optional>
 #include <ranges>
+#include <set>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -462,7 +464,13 @@ std::vector<FontFeature> getFontFeatures(const std::wstring& fontName)
 		FAILED(dw._systemFonts->GetFontFamily(index, family.GetAddressOf())))
 		return {};
 
+	// kept for the session, as the font lists are: read again at each showing of Preferences > Fonts otherwise
+	static std::map<std::wstring, std::vector<FontFeature>> familyFeatures;
+	if (const auto it = familyFeatures.find(font._name); it != familyFeatures.end())
+		return it->second;
+
 	std::map<std::wstring, std::wstring> features;
+	std::set<std::string> facesRead; // a font file's face read once: a variable font's named instances share it
 	constexpr UINT32 maxFonts = 64; // MonoLisa: 20 (10 weights, upright and italic)
 	const UINT32 fontCount = std::min(family->GetFontCount(), maxFonts);
 	for (UINT32 i = 0; i < fontCount; ++i)
@@ -472,6 +480,17 @@ std::vector<FontFeature> getFontFeatures(const std::wstring& fontName)
 		if (FAILED(family->GetFont(i, dwFont.GetAddressOf())) || (dwFont->GetSimulations() != DWRITE_FONT_SIMULATIONS_NONE) ||
 			FAILED(dwFont->CreateFontFace(face.GetAddressOf())))
 			continue;
+		UINT32 fileCount = 1;
+		ComPtr<IDWriteFontFile> file;
+		const void* fileKey = nullptr;
+		UINT32 fileKeySize = 0;
+		if (SUCCEEDED(face->GetFiles(&fileCount, file.GetAddressOf())) && file && SUCCEEDED(file->GetReferenceKey(&fileKey, &fileKeySize)))
+		{
+			std::string faceKey(static_cast<const char*>(fileKey), fileKeySize);
+			faceKey += std::to_string(face->GetIndex());
+			if (!facesRead.insert(std::move(faceKey)).second)
+				continue;
+		}
 		const FontTable names(face.Get(), DWRITE_MAKE_OPENTYPE_TAG('n', 'a', 'm', 'e'));
 		addFeatures(FontTable(face.Get(), DWRITE_MAKE_OPENTYPE_TAG('G', 'S', 'U', 'B')), names, features);
 		addFeatures(FontTable(face.Get(), DWRITE_MAKE_OPENTYPE_TAG('G', 'P', 'O', 'S')), names, features);
@@ -479,5 +498,6 @@ std::vector<FontFeature> getFontFeatures(const std::wstring& fontName)
 	std::vector<FontFeature> result;
 	for (auto& [tag, name] : features)
 		result.push_back({ tag, name });
+	familyFeatures.emplace(font._name, result);
 	return result;
 }

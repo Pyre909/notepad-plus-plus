@@ -3053,19 +3053,48 @@ wstring Notepad_plus::getLangDesc(LangType langType, bool getName)
 	return str2Show;
 }
 
+// Pyre909 build: the bookmarked lines (SCI_MARKERNEXT: from one to the next, not every line asked), in order
+std::vector<intptr_t> Notepad_plus::getBookmarkedLines() const
+{
+	std::vector<intptr_t> lines;
+	for (intptr_t line = _pEditView->execute(SCI_MARKERNEXT, 0, 1 << MARK_BOOKMARK); line >= 0;
+		line = _pEditView->execute(SCI_MARKERNEXT, line + 1, 1 << MARK_BOOKMARK))
+		lines.push_back(line);
+	return lines;
+}
+
+// Pyre909 build: the text of the bookmarked lines, gathered in order (each line was put before all the others gathered,
+// copying them each time: quadratic)
+wstring Notepad_plus::getBookmarkedLinesText(const std::vector<intptr_t>& lines)
+{
+	wstring text;
+	for (const intptr_t line : lines)
+		text += getMarkedLine(line);
+	return text;
+}
+
+// Pyre909 build: lines deleted, one range for each run of consecutive ones (one deletion a line before), from the last.
+// Lines with bookmarks have them deleted first (bookmarkClearAll: all of them deleted), else Scintilla would move them to
+// the line above (LineMarkers::RemoveLine)
+void Notepad_plus::deleteLineRuns(const std::vector<intptr_t>& lines)
+{
+	for (size_t end = lines.size(); end > 0; )
+	{
+		size_t start = end - 1;
+		while ((start > 0) && (lines[start - 1] == lines[start] - 1))
+			--start;
+		const intptr_t firstLine = lines[start];
+		const intptr_t lastLine = lines[end - 1];
+		const intptr_t rangeStart = _pEditView->execute(SCI_POSITIONFROMLINE, firstLine);
+		const intptr_t rangeEnd = _pEditView->execute(SCI_POSITIONFROMLINE, lastLine) + _pEditView->execute(SCI_LINELENGTH, lastLine);
+		_pEditView->execute(SCI_DELETERANGE, rangeStart, rangeEnd - rangeStart);
+		end = start;
+	}
+}
+
 void Notepad_plus::copyMarkedLines()
 {
-	intptr_t lastLine = _pEditView->lastZeroBasedLineNumber();
-	wstring globalStr = L"";
-	for (intptr_t i = lastLine ; i >= 0 ; i--)
-	{
-		if (bookmarkPresent(i))
-		{
-			wstring currentStr = getMarkedLine(i) + globalStr;
-			globalStr = currentStr;
-		}
-	}
-	str2Clipboard(globalStr, _pPublicInterface->getHSelf());
+	str2Clipboard(getBookmarkedLinesText(getBookmarkedLines()), _pPublicInterface->getHSelf()); // Pyre909 build
 }
 
 std::mutex mark_mutex;
@@ -3074,38 +3103,46 @@ void Notepad_plus::cutMarkedLines()
 {
 	std::lock_guard<std::mutex> lock(mark_mutex);
 
-	intptr_t lastLine = _pEditView->lastZeroBasedLineNumber();
-	wstring globalStr = L"";
+	// Pyre909 build: the lines' text gathered in order, then the lines deleted a run at a time
+	const std::vector<intptr_t> lines = getBookmarkedLines();
+	const wstring text = getBookmarkedLinesText(lines);
 	const ScintillaEditView::RedrawOff redrawOff(*_pEditView); // Pyre909 build: the scroll bars updated once
 
 	_pEditView->execute(SCI_BEGINUNDOACTION);
-	for (intptr_t i = lastLine ; i >= 0 ; i--)
-	{
-		if (bookmarkPresent(i))
-		{
-			wstring currentStr = getMarkedLine(i) + globalStr;
-			globalStr = currentStr;
-
-			deleteMarkedline(i);
-		}
-	}
+	bookmarkClearAll(); // the bookmarked lines all deleted
+	deleteLineRuns(lines);
 	_pEditView->execute(SCI_ENDUNDOACTION);
-	str2Clipboard(globalStr, _pPublicInterface->getHSelf());
+	str2Clipboard(text, _pPublicInterface->getHSelf());
 }
 
 void Notepad_plus::deleteMarkedLines(bool isMarked)
 {
 	std::lock_guard<std::mutex> lock(mark_mutex);
 
-	intptr_t lastLine = _pEditView->lastZeroBasedLineNumber();
+	// Pyre909 build: the lines to delete from the bookmarked ones, or from the lines between them; a run at a time
+	const std::vector<intptr_t> marked = getBookmarkedLines();
+	std::vector<intptr_t> lines;
+	if (isMarked)
+		lines = marked;
+	else
+	{
+		const intptr_t lastLine = _pEditView->lastZeroBasedLineNumber();
+		intptr_t line = 0;
+		for (const intptr_t markedLine : marked)
+		{
+			for (; line < markedLine; ++line)
+				lines.push_back(line);
+			line = markedLine + 1;
+		}
+		for (; line <= lastLine; ++line)
+			lines.push_back(line);
+	}
 	const ScintillaEditView::RedrawOff redrawOff(*_pEditView); // Pyre909 build: the scroll bars updated once
 
 	_pEditView->execute(SCI_BEGINUNDOACTION);
-	for (intptr_t i = lastLine ; i >= 0 ; i--)
-	{
-		if (bookmarkPresent(i) == isMarked)
-			deleteMarkedline(i);
-	}
+	if (isMarked)
+		bookmarkClearAll(); // the bookmarked lines all deleted; the others have none
+	deleteLineRuns(lines);
 	_pEditView->execute(SCI_ENDUNDOACTION);
 }
 
@@ -4698,6 +4735,89 @@ static wstring getCharCodeAt(const ScintillaEditView& view, size_t pos)
 	return std::format(L"U+{:04X}", static_cast<uint32_t>(codePoint));
 }
 
+// Pyre909 build: the characters and UTF-16 code units from a line's start to the caret and to an end (the caret, or the line's
+// end), in one pass over the line's bytes (UTF-8) read where Scintilla keeps them, each side of its gap apart, which doesn't
+// move it (SCI_COUNTCHARACTERS steps a character at a time: 2 ms a line of 1 MB, at each caret move). False for another
+// code page or invalid UTF-8, which Scintilla counts its own way.
+struct LineCounts
+{
+	size_t _charsToCaret = 0;
+	size_t _unitsToCaret = 0;
+	size_t _charsToEnd = 0;
+	size_t _unitsToEnd = 0;
+};
+
+static bool countLineUtf8(const ScintillaEditView& view, size_t lineStart, size_t caret, size_t end, LineCounts& counts)
+{
+	if ((view.execute(SCI_GETCODEPAGE) != SC_CP_UTF8) || (caret < lineStart) || (end < caret))
+		return false;
+	const auto gap = static_cast<size_t>(view.execute(SCI_GETGAPPOSITION));
+	size_t chars = 0;
+	size_t units = 0;
+	int pending = 0; // the continuation bytes the character still needs, the next one from low to high (RFC 3629)
+	unsigned char low = 0x80;
+	unsigned char high = 0xBF;
+	size_t pos = lineStart;
+	const auto countPart = [&](size_t partStart, size_t partEnd) {
+		if (partStart >= partEnd)
+			return true;
+		const auto* bytes = reinterpret_cast<const unsigned char*>(view.execute(SCI_GETRANGEPOINTER, partStart, partEnd - partStart));
+		if (!bytes)
+			return false;
+		for (size_t i = 0; i < partEnd - partStart; ++i, ++pos)
+		{
+			if (pos == caret)
+			{
+				counts._charsToCaret = chars;
+				counts._unitsToCaret = units;
+			}
+			const unsigned char byte = bytes[i];
+			if (pending > 0)
+			{
+				if ((byte < low) || (byte > high))
+					return false;
+				low = 0x80;
+				high = 0xBF;
+				--pending;
+				continue;
+			}
+			if (byte >= 0x80)
+			{
+				if ((byte >= 0xC2) && (byte <= 0xDF))
+					pending = 1;
+				else if ((byte >= 0xE0) && (byte <= 0xEF))
+				{
+					pending = 2;
+					low = (byte == 0xE0) ? 0xA0 : 0x80;
+					high = (byte == 0xED) ? 0x9F : 0xBF;
+				}
+				else if ((byte >= 0xF0) && (byte <= 0xF4))
+				{
+					pending = 3;
+					low = (byte == 0xF0) ? 0x90 : 0x80;
+					high = (byte == 0xF4) ? 0x8F : 0xBF;
+					++units; // a surrogate pair
+				}
+				else
+					return false;
+			}
+			++chars;
+			++units;
+		}
+		return true;
+	};
+	if (!countPart(lineStart, std::min(end, std::max(gap, lineStart))) || !countPart(std::max(lineStart, gap), end) || (pending > 0))
+		return false;
+	if (caret == end)
+	{
+		counts._charsToCaret = chars;
+		counts._unitsToCaret = units;
+	}
+	counts._charsToEnd = chars;
+	counts._unitsToEnd = units;
+	return true;
+}
+
 void Notepad_plus::updateStatusBar()
 {
 	// these sections of status bar NOT updated by this function:
@@ -4815,14 +4935,28 @@ void Notepad_plus::updateStatusBar()
 	const auto caretPos = static_cast<size_t>(_pEditView->execute(SCI_GETCURRENTPOS));
 	const auto caretLine = static_cast<size_t>(_pEditView->execute(SCI_LINEFROMPOSITION, caretPos));
 	const auto lineStart = static_cast<size_t>(_pEditView->execute(SCI_POSITIONFROMLINE, caretLine));
+	// the characters and code units to the caret, and to the line's end with Len:, in one pass (Scintilla's otherwise)
+	const auto lineEnd = static_cast<size_t>(nppGUI._statusBarLineLength ? _pEditView->execute(SCI_GETLINEENDPOSITION, caretLine) : caretPos);
+	LineCounts counts;
+	if (!countLineUtf8(*_pEditView, lineStart, caretPos, lineEnd, counts))
+	{
+		counts._charsToCaret = static_cast<size_t>(_pEditView->execute(SCI_COUNTCHARACTERS, lineStart, caretPos));
+		counts._charsToEnd = (lineEnd == caretPos) ? counts._charsToCaret : static_cast<size_t>(_pEditView->execute(SCI_COUNTCHARACTERS, lineStart, lineEnd));
+		if (isUtf16)
+		{
+			counts._unitsToCaret = static_cast<size_t>(_pEditView->execute(SCI_COUNTCODEUNITS, lineStart, caretPos));
+			counts._unitsToEnd = (lineEnd == caretPos) ? counts._unitsToCaret : static_cast<size_t>(_pEditView->execute(SCI_COUNTCODEUNITS, lineStart, lineEnd));
+		}
+	}
+	const size_t bytesToCaret = isUtf16 ? 2 * counts._unitsToCaret : caretPos - lineStart;
 	wstring lnStr = commafyInt(caretLine + 1);
 	wstring statusbarLnColStr;
 	if (nppGUI._statusBarPosition != NppGUI::StatusBarPosition::hexOffset)
 	{
 		const bool isGrid = _pEditView->execute(SCI_GETCHARACTERGRID) != 0;
 		const auto colNumber = static_cast<size_t>(isGrid ? _pEditView->execute(SCI_GETCELLCOLUMN, caretPos) : _pEditView->getCurrentColumnNumber()) + 1;
-		const auto charPos = static_cast<size_t>(_pEditView->execute(SCI_COUNTCHARACTERS, lineStart, caretPos)) + 1;
-		const size_t bytePos = byteCount(lineStart, caretPos) + 1;
+		const size_t charPos = counts._charsToCaret + 1;
+		const size_t bytePos = bytesToCaret + 1;
 		wstring colStr = commafyInt(colNumber);
 		if ((charPos != colNumber) || (bytePos != colNumber))
 		{
@@ -4839,12 +4973,11 @@ void Notepad_plus::updateStatusBar()
 		statusbarLnColStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Ln", L"Ln: ") + lnStr;
 	}
 	if (nppGUI._statusBarPosition != NppGUI::StatusBarPosition::column)
-		statusbarLnColStr += L"    " + pNativeSpeaker->getLocalizedStrFromID("statusbar-Off", L"Off: ") + std::format(L"X'{:02X}'", byteCount(lineStart, caretPos));
+		statusbarLnColStr += L"    " + pNativeSpeaker->getLocalizedStrFromID("statusbar-Off", L"Off: ") + std::format(L"X'{:02X}'", bytesToCaret);
 	if (nppGUI._statusBarLineLength)
 	{
-		const auto lineEnd = static_cast<size_t>(_pEditView->execute(SCI_GETLINEENDPOSITION, caretLine));
-		const auto lengthChars = static_cast<size_t>(_pEditView->execute(SCI_COUNTCHARACTERS, lineStart, lineEnd));
-		const size_t lengthBytes = byteCount(lineStart, lineEnd);
+		const size_t lengthChars = counts._charsToEnd;
+		const size_t lengthBytes = isUtf16 ? 2 * counts._unitsToEnd : lineEnd - lineStart;
 		statusbarLnColStr += L"    " + pNativeSpeaker->getLocalizedStrFromID("statusbar-Len", L"Len: ") + commafyInt(lengthChars);
 		if (lengthBytes != lengthChars)
 			statusbarLnColStr += L" " + bytesStr(lengthBytes);

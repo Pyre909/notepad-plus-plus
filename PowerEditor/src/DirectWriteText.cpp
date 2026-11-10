@@ -22,11 +22,11 @@
 #include <wrl/client.h>
 
 #include <algorithm>
+#include <array>
 #include <cwchar>
 #include <map>
 #include <string>
 #include <string_view>
-#include <tuple>
 
 #include "NppConstants.h"
 #include "Parameters.h"
@@ -36,7 +36,33 @@ using Microsoft::WRL::ComPtr;
 // Pyre909 build: see DirectWriteText.h
 namespace
 {
-	// A text format of a GDI font, with its line height and ellipsis
+	// Windows' font smoothing, read at the first draw after a WM_SETTINGCHANGE (uiTextSettingsChanged)
+	struct WindowsSmoothing
+	{
+		BOOL _isOn = TRUE;
+		UINT _type = FE_FONTSMOOTHINGCLEARTYPE;
+		UINT _contrast = 0;
+		bool _isRead = false;
+	};
+	WindowsSmoothing windowsSmoothing;
+
+	// A GDI font as text formats are kept for it: no allocation to look one up
+	struct UiFontKey
+	{
+		std::array<wchar_t, LF_FACESIZE> _faceName{};
+		LONG _height = 0;
+		LONG _weight = 0;
+		BYTE _italic = 0;
+		BYTE _charSet = 0;
+
+		explicit UiFontKey(const LOGFONT& lf) : _height(lf.lfHeight), _weight(lf.lfWeight), _italic(lf.lfItalic), _charSet(lf.lfCharSet)
+		{
+			std::copy(std::begin(lf.lfFaceName), std::end(lf.lfFaceName), _faceName.begin());
+		}
+		auto operator<=>(const UiFontKey&) const = default;
+	};
+
+	// A text format of a GDI font, with GDI's line (its height and ascent) and ellipsis
 	struct UiTextFormat
 	{
 		ComPtr<IDWriteTextFormat> _format;
@@ -62,7 +88,7 @@ namespace
 	private:
 		UiTextRenderer();
 
-		const UiTextFormat* getFormat(const LOGFONT& lf, const TEXTMETRIC& tm);
+		const UiTextFormat* getFormat(HDC hdc, const LOGFONT& lf);
 		bool updateRendering(HMONITOR hMonitor);
 		bool bind(HDC hdc, const RECT& bound);
 
@@ -71,7 +97,7 @@ namespace
 		ComPtr<IDWriteGdiInterop> _gdiInterop;
 		ComPtr<ID2D1DCRenderTarget> _target;
 		ComPtr<ID2D1SolidColorBrush> _brush;
-		std::map<std::tuple<std::wstring, LONG, LONG, BYTE, LONG, LONG>, UiTextFormat> _formats;
+		std::map<UiFontKey, UiTextFormat> _formats;
 		std::wstring _localeName;
 
 		// the settings and monitor the rendering parameters were made for, and those of dark and light text
@@ -106,10 +132,11 @@ namespace
 		_localeName = _localeName.substr(0, _localeName.find(L'_')); // "zh-TW_radstr": a sort order DirectWrite doesn't know
 	}
 
-	// The text format of the DC's font: its DirectWrite font (none for a raster font), its em height and GDI's line
-	const UiTextFormat* UiTextRenderer::getFormat(const LOGFONT& lf, const TEXTMETRIC& tm)
+	// The text format of the DC's font (selected in it: lf): its DirectWrite font (none for a raster font), its em height and
+	// GDI's line, from the DC's text metrics (MM_TEXT: the same for every DC the font is selected in)
+	const UiTextFormat* UiTextRenderer::getFormat(HDC hdc, const LOGFONT& lf)
 	{
-		const auto key = std::make_tuple(std::wstring(lf.lfFaceName), lf.lfWeight, tm.tmHeight, lf.lfItalic, tm.tmAscent, tm.tmInternalLeading);
+		const UiFontKey key(lf);
 		if (const auto it = _formats.find(key); it != _formats.end())
 			return it->second._format ? &it->second : nullptr;
 
@@ -117,6 +144,9 @@ namespace
 		if (_formats.size() >= maxFormats)
 			_formats.clear();
 		UiTextFormat& format = _formats[key];
+		TEXTMETRIC tm{};
+		if (!::GetTextMetrics(hdc, &tm))
+			return nullptr;
 		ComPtr<IDWriteFont> font;
 		ComPtr<IDWriteFontFamily> family;
 		ComPtr<IDWriteLocalizedStrings> names;
@@ -157,12 +187,17 @@ namespace
 	bool UiTextRenderer::updateRendering(HMONITOR hMonitor)
 	{
 		const ScintillaViewParams& svp = NppParameters::getInstance().getSVP();
-		BOOL isSmoothingOn = TRUE;
-		UINT smoothingType = FE_FONTSMOOTHINGCLEARTYPE;
-		UINT windowsContrast = 0;
-		::SystemParametersInfo(SPI_GETFONTSMOOTHING, 0, &isSmoothingOn, 0);
-		::SystemParametersInfo(SPI_GETFONTSMOOTHINGTYPE, 0, &smoothingType, 0);
-		::SystemParametersInfo(SPI_GETFONTSMOOTHINGCONTRAST, 0, &windowsContrast, 0);
+		if (!windowsSmoothing._isRead)
+		{
+			windowsSmoothing = {};
+			::SystemParametersInfo(SPI_GETFONTSMOOTHING, 0, &windowsSmoothing._isOn, 0);
+			::SystemParametersInfo(SPI_GETFONTSMOOTHINGTYPE, 0, &windowsSmoothing._type, 0);
+			::SystemParametersInfo(SPI_GETFONTSMOOTHINGCONTRAST, 0, &windowsSmoothing._contrast, 0);
+			windowsSmoothing._isRead = true;
+		}
+		const BOOL isSmoothingOn = windowsSmoothing._isOn;
+		const UINT smoothingType = windowsSmoothing._type;
+		const UINT windowsContrast = windowsSmoothing._contrast;
 		const int key = (((svp._textAntialiasing * 8 + svp._textRenderingMode) * 8 + svp._textContrast) * 2 + (isSmoothingOn ? 1 : 0)) * 4 +
 			static_cast<int>(smoothingType & 3) + static_cast<int>(windowsContrast) * 4096;
 		if ((key == _renderingKey) && (hMonitor == _renderingMonitor) && _darkTextParams && _lightTextParams)
@@ -245,14 +280,13 @@ namespace
 	bool UiTextRenderer::draw(HDC hdc, const wchar_t* text, int length, const RECT& rect, UINT format, int& result)
 	{
 		LOGFONT lf{};
-		TEXTMETRIC tm{};
 		const auto hFont = static_cast<HFONT>(::GetCurrentObject(hdc, OBJ_FONT));
-		if (!hFont || (::GetObject(hFont, sizeof(lf), &lf) == 0) || !::GetTextMetrics(hdc, &tm))
+		if (!hFont || (::GetObject(hFont, sizeof(lf), &lf) == 0))
 			return false;
 		// a font DirectWrite would draw otherwise: rotated (vertical tabs), underlined, struck out, condensed or expanded
 		if ((lf.lfEscapement != 0) || (lf.lfOrientation != 0) || lf.lfUnderline || lf.lfStrikeOut || (lf.lfWidth != 0))
 			return false;
-		const UiTextFormat* pFormat = getFormat(lf, tm);
+		const UiTextFormat* pFormat = getFormat(hdc, lf);
 		HWND hWnd = ::WindowFromDC(hdc); // none for a memory DC (double buffering): the active window's monitor
 		const HMONITOR hMonitor = ::MonitorFromWindow(hWnd ? hWnd : ::GetActiveWindow(), MONITOR_DEFAULTTOPRIMARY);
 		if (!pFormat || !updateRendering(hMonitor))
@@ -348,6 +382,11 @@ namespace
 			return false;
 		return UiTextRenderer::instance().isAvailable();
 	}
+}
+
+void uiTextSettingsChanged()
+{
+	windowsSmoothing._isRead = false;
 }
 
 int drawUiText(HDC hdc, const wchar_t* text, int length, RECT* rect, UINT format)

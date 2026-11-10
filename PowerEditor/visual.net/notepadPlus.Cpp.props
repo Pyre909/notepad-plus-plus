@@ -152,7 +152,7 @@ copy "..\src\stylers.model.xml" "$(OutDir)stylers.model.xml"
   </ItemDefinitionGroup>
   <!-- Pyre909 build: profile-guided optimization of a Release exe (the release workflow): /p:PyrePgo=Instrument links an
        instrumented exe, which writes notepad++!N.pgc next to notepad++.pgd at its exit (pgort140.dll next to it; the
-       training run: the tooling branch's vm\bench.ps1 -Train), then /p:PyrePgo=Optimize links with that profile -->
+       training run: .github\pyre\bench.ps1 -Train, through .github\pyre\pgo.ps1), then /p:PyrePgo=Optimize links with that profile -->
   <ItemDefinitionGroup Condition="'$(Configuration)|$(PyrePgo)'=='Release|Instrument'">
     <Link>
       <LinkTimeCodeGeneration>PGInstrument</LinkTimeCodeGeneration>

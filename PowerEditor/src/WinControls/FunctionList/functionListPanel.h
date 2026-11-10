@@ -126,6 +126,9 @@ private:
 	};
 	std::vector<LeafPosition> _leafPositions;
 	bool _areLeafPositionsSet = false;
+	// the caret's line and the item marked for it: nothing to do while they stay (markEntry runs at each SCN_UPDATEUI)
+	intptr_t _markedLine = -1;
+	HTREEITEM _markedItem = nullptr;
 	void addLeafPositions(HTREEITEM hItem);
 
 	std::wstring _sortTipStr = L"Sort";

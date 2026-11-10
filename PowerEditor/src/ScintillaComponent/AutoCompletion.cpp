@@ -685,6 +685,50 @@ static std::optional<std::vector<std::string_view>> findWordsWithPrefix(std::str
 		return std::nullopt;
 	return words;
 }
+
+// Pyre909 build: findWordsWithPrefix over the document read where Scintilla keeps it, without moving its gap (where the
+// caret is: SCI_GETCHARACTERPOINTER moves it to the end, copying all the text after the caret, and the next key typed moves
+// it back): the text before the gap and the text after it, cut just after a delimiter on each side, and the few bytes
+// between those cuts (the word at the caret) copied into run. A word ends before a delimiter, which isn't a word character
+// either: each part starts as the document does, and no word crosses a cut.
+static std::optional<std::vector<std::string_view>> findWordsWithPrefixInView(const ScintillaEditView& view, std::string_view prefix,
+	bool isMatchCase, std::string& run)
+{
+	if (std::ranges::any_of(prefix, [](char c) { return isWordDelimiter[static_cast<unsigned char>(c)]; }))
+		return std::nullopt;
+	const auto length = static_cast<size_t>(view.execute(SCI_GETLENGTH));
+	const size_t gap = std::min(static_cast<size_t>(view.execute(SCI_GETGAPPOSITION)), length);
+	const auto* before = reinterpret_cast<const char*>(view.execute(SCI_GETRANGEPOINTER, 0, gap));
+	const auto* after = reinterpret_cast<const char*>(view.execute(SCI_GETRANGEPOINTER, gap, length - gap));
+	if ((gap > 0 && !before) || ((length > gap) && !after))
+		return std::nullopt;
+	const std::string_view textBefore(before ? before : "", gap);
+	const std::string_view textAfter(after ? after : "", length - gap);
+
+	size_t runStart = gap; // just after the last delimiter before the gap
+	while ((runStart > 0) && !isWordDelimiter[static_cast<unsigned char>(textBefore[runStart - 1])])
+		--runStart;
+	size_t runEnd = 0; // just after the first delimiter after the gap
+	while ((runEnd < textAfter.size()) && !isWordDelimiter[static_cast<unsigned char>(textAfter[runEnd])])
+		++runEnd;
+	if (runEnd < textAfter.size())
+		++runEnd;
+	constexpr size_t maxRun = 1024 * 1024; // a long text without delimiters: as before
+	if ((gap - runStart) + runEnd > maxRun)
+		return std::nullopt;
+	run.assign(textBefore.substr(runStart));
+	run.append(textAfter.substr(0, runEnd));
+
+	std::vector<std::string_view> words;
+	for (const std::string_view part : { textBefore.substr(0, runStart), std::string_view(run), textAfter.substr(runEnd) })
+	{
+		const auto partWords = findWordsWithPrefix(part, prefix, isMatchCase);
+		if (!partWords)
+			return std::nullopt;
+		words.insert(words.end(), partWords->begin(), partWords->end());
+	}
+	return words;
+}
 #endif
 
 void AutoCompletion::getWordArray(std::vector<std::string>& wordArray, const char* beginChars, const char* excludeChars) const
@@ -726,8 +770,8 @@ void AutoCompletion::getWordArray(std::vector<std::string>& wordArray, const cha
 	// Pyre909 build: a UTF-8 document's words in one pass over its text (see findWordsWithPrefix)
 	if (_pEditView->execute(SCI_GETCODEPAGE) == SC_CP_UTF8)
 	{
-		const auto* text = reinterpret_cast<const char*>(_pEditView->execute(SCI_GETCHARACTERPOINTER));
-		if (const auto words = text ? findWordsWithPrefix(std::string_view(text, docLength), beginChars, isMatchCase) : std::nullopt)
+		std::string run; // the words found at the caret point into it
+		if (const auto words = findWordsWithPrefixInView(*_pEditView, beginChars, isMatchCase, run))
 		{
 			for (const std::string_view word : *words)
 				addWord(word);

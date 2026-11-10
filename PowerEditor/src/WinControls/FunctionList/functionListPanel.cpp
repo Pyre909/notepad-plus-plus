@@ -381,28 +381,34 @@ void FunctionListPanel::showPreferencesMenu()
 // hit). The leaves are listed in document order once after each change of the tree.
 void FunctionListPanel::markEntry()
 {
+	const ScintillaEditView& view = **_ppEditView;
+	const intptr_t lineNr = view.getCurrentLineNumber();
 	if (!_areLeafPositionsSet)
 	{
 		_leafPositions.clear();
 		addLeafPositions(_treeView.getRoot());
 		std::ranges::stable_sort(_leafPositions, {}, &LeafPosition::_pos);
 		_areLeafPositionsSet = true;
+		_markedLine = -1;
 	}
+	else if ((lineNr == _markedLine) && (_markedItem != nullptr) && (_treeView.getSelection() == _markedItem))
+		return; // Pyre909 build: still the line marked (a scroll, a move along the line), its item still selected
+	_markedLine = lineNr;
 
-	const ScintillaEditView& view = **_ppEditView;
-	const intptr_t lineNr = view.getCurrentLineNumber();
 	const bool isLastLine = (lineNr + 1 >= view.execute(SCI_GETLINECOUNT));
 	const intptr_t nextLineStart = isLastLine ? INTPTR_MAX : view.execute(SCI_POSITIONFROMLINE, lineNr + 1);
 	const auto last = std::ranges::lower_bound(_leafPositions, nextLineStart, {}, &LeafPosition::_pos);
 	if (last == _leafPositions.begin())
 	{
-		_treeView.selectItem(_treeView.getRoot());
+		_markedItem = _treeView.getRoot();
+		_treeView.selectItem(_markedItem);
 		return;
 	}
 
 	const intptr_t lineStart = view.execute(SCI_POSITIONFROMLINE, view.execute(SCI_LINEFROMPOSITION, std::prev(last)->_pos));
 	const auto first = std::ranges::lower_bound(_leafPositions.begin(), last, lineStart, {}, &LeafPosition::_pos);
-	_treeView.selectItem(std::ranges::min_element(first, last, {}, &LeafPosition::_treeOrder)->_item);
+	_markedItem = std::ranges::min_element(first, last, {}, &LeafPosition::_treeOrder)->_item;
+	_treeView.selectItem(_markedItem);
 }
 
 void FunctionListPanel::addLeafPositions(HTREEITEM hItem)

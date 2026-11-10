@@ -513,7 +513,7 @@ public:
 	void DrawTextClipped(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, ColourRGBA back) override;
 	void DrawTextTransparent(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore) override;
 	void DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, XYPOSITION scaleX, XYPOSITION scaleY) override;	// N++ (Pyre909 build)
-	bool DrawTextTransparentAt(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, const XYPOSITION *xs) override;	// N++ (Pyre909 build)
+	bool DrawTextTransparentAt(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text, ColourRGBA fore, const XYPOSITION *xs, const XYPOSITION *advances) override;	// N++ (Pyre909 build)
 	void MeasureWidths(const Font *font_, std::string_view text, XYPOSITION *positions) override;
 	XYPOSITION WidthText(const Font *font_, std::string_view text) override;
 
@@ -1533,9 +1533,11 @@ void SurfaceD2D::DrawTextTransparentScaled(PRectangle rc, const Font *font_, XYP
 }
 
 // N++ (Pyre909 build): one text layout, each character's advance made the distance to the next one's x by spacing after
-// it (from its own advance, a cluster each: the caller's characters are neither combined nor shaped)
+// it (a cluster each: the caller's characters are neither combined nor shaped). The spacing comes from the advances the
+// line's layout measured, set before this layout is laid out, so that it's laid out once (spacing set after a measure lays
+// it out again); where the layout's own advance differs (kerning in this text), the spacing is set again from it
 bool SurfaceD2D::DrawTextTransparentAt(PRectangle rc, const Font *font_, XYPOSITION ybase, std::string_view text,
-	ColourRGBA fore, const XYPOSITION *xs) {
+	ColourRGBA fore, const XYPOSITION *xs, const XYPOSITION *advances) {
 	const FontDirectWrite *pfm = FontDirectWrite::Cast(font_);
 	if ((mode.codePage != CpUtf8) || text.empty() || !pfm->pTextFormat || !pRenderTarget || !pBrush)
 		return false;
@@ -1545,32 +1547,67 @@ bool SurfaceD2D::DrawTextTransparentAt(PRectangle rc, const Font *font_, XYPOSIT
 	ComPtr<IDWriteTextLayout1> pTextLayout1;
 	if (!pTextLayout || FAILED(pTextLayout.As(&pTextLayout1)))
 		return false;
-	std::vector<DWRITE_CLUSTER_METRICS> clusters(tbuf.tlen);
-	UINT32 count = 0;
-	if (FAILED(pTextLayout->GetClusterMetrics(clusters.data(), static_cast<UINT32>(clusters.size()), &count)) ||
-		(count != clusters.size()))
-		return false;
-	// the spacing after each character, set once for each run of characters that take the same
+	// by UTF-16 unit (a character each): the distance to the next character's x (none after the last) and the spacing set;
+	// kept between calls (painting is on one thread)
+	const UINT32 units = static_cast<UINT32>(tbuf.tlen);
+	thread_local std::vector<FLOAT> distances;
+	thread_local std::vector<FLOAT> spacings;
+	thread_local std::vector<DWRITE_CLUSTER_METRICS> clusters;
+	distances.assign(units, 0.0f);
+	spacings.assign(units, 0.0f);
+	clusters.resize(units);
 	UINT32 unit = 0;
-	UINT32 runStart = 0;
-	FLOAT runSpacing = 0.0f;
 	size_t i = 0;
 	while (i < text.length()) {
 		const int status = UTF8Classify(text.substr(i));
 		const size_t length = static_cast<size_t>(status & UTF8MaskWidth);
-		if ((status & UTF8MaskInvalid) || (length > 3) || (unit >= count) || (clusters[unit].length != 1))
-			return false;	// one UTF-16 unit and cluster a character only
-		const FLOAT spacing = (i + length < text.length()) ?
-			static_cast<FLOAT>(xs[i + length] - xs[i]) - clusters[unit].width : 0.0f;
-		if ((unit > runStart) && (std::abs(spacing - runSpacing) > 0.001f)) {
-			pTextLayout1->SetCharacterSpacing(0.0f, runSpacing, 0.0f, DWRITE_TEXT_RANGE{ runStart, unit - runStart });
-			runStart = unit;
+		if ((status & UTF8MaskInvalid) || (length > 3) || (unit >= units)) {
+			return false;	// one UTF-16 unit a character only
 		}
-		runSpacing = spacing;
+		if (i + length < text.length()) {
+			distances[unit] = static_cast<FLOAT>(xs[i + length] - xs[i]);
+			spacings[unit] = advances ? distances[unit] - static_cast<FLOAT>(advances[i]) : 0.0f;
+		}
 		unit++;
 		i += length;
 	}
-	pTextLayout1->SetCharacterSpacing(0.0f, runSpacing, 0.0f, DWRITE_TEXT_RANGE{ runStart, unit - runStart });
+	if (unit != units) {
+		return false;
+	}
+	// the spacing set once for each run of characters that take the same
+	const auto setSpacings = [&]() {
+		UINT32 runStart = 0;
+		for (UINT32 u = 1; u <= units; u++) {
+			if ((u == units) || (std::abs(spacings[u] - spacings[runStart]) > 0.001f)) {
+				pTextLayout1->SetCharacterSpacing(0.0f, spacings[runStart], 0.0f, DWRITE_TEXT_RANGE{ runStart, u - runStart });
+				runStart = u;
+			}
+		}
+	};
+	if (advances) {
+		setSpacings();
+	}
+	UINT32 count = 0;
+	if (FAILED(pTextLayout->GetClusterMetrics(clusters.data(), units, &count)) || (count != units)) {
+		return false;
+	}
+	// a cluster's width includes the spacing after it
+	bool isOff = !advances;
+	for (UINT32 u = 0; u < units; u++) {
+		if (clusters[u].length != 1) {
+			return false;	// a cluster a character only
+		}
+		if ((u + 1 < units) && (std::abs(clusters[u].width - distances[u]) > 0.01f)) {
+			isOff = true;
+		}
+	}
+	if (isOff) {
+		for (UINT32 u = 0; u + 1 < units; u++) {
+			spacings[u] = distances[u] - (clusters[u].width - spacings[u]);
+		}
+		spacings[units - 1] = 0.0f;
+		setSpacings();
+	}
 	D2DPenColourAlpha(fore);
 	const FLOAT intensity = 0.25f * penColour.r + 0.5f * penColour.g + 0.25f * penColour.b;
 	SetFontQuality(pfm->extraFontFlag, (intensity >= lightTextMinIntensity) ? renderingVariantLight : 0);

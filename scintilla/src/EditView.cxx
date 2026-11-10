@@ -1150,24 +1150,37 @@ void DrawTextInCells(Surface *surface, const ViewStyle &vsDraw, const LineLayout
 	}
 	if (fillBackground)
 		surface->FillRectangleAligned(rcSegment, Fill(textBack));
-	// the centred characters that a run neither shapes nor reorders (one UTF-16 unit, below U+0590 or two cells wide: CJK)
-	// drawn together where the surface can, as they come
-	std::string batch;
+	// the centred characters that a run neither shapes nor reorders (one UTF-16 unit, left to right, unshaped: below U+0590,
+	// Latin and Greek extended, punctuation, symbols, arrows, box drawing (U+1E00-2BFF, of a cell or more), halfwidth forms,
+	// or two cells wide: CJK) drawn together where the surface can, as they come: text[batchStart, batchEnd), a character not batched
+	// drawing the batch first; by byte, its character's x and advance in the font (at its first byte)
+	size_t batchStart = 0;
+	size_t batchEnd = 0;
 	std::vector<XYPOSITION> batchXs;
+	std::vector<XYPOSITION> batchAdvances;
+	batchXs.reserve(length);
+	batchAdvances.reserve(length);
 	auto drawBatch = [&]() {
-		if (!batch.empty() && !surface->DrawTextTransparentAt(rcSegment, font, ybase, batch, textFore, batchXs.data())) {
-			const std::string_view batched(batch);
-			size_t i = 0;
-			while (i < batched.length()) {
-				const size_t lengthCharacter = static_cast<size_t>(std::max(1, UTF8Classify(batched.substr(i)) & UTF8MaskWidth));
-				PRectangle rcCharacter = rcSegment;
-				rcCharacter.left += batchXs[i];
-				surface->DrawTextTransparent(rcCharacter, font, ybase, batched.substr(i, lengthCharacter), textFore);
-				i += lengthCharacter;
+		// the spaces at its ends drawn as nothing (indentation, alignment)
+		std::string_view batched = text.substr(batchStart, batchEnd - batchStart);
+		const size_t first = batched.find_first_not_of(' ');
+		if (first != std::string_view::npos) {
+			batched = batched.substr(first, batched.find_last_not_of(' ') + 1 - first);
+			const XYPOSITION *xs = batchXs.data() + first;
+			if (!surface->DrawTextTransparentAt(rcSegment, font, ybase, batched, textFore, xs, batchAdvances.data() + first)) {
+				size_t i = 0;
+				while (i < batched.length()) {
+					const size_t lengthCharacter = static_cast<size_t>(std::max(1, UTF8Classify(batched.substr(i)) & UTF8MaskWidth));
+					PRectangle rcCharacter = rcSegment;
+					rcCharacter.left += xs[i];
+					surface->DrawTextTransparent(rcCharacter, font, ybase, batched.substr(i, lengthCharacter), textFore);
+					i += lengthCharacter;
+				}
 			}
 		}
-		batch.clear();
+		batchStart = batchEnd = 0;
 		batchXs.clear();
+		batchAdvances.clear();
 	};
 	int b = 0;
 	while (b < length) {
@@ -1181,8 +1194,20 @@ void DrawTextInCells(Surface *surface, const ViewStyle &vsDraw, const LineLayout
 		for (int f = b; f < e; f++)
 			width += ll->fontWidths[start + f];
 		std::string_view character = text.substr(b, e - b);
+		// its first character, decoded once (-1: ASCII, or invalid), and whether it's alone (no characters of no width after it)
+		int firstCh = -1;
+		bool isAlone = !unicode || (character.length() == 1);
+		if (unicode && !UTF8IsAscii(character[0])) {
+			const int status = UTF8Classify(character);
+			if (!(status & UTF8MaskInvalid)) {
+				firstCh = UnicodeFromUTF8(character.substr(0, status & UTF8MaskWidth));
+				isAlone = static_cast<size_t>(status & UTF8MaskWidth) == character.length();
+			} else {
+				isAlone = false;
+			}
+		}
 		std::string onCircle;
-		if (unicode && (cells > 0.5) && !UTF8IsAscii(character[0]) && IsCombiningMark(FirstCharacter(character))) {
+		if ((cells > 0.5) && (firstCh >= 0) && IsCombiningMark(firstCh)) {
 			onCircle = "\xE2\x97\x8C";	// U+25CC
 			onCircle += character;
 			character = onCircle;
@@ -1193,12 +1218,18 @@ void DrawTextInCells(Surface *surface, const ViewStyle &vsDraw, const LineLayout
 		rcCharacter.right = rcCharacter.left + std::max(cells, width);
 		if ((width <= cells + 0.5) || (cells <= 0) || (width <= 0)) {
 			rcCharacter.left += std::max(XYPOSITION{0}, std::round((cells - width) / 2));
-			const int status = UTF8Classify(character);
-			const int ch = (unicode && onCircle.empty() && !(status & UTF8MaskInvalid) &&
-				(static_cast<size_t>(status & UTF8MaskWidth) == character.length())) ? FirstCharacter(character) : -1;
-			if ((ch >= 0) && (ch < 0x10000) && ((ch < 0x590) || (CellsOfCharacter(ch) == 2))) {
-				batchXs.resize(batch.length() + character.length(), rcCharacter.left - rcSegment.left);
-				batch += character;
+			const int ch = (unicode && onCircle.empty() && isAlone) ? ((firstCh >= 0) ? firstCh : static_cast<unsigned char>(character[0])) : -1;
+			// (in U+1E00-2BFF a character of no cell, alone at a segment's start, is drawn alone: a bidirectional control (U+202E)
+			// would reorder the batch, a joiner join it)
+			if ((ch >= 0) && (ch < 0x10000) && ((ch < 0x590) || (((ch >= 0x1E00) && (ch < 0x2C00)) && (cells > 0.5)) ||
+				((ch >= 0xFF61) && (ch <= 0xFFDC)) || (cells > vsDraw.spaceWidth * 1.5))) {
+				if (batchEnd != static_cast<size_t>(b))
+					drawBatch();	// a batch is contiguous
+				if (batchXs.empty())
+					batchStart = b;
+				batchEnd = e;
+				batchXs.resize(batchXs.size() + character.length(), rcCharacter.left - rcSegment.left);
+				batchAdvances.resize(batchAdvances.size() + character.length(), width);
 			} else {
 				drawBatch();
 				surface->DrawTextTransparent(rcCharacter, font, ybase, character, textFore);
