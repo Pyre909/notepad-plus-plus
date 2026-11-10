@@ -73,8 +73,17 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
       font lists' GDI names ("Cascadia Code SemiBold"); the page's checks differed from what Scintilla draws
       ("-cv05=2"); each key typed made the fonts again (now 300 ms after the typing pauses); no dark mode colours;
       clipped notes. Tests: `pyre-font-features.ps1` 26 checks, `pyre-style-configurator.ps1` 13,
-      `pyre-directwrite-only.ps1` 9 (with french.xml); harness on ARM64, x64, Win32: 0 FAIL, 39 PASS. Local `pyre`
-      fast-forwarded to `043c3bf` (23 ahead of origin: 8.9.9 and the six commits); not pushed, waiting for Pyre909.
+      `pyre-directwrite-only.ps1` 9 (with french.xml); harness on ARM64, x64, Win32: 0 FAIL, 39 PASS. `pyre` pushed
+      (Pyre909's OK) at `3b1f0ae` (`043c3bf` and a GCC/Clang warning fix: `FeatureToken`'s initializer). Pyre909 CI
+      didn't start: the dispatch got HTTP 422 "Actions has been disabled for this repository" twice, while the API
+      shows Actions enabled and the workflow active (last runs 2026-11-03 fine): for Pyre909 to look at in Settings >
+      Actions or the account's billing. Instead, locally: MSVC ARM64, x64, Win32 Release (harness), UCRT64 GCC and
+      CLANG64 Clang Release: clean (their other warnings upstream's). Not run: MSVC Debug, CMake.
+    - Next, proposed to Pyre909 (fonts, item 2 again): OpenType features per style (Style Configurator, stylers.xml),
+      variable fonts' axes (weights between the steps; a lighter one in dark themes; MonoLisa's variable version
+      needed: the installed one is static), a hinting choice (DirectWrite grid fit; MonoLisa's TTFs have no hinting:
+      no fpgm/prep/cvt/gasp, so for Consolas, Cascadia Code and CFF fonts), a preview on the Fonts page, half-point
+      zoom. Colour fonts are on already (Scintilla's ENABLE_COLOR_FONT).
 
 - **The review round (2026-10-20, evening)**, asked by Pyre909: sync with upstream (the fork's `master` brought to
   `b661c2b` with `gh repo sync`; `pyre` had it), a preview (`C:\npp-preview-49de091`, a portable copy of the installation
