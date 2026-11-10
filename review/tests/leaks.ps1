@@ -108,6 +108,9 @@ function Measure-Op([string] $name, [scriptblock] $op) {
 # a settings folder of its own: the Default Style in "Bahnschrift Light", a C++ and a Python file
 $settings = Join-Path ([IO.Path]::GetTempPath()) ('npp-review\leaks-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 New-Item -ItemType Directory -Force $settings | Out-Null
+# Pyre909 builds list GDI among Preferences' rendering modes only with offerGdiRendering (DirectWrite the only choice
+# otherwise, since 2026-11-10); other builds ignore it. A config.xml of this alone: the rest has its defaults
+[IO.File]::WriteAllText((Join-Path $settings 'config.xml'), '<?xml version="1.0" encoding="UTF-8" ?><NotepadPlus><GUIConfigs><GUIConfig name="MISC" offerGdiRendering="yes" /></GUIConfigs></NotepadPlus>')
 $model = Join-Path (Split-Path $Exe) 'stylers.model.xml'
 if (Test-Path $model) {
 	$stylers = [IO.File]::ReadAllText($model) -replace '(<WidgetStyle name="Default Style" styleID="32"[^>]*?)fontName="[^"]*"', '$1fontName="Bahnschrift Light"'

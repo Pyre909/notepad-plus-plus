@@ -96,6 +96,9 @@ function Check-PluginFonts([string] $name, [string] $expectedOwn, [string] $expe
 # a settings folder of its own, its Default Style in "Bahnschrift Light"
 $settings = Join-Path ([IO.Path]::GetTempPath()) ('npp-review\pyre-rtl-style-fonts-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 New-Item -ItemType Directory -Force $settings | Out-Null
+# Pyre909 builds list GDI among Preferences' rendering modes only with offerGdiRendering (DirectWrite the only choice
+# otherwise, since 2026-11-10); other builds ignore it. A config.xml of this alone: the rest has its defaults
+[IO.File]::WriteAllText((Join-Path $settings 'config.xml'), '<?xml version="1.0" encoding="UTF-8" ?><NotepadPlus><GUIConfigs><GUIConfig name="MISC" offerGdiRendering="yes" /></GUIConfigs></NotepadPlus>')
 $model = Join-Path (Split-Path $Exe) 'stylers.model.xml'
 $bytes = [IO.File]::ReadAllBytes($model); $hasBom = ($bytes.Length -ge 3) -and ($bytes[0] -eq 0xEF) -and ($bytes[1] -eq 0xBB) -and ($bytes[2] -eq 0xBF)
 $stylers = [IO.File]::ReadAllText($model) -replace '(<WidgetStyle name="Default Style" styleID="32"[^>]*?)fontName="[^"]*"', '$1fontName="Bahnschrift Light"'

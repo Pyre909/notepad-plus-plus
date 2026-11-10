@@ -101,6 +101,9 @@ function Check-Split([string] $name, [int] $expected) {
 # a fresh settings folder of its own under the temp folder, so nothing of the user's is touched
 $settings = Join-Path ([IO.Path]::GetTempPath()) ('npp-review\live-switch-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 New-Item -ItemType Directory -Force $settings | Out-Null
+# Pyre909 builds list GDI among Preferences' rendering modes only with offerGdiRendering (DirectWrite the only choice
+# otherwise, since 2026-11-10); other builds ignore it. A config.xml of this alone: the rest has its defaults
+[IO.File]::WriteAllText((Join-Path $settings 'config.xml'), '<?xml version="1.0" encoding="UTF-8" ?><NotepadPlus><GUIConfigs><GUIConfig name="MISC" offerGdiRendering="yes" /></GUIConfigs></NotepadPlus>')
 Copy-Item $TestFile $settings; $file = Join-Path $settings (Split-Path $TestFile -Leaf)
 $proc = Start-Process $Exe -ArgumentList '-multiInst', '-nosession', "-settingsDir=$settings", '-titleAdd=REVIEW-TEST', $file -PassThru
 $script:npid = $proc.Id

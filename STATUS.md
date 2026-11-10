@@ -49,7 +49,11 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
     - D, **fallback fonts** (done, `eb28c50`): Preferences > Fonts > Fallback Fonts, config.xml `fontFallback`,
       Scintilla `SCI_SETFONTFALLBACK`: an `IDWriteFontFallback` of the families (each for its Unicode ranges) before
       the system's. `pyre-font-features.ps1` 21 checks (with MS Mincho for a CJK line).
-    - Next: DirectWrite stage 1, then the research for right-to-left views and printing.
+    - **DirectWrite stage 1** (done, `17e57ac`): Preferences > Editing 1 lists the four DirectWrite modes; GDI only for
+      an older GDI setting (to leave it), without DirectWrite (Wine), or with config.xml MISC `offerGdiRendering="yes"`
+      (by hand, kept). The six tests that switch to GDI write a config.xml of that alone first (a partial config.xml
+      works: the rest takes its defaults); `pyre-directwrite-only.ps1` 7 checks.
+    - Next: the research for right-to-left views and printing with DirectWrite (stages 2 and 3).
 
 - **The review round (2026-10-20, evening)**, asked by Pyre909: sync with upstream (the fork's `master` brought to
   `b661c2b` with `gh repo sync`; `pyre` had it), a preview (`C:\npp-preview-49de091`, a portable copy of the installation

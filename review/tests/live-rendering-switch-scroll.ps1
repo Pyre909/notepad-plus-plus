@@ -50,6 +50,9 @@ function Check([string] $name, [bool] $ok, [string] $detail = '') {
 # a settings folder of its own, with a long document whose lines wrap
 $settings = Join-Path ([IO.Path]::GetTempPath()) ('npp-review\live-switch-scroll-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 New-Item -ItemType Directory -Force $settings | Out-Null
+# Pyre909 builds list GDI among Preferences' rendering modes only with offerGdiRendering (DirectWrite the only choice
+# otherwise, since 2026-11-10); other builds ignore it. A config.xml of this alone: the rest has its defaults
+[IO.File]::WriteAllText((Join-Path $settings 'config.xml'), '<?xml version="1.0" encoding="UTF-8" ?><NotepadPlus><GUIConfigs><GUIConfig name="MISC" offerGdiRendering="yes" /></GUIConfigs></NotepadPlus>')
 $long = Join-Path $settings 'long.txt'; $body = ('abcdefghij ' * 30).TrimEnd()
 [IO.File]::WriteAllLines($long, [string[]](1..3000 | ForEach-Object { "line $_ $body" }))
 $proc = Start-Process $Exe -ArgumentList '-multiInst', '-nosession', "-settingsDir=$settings", '-titleAdd=REVIEW-TEST', $long -PassThru
