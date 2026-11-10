@@ -53,7 +53,28 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
       an older GDI setting (to leave it), without DirectWrite (Wine), or with config.xml MISC `offerGdiRendering="yes"`
       (by hand, kept). The six tests that switch to GDI write a config.xml of that alone first (a partial config.xml
       works: the rest takes its defaults); `pyre-directwrite-only.ps1` 7 checks.
-    - Next: the research for right-to-left views and printing with DirectWrite (stages 2 and 3).
+    - Research, stage 2 (right-to-left views with DirectWrite): Notepad++ mirrors such a view with `WS_EX_LAYOUTRTL`,
+      which GDI follows (its DC mirrored, text not) and Direct2D's HWND render target ignores, hence GDI there. Doable
+      in `SurfaceD2D` (local patch): a mirroring transform while painting a mirrored window, and each text box drawn
+      with a second mirror around its own centre (glyphs readable, positions mirrored, as GDI's LAYOUT_RTL does);
+      Windows already mirrors the window's mouse coordinates. Medium; for right-to-left documents only (Pyre909 shows
+      RTL in data order): not started.
+    - Research, stage 3 (printing with DirectWrite): `Printer.cpp` prints through the printer's HDC, Scintilla's
+      FormatRange with a GDI surface. Direct2D into that HDC (`ID2D1DCRenderTarget`) sends bitmaps: large, softer. The
+      real way is the XPS print path: a print ticket from the DEVMODE (`PTConvertDevModeToPrintTicket`), an
+      `IPrintDocumentPackageTarget`, `ID2D1PrintControl`, a command list a page, and Scintilla's page formatting drawing
+      into a Direct2D device context, which upstream Scintilla doesn't do. Large; it would print the OpenType features
+      and fallback fonts (the fonts of a weight already print through GDI). Not started; recommended to leave.
+    - **Independent review** of the five commits (one agent, the checklist): 12 findings, all fixed in `043c3bf`. The
+      ones that mattered: the Style Configurator's "Go to settings" opened the page before the right one (its page
+      enum lacked Fonts); a translated Preferences left the rendering modes in English (four items, five
+      translations); Medium of a Regular-and-Bold family drew the keywords Regular (now Bold: Consolas, and Cascadia
+      Code with GDI; DirectWrite draws Cascadia Code's Medium with its SemiBold, kept); the fallback list ignored the
+      font lists' GDI names ("Cascadia Code SemiBold"); the page's checks differed from what Scintilla draws
+      ("-cv05=2"); each key typed made the fonts again (now 300 ms after the typing pauses); no dark mode colours;
+      clipped notes. Tests: `pyre-font-features.ps1` 26 checks, `pyre-style-configurator.ps1` 13,
+      `pyre-directwrite-only.ps1` 9 (with french.xml); harness on ARM64, x64, Win32: 0 FAIL, 39 PASS. Local `pyre`
+      fast-forwarded to `043c3bf` (23 ahead of origin: 8.9.9 and the six commits); not pushed, waiting for Pyre909.
 
 - **The review round (2026-10-20, evening)**, asked by Pyre909: sync with upstream (the fork's `master` brought to
   `b661c2b` with `gh repo sync`; `pyre` had it), a preview (`C:\npp-preview-49de091`, a portable copy of the installation

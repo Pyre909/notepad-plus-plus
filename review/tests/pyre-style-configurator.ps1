@@ -10,6 +10,8 @@
 # - The user keywords typed are applied once the typing pauses, not on each key (each application restyles the views:
 #   14.6 ms a key before, 2.7 ms after, with a 100,000-line C++ file; one restyle after the pause).
 # - A size of half a point (2026-11-10): 10.5 in the size list, saved as fontSize="10.5", drawn at 10.5, shown again.
+#   A size read from a theme as Notepad++ reads it, spaces and leading zeros, with a third decimal rounded: " 010.555" 10.56.
+# - "Go to settings" of a global style opens its Preferences page, past pyre's Fonts page (Line number margin: Margins).
 # Runs a copy of the build in a folder of its own with four of the installation's themes next to it (as installed), a
 # settings folder of its own (the user's themes folder in it) and a C++ file of 100,000 lines.
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
@@ -46,7 +48,7 @@ $CB_SETCURSEL = 0x014E; $CB_FINDSTRINGEXACT = 0x0158; $LB_SETCURSEL = 0x0186; $L
 $IDM_SETTING_PREFERENCE = 48011; $IDM_LANGSTYLE_CONFIG_DLG = 46001
 $IDC_FONT_COMBO = 2202; $IDC_FONTSIZE_COMBO = 2203; $IDC_BOLD_CHECK = 2204; $IDC_USER_KEYWORDS_EDIT = 2222
 $IDC_SAVECLOSE_BUTTON = 2301; $IDC_LANGUAGES_COMBO = 2304; $IDC_STYLES_LIST = 2305; $IDC_SWITCH2THEME_COMBO = 2307
-$IDC_RADIO_DARKMODE_LIGHTMODE = 7131; $IDC_RADIO_DARKMODE_DARKMODE = 7132
+$IDC_RADIO_DARKMODE_LIGHTMODE = 7131; $IDC_RADIO_DARKMODE_DARKMODE = 7132; $IDC_GLOBAL_GOTOSETTINGS_LINK = 2234; $IDC_LIST_DLGTITLE = 6002
 $SCI_GETSTYLEAT = 2010; $SCI_STYLEGETBACK = 2482; $SCI_STYLEGETBOLD = 2483; $STYLE_DEFAULT = 32; $SCE_C_WORD = 5
 $SCI_STYLEGETSIZEFRACTIONAL = 2062
 
@@ -139,7 +141,7 @@ $noFont = Join-Path $settings 'themes\NoFont.xml'
 <NotepadPlus>
     <LexerStyles />
     <GlobalStyles>
-        <WidgetStyle name="Default Style" styleID="32" fgColor="000000" bgColor="FFFFFF" fontStyle="0" fontSize="10" />
+        <WidgetStyle name="Default Style" styleID="32" fgColor="000000" bgColor="FFFFFF" fontStyle="0" fontSize=" 010.555" />
     </GlobalStyles>
 </NotepadPlus>
 '@)
@@ -183,6 +185,9 @@ try {
 	$font = Default-Style-Attr $noFont 'fontName'
 	$shown = if ($null -eq $font) { '(no attribute)' } else { '"' + $font + '"' }
 	Check 'a font chosen where the attribute was emptied on load, saved' ($font -eq 'Consolas') "fontName $shown"
+	# its size, fontSize=" 010.555" (Pyre909 build: spaces, leading zeros, a third decimal rounded): 10.56, saved so
+	$size = Send $view $SCI_STYLEGETSIZEFRACTIONAL $STYLE_DEFAULT
+	Check '  its size " 010.555" read as 10.56 points, saved as fontSize="10.56"' (($size -eq 1056) -and ((Default-Style-Attr $noFont 'fontSize') -eq '10.56')) "$size hundredths, fontSize '$(Default-Style-Attr $noFont 'fontSize')'"
 
 	# an installation's theme saved as the user's copy, then selected again in the same session
 	$dlg = Open-Styler
@@ -227,6 +232,16 @@ try {
 	$back = Send $view $SCI_STYLEGETBACK $STYLE_DEFAULT
 	Check 'dark mode: its theme Solarized, not Solarized-light' ($back -eq (Bgr '002B36')) ('Default Style background {0:X6}, Solarized {1:X6}, Solarized-light {2:X6} (BGR)' -f $back, (Bgr '002B36'), (Bgr 'FDF6E3'))
 	Set-Radio $darkPage $IDC_RADIO_DARKMODE_LIGHTMODE $IDC_RADIO_DARKMODE_DARKMODE
+
+	# "Go to settings" of a global style: the Preferences page of its setting, past pyre's Fonts page (2026-11-10)
+	$dlg = Open-Styler
+	[void](Select-Text $dlg $IDC_LANGUAGES_COMBO 'Global Styles'); [void](Select-Text $dlg $IDC_STYLES_LIST 'Line number margin' -List)
+	[void](Send $dlg $WM_COMMAND $IDC_GLOBAL_GOTOSETTINGS_LINK ([SC]::GetDlgItem($dlg, $IDC_GLOBAL_GOTOSETTINGS_LINK)).ToInt64()); Start-Sleep -Milliseconds 500
+	$pages = [SC]::GetDlgItem([SC]::GetParent($darkPage), $IDC_LIST_DLGTITLE)
+	$i = Send $pages 0x0188   # LB_GETCURSEL
+	$sb = [Text.StringBuilder]::new(64); [void][SC]::SendMessageSb($pages, 0x0189, [IntPtr]$i, $sb)   # LB_GETTEXT
+	Check '"Go to settings" of "Line number margin": the Margins/Border/Edge page' ($sb.ToString() -eq 'Margins/Border/Edge') "page '$sb'"
+	[void](Send $dlg $WM_COMMAND 2 0); Start-Sleep -Milliseconds 300   # IDCANCEL
 }
 finally {
 	if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }

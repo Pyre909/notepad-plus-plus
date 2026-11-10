@@ -2,7 +2,9 @@
 # offers (2026-11-10). Fresh settings: the four DirectWrite modes, DirectWrite (default) chosen, the views in DirectWrite.
 # A config.xml with GDI (writeTechnologyEngine="0", an older one): GDI listed first and chosen, the views in GDI; choosing
 # DirectWrite switches them at once. config.xml's offerGdiRendering="yes" (written by hand): GDI listed with DirectWrite
-# chosen, and kept in config.xml when Notepad++ saves it.
+# chosen, and kept in config.xml when Notepad++ saves it. The Fonts page's features and fallback fonts (DirectWrite only)
+# are enabled with DirectWrite, disabled with GDI. Translated (french.xml), the list has the four DirectWrite modes' names
+# (the translation's five less GDI's).
 # Contract of review\tests: -Exe <notepad++.exe>; PASS/FAIL lines; last line "<n> checks, <m> failed".
 param([Parameter(Mandatory)] [string] $Exe)
 $ErrorActionPreference = 'Stop'
@@ -23,10 +25,12 @@ public static class DO {
 	[DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr SendMessage(IntPtr h, uint m, IntPtr w, StringBuilder l);
 	[DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
 	[DllImport("user32.dll")] public static extern IntPtr GetParent(IntPtr h);
+	[DllImport("user32.dll")] public static extern bool IsWindowEnabled(IntPtr h);
 }
 '@
 $WM_CLOSE = 0x0010; $WM_COMMAND = 0x0111; $CB_GETCOUNT = 0x0146; $CB_GETCURSEL = 0x0147; $CB_SETCURSEL = 0x014E; $CB_GETLBTEXT = 0x0148
 $IDC_COMBO_SC_TECHNOLOGY_CHOICE = 6362; $IDM_SETTING_PREFERENCE = 48011; $SCI_GETTECHNOLOGY = 2631
+$IDC_LIST_FONTFEATURES = 7203; $IDC_EDIT_FONTFEATURES = 7205; $IDC_EDIT_FONTFALLBACK = 7213
 
 $script:results = [Collections.Generic.List[string]]::new(); $script:fails = 0
 function Check([string] $name, [bool] $ok, [string] $detail = '') {
@@ -47,9 +51,11 @@ function Get-Kids([IntPtr] $parent) {
 function Send([IntPtr] $h, [int] $msg, [long] $w = 0, [long] $l = 0) { $r = [IntPtr]::Zero; [void][DO]::SendMessageTimeout($h, $msg, [IntPtr]$w, [IntPtr]$l, 2, 5000, [ref]$r); $r.ToInt64() }
 
 $root = Join-Path ([IO.Path]::GetTempPath()) ('npp-review\pyre-directwrite-only-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
-# starts Notepad++ with a settings folder of its own, its config.xml's MISC attributes as given (none: no config.xml)
-function Start-Npp([string] $name, [string] $miscAttributes) {
+# starts Notepad++ with a settings folder of its own, its config.xml's MISC attributes as given (none: no config.xml), a
+# translation as its nativeLang.xml if given
+function Start-Npp([string] $name, [string] $miscAttributes, [string] $nativeLang = '') {
 	$script:settings = Join-Path $root $name; New-Item -ItemType Directory -Force $script:settings | Out-Null
+	if ($nativeLang) { Copy-Item -LiteralPath $nativeLang (Join-Path $script:settings 'nativeLang.xml') }
 	if ($miscAttributes) {
 		[IO.File]::WriteAllText((Join-Path $script:settings 'config.xml'), "<?xml version=""1.0"" encoding=""UTF-8"" ?><NotepadPlus><GUIConfigs><GUIConfig name=""MISC"" $miscAttributes /></GUIConfigs></NotepadPlus>")
 	}
@@ -65,6 +71,11 @@ function Start-Npp([string] $name, [string] $miscAttributes) {
 		foreach ($t in Get-Tops) { if ((Get-Cls $t) -eq '#32770') { $m = Get-Kids $t | Where-Object { [DO]::GetDlgItem($_, $IDC_COMBO_SC_TECHNOLOGY_CHOICE) -ne [IntPtr]::Zero } | Select-Object -First 1; if ($m) { $script:page = $m } } }
 	}
 	$script:combo = [DO]::GetDlgItem($script:page, $IDC_COMBO_SC_TECHNOLOGY_CHOICE)
+	$script:fontsPage = Get-Kids ([DO]::GetParent($script:page)) | Where-Object { [DO]::GetDlgItem($_, $IDC_EDIT_FONTFEATURES) -ne [IntPtr]::Zero } | Select-Object -First 1
+}
+# the Fonts page's features and fallback fonts, enabled with DirectWrite only (as Preferences opened)
+function Get-FontsEnabled {
+	@($IDC_LIST_FONTFEATURES, $IDC_EDIT_FONTFEATURES, $IDC_EDIT_FONTFALLBACK | Where-Object { [DO]::IsWindowEnabled([DO]::GetDlgItem($script:fontsPage, $_)) }).Count
 }
 function Stop-Npp {
 	if (-not $script:proc.HasExited) { [void][DO]::PostMessage($script:main, $WM_CLOSE, [IntPtr]::Zero, [IntPtr]::Zero); if (-not $script:proc.WaitForExit(10000)) { Stop-Process -Id $script:proc.Id -Force } }
@@ -77,6 +88,7 @@ try {
 	Start-Npp 'fresh' ''
 	$items = Get-Items
 	Check 'fresh settings: the four DirectWrite modes only, DirectWrite (default) chosen, the view in DirectWrite' ((($items -join '|') -eq 'DirectWrite (default)|DirectWrite (retain frames)|DirectWrite (draw to GDI DC)|DirectWrite (DirectX 11)') -and ((Send $script:combo $CB_GETCURSEL) -eq 0) -and ((Send $script:view $SCI_GETTECHNOLOGY) -eq 1)) "items '$($items -join "', '")'; chosen $(Send $script:combo $CB_GETCURSEL)"
+	Check '  the Fonts page''s features and fallback fonts enabled' ((Get-FontsEnabled) -eq 3) "$(Get-FontsEnabled) of 3 enabled"
 	# the last item, DirectX 11 (SC_TECHNOLOGY_DIRECT_WRITE_1, 4), then the first again: the items map to their modes
 	[void](Send $script:combo $CB_SETCURSEL 3); [void](Send $script:page $WM_COMMAND ((1 -shl 16) -bor $IDC_COMBO_SC_TECHNOLOGY_CHOICE) $script:combo.ToInt64()); Start-Sleep -Milliseconds 400
 	$dx11 = Send $script:view $SCI_GETTECHNOLOGY
@@ -86,7 +98,7 @@ try {
 
 	Start-Npp 'gdi' 'writeTechnologyEngine="0"'
 	$items = Get-Items
-	Check 'an older config.xml with GDI: GDI listed first and chosen, the view in GDI' (($items.Count -eq 5) -and ($items[0] -like 'GDI*') -and ((Send $script:combo $CB_GETCURSEL) -eq 0) -and ((Send $script:view $SCI_GETTECHNOLOGY) -eq 0)) "items $($items.Count), chosen $(Send $script:combo $CB_GETCURSEL), technology $(Send $script:view $SCI_GETTECHNOLOGY)"
+	Check 'an older config.xml with GDI: GDI listed first and chosen, the view in GDI, the Fonts page''s features and fallback fonts disabled' (((Get-FontsEnabled) -eq 0) -and ($items.Count -eq 5) -and ($items[0] -like 'GDI*') -and ((Send $script:combo $CB_GETCURSEL) -eq 0) -and ((Send $script:view $SCI_GETTECHNOLOGY) -eq 0)) "items $($items.Count), chosen $(Send $script:combo $CB_GETCURSEL), technology $(Send $script:view $SCI_GETTECHNOLOGY)"
 	[void](Send $script:combo $CB_SETCURSEL 1); [void](Send $script:page $WM_COMMAND ((1 -shl 16) -bor $IDC_COMBO_SC_TECHNOLOGY_CHOICE) $script:combo.ToInt64()); Start-Sleep -Milliseconds 400
 	Check '  DirectWrite chosen: the view switched at once' ((Send $script:view $SCI_GETTECHNOLOGY) -eq 1) "technology $(Send $script:view $SCI_GETTECHNOLOGY)"
 	Stop-Npp
@@ -97,6 +109,19 @@ try {
 	Check 'offerGdiRendering="yes": GDI listed, DirectWrite (default) chosen' (($items.Count -eq 5) -and ($items[0] -like 'GDI*') -and ((Send $script:combo $CB_GETCURSEL) -eq 1) -and ((Send $script:view $SCI_GETTECHNOLOGY) -eq 1)) "items $($items.Count), chosen $(Send $script:combo $CB_GETCURSEL)"
 	Stop-Npp
 	Check '  kept in config.xml when Notepad++ saves it' ((Get-Content -LiteralPath (Join-Path $script:settings 'config.xml') -Raw) -match 'offerGdiRendering="yes"')
+
+	# translated (french.xml, five modes, GDI's first): the four DirectWrite modes in French, GDI's translation left out
+	$french = @((Join-Path (Split-Path $Exe) 'localization\french.xml'), (Join-Path (Split-Path (Split-Path $Exe)) 'installer\nativeLang\french.xml')) |
+		Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+	if ($french) {
+		Start-Npp 'french' '' $french
+		$items = Get-Items
+		$combo = [regex]::Match([IO.File]::ReadAllText($french), '(?s)<ComboBox id="6362">(.*?)</ComboBox>').Groups[1].Value
+		$names = @([regex]::Matches($combo, 'name="([^"]*)"') | ForEach-Object { $_.Groups[1].Value })
+		Check 'translated (french.xml): the four DirectWrite modes, GDI''s translation left out' (($names.Count -eq 5) -and (($items -join '|') -eq (($names | Select-Object -Skip 1) -join '|'))) "items '$($items -join "', '")'"
+		Stop-Npp
+	}
+	else { $script:results.Add('INFO  no french.xml next to the build: the translated list not checked') }
 }
 finally {
 	foreach ($q in @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $Exe -and $_.MainWindowTitle -match 'REVIEW-TEST' })) { Stop-Process -Id $q.Id -Force }
