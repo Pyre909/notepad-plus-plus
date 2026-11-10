@@ -2501,6 +2501,19 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 		case SCI_GETFONTFEATURES:
 			return StringResult(lParam, vs.fontFeatures.c_str());
 
+		case SCI_SETFONTFALLBACK: {	// N++ (Pyre909 build): the fonts of the characters a font hasn't, drawn with DirectWrite
+			const char *fallback = ConstCharPtrFromSPtr(lParam);
+			const std::string value = fallback ? fallback : "";
+			if (vs.fontFallback != value) {
+				vs.fontFallback = value;
+				InvalidateStyleRedraw();
+			}
+			return 0;
+		}
+
+		case SCI_GETFONTFALLBACK:
+			return StringResult(lParam, vs.fontFallback.c_str());
+
 		case WM_GETMINMAXINFO:
 			return ::DefWindowProc(MainHWND(), msg, wParam, lParam);
 

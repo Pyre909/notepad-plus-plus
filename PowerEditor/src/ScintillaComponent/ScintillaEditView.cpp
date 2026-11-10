@@ -658,8 +658,9 @@ void ScintillaEditView::applyTextRenderingSettings()
 	};
 	for (const auto& [parameter, value] : parameters)
 		execute(SCI_SETFONTRENDERINGPARAMETER, parameter, value);
-	// the fonts' OpenType features (Preferences > Fonts), on top of the ligatures' setting
+	// the fonts' OpenType features (Preferences > Fonts), on top of the ligatures' setting, and the fallback fonts
 	execute(SCI_SETFONTFEATURES, 0, reinterpret_cast<LPARAM>(svp._fontFeatures.c_str()));
+	execute(SCI_SETFONTFALLBACK, 0, reinterpret_cast<LPARAM>(svp._fontFallback.c_str()));
 
 	applyLineSpacing();
 }

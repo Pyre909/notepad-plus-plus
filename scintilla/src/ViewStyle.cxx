@@ -63,14 +63,14 @@ bool MarginStyle::ShowsFolding() const noexcept {
 }
 
 void FontRealised::Realise(Surface &surface, int zoomLevel, Technology technology, const FontSpecification &fs, const char *localeName,
-	const char *features) {	// N++ (Pyre909 build): features
+	const char *features, const char *fallback) {	// N++ (Pyre909 build): features, fallback
 	PLATFORM_ASSERT(fs.fontName);
 	// If negative zoomLevel, ensure sizeZoomed at least minimum positive size 
 	measurements.sizeZoomed = std::max(fs.size + (zoomLevel * FontSizeMultiplier), FontSizeMultiplier);
 
 	const float deviceHeight = static_cast<float>(surface.DeviceHeightFont(measurements.sizeZoomed));
 	const FontParameters fp(fs.fontName, deviceHeight / FontSizeMultiplier, fs.weight,
-		fs.italic, fs.extraFontFlag, technology, fs.characterSet, localeName, fs.stretch, features);
+		fs.italic, fs.extraFontFlag, technology, fs.characterSet, localeName, fs.stretch, features, fallback);
 	font = Font::Allocate(fp);
 
 	// floor here is historical as platform layers have tweaked their values to match.
@@ -312,6 +312,7 @@ ViewStyle::ViewStyle(const ViewStyle &source) : ViewStyle(source.styles.size()) 
 	tabDrawMode = source.tabDrawMode;
 	characterGrid = source.characterGrid;	// N++ (Pyre909 build)
 	fontFeatures = source.fontFeatures;	// N++ (Pyre909 build)
+	fontFallback = source.fontFallback;	// N++ (Pyre909 build)
 	whitespaceSize = source.whitespaceSize;
 	viewIndentationGuides = source.viewIndentationGuides;
 	viewEOL = source.viewEOL;
@@ -401,7 +402,7 @@ void ViewStyle::Refresh(Surface &surface, int tabInChars) {
 
 	// Ask platform to allocate each unique font.
 	for (const std::pair<const FontSpecification, std::unique_ptr<FontRealised>> &font : fonts) {
-		font.second->Realise(surface, zoomLevel, technology, font.first, localeName.c_str(), fontFeatures.c_str());	// N++ (Pyre909 build): features
+		font.second->Realise(surface, zoomLevel, technology, font.first, localeName.c_str(), fontFeatures.c_str(), fontFallback.c_str());	// N++ (Pyre909 build): features, fallback
 	}
 
 	// Set the platform font handle and measurements for each style.

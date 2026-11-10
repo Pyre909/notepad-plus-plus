@@ -53,6 +53,7 @@ using Microsoft::WRL::ComPtr;
 #include <d2d1_1.h>
 #include <d3d11_1.h>
 #include <dwrite_1.h>
+#include <dwrite_2.h>	// N++ (Pyre909 build): font fallback (SCI_SETFONTFALLBACK)
 #endif
 
 #include "ScintillaTypes.h"
@@ -192,6 +193,69 @@ TextLayout LayoutCreateMeasured(std::wstring_view wsv, IDWriteTextFormat *pTextF
 	return layout;
 }
 
+// N++ (Pyre909 build): the font fallback of a list of families (SCI_SETFONTFALLBACK), tried in order before the system's
+// fallback, each for the characters its regular font has (its Unicode ranges: a family isn't chosen for a character it
+// hasn't); a family DirectWrite doesn't know is left out. Made once for a list; the last few lists kept.
+ComPtr<IDWriteFontFallback> FontFallbackOfList(std::string_view list) {
+	static std::mutex mutex;
+	static std::map<std::string, ComPtr<IDWriteFontFallback>, std::less<>> fallbacks;
+	const std::lock_guard<std::mutex> guard(mutex);
+	if (const auto it = fallbacks.find(list); it != fallbacks.end())
+		return it->second;
+
+	ComPtr<IDWriteFontFallback> fallback;
+	ComPtr<IDWriteFactory2> factory2;
+	ComPtr<IDWriteFontFallbackBuilder> builder;
+	ComPtr<IDWriteFontCollection> systemFonts;
+	if (pIDWriteFactory && SUCCEEDED(pIDWriteFactory->QueryInterface(IID_PPV_ARGS(factory2.GetAddressOf()))) &&
+		SUCCEEDED(factory2->CreateFontFallbackBuilder(builder.GetAddressOf())) &&
+		SUCCEEDED(factory2->GetSystemFontCollection(systemFonts.GetAddressOf(), FALSE))) {
+		size_t start = 0;
+		while (start < list.length()) {
+			size_t end = list.find_first_of(";,", start);
+			if (end == std::string_view::npos)
+				end = list.length();
+			std::string_view name = list.substr(start, end - start);
+			start = end + 1;
+			while (!name.empty() && ((name.front() == ' ') || (name.front() == '\t')))
+				name.remove_prefix(1);
+			while (!name.empty() && ((name.back() == ' ') || (name.back() == '\t')))
+				name.remove_suffix(1);
+			if (name.empty())
+				continue;
+			const std::wstring family = WStringFromUTF8(name);
+			UINT32 index = 0;
+			BOOL exists = FALSE;
+			ComPtr<IDWriteFontFamily> fontFamily;
+			ComPtr<IDWriteFont> font;
+			ComPtr<IDWriteFontFace> face;
+			ComPtr<IDWriteFontFace1> face1;
+			if (FAILED(systemFonts->FindFamilyName(family.c_str(), &index, &exists)) || !exists ||
+				FAILED(systemFonts->GetFontFamily(index, fontFamily.GetAddressOf())) ||
+				FAILED(fontFamily->GetFirstMatchingFont(DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL, font.GetAddressOf())) ||
+				FAILED(font->CreateFontFace(face.GetAddressOf())) || FAILED(face.As(&face1)))
+				continue;
+			UINT32 count = 0;
+			face1->GetUnicodeRanges(0, nullptr, &count);
+			std::vector<DWRITE_UNICODE_RANGE> ranges(count);
+			if ((count == 0) || FAILED(face1->GetUnicodeRanges(count, ranges.data(), &count)))
+				continue;
+			const WCHAR *families[] = { family.c_str() };
+			builder->AddMapping(ranges.data(), count, families, 1);
+		}
+		ComPtr<IDWriteFontFallback> systemFallback;
+		if (SUCCEEDED(factory2->GetSystemFontFallback(systemFallback.GetAddressOf())))
+			builder->AddMappings(systemFallback.Get());
+		if (FAILED(builder->CreateFontFallback(fallback.GetAddressOf())))
+			fallback.Reset();
+	}
+	constexpr size_t maxFallbacks = 8; // a list typed in Preferences makes one for each key
+	if (fallbacks.size() >= maxFallbacks)
+		fallbacks.clear();
+	fallbacks.emplace(std::string(list), fallback);
+	return fallback;
+}
+
 struct FontDirectWrite : public FontWin {
 	ComPtr<IDWriteTextFormat> pTextFormat;
 	FontQuality extraFontFlag = FontQuality::QualityDefault;
@@ -241,6 +305,11 @@ struct FontDirectWrite : public FontWin {
 		}
 		if (SUCCEEDED(hr)) {
 			pTextFormat->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+			if (fp.fallback && *fp.fallback) {	// N++ (Pyre909 build): SCI_SETFONTFALLBACK's fonts before the system's
+				ComPtr<IDWriteTextFormat1> pTextFormat1;
+				if (const ComPtr<IDWriteFontFallback> fallback = FontFallbackOfList(fp.fallback); fallback && SUCCEEDED(pTextFormat.As(&pTextFormat1)))
+					pTextFormat1->SetFontFallback(fallback.Get());
+			}
 
 			if (TextLayout pTextLayout = LayoutCreateMeasured(L"X", pTextFormat.Get(), measuringMode, pTypography.Get())) {	// N++: measured
 				constexpr int maxLines = 2;

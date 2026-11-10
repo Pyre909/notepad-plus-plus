@@ -579,3 +579,7 @@
 #define IDC_BOLDWEIGHT_STATIC                          7208
 #define IDC_COMBO_BOLDWEIGHT                           7209
 #define IDC_BOLDWEIGHT_NOTE_STATIC                     7210
+#define IDC_FONTFALLBACK_GB_STATIC                     7211
+#define IDC_FONTFALLBACK_STATIC                        7212
+#define IDC_EDIT_FONTFALLBACK                          7213
+#define IDC_FONTFALLBACK_NOTE_STATIC                   7214

@@ -1121,6 +1121,9 @@ Translation note:
 					<Item id="7207" name="Bold"/>
 					<Item id="7208" name="Weight:"/>
 					<Item id="7210" name="Of a regular font; a font of another weight as many steps heavier (Light: SemiBold with Bold)"/>
+					<Item id="7211" name="Fallback Fonts"/>
+					<Item id="7212" name="Fonts:"/>
+					<Item id="7214" name="For the characters the font hasn't, before Windows' own (DirectWrite)"/>
 					<ComboBox id="7209">
 						<Element name="Medium"/>
 						<Element name="SemiBold"/>

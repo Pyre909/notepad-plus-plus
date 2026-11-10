@@ -209,6 +209,11 @@ BEGIN
     RTEXT           "Weight:",IDC_BOLDWEIGHT_STATIC,17,153,48,8
     COMBOBOX        IDC_COMBO_BOLDWEIGHT,70,151,90,100,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Of a regular font; a font of another weight as many steps heavier (Light: SemiBold with Bold)",IDC_BOLDWEIGHT_NOTE_STATIC,166,153,277,8
+
+    GROUPBOX        "Fallback Fonts",IDC_FONTFALLBACK_GB_STATIC,11,173,438,28,BS_CENTER
+    RTEXT           "Fonts:",IDC_FONTFALLBACK_STATIC,17,185,48,8
+    EDITTEXT        IDC_EDIT_FONTFALLBACK,70,183,190,13,ES_AUTOHSCROLL
+    LTEXT           "For the characters the font hasn't, before Windows' own (DirectWrite)",IDC_FONTFALLBACK_NOTE_STATIC,266,185,177,8
 END
 
 

@@ -55,4 +55,12 @@
 #define SCI_SETFONTFEATURES 5106
 #define SCI_GETFONTFEATURES 5107
 
+/* SCI_SETFONTFALLBACK(<unused>, const char *fonts) sets the fonts DirectWrite draws the characters a style's font hasn't
+   with, tried in order before the system's fallback: family names separated by semicolons or commas ("BIZ UDGothic;
+   Segoe UI Emoji"), each for the characters it has; a name DirectWrite doesn't know is left out. NULL or "" for the
+   system's fallback alone. SCI_GETFONTFALLBACK(<unused>, char *fonts) copies the list as set and returns its length.
+   Drawn with DirectWrite only (GDI's fallback is Windows' font linking). */
+#define SCI_SETFONTFALLBACK 5108
+#define SCI_GETFONTFALLBACK 5109
+
 #endif

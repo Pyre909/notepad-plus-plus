@@ -804,7 +804,7 @@ bool Style::setFontSizeText(const std::wstring& text)
 
 // Pyre909 build: the Text Rendering settings (Preferences > Editing 1) of <GUIConfig name="ScintillaPrimaryView">,
 // fontAntialiasing="0" fontRenderingMode="0" fontContrast="0" fontLigatures="yes" fontFeatures="" boldWeight="700"
-// (Preferences > Fonts) lineSpacing="0". smoothFont="yes"
+// fontFallback="" (Preferences > Fonts) lineSpacing="0". smoothFont="yes"
 // was ClearType, and a smoothFont that disagrees with fontAntialiasing was changed since by a Notepad++ without these
 // settings sharing config.xml: the newer. Without smoothFont (written by hand), fontAntialiasing.
 static void readTextRenderingParams(const NppXml::Element& elem, ScintillaViewParams& svp)
@@ -830,6 +830,9 @@ static void readTextRenderingParams(const NppXml::Element& elem, ScintillaViewPa
 	// boldWeight="700" (Preferences > Fonts): Medium to Black, whole hundreds
 	if (const int boldWeight = NppXml::intAttribute(elem, "boldWeight", 0); (boldWeight >= 500) && (boldWeight <= 900) && (boldWeight % 100 == 0))
 		svp._boldWeight = boldWeight;
+	// fontFallback="BIZ UDGothic; Segoe UI Emoji" (Preferences > Fonts)
+	if (const char* fallback = NppXml::attribute(elem, "fontFallback"))
+		svp._fontFallback = std::string(fallback).substr(0, maxFontFeaturesLength);
 	svp._lineSpacing = getRangeClampAttribute(elem, "lineSpacing", 0, ScintillaViewParams::maxLineSpacing, svp._lineSpacing);
 }
 
@@ -841,6 +844,7 @@ static void writeTextRenderingParams(NppXml::Element& elem, const ScintillaViewP
 	NppXml::setAttribute(elem, "fontLigatures", svp._textLigatures ? "yes" : "no");
 	NppXml::setAttribute(elem, "fontFeatures", svp._fontFeatures.c_str());
 	NppXml::setAttribute(elem, "boldWeight", svp._boldWeight);
+	NppXml::setAttribute(elem, "fontFallback", svp._fontFallback.c_str());
 	NppXml::setAttribute(elem, "lineSpacing", svp._lineSpacing);
 	// the advanced overrides of the former Pyre909 builds
 	for (const char* name : { "fontGamma", "fontEnhancedContrast", "fontGrayscaleEnhancedContrast", "fontClearTypeLevel", "fontPixelGeometry", "fontLightTextGamma" })

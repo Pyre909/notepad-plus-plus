@@ -2775,6 +2775,10 @@ intptr_t CALLBACK FontsSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 			for (const wchar_t* weightName : { L"Medium", L"SemiBold", L"Bold", L"ExtraBold", L"Black" })
 				::SendMessage(hBoldWeight, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(weightName));
 			::SendMessage(hBoldWeight, CB_SETCURSEL, (NppParameters::getInstance().getSVP()._boldWeight - 500) / 100, 0);
+
+			_isSyncing = true;
+			::SetDlgItemText(_hSelf, IDC_EDIT_FONTFALLBACK, string2wstring(NppParameters::getInstance().getSVP()._fontFallback, CP_UTF8).c_str());
+			_isSyncing = false;
 			return TRUE;
 		}
 
@@ -2803,6 +2807,13 @@ intptr_t CALLBACK FontsSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 			{
 				applyFeatures(getDlgItemText(_hSelf, IDC_EDIT_FONTFEATURES));
 				checkFeatures();
+				return TRUE;
+			}
+			if ((LOWORD(wParam) == IDC_EDIT_FONTFALLBACK) && (HIWORD(wParam) == EN_CHANGE) && !_isSyncing)
+			{
+				ScintillaViewParams& svp = const_cast<ScintillaViewParams&>(NppParameters::getInstance().getSVP());
+				svp._fontFallback = wstring2string(getDlgItemText(_hSelf, IDC_EDIT_FONTFALLBACK), CP_UTF8);
+				ScintillaEditView::applyTextRenderingSettingsToAll();
 				return TRUE;
 			}
 			if ((LOWORD(wParam) == IDC_COMBO_BOLDWEIGHT) && (HIWORD(wParam) == CBN_SELCHANGE))

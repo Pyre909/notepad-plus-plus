@@ -33,7 +33,7 @@ public:
 	FontMeasurements measurements;
 	std::shared_ptr<Font> font;
 	void Realise(Surface &surface, int zoomLevel, Scintilla::Technology technology, const FontSpecification &fs, const char *localeName,
-		const char *features);	// N++ (Pyre909 build): features
+		const char *features, const char *fallback);	// N++ (Pyre909 build): features, fallback
 };
 
 using FontMap = std::map<FontSpecification, std::unique_ptr<FontRealised>>;
@@ -154,6 +154,7 @@ public:
 	Scintilla::TabDrawMode tabDrawMode;
 	bool characterGrid;	// N++ (Pyre909 build): SCI_SETCHARACTERGRID, tabs and representations in whole cells (CellsWidth)
 	std::string fontFeatures;	// N++ (Pyre909 build): SCI_SETFONTFEATURES, the OpenType features of every font
+	std::string fontFallback;	// N++ (Pyre909 build): SCI_SETFONTFALLBACK, the fonts of the characters a font hasn't
 	int whitespaceSize;
 	Scintilla::IndentView viewIndentationGuides;
 	bool viewEOL;
