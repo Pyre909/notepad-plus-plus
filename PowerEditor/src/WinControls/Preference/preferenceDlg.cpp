@@ -2640,7 +2640,7 @@ namespace
 				end = features.length();
 			if (end > start)
 			{
-				FeatureToken token{ features.substr(start, end - start) };
+				FeatureToken token{ features.substr(start, end - start), {}, false };
 				std::wstring_view rest(token._text);
 				unsigned int value = 1;
 				if (rest.starts_with(L'+') || rest.starts_with(L'-'))
