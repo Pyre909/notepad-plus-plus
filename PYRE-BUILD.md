@@ -16,6 +16,11 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **Line spacing and font ligatures** (Preferences > Editing 1 > Text Rendering): extra space between the lines
   of the editor, +1 to +10 pixels at 100% scale (official issue #971), and the fonts' ligatures, such as the
   arrows and operators of Cascadia Code or Fira Code, turned off when unwanted (DirectWrite; official issue #14764).
+- **OpenType font features** (Preferences > Fonts): the features of the editor's font, chosen from a list of the Default
+  Style font's own features with the font's names for its stylistic sets (all its weights and styles: MonoLisa's
+  "Script variant" is in its italics only), or typed as a list such as `ss01 zero cv05=2 -calt`; applied at once to
+  every view, drawn with DirectWrite. With MonoLisa, `ss01` turns italic comments into its script, `dlig` brings its
+  coding ligatures; with Cascadia Code, `ss01` its cursive italic, `zero` a slashed zero.
 - **The rendering mode applies at once**, without restarting Notepad++.
 - **Faster with long lines and large files**: the layouts of the lines shown are kept between paints (not for a file
   over the large file size of Preferences > Performance), and lines are laid out on several threads. Moving the caret and typing in files with very long lines (minified JSON

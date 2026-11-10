@@ -207,12 +207,12 @@ struct FontDirectWrite : public FontWin {
 		extraFontFlag(fp.extraFontFlag),
 		characterSet(fp.characterSet),
 		measuringMode(DWriteMapMeasuringMode(fp.extraFontFlag)) {	// N++
-		// N++: without ligatures (fontQualityNoLigatures), the standard and contextual ligatures are turned off, and the
-		// contextual alternates, which coding fonts (Cascadia Code, Fira Code...) make their ligatures with
-		if ((static_cast<int>(fp.extraFontFlag) & fontQualityNoLigatures) && SUCCEEDED(pIDWriteFactory->CreateTypography(pTypography.GetAddressOf()))) {
-			for (const DWRITE_FONT_FEATURE_TAG tag : { DWRITE_FONT_FEATURE_TAG_STANDARD_LIGATURES,
-				DWRITE_FONT_FEATURE_TAG_CONTEXTUAL_LIGATURES, DWRITE_FONT_FEATURE_TAG_CONTEXTUAL_ALTERNATES }) {
-				pTypography->AddFontFeature(DWRITE_FONT_FEATURE{ tag, 0 });
+		// N++: the OpenType features: the ligatures off (fontQualityNoLigatures), then SCI_SETFONTFEATURES's (Pyre909 build)
+		const std::vector<DWRITE_FONT_FEATURE> features = FontFeatures(fp.features ? fp.features : "",
+			(static_cast<int>(fp.extraFontFlag) & fontQualityNoLigatures) != 0);
+		if (!features.empty() && SUCCEEDED(pIDWriteFactory->CreateTypography(pTypography.GetAddressOf()))) {
+			for (const DWRITE_FONT_FEATURE &feature : features) {
+				pTypography->AddFontFeature(feature);
 			}
 		}
 		const std::wstring wsFace = WStringFromUTF8(fp.faceName);

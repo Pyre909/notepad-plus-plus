@@ -10,6 +10,8 @@
 
 #include <algorithm>
 #include <array>
+#include <string_view>
+#include <vector>
 
 #include <wrl/client.h>
 
@@ -34,6 +36,73 @@ constexpr int fontQualityNoLigatures = 0x20;
 static_assert((fontQualityNoLigatures & (static_cast<int>(FontQuality::QualityMask) | fontQualityMeasuringGdiClassic)) == 0);
 // The FontQuality bits of the overrides (see FontBits)
 constexpr int fontQualityOverrideBits = fontQualityMeasuringGdiClassic | fontQualityNoLigatures;
+
+// The OpenType features of a font, none if it draws its default ones: with a typography, DirectWrite leaves out the
+// features it otherwise applies by default (Cascadia Code's ligatures went with "dlig" alone), so those come first, on;
+// without ligatures, the standard and contextual ligatures and the contextual alternates off (coding fonts such as
+// Cascadia Code and Fira Code make their ligatures with them); then those of SCI_SETFONTFEATURES's list, a later one
+// replacing an earlier of the same tag
+constexpr size_t maxFontFeatures = 64;
+inline std::vector<DWRITE_FONT_FEATURE> FontFeatures(std::string_view list, bool noLigatures) {
+	std::vector<DWRITE_FONT_FEATURE> features;
+	if (!noLigatures && (list.find_first_not_of(" \t,;") == std::string_view::npos))
+		return features;
+	const auto set = [&features](DWRITE_FONT_FEATURE_TAG tag, UINT32 value) {
+		const auto it = std::find_if(features.begin(), features.end(),
+			[tag](const DWRITE_FONT_FEATURE &feature) noexcept { return feature.nameTag == tag; });
+		if (it != features.end())
+			it->parameter = value;
+		else if (features.size() < maxFontFeatures)
+			features.push_back(DWRITE_FONT_FEATURE{ tag, value });
+	};
+	for (const DWRITE_FONT_FEATURE_TAG tag : { DWRITE_FONT_FEATURE_TAG_STANDARD_LIGATURES,
+		DWRITE_FONT_FEATURE_TAG_CONTEXTUAL_LIGATURES, DWRITE_FONT_FEATURE_TAG_CONTEXTUAL_ALTERNATES,
+		DWRITE_FONT_FEATURE_TAG_KERNING }) {
+		set(tag, 1);
+	}
+	if (noLigatures) {
+		for (const DWRITE_FONT_FEATURE_TAG tag : { DWRITE_FONT_FEATURE_TAG_STANDARD_LIGATURES,
+			DWRITE_FONT_FEATURE_TAG_CONTEXTUAL_LIGATURES, DWRITE_FONT_FEATURE_TAG_CONTEXTUAL_ALTERNATES }) {
+			set(tag, 0);
+		}
+	}
+	size_t start = 0;
+	while (start < list.length()) {
+		size_t end = list.find_first_of(" \t,;", start);
+		if (end == std::string_view::npos)
+			end = list.length();
+		std::string_view token = list.substr(start, end - start);
+		start = end + 1;
+		if (token.empty())
+			continue;
+		UINT32 value = 1;
+		if ((token.front() == '+') || (token.front() == '-')) {
+			value = (token.front() == '-') ? 0 : 1;
+			token.remove_prefix(1);
+		}
+		const size_t equals = token.find('=');
+		const std::string_view tag = token.substr(0, equals);
+		if (equals != std::string_view::npos) {
+			const std::string_view number = token.substr(equals + 1);
+			if (number.empty() || (number.length() > 5) ||
+				!std::all_of(number.begin(), number.end(), [](char ch) noexcept { return (ch >= '0') && (ch <= '9'); }))
+				continue;
+			value = 0;
+			for (const char ch : number)
+				value = value * 10 + (ch - '0');
+			if (value > 0xFFFF)
+				continue;
+		}
+		if (tag.empty() || (tag.length() > 4) || !std::all_of(tag.begin(), tag.end(), [](char ch) noexcept {
+			return ((ch >= 'a') && (ch <= 'z')) || ((ch >= 'A') && (ch <= 'Z')) || ((ch >= '0') && (ch <= '9')) || (ch == '_');
+		}))
+			continue;
+		std::array<char, 4> padded{ ' ', ' ', ' ', ' ' };
+		std::copy(tag.begin(), tag.end(), padded.begin());
+		set(static_cast<DWRITE_FONT_FEATURE_TAG>(DWRITE_MAKE_OPENTYPE_TAG(padded[0], padded[1], padded[2], padded[3])), value);
+	}
+	return features;
+}
 
 static_assert((DWRITE_RENDERING_MODE_CLEARTYPE_GDI_CLASSIC == SC_RENDERINGMODE_GDICLASSIC) &&
 	(DWRITE_RENDERING_MODE_CLEARTYPE_NATURAL == SC_RENDERINGMODE_NATURAL) &&

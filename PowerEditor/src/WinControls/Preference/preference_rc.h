@@ -566,3 +566,12 @@
 #define IDC_COMBO_DIALOG_FONT_SIZE                     7167
 #define IDC_STATIC_DIALOG_FONT_NAME                    7168
 #define IDC_COMBO_DIALOG_FONT_NAME                     7169
+
+// Pyre909 build: Preferences > Fonts
+#define IDD_PREFERENCE_SUB_FONTS                       7200
+#define IDC_FONTFEATURES_GB_STATIC                     7201
+#define IDC_FONTFEATURES_FONT_STATIC                   7202
+#define IDC_LIST_FONTFEATURES                          7203
+#define IDC_FONTFEATURES_STATIC                        7204
+#define IDC_EDIT_FONTFEATURES                          7205
+#define IDC_FONTFEATURES_NOTE_STATIC                   7206

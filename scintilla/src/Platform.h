@@ -109,6 +109,7 @@ struct FontParameters {
 	Scintilla::CharacterSet characterSet;
 	const char *localeName;
 	Scintilla::FontStretch stretch;
+	const char *features;	// N++ (Pyre909 build): the view's OpenType features (SCI_SETFONTFEATURES), or nullptr
 
 	constexpr FontParameters(
 		const char *faceName_,
@@ -119,7 +120,8 @@ struct FontParameters {
 		Scintilla::Technology technology_,
 		Scintilla::CharacterSet characterSet_,
 		const char *localeName_,
-		Scintilla::FontStretch stretch_) noexcept :
+		Scintilla::FontStretch stretch_,
+		const char *features_ = nullptr) noexcept :
 
 		faceName(faceName_),
 		size(size_),
@@ -129,7 +131,8 @@ struct FontParameters {
 		technology(technology_),
 		characterSet(characterSet_),
 		localeName(localeName_),
-		stretch(stretch_)
+		stretch(stretch_),
+		features(features_)
 	{
 	}
 

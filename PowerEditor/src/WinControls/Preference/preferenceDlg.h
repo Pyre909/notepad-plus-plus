@@ -142,6 +142,23 @@ private:
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 };
 
+// Pyre909 build: Preferences > Fonts, the OpenType features of the fonts (DirectWrite)
+class FontsSubDlg : public StaticDialog
+{
+public:
+	FontsSubDlg() = default;
+
+private:
+	std::vector<std::wstring> _featureTags; // of the list's rows: the features of the Default Style's font
+	bool _isSyncing = false; // the list's checks or the features' text being set from the other
+
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
+	void fillFeatureList();
+	void checkFeatures();
+	void setFeature(size_t row, bool isOn);
+	void applyFeatures(const std::wstring& features);
+};
+
 class DarkModeSubDlg : public StaticDialog
 {
 public:
@@ -445,6 +462,7 @@ private :
 	TabbarSubDlg _tabbarSubDlg;
 	EditingSubDlg _editingSubDlg;
 	Editing2SubDlg _editing2SubDlg;
+	FontsSubDlg _fontsSubDlg; // Pyre909 build
 	DarkModeSubDlg _darkModeSubDlg;
 	MarginsBorderEdgeSubDlg _marginsBorderEdgeSubDlg;
 	MiscSubDlg _miscSubDlg;

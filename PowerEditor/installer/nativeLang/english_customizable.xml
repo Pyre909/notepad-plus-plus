@@ -1114,6 +1114,11 @@ Translation note:
 					<Item id="6258" name="Apply Appearance settings to C0, C1 &amp;&amp; Unicode EOL"/>
 					<Item id="6259" name="Prevent control character (C0 code) typing into document"/>
 				</Scintillas2>
+				<Fonts title="Fonts">
+					<Item id="7201" name="OpenType Features"/>
+					<Item id="7204" name="Features:"/>
+					<Item id="7206" name="Drawn with DirectWrite. A list such as: ss01 zero cv05=2 -calt"/>
+				</Fonts>
 
 				<DarkMode title="Dark Mode">
 					<Item id="7131" name="Light mode"/>
@@ -1999,6 +2004,35 @@ If you select advanced mode but do not edit files in the aforementioned language
 			<statusbar-Ln value="Ln: "/>
 			<statusbar-Off value="Off: "/>
 			<statusbar-Len value="Len: "/>
+			<fontfeatures-font value="Features of $STR_REPLACE$, the Default Style's font (all its weights and styles):"/>
+			<fontfeatures-none value="$STR_REPLACE$, the Default Style's font, has no OpenType feature to choose."/>
+			<fontfeatures-column-feature value="Feature"/>
+			<fontfeatures-column-description value="Description"/>
+			<fontfeature-default value=" (on unless turned off)"/>
+			<fontfeature-ss value="Stylistic set $INT_REPLACE$"/>
+			<fontfeature-cv value="Character variant $INT_REPLACE$"/>
+			<fontfeature-liga value="Standard ligatures"/>
+			<fontfeature-clig value="Contextual ligatures"/>
+			<fontfeature-dlig value="Discretionary ligatures"/>
+			<fontfeature-hlig value="Historical ligatures"/>
+			<fontfeature-calt value="Contextual alternates"/>
+			<fontfeature-salt value="Stylistic alternates"/>
+			<fontfeature-zero value="Slashed zero"/>
+			<fontfeature-case value="Case-sensitive forms"/>
+			<fontfeature-frac value="Fractions"/>
+			<fontfeature-afrc value="Alternative fractions"/>
+			<fontfeature-sups value="Superscript"/>
+			<fontfeature-subs value="Subscript"/>
+			<fontfeature-sinf value="Scientific inferiors"/>
+			<fontfeature-ordn value="Ordinals"/>
+			<fontfeature-onum value="Oldstyle figures"/>
+			<fontfeature-lnum value="Lining figures"/>
+			<fontfeature-pnum value="Proportional figures"/>
+			<fontfeature-tnum value="Tabular figures"/>
+			<fontfeature-kern value="Kerning"/>
+			<fontfeature-swsh value="Swash"/>
+			<fontfeature-smcp value="Small capitals"/>
+			<fontfeature-c2sc value="Capitals to small capitals"/>
 			<statusbar-char-byte value="(ch $STR_REPLACE1$, byte $STR_REPLACE2$)"/>
 			<statusbar-bytes value="($STR_REPLACE1$ bytes)"/>
 			<toolbar-accent-tip value="This option makes your toolbar icons follow Windows system accent color. Accent color is the highlight color used in buttons, borders, and Start menu tiles in Windows. To change it, go to Settings &gt; Personalization &gt; Colors, then select your preferred accent color."/>

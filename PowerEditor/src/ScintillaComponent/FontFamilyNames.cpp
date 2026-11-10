@@ -285,3 +285,156 @@ ScintillaFont getScintillaFont(const std::wstring& fontName, bool isBold, bool i
 	}
 	return font;
 }
+
+// Pyre909 build: the OpenType features of a font family, read from its fonts' GSUB and GPOS tables, the names of the
+// stylistic sets and character variants from their name tables
+namespace
+{
+	// A big-endian 16-bit value of a font table, false past its end
+	bool readU16(const BYTE* data, UINT32 size, size_t offset, UINT16& value)
+	{
+		if ((data == nullptr) || (offset + 2 > size))
+			return false;
+		value = static_cast<UINT16>((data[offset] << 8) | data[offset + 1]);
+		return true;
+	}
+
+	// A table of a font face, released with it
+	class FontTable
+	{
+	public:
+		FontTable(IDWriteFontFace* face, UINT32 tag) : _face(face)
+		{
+			BOOL exists = FALSE;
+			if (FAILED(face->TryGetFontTable(tag, reinterpret_cast<const void**>(&_data), &_size, &_context, &exists)) || !exists)
+			{
+				_data = nullptr;
+				_size = 0;
+			}
+		}
+		~FontTable()
+		{
+			if (_context != nullptr)
+				_face->ReleaseFontTable(_context);
+		}
+		FontTable(const FontTable&) = delete;
+		FontTable& operator=(const FontTable&) = delete;
+
+		const BYTE* data() const { return _data; }
+		UINT32 size() const { return _size; }
+
+	private:
+		IDWriteFontFace* _face = nullptr;
+		const BYTE* _data = nullptr;
+		UINT32 _size = 0;
+		void* _context = nullptr;
+	};
+
+	// A string of a name table, the Windows platform's (Unicode), English (United States) first; empty if none
+	std::wstring getNameTableString(const FontTable& names, UINT16 nameId)
+	{
+		const BYTE* data = names.data();
+		const UINT32 size = names.size();
+		UINT16 count = 0;
+		UINT16 stringOffset = 0;
+		if (!readU16(data, size, 2, count) || !readU16(data, size, 4, stringOffset))
+			return {};
+		std::wstring found;
+		bool isEnglish = false;
+		for (UINT16 i = 0; i < count; ++i)
+		{
+			const size_t record = 6 + static_cast<size_t>(i) * 12;
+			UINT16 platform = 0;
+			UINT16 encoding = 0;
+			UINT16 language = 0;
+			UINT16 id = 0;
+			UINT16 length = 0;
+			UINT16 offset = 0;
+			if (!readU16(data, size, record, platform) || !readU16(data, size, record + 2, encoding) ||
+				!readU16(data, size, record + 4, language) || !readU16(data, size, record + 6, id) ||
+				!readU16(data, size, record + 8, length) || !readU16(data, size, record + 10, offset))
+				break;
+			if ((id != nameId) || (platform != 3) || ((encoding != 1) && (encoding != 10)) || (!found.empty() && (isEnglish || (language != 0x409))))
+				continue;
+			const size_t start = static_cast<size_t>(stringOffset) + offset;
+			if (start + length > size)
+				continue;
+			found.clear();
+			for (size_t j = 0; j + 1 < length; j += 2)
+				found.push_back(static_cast<wchar_t>((data[start + j] << 8) | data[start + j + 1]));
+			isEnglish = (language == 0x409);
+		}
+		return found;
+	}
+
+	// The features of a GSUB or GPOS table, a stylistic set or character variant with its name (its feature parameters'
+	// name ID) if it has one
+	void addFeatures(const FontTable& layout, const FontTable& names, std::map<std::wstring, std::wstring>& features)
+	{
+		const BYTE* data = layout.data();
+		const UINT32 size = layout.size();
+		UINT16 featureList = 0;
+		UINT16 count = 0;
+		if (!readU16(data, size, 6, featureList) || !readU16(data, size, featureList, count))
+			return;
+		for (UINT16 i = 0; i < count; ++i)
+		{
+			const size_t record = static_cast<size_t>(featureList) + 2 + static_cast<size_t>(i) * 6;
+			UINT16 featureOffset = 0;
+			if (!readU16(data, size, record + 4, featureOffset))
+				break;
+			std::wstring tag;
+			for (size_t j = 0; j < 4; ++j)
+			{
+				const BYTE ch = data[record + j];
+				if ((ch < 0x20) || (ch > 0x7E))
+					break;
+				tag.push_back(static_cast<wchar_t>(ch));
+			}
+			while (!tag.empty() && (tag.back() == L' '))
+				tag.pop_back();
+			if (tag.empty())
+				continue;
+			std::wstring& name = features[tag];
+			const size_t feature = static_cast<size_t>(featureList) + featureOffset;
+			UINT16 params = 0;
+			UINT16 nameId = 0;
+			if (name.empty() && (tag.starts_with(L"ss") || tag.starts_with(L"cv")) && readU16(data, size, feature, params) &&
+				(params != 0) && readU16(data, size, feature + params + 2, nameId) && (nameId != 0))
+				name = getNameTableString(names, nameId);
+		}
+	}
+}
+
+std::vector<FontFeature> getFontFeatures(const std::wstring& fontName)
+{
+	const DirectWrite& dw = getDirectWrite();
+	if (!dw._systemFonts || fontName.empty())
+		return {};
+	const ScintillaFont font = getScintillaFont(fontName, false, false, SC_TECHNOLOGY_DIRECTWRITE);
+	UINT32 index = 0;
+	BOOL exists = FALSE;
+	ComPtr<IDWriteFontFamily> family;
+	if (FAILED(dw._systemFonts->FindFamilyName(font._name.c_str(), &index, &exists)) || !exists ||
+		FAILED(dw._systemFonts->GetFontFamily(index, family.GetAddressOf())))
+		return {};
+
+	std::map<std::wstring, std::wstring> features;
+	constexpr UINT32 maxFonts = 64; // MonoLisa: 20 (10 weights, upright and italic)
+	const UINT32 fontCount = std::min(family->GetFontCount(), maxFonts);
+	for (UINT32 i = 0; i < fontCount; ++i)
+	{
+		ComPtr<IDWriteFont> dwFont;
+		ComPtr<IDWriteFontFace> face;
+		if (FAILED(family->GetFont(i, dwFont.GetAddressOf())) || (dwFont->GetSimulations() != DWRITE_FONT_SIMULATIONS_NONE) ||
+			FAILED(dwFont->CreateFontFace(face.GetAddressOf())))
+			continue;
+		const FontTable names(face.Get(), DWRITE_MAKE_OPENTYPE_TAG('n', 'a', 'm', 'e'));
+		addFeatures(FontTable(face.Get(), DWRITE_MAKE_OPENTYPE_TAG('G', 'S', 'U', 'B')), names, features);
+		addFeatures(FontTable(face.Get(), DWRITE_MAKE_OPENTYPE_TAG('G', 'P', 'O', 'S')), names, features);
+	}
+	std::vector<FontFeature> result;
+	for (auto& [tag, name] : features)
+		result.push_back({ tag, name });
+	return result;
+}

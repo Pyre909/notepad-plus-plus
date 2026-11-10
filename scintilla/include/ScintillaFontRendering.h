@@ -34,9 +34,10 @@
 /* SCI_SETCHARACTERGRID(bool grid) lays out on a grid of cells, a cell being the width of a space of STYLE_DEFAULT: a tab is
    one tab width wide wherever it is (not up to the next tab stop), and the representations (control characters, line
    ends, those of SCI_SETREPRESENTATION, invalid bytes) take whole cells, their text centred (a representation of no width,
-   such as a zero width space, stays of no width). The text itself keeps its font's widths (in a monospaced font, a
-   cell). The edge's background mode starts at its column in cells. Explicit tab stops (SCI_ADDTABSTOP) and the
-   bidirectional mode's tabs aren't on the grid. SCI_GETCHARACTERGRID returns it. Whatever the technology. */
+   such as a zero width space, stays of no width). Every character takes the cells Unicode gives it (East Asian wide 2,
+   combining and format characters 0, others 1), its glyph centred or narrowed in them; the cell in whole pixels. The
+   edge's background mode starts at its column in cells. Explicit tab stops (SCI_ADDTABSTOP) and the bidirectional mode
+   aren't on the grid. SCI_GETCHARACTERGRID returns it. Whatever the technology. */
 #define SCI_SETCHARACTERGRID 5103
 #define SCI_GETCHARACTERGRID 5104
 
@@ -44,5 +45,14 @@
    wrapped or not): where it starts in the line's layout, in widths of a space of STYLE_DEFAULT (with the character grid,
    its cells: a space, or a "0" where wider), rounded. With the character grid, what the view shows. */
 #define SCI_GETCELLCOLUMN 5105
+
+/* SCI_SETFONTFEATURES(<unused>, const char *features) sets the OpenType features of every font of the view, as CSS's
+   font-feature-settings or simpler: separated by commas, semicolons or spaces, "ss01" or "+ss01" on, "-calt" off,
+   "cv05=2" a value (an alternate's number); a tag of 1 to 4 letters, digits or underscores (padded with spaces); a later
+   one wins, at most 64; what isn't a feature is ignored. They override SC_FONTRENDERING_LIGATURES 0's. NULL or "" for
+   none. SCI_GETFONTFEATURES(<unused>, char *features) copies them as set and returns their length. Drawn with
+   DirectWrite only (GDI draws no OpenType features). */
+#define SCI_SETFONTFEATURES 5106
+#define SCI_GETFONTFEATURES 5107
 
 #endif

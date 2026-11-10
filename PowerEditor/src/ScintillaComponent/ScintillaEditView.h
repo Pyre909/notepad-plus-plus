@@ -280,6 +280,7 @@ public:
 	// to the view, or to every live Notepad++ Scintilla (edit views, Finders, Document Map, Peeker, plugins' Scintillas...)
 	void applyTextRenderingSettings();
 	static void applyTextRenderingSettingsToAll();
+	static std::wstring getDefaultFontName(); // Pyre909 build: the font of an edit view's STYLE_DEFAULT, as drawn
 	// Pyre909 build: the Rendering mode setting changed: the views on the previous one switch (setTechnologyToAll), then each
 	// view that switched updates what depends on the technology
 	static void switchTechnologyOfAll(writeTechnologyEngine technology);

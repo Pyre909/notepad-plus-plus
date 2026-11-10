@@ -658,6 +658,8 @@ void ScintillaEditView::applyTextRenderingSettings()
 	};
 	for (const auto& [parameter, value] : parameters)
 		execute(SCI_SETFONTRENDERINGPARAMETER, parameter, value);
+	// the fonts' OpenType features (Preferences > Fonts), on top of the ligatures' setting
+	execute(SCI_SETFONTFEATURES, 0, reinterpret_cast<LPARAM>(svp._fontFeatures.c_str()));
 
 	applyLineSpacing();
 }
@@ -703,6 +705,23 @@ void ScintillaEditView::applyTextRenderingSettingsToAll()
 {
 	for (ScintillaEditView* pView : _liveViews)
 		pView->applyTextRenderingSettings();
+}
+
+// Pyre909 build: the font name of the first edit view's STYLE_DEFAULT, the Default Style's (or Global override's) font as
+// Scintilla draws it (see getScintillaFont); empty without an edit view
+std::wstring ScintillaEditView::getDefaultFontName()
+{
+	for (const ScintillaEditView* pView : _liveViews)
+	{
+		if (!pView->_isMainEditZone)
+			continue;
+		const auto length = static_cast<size_t>(pView->execute(SCI_STYLEGETFONT, STYLE_DEFAULT, 0));
+		std::string name(length + 1, '\0');
+		pView->execute(SCI_STYLEGETFONT, STYLE_DEFAULT, reinterpret_cast<LPARAM>(name.data()));
+		name.resize(length);
+		return string2wstring(name, CP_UTF8);
+	}
+	return {};
 }
 
 void ScintillaEditView::switchTechnologyOfAll(writeTechnologyEngine technology)

@@ -764,7 +764,8 @@ template <typename T>
 }
 
 // Pyre909 build: the Text Rendering settings (Preferences > Editing 1) of <GUIConfig name="ScintillaPrimaryView">,
-// fontAntialiasing="0" fontRenderingMode="0" fontContrast="0" fontLigatures="yes" lineSpacing="0". smoothFont="yes"
+// fontAntialiasing="0" fontRenderingMode="0" fontContrast="0" fontLigatures="yes" fontFeatures="" (Preferences > Fonts)
+// lineSpacing="0". smoothFont="yes"
 // was ClearType, and a smoothFont that disagrees with fontAntialiasing was changed since by a Notepad++ without these
 // settings sharing config.xml: the newer. Without smoothFont (written by hand), fontAntialiasing.
 static void readTextRenderingParams(const NppXml::Element& elem, ScintillaViewParams& svp)
@@ -783,6 +784,10 @@ static void readTextRenderingParams(const NppXml::Element& elem, ScintillaViewPa
 		svp._textRenderingMode = getRangeDefaultAttribute(elem, "fontRenderingMode", textRenderingModeAutomatic, textRenderingModeGdiClassic, svp._textRenderingMode);
 	svp._textContrast = getRangeDefaultAttribute(elem, "fontContrast", textContrastFollowWindows, textContrastVeryHigh, svp._textContrast);
 	svp._textLigatures = getBoolAttribute(elem, "fontLigatures", svp._textLigatures);
+	// fontFeatures="ss01 zero" (Preferences > Fonts): Scintilla ignores what isn't a feature, and takes 64 at most
+	constexpr size_t maxFontFeaturesLength = 512;
+	if (const char* features = NppXml::attribute(elem, "fontFeatures"))
+		svp._fontFeatures = std::string(features).substr(0, maxFontFeaturesLength);
 	svp._lineSpacing = getRangeClampAttribute(elem, "lineSpacing", 0, ScintillaViewParams::maxLineSpacing, svp._lineSpacing);
 }
 
@@ -792,6 +797,7 @@ static void writeTextRenderingParams(NppXml::Element& elem, const ScintillaViewP
 	NppXml::setAttribute(elem, "fontRenderingMode", svp._textRenderingMode);
 	NppXml::setAttribute(elem, "fontContrast", svp._textContrast);
 	NppXml::setAttribute(elem, "fontLigatures", svp._textLigatures ? "yes" : "no");
+	NppXml::setAttribute(elem, "fontFeatures", svp._fontFeatures.c_str());
 	NppXml::setAttribute(elem, "lineSpacing", svp._lineSpacing);
 	// the advanced overrides of the former Pyre909 builds
 	for (const char* name : { "fontGamma", "fontEnhancedContrast", "fontGrayscaleEnhancedContrast", "fontClearTypeLevel", "fontPixelGeometry", "fontLightTextGamma" })

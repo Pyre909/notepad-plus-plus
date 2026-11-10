@@ -2488,6 +2488,19 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 			return std::lround(ll->XInLine(pos - pdoc->LineStart(line)) / vs.spaceWidth);
 		}
 
+		case SCI_SETFONTFEATURES: {	// N++ (Pyre909 build): the fonts' OpenType features, drawn with DirectWrite
+			const char *features = ConstCharPtrFromSPtr(lParam);
+			const std::string value = features ? features : "";
+			if (vs.fontFeatures != value) {
+				vs.fontFeatures = value;
+				InvalidateStyleRedraw();
+			}
+			return 0;
+		}
+
+		case SCI_GETFONTFEATURES:
+			return StringResult(lParam, vs.fontFeatures.c_str());
+
 		case WM_GETMINMAXINFO:
 			return ::DefWindowProc(MainHWND(), msg, wParam, lParam);
 

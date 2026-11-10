@@ -32,7 +32,8 @@ class FontRealised {
 public:
 	FontMeasurements measurements;
 	std::shared_ptr<Font> font;
-	void Realise(Surface &surface, int zoomLevel, Scintilla::Technology technology, const FontSpecification &fs, const char *localeName);
+	void Realise(Surface &surface, int zoomLevel, Scintilla::Technology technology, const FontSpecification &fs, const char *localeName,
+		const char *features);	// N++ (Pyre909 build): features
 };
 
 using FontMap = std::map<FontSpecification, std::unique_ptr<FontRealised>>;
@@ -152,6 +153,7 @@ public:
 	Scintilla::WhiteSpace viewWhitespace;
 	Scintilla::TabDrawMode tabDrawMode;
 	bool characterGrid;	// N++ (Pyre909 build): SCI_SETCHARACTERGRID, tabs and representations in whole cells (CellsWidth)
+	std::string fontFeatures;	// N++ (Pyre909 build): SCI_SETFONTFEATURES, the OpenType features of every font
 	int whitespaceSize;
 	Scintilla::IndentView viewIndentationGuides;
 	bool viewEOL;

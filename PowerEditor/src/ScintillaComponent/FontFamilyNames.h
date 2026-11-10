@@ -18,6 +18,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "Scintilla.h"
 
 // The font parameters of a Scintilla style: SCI_STYLESETFONT, SCI_STYLESETWEIGHT, SCI_STYLESETSTRETCH and SCI_STYLESETITALIC
@@ -39,3 +40,16 @@ struct ScintillaFont
 //   relative to its weight as GDI emboldens it: the bold of "Fira Code Light" is "Fira Code" SemiBold,
 // - with GDI, a GDI family name and weight.
 ScintillaFont getScintillaFont(const std::wstring& fontName, bool isBold, bool isItalic, int technology);
+
+// Pyre909 build: an OpenType feature of a font, its tag ("ss01") and the font's own name for it if it has one (stylistic
+// sets and character variants: "Script variant [italic only]")
+struct FontFeature
+{
+	std::wstring _tag;
+	std::wstring _name;
+};
+
+// Pyre909 build: the OpenType substitution and positioning features of the fonts of a font family (a name of the font lists),
+// all its weights and styles together (a stylistic set can be in the italic fonts only), sorted by tag; none if DirectWrite
+// doesn't know it
+std::vector<FontFeature> getFontFeatures(const std::wstring& fontName);
