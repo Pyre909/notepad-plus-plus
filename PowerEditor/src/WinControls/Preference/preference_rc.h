@@ -575,3 +575,7 @@
 #define IDC_FONTFEATURES_STATIC                        7204
 #define IDC_EDIT_FONTFEATURES                          7205
 #define IDC_FONTFEATURES_NOTE_STATIC                   7206
+#define IDC_BOLDWEIGHT_GB_STATIC                       7207
+#define IDC_BOLDWEIGHT_STATIC                          7208
+#define IDC_COMBO_BOLDWEIGHT                           7209
+#define IDC_BOLDWEIGHT_NOTE_STATIC                     7210

@@ -39,7 +39,9 @@ struct ScintillaFont
 // - with DirectWrite, the DirectWrite family of the font, with its weight, stretch and style, the bold weight being
 //   relative to its weight as GDI emboldens it: the bold of "Fira Code Light" is "Fira Code" SemiBold,
 // - with GDI, a GDI family name and weight.
-ScintillaFont getScintillaFont(const std::wstring& fontName, bool isBold, bool isItalic, int technology);
+// Pyre909 build: bold is boldWeight for a regular font (Preferences > Fonts), as many steps heavier for a font of another
+// weight ("Fira Code Light" bold SemiBold with Bold, Medium with SemiBold)
+ScintillaFont getScintillaFont(const std::wstring& fontName, bool isBold, bool isItalic, int technology, int boldWeight = SC_WEIGHT_BOLD);
 
 // Pyre909 build: an OpenType feature of a font, its tag ("ss01") and the font's own name for it if it has one (stylistic
 // sets and character variants: "Script variant [italic only]")

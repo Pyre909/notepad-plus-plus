@@ -204,6 +204,11 @@ BEGIN
     RTEXT           "Features:",IDC_FONTFEATURES_STATIC,17,106,48,8
     EDITTEXT        IDC_EDIT_FONTFEATURES,70,104,373,13,ES_AUTOHSCROLL
     LTEXT           "Drawn with DirectWrite. A list such as: ss01 zero cv05=2 -calt",IDC_FONTFEATURES_NOTE_STATIC,70,121,373,8
+
+    GROUPBOX        "Bold",IDC_BOLDWEIGHT_GB_STATIC,11,140,438,30,BS_CENTER
+    RTEXT           "Weight:",IDC_BOLDWEIGHT_STATIC,17,153,48,8
+    COMBOBOX        IDC_COMBO_BOLDWEIGHT,70,151,90,100,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Of a regular font; a font of another weight as many steps heavier (Light: SemiBold with Bold)",IDC_BOLDWEIGHT_NOTE_STATIC,166,153,277,8
 END
 
 

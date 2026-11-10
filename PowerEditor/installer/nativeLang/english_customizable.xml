@@ -1118,6 +1118,16 @@ Translation note:
 					<Item id="7201" name="OpenType Features"/>
 					<Item id="7204" name="Features:"/>
 					<Item id="7206" name="Drawn with DirectWrite. A list such as: ss01 zero cv05=2 -calt"/>
+					<Item id="7207" name="Bold"/>
+					<Item id="7208" name="Weight:"/>
+					<Item id="7210" name="Of a regular font; a font of another weight as many steps heavier (Light: SemiBold with Bold)"/>
+					<ComboBox id="7209">
+						<Element name="Medium"/>
+						<Element name="SemiBold"/>
+						<Element name="Bold"/>
+						<Element name="ExtraBold"/>
+						<Element name="Black"/>
+					</ComboBox>
 				</Fonts>
 
 				<DarkMode title="Dark Mode">

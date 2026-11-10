@@ -268,9 +268,9 @@ namespace
 	}
 }
 
-ScintillaFont getScintillaFont(const std::wstring& fontName, bool isBold, bool isItalic, int technology)
+ScintillaFont getScintillaFont(const std::wstring& fontName, bool isBold, bool isItalic, int technology, int boldWeight)
 {
-	ScintillaFont font{ fontName, isBold ? SC_WEIGHT_BOLD : SC_WEIGHT_NORMAL, SC_STRETCH_NORMAL, isItalic };
+	ScintillaFont font{ fontName, isBold ? boldWeight : SC_WEIGHT_NORMAL, SC_STRETCH_NORMAL, isItalic };
 	if (fontName.empty() || (fontName.length() >= LF_FACESIZE))
 		return font; // not a GDI family name
 	if (technology == SC_TECHNOLOGY_DEFAULT)

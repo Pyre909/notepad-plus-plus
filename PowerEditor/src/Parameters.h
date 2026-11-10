@@ -964,6 +964,7 @@ struct ScintillaViewParams
 	textContrast _textContrast = textContrastFollowWindows;
 	bool _textLigatures = true;  // the fonts' ligatures (DirectWrite only: GDI draws none)
 	std::string _fontFeatures;   // the fonts' OpenType features (Preferences > Fonts; DirectWrite only): "ss01 zero cv05=2 -calt"
+	int _boldWeight = 700;       // the weight of bold for a regular font (Preferences > Fonts): 500 to 900 (getScintillaFont)
 	int _lineSpacing = 0;        // extra pixels between the lines, at 96 DPI (0-10)
 	static constexpr int maxLineSpacing = 10;
 	bool isClearTypeAntialiasing() const {

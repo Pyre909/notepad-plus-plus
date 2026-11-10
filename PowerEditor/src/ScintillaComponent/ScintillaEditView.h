@@ -281,6 +281,7 @@ public:
 	void applyTextRenderingSettings();
 	static void applyTextRenderingSettingsToAll();
 	static std::wstring getDefaultFontName(); // Pyre909 build: the font of an edit view's STYLE_DEFAULT, as drawn
+	static void applyBoldWeightToAll(int previousBoldWeight); // Pyre909 build: Preferences > Fonts' bold weight changed
 	// Pyre909 build: the Rendering mode setting changed: the views on the previous one switch (setTechnologyToAll), then each
 	// view that switched updates what depends on the technology
 	static void switchTechnologyOfAll(writeTechnologyEngine technology);
@@ -704,6 +705,7 @@ public:
 	// sets the style fonts again for another technology (printing uses GDI): a font of the font lists may have other
 	// parameters there (see getScintillaFont); a style whose font was changed by someone else (a plugin) is left as it is
 	void refreshStyleFonts(int technology, int previousTechnology) const;
+	void refreshStyleFonts(int technology, int previousTechnology, int boldWeight, int previousBoldWeight) const;
 
 	void addCustomWordChars() const;
 	void restoreDefaultWordChars() const;

@@ -1349,7 +1349,8 @@ void ScintillaEditView::setSpecialCharLabelSize(bool forPrinting) const
 
 void ScintillaEditView::setStyleFont(int styleID, const StyleFont& styleFont) const
 {
-	setScintillaFont(styleID, getScintillaFont(styleFont._name, styleFont._isBold, styleFont._isItalic, static_cast<int>(execute(SCI_GETTECHNOLOGY))));
+	setScintillaFont(styleID, getScintillaFont(styleFont._name, styleFont._isBold, styleFont._isItalic, static_cast<int>(execute(SCI_GETTECHNOLOGY)),
+		NppParameters::getInstance().getSVP()._boldWeight));
 }
 
 void ScintillaEditView::setScintillaFont(int styleID, const ScintillaFont& font) const
@@ -1378,17 +1379,35 @@ bool ScintillaEditView::hasScintillaFont(int styleID, const ScintillaFont& font)
 
 void ScintillaEditView::refreshStyleFonts(int technology, int previousTechnology) const
 {
+	const int boldWeight = NppParameters::getInstance().getSVP()._boldWeight;
+	refreshStyleFonts(technology, previousTechnology, boldWeight, boldWeight);
+}
+
+// the style fonts recorded, drawn with a technology and bold weight after another: a style whose font was changed by
+// someone else since (a plugin) is left as it is
+void ScintillaEditView::refreshStyleFonts(int technology, int previousTechnology, int boldWeight, int previousBoldWeight) const
+{
 	for (int styleID = 0; styleID <= STYLE_MAX; ++styleID)
 	{
 		const StyleFont& styleFont = _styleFonts[styleID];
 		if (styleFont._name.empty())
 			continue;
-		const ScintillaFont font = getScintillaFont(styleFont._name, styleFont._isBold, styleFont._isItalic, technology);
-		const ScintillaFont previousFont = getScintillaFont(styleFont._name, styleFont._isBold, styleFont._isItalic, previousTechnology);
-		// the usual fonts are the same for both technologies; a style whose font was changed by someone else since (a plugin)
-		// is left as it is
+		const ScintillaFont font = getScintillaFont(styleFont._name, styleFont._isBold, styleFont._isItalic, technology, boldWeight);
+		const ScintillaFont previousFont = getScintillaFont(styleFont._name, styleFont._isBold, styleFont._isItalic, previousTechnology, previousBoldWeight);
+		// the usual fonts are the same for both technologies
 		if ((font != previousFont) && hasScintillaFont(styleID, previousFont))
 			setScintillaFont(styleID, font);
+	}
+}
+
+// Pyre909 build: Preferences > Fonts' bold weight changed: the bold styles of every view again
+void ScintillaEditView::applyBoldWeightToAll(int previousBoldWeight)
+{
+	const int boldWeight = NppParameters::getInstance().getSVP()._boldWeight;
+	for (const ScintillaEditView* pView : _liveViews)
+	{
+		const int technology = static_cast<int>(pView->execute(SCI_GETTECHNOLOGY));
+		pView->refreshStyleFonts(technology, technology, boldWeight, previousBoldWeight);
 	}
 }
 

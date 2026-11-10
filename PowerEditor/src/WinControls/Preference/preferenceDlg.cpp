@@ -2769,6 +2769,12 @@ intptr_t CALLBACK FontsSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 			_isSyncing = true;
 			::SetDlgItemText(_hSelf, IDC_EDIT_FONTFEATURES, string2wstring(NppParameters::getInstance().getSVP()._fontFeatures, CP_UTF8).c_str());
 			_isSyncing = false;
+
+			// the bold weight: Medium (500) to Black (900), translated by english.xml's ComboBox 7209
+			const HWND hBoldWeight = ::GetDlgItem(_hSelf, IDC_COMBO_BOLDWEIGHT);
+			for (const wchar_t* weightName : { L"Medium", L"SemiBold", L"Bold", L"ExtraBold", L"Black" })
+				::SendMessage(hBoldWeight, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(weightName));
+			::SendMessage(hBoldWeight, CB_SETCURSEL, (NppParameters::getInstance().getSVP()._boldWeight - 500) / 100, 0);
 			return TRUE;
 		}
 
@@ -2797,6 +2803,18 @@ intptr_t CALLBACK FontsSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 			{
 				applyFeatures(getDlgItemText(_hSelf, IDC_EDIT_FONTFEATURES));
 				checkFeatures();
+				return TRUE;
+			}
+			if ((LOWORD(wParam) == IDC_COMBO_BOLDWEIGHT) && (HIWORD(wParam) == CBN_SELCHANGE))
+			{
+				const auto index = ::SendDlgItemMessage(_hSelf, IDC_COMBO_BOLDWEIGHT, CB_GETCURSEL, 0, 0);
+				ScintillaViewParams& svp = const_cast<ScintillaViewParams&>(NppParameters::getInstance().getSVP());
+				const int previousBoldWeight = svp._boldWeight;
+				if ((index >= 0) && (index <= 4) && (500 + static_cast<int>(index) * 100 != previousBoldWeight))
+				{
+					svp._boldWeight = 500 + static_cast<int>(index) * 100;
+					ScintillaEditView::applyBoldWeightToAll(previousBoldWeight);
+				}
 				return TRUE;
 			}
 			break;
