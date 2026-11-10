@@ -86,6 +86,19 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
       needed: the installed one is static), a hinting choice (DirectWrite grid fit; MonoLisa's TTFs have no hinting:
       no fpgm/prep/cvt/gasp, so for Consolas, Cascadia Code and CFF fonts), a preview on the Fonts page, half-point
       zoom. Colour fonts are on already (Scintilla's ENABLE_COLOR_FONT).
+    - **"Full DirectWrite" for the whole application** (Pyre909 asked, recalling Neil's GDI remark): the terms explained
+      (Win32 stays; GDI, Direct2D, DirectWrite, Direct3D draw inside it); Windows draws its menus, dialogs and controls
+      with GDI and can't be switched; Notepad++'s own drawing is about 33 DrawText calls in 9 files. Options: 1. its
+      own drawing with DirectWrite (chosen); 2. right-to-left views (stage 2, only if Pyre909 edits RTL text); 3.
+      printing (stage 3, Scintilla's to solve if GDI goes); 4. a WinUI 3 interface (a mockup shown; a rewrite: plugins,
+      translations, startup time, no more upstream merges: no). XAML Islands mentioned, not recommended.
+    - **Option 1 done** (`fd753d3`, not pushed): `drawUiText` (DirectWriteText.cpp) at the tab bar, the panels'
+      captions and tabs, the dark mode status bar and the Ctrl+Tab list; GDI's line and widths, the editor's rendering
+      parameters, an ID2D1DCRenderTarget over GDI's background (a probe showed it keeps the pixels under the text).
+      Independent review: 6 findings fixed (rendering parameters as the editor's, shifted DCs, line breaks, font
+      attributes, GDI widths, the redraw); its Ctrl+Tab finding (buffered paint shifting the DC: mixed GDI text) didn't
+      reproduce on Windows 11 (4 colours with DirectWrite, 141 with GDI, Antialiasing None), the fix kept. A tab bar of
+      30 tabs: 1.6 ms a repaint (GDI 0.9). `pyre-ui-text.ps1` 8 checks.
 
 - **The review round (2026-10-20, evening)**, asked by Pyre909: sync with upstream (the fork's `master` brought to
   `b661c2b` with `gh repo sync`; `pyre` had it), a preview (`C:\npp-preview-49de091`, a portable copy of the installation
