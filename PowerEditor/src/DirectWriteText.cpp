@@ -140,13 +140,13 @@ namespace
 		if (const auto it = _formats.find(key); it != _formats.end())
 			return it->second._format ? &it->second : nullptr;
 
+		TEXTMETRIC tm{};
+		if (!::GetTextMetrics(hdc, &tm))
+			return nullptr; // left to DrawText this time (not kept as a font DirectWrite doesn't draw)
 		constexpr size_t maxFormats = 32;
 		if (_formats.size() >= maxFormats)
 			_formats.clear();
 		UiTextFormat& format = _formats[key];
-		TEXTMETRIC tm{};
-		if (!::GetTextMetrics(hdc, &tm))
-			return nullptr;
 		ComPtr<IDWriteFont> font;
 		ComPtr<IDWriteFontFamily> family;
 		ComPtr<IDWriteLocalizedStrings> names;
@@ -378,7 +378,7 @@ namespace
 		// a mnemonic's underline; a tab; a line break, which DrawText doesn't make on a single line and DirectWrite always does
 		const std::wstring_view textView(text, static_cast<size_t>(length));
 		if ((!(format & DT_NOPREFIX) && (textView.find(L'&') != std::wstring_view::npos)) ||
-			(textView.find_first_of(L"\t\r\n\v\f\u0085  ") != std::wstring_view::npos))
+			(textView.find_first_of(L"\t\r\n\v\f\u0085\u2028\u2029") != std::wstring_view::npos))
 			return false;
 		return UiTextRenderer::instance().isAvailable();
 	}

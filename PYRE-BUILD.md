@@ -49,7 +49,8 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   Lines no longer slow down with the number of lines (100,000 lines: copy 3 s to 18 ms, cut 3.7 s to 0.7 s).
 - **No work when Windows changes an unrelated setting**: official Notepad++ restyles and re-wraps its documents at
   every Windows settings broadcast (group policy, environment, taskbar...): 2 seconds of CPU with a large wrapped file
-  and the Document Map. Only font smoothing, ClearType, the mouse wheel and high contrast do that now. With padding
+  and the Document Map. Only the settings the editor reads do that now (font smoothing, ClearType, the mouse wheel and
+  pointer, high contrast, the theme). With padding
   set, the Document Map no longer re-wraps itself at every paint. The character grid draws a third faster with
   DirectWrite, and the status bar's counts on very long lines take one pass.
 - **The Function List 25 to 30 times faster**: about 6 seconds instead of over 3 minutes for 60,000 lines of C++, a

@@ -3074,8 +3074,8 @@ wstring Notepad_plus::getBookmarkedLinesText(const std::vector<intptr_t>& lines)
 }
 
 // Pyre909 build: lines deleted, one range for each run of consecutive ones (one deletion a line before), from the last.
-// Lines with bookmarks have them deleted first (bookmarkClearAll: all of them deleted), else Scintilla would move them to
-// the line above (LineMarkers::RemoveLine)
+// Lines with bookmarks have them deleted first (bookmarkClearAll: all of them deleted), else Scintilla would merge them into
+// the line before the run (LineMarkers::RemoveLine), which then holds the text after it
 void Notepad_plus::deleteLineRuns(const std::vector<intptr_t>& lines)
 {
 	for (size_t end = lines.size(); end > 0; )
@@ -4738,7 +4738,7 @@ static wstring getCharCodeAt(const ScintillaEditView& view, size_t pos)
 // Pyre909 build: the characters and UTF-16 code units from a line's start to the caret and to an end (the caret, or the line's
 // end), in one pass over the line's bytes (UTF-8) read where Scintilla keeps them, each side of its gap apart, which doesn't
 // move it (SCI_COUNTCHARACTERS steps a character at a time: 2 ms a line of 1 MB, at each caret move). False for another
-// code page or invalid UTF-8, which Scintilla counts its own way.
+// code page or UTF-8 Scintilla takes as invalid (UTF8Classify: noncharacters too), which it counts its own way.
 struct LineCounts
 {
 	size_t _charsToCaret = 0;
@@ -4757,6 +4757,8 @@ static bool countLineUtf8(const ScintillaEditView& view, size_t lineStart, size_
 	int pending = 0; // the continuation bytes the character still needs, the next one from low to high (RFC 3629)
 	unsigned char low = 0x80;
 	unsigned char high = 0xBF;
+	unsigned char sequence[4]{}; // the character's bytes so far, for the noncharacters
+	int sequenceLength = 0;
 	size_t pos = lineStart;
 	const auto countPart = [&](size_t partStart, size_t partEnd) {
 		if (partStart >= partEnd)
@@ -4778,11 +4780,17 @@ static bool countLineUtf8(const ScintillaEditView& view, size_t lineStart, size_
 					return false;
 				low = 0x80;
 				high = 0xBF;
-				--pending;
+				sequence[sequenceLength++] = byte;
+				if ((--pending == 0) && (((sequenceLength == 3) && (sequence[0] == 0xEF) &&
+					(((sequence[1] == 0xBF) && (sequence[2] >= 0xBE)) || ((sequence[1] == 0xB7) && (sequence[2] >= 0x90) && (sequence[2] <= 0xAF)))) ||
+					((sequenceLength == 4) && ((sequence[1] & 0x0F) == 0x0F) && (sequence[2] == 0xBF) && (sequence[3] >= 0xBE))))
+					return false; // U+FFFE, U+FFFF, U+FDD0-FDEF, U+nFFFE, U+nFFFF
 				continue;
 			}
 			if (byte >= 0x80)
 			{
+				sequence[0] = byte;
+				sequenceLength = 1;
 				if ((byte >= 0xC2) && (byte <= 0xDF))
 					pending = 1;
 				else if ((byte >= 0xE0) && (byte <= 0xEF))
@@ -4938,7 +4946,8 @@ void Notepad_plus::updateStatusBar()
 	// the characters and code units to the caret, and to the line's end with Len:, in one pass (Scintilla's otherwise)
 	const auto lineEnd = static_cast<size_t>(nppGUI._statusBarLineLength ? _pEditView->execute(SCI_GETLINEENDPOSITION, caretLine) : caretPos);
 	LineCounts counts;
-	if (!countLineUtf8(*_pEditView, lineStart, caretPos, lineEnd, counts))
+	const bool isCounted = (nppGUI._statusBarPosition != NppGUI::StatusBarPosition::hexOffset) || nppGUI._statusBarLineLength || isUtf16;
+	if (isCounted && !countLineUtf8(*_pEditView, lineStart, caretPos, lineEnd, counts))
 	{
 		counts._charsToCaret = static_cast<size_t>(_pEditView->execute(SCI_COUNTCHARACTERS, lineStart, caretPos));
 		counts._charsToEnd = (lineEnd == caretPos) ? counts._charsToCaret : static_cast<size_t>(_pEditView->execute(SCI_COUNTCHARACTERS, lineStart, lineEnd));

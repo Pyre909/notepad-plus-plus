@@ -691,11 +691,17 @@ static std::optional<std::vector<std::string_view>> findWordsWithPrefix(std::str
 // it back): the text before the gap and the text after it, cut just after a delimiter on each side, and the few bytes
 // between those cuts (the word at the caret) copied into run. A word ends before a delimiter, which isn't a word character
 // either: each part starts as the document does, and no word crosses a cut.
+// A prefix with a delimiter in it (characters added to the words, Preferences > Delimiter) or a long text without
+// delimiters at the caret: the whole text, as before (the gap moved).
 static std::optional<std::vector<std::string_view>> findWordsWithPrefixInView(const ScintillaEditView& view, std::string_view prefix,
 	bool isMatchCase, std::string& run)
 {
+	const auto inWholeText = [&]() -> std::optional<std::vector<std::string_view>> {
+		const auto* text = reinterpret_cast<const char*>(view.execute(SCI_GETCHARACTERPOINTER));
+		return text ? findWordsWithPrefix(std::string_view(text, static_cast<size_t>(view.execute(SCI_GETLENGTH))), prefix, isMatchCase) : std::nullopt;
+	};
 	if (std::ranges::any_of(prefix, [](char c) { return isWordDelimiter[static_cast<unsigned char>(c)]; }))
-		return std::nullopt;
+		return inWholeText();
 	const auto length = static_cast<size_t>(view.execute(SCI_GETLENGTH));
 	const size_t gap = std::min(static_cast<size_t>(view.execute(SCI_GETGAPPOSITION)), length);
 	const auto* before = reinterpret_cast<const char*>(view.execute(SCI_GETRANGEPOINTER, 0, gap));
@@ -713,9 +719,9 @@ static std::optional<std::vector<std::string_view>> findWordsWithPrefixInView(co
 		++runEnd;
 	if (runEnd < textAfter.size())
 		++runEnd;
-	constexpr size_t maxRun = 1024 * 1024; // a long text without delimiters: as before
+	constexpr size_t maxRun = 1024 * 1024;
 	if ((gap - runStart) + runEnd > maxRun)
-		return std::nullopt;
+		return inWholeText();
 	run.assign(textBefore.substr(runStart));
 	run.append(textAfter.substr(0, runEnd));
 

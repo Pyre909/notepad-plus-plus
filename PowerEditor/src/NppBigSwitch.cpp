@@ -83,13 +83,16 @@ using namespace std;
 std::atomic<bool> g_bNppExitFlag{ false };
 const UINT WM_TASKBARCREATED = ::RegisterWindowMessage(L"TaskbarCreated");
 
-// Pyre909 build: whether a WM_SETTINGCHANGE is one the Scintilla views read (ScintillaWin's WM_SETTINGCHANGE: the font
-// smoothing and ClearType for the DirectWrite rendering parameters and "Follow Windows", the mouse wheel's scroll
-// amounts, high contrast and the colours of the light or dark theme for the base elements), or one Windows doesn't name
+// Pyre909 build: whether a WM_SETTINGCHANGE may concern the Scintilla views (ScintillaWin's WM_SETTINGCHANGE: the
+// rendering parameters (font smoothing, ClearType, "Follow Windows"), the base elements' colours, and GetMouseParameters:
+// the wheel's scroll amounts, hiding the pointer while typing, the pointer's size and colour). A setting Windows names by
+// its SPI code: those Scintilla reads. A broadcast it names by its area: all but a few that never concern it.
 static bool isSettingChangeForScintilla(WPARAM wParam, LPARAM lParam)
 {
 	switch (wParam)
 	{
+		case 0:
+			break; // named by its area, or not named
 		case SPI_SETFONTSMOOTHING:
 		case SPI_SETFONTSMOOTHINGTYPE:
 		case SPI_SETFONTSMOOTHINGCONTRAST:
@@ -97,13 +100,19 @@ static bool isSettingChangeForScintilla(WPARAM wParam, LPARAM lParam)
 		case SPI_SETCLEARTYPE:
 		case SPI_SETWHEELSCROLLLINES:
 		case SPI_SETWHEELSCROLLCHARS:
+		case SPI_SETMOUSEVANISH:
+		case SPI_SETCURSORS:
 		case SPI_SETHIGHCONTRAST:
 			return true;
 		default:
-			break;
+			return false;
 	}
 	const auto area = reinterpret_cast<const wchar_t*>(lParam);
-	return ((wParam == 0) && (area == nullptr)) || ((area != nullptr) && (std::wcscmp(area, L"ImmersiveColorSet") == 0));
+	if (area == nullptr)
+		return true;
+	static constexpr const wchar_t* otherAreas[]{ L"Policy", L"Environment", L"intl", L"TraySettings", L"ShellState", L"windows",
+		L"UserInteractionMode", L"ConvertibleSlateMode" };
+	return std::ranges::none_of(otherAreas, [area](const wchar_t* other) { return ::_wcsicmp(area, other) == 0; });
 }
 
 
