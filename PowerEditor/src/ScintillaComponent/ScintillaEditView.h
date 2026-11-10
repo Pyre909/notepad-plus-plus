@@ -705,7 +705,7 @@ public:
 	// sets the style fonts again for another technology (printing uses GDI): a font of the font lists may have other
 	// parameters there (see getScintillaFont); a style whose font was changed by someone else (a plugin) is left as it is
 	void refreshStyleFonts(int technology, int previousTechnology) const;
-	void refreshStyleFonts(int technology, int previousTechnology, int boldWeight, int previousBoldWeight) const;
+	void refreshStyleFonts(int technology, int previousTechnology, int boldWeight, int previousBoldWeight) const; // Pyre909 build: and a bold weight
 
 	void addCustomWordChars() const;
 	void restoreDefaultWordChars() const;

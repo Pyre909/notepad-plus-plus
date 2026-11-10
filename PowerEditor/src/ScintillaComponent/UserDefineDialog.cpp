@@ -2020,6 +2020,7 @@ intptr_t CALLBACK StylerDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lPa
                 auto i = ::SendDlgItemMessage(_hSelf, LOWORD(wParam), CB_GETCURSEL, 0, 0);
                 if (LOWORD(wParam) == IDC_STYLER_COMBO_FONT_SIZE)
                 {
+                    style._fontSizeHundredths = 0; // Pyre909 build: the list's sizes are whole points (not "10.5")
                     if (i != 0)
                     {
 						static constexpr size_t intStrLen = 3;

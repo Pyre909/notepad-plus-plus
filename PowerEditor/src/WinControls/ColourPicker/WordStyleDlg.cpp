@@ -1091,6 +1091,7 @@ std::pair<intptr_t, intptr_t> WordStyleDlg::goToPreferencesSettings()
 		tabbar,
 		edit1,
 		edit2,
+		fonts, // Pyre909 build: Preferences > Fonts
 		darkMode,
 		margins,
 		newDocument,

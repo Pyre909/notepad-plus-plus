@@ -19,6 +19,7 @@
 
 #include <windows.h>
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -149,15 +150,24 @@ class FontsSubDlg : public StaticDialog
 public:
 	FontsSubDlg() = default;
 
+	void refreshFont(); // the features of the Default Style's font, if another since they were listed
+
 private:
 	std::vector<std::wstring> _featureTags; // of the list's rows: the features of the Default Style's font
+	std::wstring _featureFontName; // that font
+	std::map<std::wstring, std::wstring> _onTokens; // the last text that turned each feature on ("cv05=2"), for its check
 	bool _isSyncing = false; // the list's checks or the features' text being set from the other
+	static constexpr UINT_PTR _applyFeaturesTimer = 1; // the text applied once typing pauses
+	static constexpr UINT_PTR _applyFallbackTimer = 2;
 
 	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	void fillFeatureList();
 	void checkFeatures();
 	void setFeature(size_t row, bool isOn);
-	void applyFeatures(const std::wstring& features);
+	void applyFeatures();
+	void applyFallback();
+	void sizeFeatureColumns();
+	void enableDirectWriteControls();
 };
 
 class DarkModeSubDlg : public StaticDialog

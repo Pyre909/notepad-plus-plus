@@ -974,6 +974,8 @@ struct ScintillaViewParams
 	std::string _fontFallback;   // the fonts of the characters the editor's font hasn't, before Windows' (Preferences > Fonts; DirectWrite)
 	int _lineSpacing = 0;        // extra pixels between the lines, at 96 DPI (0-10)
 	static constexpr int maxLineSpacing = 10;
+	static constexpr size_t maxFontFeaturesLength = 512; // bytes of UTF-8 (Scintilla takes 64 features at most)
+	static constexpr size_t maxFontFallbackLength = 512;
 	bool isClearTypeAntialiasing() const {
 		return (_textAntialiasing == textAntialiasingClearType) || (_textAntialiasing == textAntialiasingClearTypeLessColor);
 	}

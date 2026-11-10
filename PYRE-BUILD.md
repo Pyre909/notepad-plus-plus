@@ -22,16 +22,18 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   arrows and operators of Cascadia Code or Fira Code, turned off when unwanted (DirectWrite; official issue #14764).
 - **OpenType font features** (Preferences > Fonts): the features of the editor's font, chosen from a list of the Default
   Style font's own features with the font's names for its stylistic sets (all its weights and styles: MonoLisa's
-  "Script variant" is in its italics only), or typed as a list such as `ss01 zero cv05=2 -calt`; applied at once to
-  every view, drawn with DirectWrite. With MonoLisa, `ss01` turns italic comments into its script, `dlig` brings its
+  "Script variant" is in its italics only), or typed as a list such as `ss01 zero cv05=2 -calt`; applied to every view
+  as soon as the typing pauses, drawn with DirectWrite. With MonoLisa, `ss01` turns italic comments into its script, `dlig` brings its
   coding ligatures; with Cascadia Code, `ss01` its cursive italic, `zero` a slashed zero.
 - **The weight of bold** (Preferences > Fonts > Bold): Medium, SemiBold, Bold (as official Notepad++), ExtraBold or
   Black for the bold styles (keywords...) of every language at once; a font of another weight is made as many steps
   heavier ("MonoLisaCode Light" bold: Medium with SemiBold). With a font that has these weights (MonoLisa: ten), drawn
-  with its own face, GDI and DirectWrite alike.
+  with its own face, GDI and DirectWrite alike; with a font that has no face for a lighter choice (Medium of Consolas,
+  whose Regular would draw it), Bold.
 - **Fallback fonts** (Preferences > Fonts > Fallback Fonts): the fonts for the characters the editor's font hasn't
   (Chinese, Japanese, Korean, symbols, emoji), tried in order before Windows' own choice: `BIZ UDGothic; Segoe UI
-  Emoji`; each is used for the characters it has. Drawn with DirectWrite (GDI uses Windows' font linking).
+  Emoji`; each is used for the characters it has (a name of the font lists such as "Fira Code Light" is its family).
+  Drawn with DirectWrite (GDI uses Windows' font linking).
 - **The rendering mode applies at once**, without restarting Notepad++.
 - **Faster with long lines and large files**: the layouts of the lines shown are kept between paints (not for a file
   over the large file size of Preferences > Performance), and lines are laid out on several threads. Moving the caret and typing in files with very long lines (minified JSON

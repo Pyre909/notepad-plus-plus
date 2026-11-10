@@ -1014,6 +1014,13 @@ void NativeLangSpeaker::changePreferenceDlgLang(PreferenceDlg& preference) const
 		preference.renameDialogTitle(L"Scintillas2", nameW);
 	}
 
+	changeDlgLang(preference._fontsSubDlg.getHSelf(), "Fonts", titre, titreMaxSize); // Pyre909 build
+	if (titre[0] != '\0')
+	{
+		const wchar_t *nameW = wmc.char2wchar(titre, _nativeLangEncoding);
+		preference.renameDialogTitle(L"Fonts", nameW);
+	}
+
 	changeDlgLang(preference._darkModeSubDlg.getHSelf(), "DarkMode", titre, titreMaxSize);
 	if (titre[0] != '\0')
 	{
@@ -1289,6 +1296,10 @@ bool NativeLangSpeaker::changeDlgLang(HWND hDlg, const char* dlgTagName, char* t
 		}
 
 		size_t count = ::SendMessage(hCombo, CB_GETCOUNT, 0, 0);
+		// Pyre909 build: the rendering modes without GDI (EditingSubDlg::initTextRenderingParam) are one fewer than their
+		// translations, GDI's first
+		if ((id == IDC_COMBO_SC_TECHNOLOGY_CHOICE) && (count + 1 == comboElms.size()))
+			comboElms.erase(comboElms.begin());
 		if (count == comboElms.size())
 		{
 			// get selected index

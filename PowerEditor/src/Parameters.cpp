@@ -779,27 +779,57 @@ std::wstring Style::getFontSizeText() const
 	return text;
 }
 
-// Pyre909 build: a size of 1 to 3 digits of points and up to 2 decimals ("10", "10.5", "9.25"); false otherwise
+// Pyre909 build: a size of points from 1 to 999 and decimals rounded to hundredths ("10", "10.5", "9.25", " 010.555" 10.56),
+// spaces around it; false otherwise
 bool Style::setFontSizeText(const std::wstring& text)
 {
 	const auto isDigit = [](wchar_t ch) { return (ch >= L'0') && (ch <= L'9'); };
-	size_t i = 0;
-	int size = 0;
-	while ((i < text.length()) && (i < 3) && isDigit(text[i]))
-		size = size * 10 + (text[i++] - L'0');
-	if ((i == 0) || (size == 0))
+	const size_t first = text.find_first_not_of(L" \t");
+	if (first == std::wstring::npos)
 		return false;
-	int hundredths = 0;
-	if (i < text.length())
+	const std::wstring number = text.substr(first, text.find_last_not_of(L" \t") - first + 1);
+	const size_t point = number.find(L'.');
+	const std::wstring points = number.substr(0, point);
+	const std::wstring decimals = (point == std::wstring::npos) ? std::wstring() : number.substr(point + 1);
+	if (points.empty() || !std::all_of(points.begin(), points.end(), isDigit) ||
+		((point != std::wstring::npos) && (decimals.empty() || !std::all_of(decimals.begin(), decimals.end(), isDigit))))
+		return false;
+
+	int size = 0;
+	for (const wchar_t ch : points)
 	{
-		const std::wstring decimals = text.substr(i + 1);
-		if ((text[i] != L'.') || decimals.empty() || (decimals.length() > 2) || !std::all_of(decimals.begin(), decimals.end(), isDigit))
+		size = size * 10 + (ch - L'0');
+		if (size > 999)
 			return false;
-		hundredths = (decimals[0] - L'0') * 10 + ((decimals.length() == 2) ? (decimals[1] - L'0') : 0);
 	}
+	int thousandths = 0; // rounded to hundredths below
+	for (size_t i = 0; i < 3; ++i)
+		thousandths = thousandths * 10 + ((i < decimals.length()) ? (decimals[i] - L'0') : 0);
+	int hundredths = (thousandths + 5) / 10;
+	if (hundredths == 100)
+	{
+		++size;
+		hundredths = 0;
+	}
+	if ((size == 0) || (size > 999))
+		return false;
 	_fontSize = size;
 	_fontSizeHundredths = hundredths;
 	return true;
+}
+
+// Pyre909 build: a UTF-8 text of at most a number of bytes, cut at a character's start
+static std::string cutUtf8(const char* text, size_t maxLength)
+{
+	std::string cut(text);
+	if (cut.length() > maxLength)
+	{
+		size_t length = maxLength;
+		while ((length > 0) && ((static_cast<unsigned char>(cut[length]) & 0xC0) == 0x80))
+			--length;
+		cut.resize(length);
+	}
+	return cut;
 }
 
 // Pyre909 build: the Text Rendering settings (Preferences > Editing 1) of <GUIConfig name="ScintillaPrimaryView">,
@@ -824,15 +854,14 @@ static void readTextRenderingParams(const NppXml::Element& elem, ScintillaViewPa
 	svp._textContrast = getRangeDefaultAttribute(elem, "fontContrast", textContrastFollowWindows, textContrastVeryHigh, svp._textContrast);
 	svp._textLigatures = getBoolAttribute(elem, "fontLigatures", svp._textLigatures);
 	// fontFeatures="ss01 zero" (Preferences > Fonts): Scintilla ignores what isn't a feature, and takes 64 at most
-	constexpr size_t maxFontFeaturesLength = 512;
 	if (const char* features = NppXml::attribute(elem, "fontFeatures"))
-		svp._fontFeatures = std::string(features).substr(0, maxFontFeaturesLength);
+		svp._fontFeatures = cutUtf8(features, ScintillaViewParams::maxFontFeaturesLength);
 	// boldWeight="700" (Preferences > Fonts): Medium to Black, whole hundreds
 	if (const int boldWeight = NppXml::intAttribute(elem, "boldWeight", 0); (boldWeight >= 500) && (boldWeight <= 900) && (boldWeight % 100 == 0))
 		svp._boldWeight = boldWeight;
 	// fontFallback="BIZ UDGothic; Segoe UI Emoji" (Preferences > Fonts)
 	if (const char* fallback = NppXml::attribute(elem, "fontFallback"))
-		svp._fontFallback = std::string(fallback).substr(0, maxFontFeaturesLength);
+		svp._fontFallback = cutUtf8(fallback, ScintillaViewParams::maxFontFallbackLength);
 	svp._lineSpacing = getRangeClampAttribute(elem, "lineSpacing", 0, ScintillaViewParams::maxLineSpacing, svp._lineSpacing);
 }
 

@@ -266,10 +266,58 @@ namespace
 			it = fonts.emplace(key, findGdiFont(requested)).first;
 		return it->second;
 	}
+
+	// Pyre909 build: whether a bold weight draws a family heavier than its regular font: Medium of a family of Regular and
+	// Bold (Consolas) is its Regular. With DirectWrite, as it matches weights (Medium of Cascadia Code, a variable font, is
+	// its SemiBold); with GDI, the family's font of the closest weight (findGdiFont: Cascadia Code's Regular, GDI's family
+	// being Regular and Bold), or DirectWrite's for a family of a weight ("Fira Code Light", drawn with DirectWrite's
+	// font). True if the family isn't known: as asked.
+	bool isBoldWeightHeavier(const std::wstring& fontName, int weight, bool isItalic, bool isGdi)
+	{
+		static std::map<std::tuple<std::wstring, int, bool, bool>, bool> answers;
+		const auto key = std::make_tuple(fontName, weight, isItalic, isGdi);
+		if (const auto it = answers.find(key); it != answers.end())
+			return it->second;
+
+		bool isHeavier = true;
+		const std::optional<DWriteFont>& dwFont = getDWriteFontOfGdiFamily(fontName);
+		if (isGdi && !dwFont)
+		{
+			const std::vector<GdiFamilyMember> members = getGdiFamilyMembers(fontName);
+			const LONG regularWeight = getClosestMember(members, FW_NORMAL, isItalic)._weight;
+			isHeavier = (regularWeight <= 0) || (getClosestMember(members, weight, isItalic)._weight > regularWeight);
+			answers.emplace(key, isHeavier);
+			return isHeavier;
+		}
+
+		IDWriteFontCollection* pSystemFonts = getDirectWrite()._systemFonts.Get();
+		const DWriteFont regular = dwFont ? *dwFont : DWriteFont{ fontName };
+		const DWRITE_FONT_STYLE style = isItalic ? DWRITE_FONT_STYLE_ITALIC : regular._style;
+		const auto boldWeight = static_cast<DWRITE_FONT_WEIGHT>(getRelativeWeight(regular, weight));
+		UINT32 index = 0;
+		BOOL exists = FALSE;
+		ComPtr<IDWriteFontFamily> family;
+		ComPtr<IDWriteFont> regularFont;
+		ComPtr<IDWriteFont> boldFont;
+		if (pSystemFonts && SUCCEEDED(pSystemFonts->FindFamilyName(regular._family.c_str(), &index, &exists)) && exists &&
+			SUCCEEDED(pSystemFonts->GetFontFamily(index, family.GetAddressOf())) &&
+			SUCCEEDED(family->GetFirstMatchingFont(regular._weight, regular._stretch, style, regularFont.GetAddressOf())) &&
+			SUCCEEDED(family->GetFirstMatchingFont(boldWeight, regular._stretch, style, boldFont.GetAddressOf())))
+		{
+			isHeavier = (boldFont->GetWeight() > regularFont->GetWeight()) || (boldFont->GetSimulations() & DWRITE_FONT_SIMULATIONS_BOLD);
+		}
+		answers.emplace(key, isHeavier);
+		return isHeavier;
+	}
 }
 
 ScintillaFont getScintillaFont(const std::wstring& fontName, bool isBold, bool isItalic, int technology, int boldWeight)
 {
+	// Pyre909 build: a bold weight lighter than bold that would draw the regular font is bold
+	if (isBold && (boldWeight < SC_WEIGHT_BOLD) && !fontName.empty() && (fontName.length() < LF_FACESIZE) &&
+		!isBoldWeightHeavier(fontName, boldWeight, isItalic, technology == SC_TECHNOLOGY_DEFAULT))
+		boldWeight = SC_WEIGHT_BOLD;
+
 	ScintillaFont font{ fontName, isBold ? boldWeight : SC_WEIGHT_NORMAL, SC_STRETCH_NORMAL, isItalic };
 	if (fontName.empty() || (fontName.length() >= LF_FACESIZE))
 		return font; // not a GDI family name
@@ -375,8 +423,8 @@ namespace
 		const UINT32 size = layout.size();
 		UINT16 featureList = 0;
 		UINT16 count = 0;
-		if (!readU16(data, size, 6, featureList) || !readU16(data, size, featureList, count))
-			return;
+		if (!readU16(data, size, 6, featureList) || (featureList == 0) || !readU16(data, size, featureList, count))
+			return; // no feature list (offset 0)
 		for (UINT16 i = 0; i < count; ++i)
 		{
 			const size_t record = static_cast<size_t>(featureList) + 2 + static_cast<size_t>(i) * 6;
@@ -385,15 +433,10 @@ namespace
 				break;
 			std::wstring tag;
 			for (size_t j = 0; j < 4; ++j)
-			{
-				const BYTE ch = data[record + j];
-				if ((ch < 0x20) || (ch > 0x7E))
-					break;
-				tag.push_back(static_cast<wchar_t>(ch));
-			}
+				tag.push_back(static_cast<wchar_t>(data[record + j])); // in the table: record + 4 was read
 			while (!tag.empty() && (tag.back() == L' '))
 				tag.pop_back();
-			if (tag.empty())
+			if (tag.empty() || !std::all_of(tag.begin(), tag.end(), [](wchar_t ch) { return (ch > 0x20) && (ch <= 0x7E); }))
 				continue;
 			std::wstring& name = features[tag];
 			const size_t feature = static_cast<size_t>(featureList) + featureOffset;

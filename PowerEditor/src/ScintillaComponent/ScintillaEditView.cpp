@@ -588,6 +588,28 @@ void ScintillaEditView::applyCharacterGrid(bool allowed)
 		execute(SCI_SETCHARACTERGRID, allowed && NppParameters::getInstance().getSVP()._characterGrid);
 }
 
+// Pyre909 build: the families of a list of fallback fonts (Preferences > Fonts) as DirectWrite knows them, split as
+// Scintilla splits them (FontFallbackOfList): a font of a weight of the font lists ("Fira Code Light") is its family
+static std::string getFallbackFamilies(const std::string& list)
+{
+	std::string families;
+	size_t start = 0;
+	while (start < list.length())
+	{
+		size_t end = list.find_first_of(";,", start);
+		if (end == std::string::npos)
+			end = list.length();
+		const std::wstring name = string2wstring(list.substr(start, end - start), CP_UTF8);
+		start = end + 1;
+		const size_t first = name.find_first_not_of(L" \t");
+		if (first == std::wstring::npos)
+			continue;
+		const std::wstring trimmed = name.substr(first, name.find_last_not_of(L" \t") - first + 1);
+		families += (families.empty() ? "" : ", ") + wstring2string(getScintillaFont(trimmed, false, false, SC_TECHNOLOGY_DIRECTWRITE)._name, CP_UTF8);
+	}
+	return families;
+}
+
 // Pyre909 build: the Text Rendering settings of Preferences > Editing 1
 void ScintillaEditView::applyTextRenderingSettings()
 {
@@ -660,7 +682,8 @@ void ScintillaEditView::applyTextRenderingSettings()
 		execute(SCI_SETFONTRENDERINGPARAMETER, parameter, value);
 	// the fonts' OpenType features (Preferences > Fonts), on top of the ligatures' setting, and the fallback fonts
 	execute(SCI_SETFONTFEATURES, 0, reinterpret_cast<LPARAM>(svp._fontFeatures.c_str()));
-	execute(SCI_SETFONTFALLBACK, 0, reinterpret_cast<LPARAM>(svp._fontFallback.c_str()));
+	const std::string fallbackFamilies = getFallbackFamilies(svp._fontFallback);
+	execute(SCI_SETFONTFALLBACK, 0, reinterpret_cast<LPARAM>(fallbackFamilies.c_str()));
 
 	applyLineSpacing();
 }
@@ -1353,6 +1376,7 @@ void ScintillaEditView::setSpecialCharLabelSize(bool forPrinting) const
 
 void ScintillaEditView::setStyleFont(int styleID, const StyleFont& styleFont) const
 {
+	// Pyre909 build: with Preferences > Fonts' bold weight
 	setScintillaFont(styleID, getScintillaFont(styleFont._name, styleFont._isBold, styleFont._isItalic, static_cast<int>(execute(SCI_GETTECHNOLOGY)),
 		NppParameters::getInstance().getSVP()._boldWeight));
 }
@@ -1387,8 +1411,8 @@ void ScintillaEditView::refreshStyleFonts(int technology, int previousTechnology
 	refreshStyleFonts(technology, previousTechnology, boldWeight, boldWeight);
 }
 
-// the style fonts recorded, drawn with a technology and bold weight after another: a style whose font was changed by
-// someone else since (a plugin) is left as it is
+// Pyre909 build: the style fonts recorded, drawn with a technology and bold weight after another: a style whose font was
+// changed by someone else since (a plugin) is left as it is
 void ScintillaEditView::refreshStyleFonts(int technology, int previousTechnology, int boldWeight, int previousBoldWeight) const
 {
 	for (int styleID = 0; styleID <= STYLE_MAX; ++styleID)

@@ -352,6 +352,13 @@ intptr_t CALLBACK PreferenceDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			return TRUE;
 		}
 
+		case WM_ACTIVATE: // Pyre909 build: the Fonts page's features, of another font if the Default Style's changed since
+		{
+			if (LOWORD(wParam) != WA_INACTIVE)
+				_fontsSubDlg.refreshFont();
+			break;
+		}
+
 		case WM_NCLBUTTONDOWN:
 		{
 			if (_gotoTip.isValid())
@@ -507,6 +514,7 @@ intptr_t CALLBACK PreferenceDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM
 			_tabbarSubDlg.dpiManager().setDpiWP(wParam);
 			_editingSubDlg.dpiManager().setDpiWP(wParam);
 			_editing2SubDlg.dpiManager().setDpiWP(wParam);
+			_fontsSubDlg.dpiManager().setDpiWP(wParam); // Pyre909 build
 			_darkModeSubDlg.dpiManager().setDpiWP(wParam);
 			_marginsBorderEdgeSubDlg.dpiManager().setDpiWP(wParam);
 			_miscSubDlg.dpiManager().setDpiWP(wParam);
@@ -660,6 +668,7 @@ void PreferenceDlg::destroy()
 	_tabbarSubDlg.destroy();
 	_editingSubDlg.destroy();
 	_editing2SubDlg.destroy();
+	_fontsSubDlg.destroy(); // Pyre909 build
 	_darkModeSubDlg.destroy();
 	_marginsBorderEdgeSubDlg.destroy();
 	_miscSubDlg.destroy();
@@ -2590,10 +2599,39 @@ namespace
 		return text;
 	}
 
-	// The features of a text as Scintilla reads them: separated by spaces, commas or semicolons
-	std::vector<std::wstring> featureTokens(const std::wstring& features)
+	// A text of an edit box as saved: UTF-8 of at most a number of bytes (as config.xml is read), cut at a character's start
+	std::string getSettingText(const std::wstring& text, size_t maxLength)
 	{
-		std::vector<std::wstring> tokens;
+		std::string setting = wstring2string(text, CP_UTF8);
+		if (setting.length() > maxLength)
+		{
+			size_t length = maxLength;
+			while ((length > 0) && ((static_cast<unsigned char>(setting[length]) & 0xC0) == 0x80))
+				--length;
+			setting.resize(length);
+		}
+		return setting;
+	}
+
+	// A feature of the features' text
+	struct FeatureToken
+	{
+		std::wstring _text; // as typed
+		std::wstring _tag;  // empty if Scintilla skips it
+		bool _isOn = false;
+	};
+
+	// The features of a text exactly as Scintilla reads them (FontFeatures in FontRenderingOverrides.h): separated by
+	// spaces, commas or semicolons, "[+|-]tag[=value]", a tag of 1 to 4 letters, digits or '_', a value of at most 5 digits
+	// up to 65535 which replaces the sign's ("-cv05=2" is on); "-tag" is off, the others on. A later one replaces an
+	// earlier one of the same tag.
+	std::vector<FeatureToken> getFeatureTokens(const std::wstring& features)
+	{
+		const auto isDigit = [](wchar_t ch) { return (ch >= L'0') && (ch <= L'9'); };
+		const auto isTagCharacter = [isDigit](wchar_t ch) {
+			return ((ch >= L'a') && (ch <= L'z')) || ((ch >= L'A') && (ch <= L'Z')) || isDigit(ch) || (ch == L'_');
+		};
+		std::vector<FeatureToken> tokens;
 		size_t start = 0;
 		while (start < features.length())
 		{
@@ -2601,25 +2639,40 @@ namespace
 			if (end == std::wstring::npos)
 				end = features.length();
 			if (end > start)
-				tokens.push_back(features.substr(start, end - start));
+			{
+				FeatureToken token{ features.substr(start, end - start) };
+				std::wstring_view rest(token._text);
+				unsigned int value = 1;
+				if (rest.starts_with(L'+') || rest.starts_with(L'-'))
+				{
+					value = rest.starts_with(L'-') ? 0 : 1;
+					rest.remove_prefix(1);
+				}
+				const size_t equals = rest.find(L'=');
+				const std::wstring_view tag = rest.substr(0, equals);
+				bool isValid = !tag.empty() && (tag.length() <= 4) && std::all_of(tag.begin(), tag.end(), isTagCharacter);
+				if (isValid && (equals != std::wstring_view::npos))
+				{
+					const std::wstring_view number = rest.substr(equals + 1);
+					isValid = !number.empty() && (number.length() <= 5) && std::all_of(number.begin(), number.end(), isDigit);
+					value = 0;
+					if (isValid)
+					{
+						for (const wchar_t ch : number)
+							value = value * 10 + (ch - L'0');
+						isValid = value <= 0xFFFF;
+					}
+				}
+				if (isValid)
+				{
+					token._tag = tag;
+					token._isOn = value != 0;
+				}
+				tokens.push_back(std::move(token));
+			}
 			start = end + 1;
 		}
 		return tokens;
-	}
-
-	// The tag of a feature: "-calt" calt, "cv05=2" cv05
-	std::wstring featureTokenTag(const std::wstring& token)
-	{
-		const size_t start = (token.starts_with(L'+') || token.starts_with(L'-')) ? 1 : 0;
-		const size_t equals = token.find(L'=');
-		return token.substr(start, (equals == std::wstring::npos) ? std::wstring::npos : equals - start);
-	}
-
-	// Whether a feature is on: "-calt" and "cv05=0" are off
-	bool isFeatureTokenOn(const std::wstring& token)
-	{
-		const size_t equals = token.find(L'=');
-		return !token.starts_with(L'-') && ((equals == std::wstring::npos) || (token.substr(equals + 1) != L"0"));
 	}
 
 	// The features DirectWrite draws unless they're turned off, the ligatures unless Editing 1's Font ligatures is off
@@ -2662,23 +2715,69 @@ namespace
 	}
 }
 
-void FontsSubDlg::applyFeatures(const std::wstring& features)
+// The features' text applied (now: typed, the timer stops)
+void FontsSubDlg::applyFeatures()
 {
+	::KillTimer(_hSelf, _applyFeaturesTimer);
 	ScintillaViewParams& svp = const_cast<ScintillaViewParams&>(NppParameters::getInstance().getSVP());
-	svp._fontFeatures = wstring2string(features, CP_UTF8);
-	ScintillaEditView::applyTextRenderingSettingsToAll();
+	const std::string features = getSettingText(getDlgItemText(_hSelf, IDC_EDIT_FONTFEATURES), ScintillaViewParams::maxFontFeaturesLength);
+	if (features != svp._fontFeatures)
+	{
+		svp._fontFeatures = features;
+		ScintillaEditView::applyTextRenderingSettingsToAll();
+	}
+}
+
+// The fallback fonts' text applied (now: typed, the timer stops)
+void FontsSubDlg::applyFallback()
+{
+	::KillTimer(_hSelf, _applyFallbackTimer);
+	ScintillaViewParams& svp = const_cast<ScintillaViewParams&>(NppParameters::getInstance().getSVP());
+	const std::string fallback = getSettingText(getDlgItemText(_hSelf, IDC_EDIT_FONTFALLBACK), ScintillaViewParams::maxFontFallbackLength);
+	if (fallback != svp._fontFallback)
+	{
+		svp._fontFallback = fallback;
+		ScintillaEditView::applyTextRenderingSettingsToAll();
+	}
+}
+
+// The features and the fallback fonts are drawn by DirectWrite only (as Editing 1's Font ligatures); the labels show it
+// with their text color (WM_CTLCOLORSTATIC)
+void FontsSubDlg::enableDirectWriteControls()
+{
+	for (const int id : { IDC_LIST_FONTFEATURES, IDC_EDIT_FONTFEATURES, IDC_EDIT_FONTFALLBACK })
+		::EnableWindow(::GetDlgItem(_hSelf, id), isDirectWriteTechnology());
+	for (const int id : { IDC_FONTFEATURES_FONT_STATIC, IDC_FONTFEATURES_STATIC, IDC_FONTFALLBACK_STATIC })
+		redrawDlgItem(id);
+}
+
+// The list's columns: the tag's, and the description's in the rest of the list's width
+void FontsSubDlg::sizeFeatureColumns()
+{
+	const HWND hList = ::GetDlgItem(_hSelf, IDC_LIST_FONTFEATURES);
+	RECT rc{};
+	::GetClientRect(hList, &rc);
+	const int tagWidth = _dpiManager.scale(72);
+	ListView_SetColumnWidth(hList, 0, tagWidth);
+	ListView_SetColumnWidth(hList, 1, std::max<int>(rc.right - rc.left - tagWidth - _dpiManager.getSystemMetricsForDpi(SM_CXVSCROLL), tagWidth));
+}
+
+void FontsSubDlg::refreshFont()
+{
+	if (isCreated() && isVisible() && (ScintillaEditView::getDefaultFontName() != _featureFontName))
+		fillFeatureList();
 }
 
 void FontsSubDlg::fillFeatureList()
 {
 	NativeLangSpeaker* pNativeSpeaker = NppParameters::getInstance().getNativeLangSpeaker();
 	const HWND hList = ::GetDlgItem(_hSelf, IDC_LIST_FONTFEATURES);
-	const std::wstring fontName = ScintillaEditView::getDefaultFontName();
+	_featureFontName = ScintillaEditView::getDefaultFontName();
 
 	_isSyncing = true;
 	ListView_DeleteAllItems(hList);
 	_featureTags.clear();
-	for (const FontFeature& feature : getFontFeatures(fontName))
+	for (const FontFeature& feature : getFontFeatures(_featureFontName))
 	{
 		const std::wstring registeredDescription = featureDescription(feature._tag);
 		if (registeredDescription.empty())
@@ -2702,54 +2801,63 @@ void FontsSubDlg::fillFeatureList()
 		pNativeSpeaker->getLocalizedStrFromID("fontfeatures-font", L"Features of $STR_REPLACE$, the Default Style's font (all its weights and styles):");
 	std::wstring text = label;
 	if (const size_t at = text.find(L"$STR_REPLACE$"); at != std::wstring::npos)
-		text.replace(at, std::wstring(L"$STR_REPLACE$").length(), fontName);
+		text.replace(at, std::wstring(L"$STR_REPLACE$").length(), _featureFontName);
 	::SetDlgItemText(_hSelf, IDC_FONTFEATURES_FONT_STATIC, text.c_str());
 
 	checkFeatures();
 }
 
-// The list's checks from the features' text: a feature on or off as its last mention says, else as drawn by default
+// The list's checks from the features' text: a feature on or off as Scintilla draws it, its last mention or its default
 void FontsSubDlg::checkFeatures()
 {
 	const HWND hList = ::GetDlgItem(_hSelf, IDC_LIST_FONTFEATURES);
-	const std::vector<std::wstring> tokens = featureTokens(getDlgItemText(_hSelf, IDC_EDIT_FONTFEATURES));
+	const std::vector<FeatureToken> tokens = getFeatureTokens(getDlgItemText(_hSelf, IDC_EDIT_FONTFEATURES));
 	_isSyncing = true;
 	for (size_t row = 0; row < _featureTags.size(); ++row)
 	{
 		bool isOn = isFeatureOnByDefault(_featureTags[row]);
-		for (const std::wstring& token : tokens)
+		for (const FeatureToken& token : tokens)
 		{
-			if (featureTokenTag(token) == _featureTags[row])
-				isOn = isFeatureTokenOn(token);
+			if (token._tag == _featureTags[row])
+				isOn = token._isOn;
 		}
 		ListView_SetCheckState(hList, static_cast<int>(row), isOn);
 	}
 	_isSyncing = false;
 }
 
-// A feature checked or unchecked: its mentions replaced by one, none if that's how it's drawn by default
+// A feature checked or unchecked: its mentions replaced by one, none if that's how it's drawn by default. A feature
+// turned on with a value ("cv05=2") gets it back when checked again.
 void FontsSubDlg::setFeature(size_t row, bool isOn)
 {
 	if (row >= _featureTags.size())
 		return;
 	const std::wstring& tag = _featureTags[row];
 	std::wstring features;
-	for (const std::wstring& token : featureTokens(getDlgItemText(_hSelf, IDC_EDIT_FONTFEATURES)))
+	for (const FeatureToken& token : getFeatureTokens(getDlgItemText(_hSelf, IDC_EDIT_FONTFEATURES)))
 	{
-		if (featureTokenTag(token) != tag)
-			features += (features.empty() ? L"" : L" ") + token;
+		if (token._tag != tag)
+			features += (features.empty() ? L"" : L" ") + token._text;
+		else if (token._isOn && (token._text.find(L'=') != std::wstring::npos))
+			_onTokens[tag] = token._text;
 	}
-	if (isOn != isFeatureOnByDefault(tag))
+	const auto onToken = _onTokens.find(tag);
+	if (isOn && (onToken != _onTokens.end()))
+		features += (features.empty() ? L"" : L" ") + onToken->second;
+	else if (isOn != isFeatureOnByDefault(tag))
 		features += (features.empty() ? L"" : L" ") + (isOn ? tag : L"-" + tag);
 
 	_isSyncing = true;
 	::SetDlgItemText(_hSelf, IDC_EDIT_FONTFEATURES, features.c_str());
 	_isSyncing = false;
-	applyFeatures(features);
+	applyFeatures();
 }
 
 intptr_t CALLBACK FontsSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
+	// the texts typed are applied once typing pauses: the fonts are made again for each change
+	static constexpr UINT applyDelay = 300;
+
 	switch (message)
 	{
 		case WM_INITDIALOG:
@@ -2758,40 +2866,95 @@ intptr_t CALLBACK FontsSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 			const HWND hList = ::GetDlgItem(_hSelf, IDC_LIST_FONTFEATURES);
 			ListView_SetExtendedListViewStyle(hList, LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
 
-			RECT rc{};
-			::GetClientRect(hList, &rc);
-			const int tagWidth = _dpiManager.scale(72);
 			std::wstring tagHeader = pNativeSpeaker->getLocalizedStrFromID("fontfeatures-column-feature", L"Feature");
 			std::wstring descriptionHeader = pNativeSpeaker->getLocalizedStrFromID("fontfeatures-column-description", L"Description");
 			LVCOLUMN column{};
-			column.mask = LVCF_TEXT | LVCF_WIDTH;
-			column.cx = tagWidth;
+			column.mask = LVCF_TEXT;
 			column.pszText = tagHeader.data();
 			ListView_InsertColumn(hList, 0, &column);
-			column.cx = std::max<int>(rc.right - rc.left - tagWidth - _dpiManager.getSystemMetricsForDpi(SM_CXVSCROLL), tagWidth);
 			column.pszText = descriptionHeader.data();
 			ListView_InsertColumn(hList, 1, &column);
+			sizeFeatureColumns();
 
+			const ScintillaViewParams& svp = NppParameters::getInstance().getSVP();
+			::SendDlgItemMessage(_hSelf, IDC_EDIT_FONTFEATURES, EM_LIMITTEXT, ScintillaViewParams::maxFontFeaturesLength, 0);
+			::SendDlgItemMessage(_hSelf, IDC_EDIT_FONTFALLBACK, EM_LIMITTEXT, ScintillaViewParams::maxFontFallbackLength, 0);
 			_isSyncing = true;
-			::SetDlgItemText(_hSelf, IDC_EDIT_FONTFEATURES, string2wstring(NppParameters::getInstance().getSVP()._fontFeatures, CP_UTF8).c_str());
+			::SetDlgItemText(_hSelf, IDC_EDIT_FONTFEATURES, string2wstring(svp._fontFeatures, CP_UTF8).c_str());
+			::SetDlgItemText(_hSelf, IDC_EDIT_FONTFALLBACK, string2wstring(svp._fontFallback, CP_UTF8).c_str());
 			_isSyncing = false;
 
 			// the bold weight: Medium (500) to Black (900), translated by english.xml's ComboBox 7209
 			const HWND hBoldWeight = ::GetDlgItem(_hSelf, IDC_COMBO_BOLDWEIGHT);
 			for (const wchar_t* weightName : { L"Medium", L"SemiBold", L"Bold", L"ExtraBold", L"Black" })
 				::SendMessage(hBoldWeight, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(weightName));
-			::SendMessage(hBoldWeight, CB_SETCURSEL, (NppParameters::getInstance().getSVP()._boldWeight - 500) / 100, 0);
+			::SendMessage(hBoldWeight, CB_SETCURSEL, (svp._boldWeight - 500) / 100, 0);
 
-			_isSyncing = true;
-			::SetDlgItemText(_hSelf, IDC_EDIT_FONTFALLBACK, string2wstring(NppParameters::getInstance().getSVP()._fontFallback, CP_UTF8).c_str());
-			_isSyncing = false;
+			enableDirectWriteControls();
+			return TRUE;
+		}
+
+		case WM_CTLCOLOREDIT:
+		{
+			return NppDarkMode::onCtlColorCtrl(reinterpret_cast<HDC>(wParam));
+		}
+
+		case WM_CTLCOLORDLG:
+		case WM_CTLCOLORSTATIC:
+		{
+			const int id = ::GetDlgCtrlID(reinterpret_cast<HWND>(lParam));
+			if ((id == IDC_FONTFEATURES_FONT_STATIC) || (id == IDC_FONTFEATURES_STATIC) || (id == IDC_FONTFALLBACK_STATIC))
+				return NppDarkMode::onCtlColorDlgStaticText(reinterpret_cast<HDC>(wParam), isDirectWriteTechnology());
+			return NppDarkMode::onCtlColorDlg(reinterpret_cast<HDC>(wParam));
+		}
+
+		case WM_PRINTCLIENT:
+		{
+			if (NppDarkMode::isEnabled())
+				return TRUE;
+			break;
+		}
+
+		case WM_DPICHANGED_AFTERPARENT:
+		{
+			sizeFeatureColumns();
 			return TRUE;
 		}
 
 		case WM_SHOWWINDOW:
 		{
 			if (wParam == TRUE)
-				fillFeatureList(); // the Default Style's font may have changed since
+			{
+				fillFeatureList(); // the Default Style's font, Font ligatures or the rendering mode may have changed since
+				enableDirectWriteControls();
+			}
+			else
+			{
+				applyFeatures(); // what was typed just before another page was shown
+				applyFallback();
+			}
+			break;
+		}
+
+		case WM_TIMER:
+		{
+			if (wParam == _applyFeaturesTimer)
+			{
+				applyFeatures();
+				return TRUE;
+			}
+			if (wParam == _applyFallbackTimer)
+			{
+				applyFallback();
+				return TRUE;
+			}
+			break;
+		}
+
+		case WM_DESTROY:
+		{
+			::KillTimer(_hSelf, _applyFeaturesTimer);
+			::KillTimer(_hSelf, _applyFallbackTimer);
 			break;
 		}
 
@@ -2811,15 +2974,13 @@ intptr_t CALLBACK FontsSubDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM l
 		{
 			if ((LOWORD(wParam) == IDC_EDIT_FONTFEATURES) && (HIWORD(wParam) == EN_CHANGE) && !_isSyncing)
 			{
-				applyFeatures(getDlgItemText(_hSelf, IDC_EDIT_FONTFEATURES));
 				checkFeatures();
+				::SetTimer(_hSelf, _applyFeaturesTimer, applyDelay, nullptr);
 				return TRUE;
 			}
 			if ((LOWORD(wParam) == IDC_EDIT_FONTFALLBACK) && (HIWORD(wParam) == EN_CHANGE) && !_isSyncing)
 			{
-				ScintillaViewParams& svp = const_cast<ScintillaViewParams&>(NppParameters::getInstance().getSVP());
-				svp._fontFallback = wstring2string(getDlgItemText(_hSelf, IDC_EDIT_FONTFALLBACK), CP_UTF8);
-				ScintillaEditView::applyTextRenderingSettingsToAll();
+				::SetTimer(_hSelf, _applyFallbackTimer, applyDelay, nullptr);
 				return TRUE;
 			}
 			if ((LOWORD(wParam) == IDC_COMBO_BOLDWEIGHT) && (HIWORD(wParam) == CBN_SELCHANGE))

@@ -195,13 +195,16 @@ TextLayout LayoutCreateMeasured(std::wstring_view wsv, IDWriteTextFormat *pTextF
 
 // N++ (Pyre909 build): the font fallback of a list of families (SCI_SETFONTFALLBACK), tried in order before the system's
 // fallback, each for the characters its regular font has (its Unicode ranges: a family isn't chosen for a character it
-// hasn't); a family DirectWrite doesn't know is left out. Made once for a list; the last few lists kept.
+// hasn't); a family DirectWrite doesn't know is left out. Made once for a list; the last few lists kept, released with
+// DirectWrite (ReleaseD2D).
+static std::mutex fontFallbacksMutex;
+static std::map<std::string, ComPtr<IDWriteFontFallback>, std::less<>> fontFallbacks;
+
 ComPtr<IDWriteFontFallback> FontFallbackOfList(std::string_view list) {
-	static std::mutex mutex;
-	static std::map<std::string, ComPtr<IDWriteFontFallback>, std::less<>> fallbacks;
-	const std::lock_guard<std::mutex> guard(mutex);
-	if (const auto it = fallbacks.find(list); it != fallbacks.end())
+	const std::lock_guard<std::mutex> guard(fontFallbacksMutex);
+	if (const auto it = fontFallbacks.find(list); it != fontFallbacks.end()) {
 		return it->second;
+	}
 
 	ComPtr<IDWriteFontFallback> fallback;
 	ComPtr<IDWriteFactory2> factory2;
@@ -213,16 +216,20 @@ ComPtr<IDWriteFontFallback> FontFallbackOfList(std::string_view list) {
 		size_t start = 0;
 		while (start < list.length()) {
 			size_t end = list.find_first_of(";,", start);
-			if (end == std::string_view::npos)
+			if (end == std::string_view::npos) {
 				end = list.length();
+			}
 			std::string_view name = list.substr(start, end - start);
 			start = end + 1;
-			while (!name.empty() && ((name.front() == ' ') || (name.front() == '\t')))
+			while (!name.empty() && ((name.front() == ' ') || (name.front() == '\t'))) {
 				name.remove_prefix(1);
-			while (!name.empty() && ((name.back() == ' ') || (name.back() == '\t')))
+			}
+			while (!name.empty() && ((name.back() == ' ') || (name.back() == '\t'))) {
 				name.remove_suffix(1);
-			if (name.empty())
+			}
+			if (name.empty()) {
 				continue;
+			}
 			const std::wstring family = WStringFromUTF8(name);
 			UINT32 index = 0;
 			BOOL exists = FALSE;
@@ -233,26 +240,31 @@ ComPtr<IDWriteFontFallback> FontFallbackOfList(std::string_view list) {
 			if (FAILED(systemFonts->FindFamilyName(family.c_str(), &index, &exists)) || !exists ||
 				FAILED(systemFonts->GetFontFamily(index, fontFamily.GetAddressOf())) ||
 				FAILED(fontFamily->GetFirstMatchingFont(DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL, font.GetAddressOf())) ||
-				FAILED(font->CreateFontFace(face.GetAddressOf())) || FAILED(face.As(&face1)))
+				FAILED(font->CreateFontFace(face.GetAddressOf())) || FAILED(face.As(&face1))) {
 				continue;
+			}
 			UINT32 count = 0;
 			face1->GetUnicodeRanges(0, nullptr, &count);
 			std::vector<DWRITE_UNICODE_RANGE> ranges(count);
-			if ((count == 0) || FAILED(face1->GetUnicodeRanges(count, ranges.data(), &count)))
+			if ((count == 0) || FAILED(face1->GetUnicodeRanges(count, ranges.data(), &count))) {
 				continue;
+			}
 			const WCHAR *families[] = { family.c_str() };
 			builder->AddMapping(ranges.data(), count, families, 1);
 		}
 		ComPtr<IDWriteFontFallback> systemFallback;
-		if (SUCCEEDED(factory2->GetSystemFontFallback(systemFallback.GetAddressOf())))
+		if (SUCCEEDED(factory2->GetSystemFontFallback(systemFallback.GetAddressOf()))) {
 			builder->AddMappings(systemFallback.Get());
-		if (FAILED(builder->CreateFontFallback(fallback.GetAddressOf())))
+		}
+		if (FAILED(builder->CreateFontFallback(fallback.GetAddressOf()))) {
 			fallback.Reset();
+		}
 	}
-	constexpr size_t maxFallbacks = 8; // a list typed in Preferences makes one for each key
-	if (fallbacks.size() >= maxFallbacks)
-		fallbacks.clear();
-	fallbacks.emplace(std::string(list), fallback);
+	constexpr size_t maxFallbacks = 8; // a list typed in Preferences makes one each time the typing pauses
+	if (fontFallbacks.size() >= maxFallbacks) {
+		fontFallbacks.clear();
+	}
+	fontFallbacks.emplace(std::string(list), fallback);
 	return fallback;
 }
 
@@ -1875,6 +1887,7 @@ bool LoadD2D() noexcept {
 }
 
 void ReleaseD2D() noexcept {
+	fontFallbacks.clear();	// N++ (Pyre909 build): before DirectWrite; at the end, no other thread lays out text
 	ReleaseUnknown(pIDWriteFactory);
 	ReleaseUnknown(pD2DFactory);
 	ReleaseLibrary(hDLLDWrite);
