@@ -161,6 +161,11 @@ public :
 	static void doMultiLine();
 
 	static void setColour(COLORREF colour2Set, tabColourIndex i, DPIManagerV2* pDPIManager);
+	// Pyre909 build: the light tab bar painted in the editor's colours (the Default Style's), with a light editor background
+	// in light mode: a strip a shade darker than the text's background, the active tab on that background, bordered, under
+	// its top bar, the inactive tabs a shade darker than the strip, gaps between the tabs
+	static void setEditorColours(COLORREF text, COLORREF background);
+	static bool isEditorColoured();
 	virtual int getIndividualTabColourId(int tabIndex) = 0;
 
 	void tabToStart(int index = -1);
@@ -236,11 +241,13 @@ protected:
 	static COLORREF _activeTopBarUnfocusedColour;
 	static COLORREF _inactiveTextColour;
 	static COLORREF _inactiveBgColour;
+	static COLORREF _editorTextColour; // Pyre909 build: setEditorColours
+	static COLORREF _editorBgColour;
 
 	static int _nbCtrl;
 	static HWND _tabbrPlusInstanceHwndArray[nbCtrlMax];
 
-	void drawItem(DRAWITEMSTRUCT *pDrawItemStruct, bool isDarkMode = false);
+	void drawItem(DRAWITEMSTRUCT *pDrawItemStruct, bool isDarkMode = false, bool isInEditorColours = false); // Pyre909 build: isInEditorColours
 	void draggingCursor(POINT screenPoint);
 
 	int getTabIndexAt(const POINT & p) const {

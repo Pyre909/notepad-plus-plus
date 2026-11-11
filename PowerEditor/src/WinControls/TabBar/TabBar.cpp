@@ -53,6 +53,62 @@ COLORREF TabBarPlus::_inactiveBgColour = RGB(192, 192, 192);
 HWND TabBarPlus::_tabbrPlusInstanceHwndArray[nbCtrlMax] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 int TabBarPlus::_nbCtrl = 0;
 
+// Pyre909 build: the light tab bar in the editor's colours (setEditorColours): its shades, as the percent of the text's colour
+// mixed into the text's background
+COLORREF TabBarPlus::_editorTextColour = RGB(0, 0, 0);
+COLORREF TabBarPlus::_editorBgColour = RGB(255, 255, 255);
+
+namespace
+{
+	constexpr int stripShade = 6;
+	constexpr int inactiveTabShade = 11;
+	constexpr int activeBorderShade = 30;
+	constexpr int inactiveBorderShade = 22;
+
+	COLORREF mixColour(COLORREF background, COLORREF text, int percent)
+	{
+		const auto channel = [&](int shift) -> BYTE {
+			return static_cast<BYTE>(((((background >> shift) & 0xFF) * (100 - percent)) + (((text >> shift) & 0xFF) * percent) + 50) / 100);
+		};
+		return RGB(channel(0), channel(8), channel(16));
+	}
+
+	// a tab's border, open toward the editor (a horizontal tab's bottom, a vertical tab's right), closed all round as buttons
+	void drawTabBorder(HDC hDC, const RECT& rc, COLORREF colour, bool isVertical, bool isButton)
+	{
+		HBRUSH hBorder = ::CreateSolidBrush(colour);
+		const RECT sides[]{
+			{ rc.left, rc.top, rc.right, rc.top + 1 },
+			{ rc.left, rc.top, rc.left + 1, rc.bottom },
+			{ rc.right - 1, rc.top, rc.right, rc.bottom },
+			{ rc.left, rc.bottom - 1, rc.right, rc.bottom }
+		};
+		for (size_t i = 0; i < std::size(sides); ++i)
+		{
+			if (isButton || (i != (isVertical ? 2u : 3u)))
+				::FillRect(hDC, &sides[i], hBorder);
+		}
+		::DeleteObject(hBorder);
+	}
+}
+
+void TabBarPlus::setEditorColours(COLORREF text, COLORREF background)
+{
+	if ((text == _editorTextColour) && (background == _editorBgColour))
+		return;
+	_editorTextColour = text;
+	_editorBgColour = background;
+	for (int i = 0; i < _nbCtrl; ++i)
+		::InvalidateRect(_tabbrPlusInstanceHwndArray[i], nullptr, TRUE);
+}
+
+// in light mode, with a light background (the light mode's close and pin buttons are drawn for one)
+bool TabBarPlus::isEditorColoured()
+{
+	const int luminance = (GetRValue(_editorBgColour) * 299 + GetGValue(_editorBgColour) * 587 + GetBValue(_editorBgColour) * 114) / 1000;
+	return !NppDarkMode::isEnabled() && (luminance >= 160);
+}
+
 void TabBar::init(HINSTANCE hInst, HWND parent, bool isVertical, bool isMultiLine)
 {
 	Window::init(hInst, parent);
@@ -1249,6 +1305,16 @@ LRESULT TabBarPlus::runProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPara
 
 		case WM_ERASEBKGND:
 		{
+			if (isEditorColoured()) // Pyre909 build: the strip in the editor's colours
+			{
+				RECT rc{};
+				::GetClientRect(hwnd, &rc);
+				HBRUSH hStrip = ::CreateSolidBrush(mixColour(_editorBgColour, _editorTextColour, stripShade));
+				::FillRect(reinterpret_cast<HDC>(wParam), &rc, hStrip);
+				::DeleteObject(hStrip);
+				return TRUE;
+			}
+
 			if (!NppDarkMode::isEnabled())
 			{
 				break;	// Let the control paint background the default way
@@ -1264,13 +1330,22 @@ LRESULT TabBarPlus::runProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPara
 		case WM_PRINTCLIENT:
 		{
 			LONG_PTR dwStyle = GetWindowLongPtr(hwnd, GWL_STYLE);
-			if (!NppDarkMode::isEnabled() || !(dwStyle & TCS_OWNERDRAWFIXED))
+			const bool isEditorColouredTabs = isEditorColoured(); // Pyre909 build: painted as in dark mode, in the editor's colours
+			if ((!NppDarkMode::isEnabled() && !isEditorColouredTabs) || !(dwStyle & TCS_OWNERDRAWFIXED))
 			{
 				break;	// Let the control paint itself the default way
 			}
 
 			PAINTSTRUCT ps{};
 			HDC hdc = (Message == WM_PAINT) ? ::BeginPaint(hwnd, &ps) : reinterpret_cast<HDC>(wParam);
+			if (isEditorColouredTabs) // Pyre909 build: the strip (between and after the tabs) whether erased or not
+			{
+				RECT rcStrip{};
+				::GetClientRect(hwnd, &rcStrip);
+				HBRUSH hStrip = ::CreateSolidBrush(mixColour(_editorBgColour, _editorTextColour, stripShade));
+				::FillRect(hdc, &rcStrip, hStrip);
+				::DeleteObject(hStrip);
+			}
 
 			const bool hasMultipleLines = ((dwStyle & TCS_BUTTONS) == TCS_BUTTONS);
 
@@ -1314,7 +1389,7 @@ LRESULT TabBarPlus::runProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPara
 
 				if (::RectVisible(hdc, &dis.rcItem))
 				{
-					if (!hasMultipleLines)
+					if (!hasMultipleLines && !isEditorColouredTabs) // Pyre909 build: those tabs have their own borders
 					{
 						if (isVertical)
 						{
@@ -1352,7 +1427,7 @@ LRESULT TabBarPlus::runProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPara
 
 					SelectClipRgn(hdc, hClip);
 
-					drawItem(&dis, NppDarkMode::isEnabled());
+					drawItem(&dis, NppDarkMode::isEnabled(), isEditorColouredTabs);
 
 					DeleteObject(hClip);
 
@@ -1360,7 +1435,7 @@ LRESULT TabBarPlus::runProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPara
 				}
 			}
 
-			if (!hasMultipleLines)
+			if (!hasMultipleLines && !isEditorColouredTabs)
 			{
 				RECT rcFirstTab{};
 				TabCtrl_GetItemRect(hwnd, 0, &rcFirstTab);
@@ -1433,7 +1508,7 @@ LRESULT TabBarPlus::runProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPara
 	return ::DefSubclassProc(hwnd, Message, wParam, lParam);
 }
 
-void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode)
+void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode, bool isInEditorColours)
 {
 	RECT rect = pDrawItemStruct->rcItem;
 
@@ -1450,10 +1525,16 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode)
 
 	::SendMessage(_hSelf, TCM_GETITEM, nTab, reinterpret_cast<LPARAM>(&tci));
 	
-	const COLORREF colorActiveBg = isDarkMode ? NppDarkMode::getCtrlBackgroundColor() : ::GetSysColor(COLOR_BTNFACE);
-	const COLORREF colorInactiveBgBase = isDarkMode ? NppDarkMode::getBackgroundColor() : ::GetSysColor(COLOR_BTNFACE);
-	
+	COLORREF colorActiveBg = isDarkMode ? NppDarkMode::getCtrlBackgroundColor() : ::GetSysColor(COLOR_BTNFACE);
+	COLORREF colorInactiveBgBase = isDarkMode ? NppDarkMode::getBackgroundColor() : ::GetSysColor(COLOR_BTNFACE);
+
 	COLORREF colorInactiveBg = _inactiveBgColour;
+	if (isInEditorColours) // Pyre909 build: the editor's colours (setEditorColours)
+	{
+		colorActiveBg = _editorBgColour;
+		colorInactiveBgBase = mixColour(_editorBgColour, _editorTextColour, stripShade);
+		colorInactiveBg = mixColour(_editorBgColour, _editorTextColour, inactiveTabShade);
+	}
 	COLORREF colorActiveText = _activeTextColour;
 	COLORREF colorInactiveText = _inactiveTextColour;
 
@@ -1483,7 +1564,7 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode)
 	// equalize drawing areas of active and inactive tabs
 	int paddingDynamicTwoX = _dpiManager.scale(2);
 	int paddingDynamicTwoY = paddingDynamicTwoX;
-	if (isSelected && !isDarkMode)
+	if (isSelected && !isDarkMode && !isInEditorColours) // Pyre909 build: painted as in dark mode
 	{
 		// the drawing area of the active tab extends on all borders by default
 		const int xEdge = _dpiManager.getSystemMetricsForDpi(SM_CXEDGE);
@@ -1535,14 +1616,41 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode)
 
 	const int individualColourId = getIndividualTabColourId(nTab);
 
+	// Pyre909 build: the tab's own shape in the editor's colours, a gap each side, the inactive ones lower (vertical: narrower):
+	// its background and top bar drawn in it, and its border
+	RECT tabRect = pDrawItemStruct->rcItem;
+	if (isInEditorColours)
+	{
+		const int gap = _dpiManager.scale(1);
+		if (hasMultipleLines)
+		{
+			::InflateRect(&tabRect, -gap, -gap);
+		}
+		else if (isVertical)
+		{
+			tabRect.top += gap;
+			tabRect.bottom -= gap;
+			tabRect.left += isSelected ? 0 : paddingDynamicTwoX;
+		}
+		else
+		{
+			tabRect.left += gap;
+			tabRect.right -= gap;
+			tabRect.top += isSelected ? 0 : paddingDynamicTwoY;
+			rect.left += 2 * paddingDynamicTwoX; // the icon and text clear of the border (as the dark mode's start left of it)
+		}
+	}
+
 	// draw highlights on tabs (top bar for active tab / darkened background for inactive tab)
 	RECT barRect = rect;
 	NppParameters& nppParam = NppParameters::getInstance();
 	if (isSelected)
 	{
 		hBrush = ::CreateSolidBrush(colorActiveBg);
-		::FillRect(hDC, &pDrawItemStruct->rcItem, hBrush);
+		::FillRect(hDC, isInEditorColours ? &tabRect : &pDrawItemStruct->rcItem, hBrush); // Pyre909 build: tabRect
 		::DeleteObject(static_cast<HGDIOBJ>(hBrush));
+		if (isInEditorColours)
+			drawTabBorder(hDC, tabRect, mixColour(_editorBgColour, _editorTextColour, activeBorderShade), isVertical, hasMultipleLines);
 
 		if (drawTopBar)
 		{
@@ -1556,6 +1664,14 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode)
 			{
 				barRect.top -= (hasMultipleLines && isDarkMode) ? 0 : paddingDynamicTwoY;
 				barRect.bottom = barRect.top + topBarHeight;
+			}
+			if (isInEditorColours) // Pyre909 build: along the tab's top (vertical: its left), over its border
+			{
+				barRect = tabRect;
+				if (isVertical)
+					barRect.right = barRect.left + topBarHeight;
+				else
+					barRect.bottom = barRect.top + topBarHeight;
 			}
 
 			const bool isFocused = ::SendMessage(_hParent, NPPM_INTERNAL_ISFOCUSEDTAB, 0, reinterpret_cast<LPARAM>(_hSelf));
@@ -1574,7 +1690,7 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode)
 	}
 	else // inactive tabs
 	{
-		RECT inactiveRect = hasMultipleLines ? pDrawItemStruct->rcItem : barRect;
+		RECT inactiveRect = isInEditorColours ? tabRect : (hasMultipleLines ? pDrawItemStruct->rcItem : barRect); // Pyre909 build: tabRect
 		COLORREF brushColour{};
 
 		if (drawInactiveTab && individualColourId == -1)
@@ -1599,6 +1715,8 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode)
 		hBrush = ::CreateSolidBrush(brushColour);
 		::FillRect(hDC, &inactiveRect, hBrush);
 		::DeleteObject(static_cast<HGDIOBJ>(hBrush));
+		if (isInEditorColours) // Pyre909 build
+			drawTabBorder(hDC, tabRect, mixColour(_editorBgColour, _editorTextColour, inactiveBorderShade), isVertical, hasMultipleLines);
 	}
 
 	if (isDarkMode && hasMultipleLines)
@@ -1811,11 +1929,11 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode)
 		flags |= DT_TOP;
 
 		const int paddingText = ((pDrawItemStruct->rcItem.bottom - pDrawItemStruct->rcItem.top) - (textHeight + textDescent)) / 2;
-		const int paddingDescent = !hasMultipleLines ? ((textDescent + ((isDarkMode || !isSelected) ? 1 : 0)) / 2) : 0;
+		const int paddingDescent = !hasMultipleLines ? ((textDescent + ((isDarkMode || isInEditorColours || !isSelected) ? 1 : 0)) / 2) : 0; // Pyre909 build: isInEditorColours
 		rect.top = pDrawItemStruct->rcItem.top + paddingText + paddingDescent;
 		rect.bottom = pDrawItemStruct->rcItem.bottom - paddingText + paddingDescent;
 
-		if (isDarkMode || !isSelected || drawTopBar)
+		if (isDarkMode || isInEditorColours || !isSelected || drawTopBar)
 		{
 			rect.top += paddingDynamicTwoY;
 		}

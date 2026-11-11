@@ -7068,6 +7068,11 @@ void Notepad_plus::drawTabbarColoursFromStylerArray()
 		TabBarPlus::setColour(stInact->_fgColor, TabBarPlus::inactiveText, &(_mainDocTab.dpiManager()));
 	if (stInact && static_cast<long>(stInact->_bgColor) != -1)
 		TabBarPlus::setColour(stInact->_bgColor, TabBarPlus::inactiveBg, &(_mainDocTab.dpiManager()));
+
+	// Pyre909 build: the editor's colours, for the light tab bar painted in them (TabBarPlus::setEditorColours)
+	const Style* stDefault = getStyleFromName(L"Default Style");
+	if (stDefault && (static_cast<long>(stDefault->_fgColor) != -1) && (static_cast<long>(stDefault->_bgColor) != -1))
+		TabBarPlus::setEditorColours(stDefault->_fgColor, stDefault->_bgColor);
 }
 
 void Notepad_plus::drawAutocompleteColoursFromTheme(COLORREF fgColor, COLORREF bgColor)
