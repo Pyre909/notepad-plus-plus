@@ -762,14 +762,18 @@ void ScintillaEditView::applyTextRenderingSettingsToAll()
 		pView->applyTextRenderingSettings();
 }
 
+// a function, not a lambda: 32-bit GCC doesn't convert a lambda to a stdcall callback
+static BOOL CALLBACK redrawVisibleWindow(HWND hWnd, LPARAM)
+{
+	if (::IsWindowVisible(hWnd))
+		::RedrawWindow(hWnd, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
+	return TRUE;
+}
+
 void ScintillaEditView::redrawUiText()
 {
 	// the windows of this thread: the main window, floating panels, the Find dialog...
-	::EnumThreadWindows(::GetCurrentThreadId(), [](HWND hWnd, LPARAM) -> BOOL {
-		if (::IsWindowVisible(hWnd))
-			::RedrawWindow(hWnd, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
-		return TRUE;
-	}, 0);
+	::EnumThreadWindows(::GetCurrentThreadId(), redrawVisibleWindow, 0);
 }
 
 // Pyre909 build: the font name of the first edit view's STYLE_DEFAULT, the Default Style's (or Global override's) font as
