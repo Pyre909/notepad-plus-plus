@@ -280,6 +280,11 @@ public:
 	// to the view, or to every live Notepad++ Scintilla (edit views, Finders, Document Map, Peeker, plugins' Scintillas...)
 	void applyTextRenderingSettings();
 	static void applyTextRenderingSettingsToAll();
+	// Pyre909 build: the indentation guides of Preferences > Margins/Border/Edge (edit views): solid or dotted, and the
+	// guide of the caret's block highlighted, updated as the caret, the text or the view moves (SCN_UPDATEUI)
+	void applyIndentGuideStyle();
+	static void applyIndentGuideStyleToAll();
+	void updateActiveIndentGuide(bool isScrollOnly = false) const;
 	// Pyre909 build: Notepad++'s windows drawn again after a change of the rendering (technology, antialiasing, DirectWrite
 	// mode, contrast): the text Notepad++ draws itself follows the editor's (drawUiText in DirectWriteText.h)
 	static void redrawUiText();

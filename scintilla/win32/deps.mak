@@ -251,6 +251,7 @@ $(DIR_O)/Editor.o: \
 	../src/Editor.cxx \
 	../include/ScintillaTypes.h \
 	../include/ScintillaMessages.h \
+	../include/ScintillaFontRendering.h \
 	../include/ScintillaStructures.h \
 	../include/ILoader.h \
 	../include/Sci_Position.h \
@@ -291,6 +292,7 @@ $(DIR_O)/EditView.o: \
 	../src/EditView.cxx \
 	../include/ScintillaTypes.h \
 	../include/ScintillaMessages.h \
+	../include/ScintillaFontRendering.h \
 	../include/ScintillaStructures.h \
 	../include/ILoader.h \
 	../include/Sci_Position.h \
@@ -357,6 +359,7 @@ $(DIR_O)/MarginView.o: \
 	../src/MarginView.cxx \
 	../include/ScintillaTypes.h \
 	../include/ScintillaMessages.h \
+	../include/ScintillaFontRendering.h \
 	../include/ScintillaStructures.h \
 	../include/ILoader.h \
 	../include/Sci_Position.h \

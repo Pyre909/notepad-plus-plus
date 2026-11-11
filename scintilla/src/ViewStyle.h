@@ -153,6 +153,7 @@ public:
 	Scintilla::WhiteSpace viewWhitespace;
 	Scintilla::TabDrawMode tabDrawMode;
 	bool characterGrid;	// N++ (Pyre909 build): SCI_SETCHARACTERGRID, tabs and representations in whole cells (CellsWidth)
+	bool indentGuideSolid;	// N++ (Pyre909 build): SCI_SETINDENTGUIDESOLID
 	std::string fontFeatures;	// N++ (Pyre909 build): SCI_SETFONTFEATURES, the OpenType features of every font
 	std::string fontFallback;	// N++ (Pyre909 build): SCI_SETFONTFALLBACK, the fonts of the characters a font hasn't
 	int whitespaceSize;

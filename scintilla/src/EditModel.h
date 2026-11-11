@@ -62,6 +62,14 @@ public:
 	Sci::Position braces[2];
 	int bracesMatchStyle;
 	int highlightGuideColumn;
+	// N++ (Pyre909 build): SCI_UPDATEACTIVEINDENTGUIDE, the guide of the main caret's block (column 0: none), and whether
+	// it depends on the view (the lines read reached the limit beyond it); the line whose number SC_ELEMENT_CARETLINENUMBER
+	// coloured last (Editor::NotifyUpdateUI)
+	int activeGuideColumn = 0;
+	Sci::Line activeGuideFirst = 0;
+	Sci::Line activeGuideLast = -1;
+	bool activeGuideViewDependent = false;
+	Sci::Line caretLineNumberDrawn = -1;
 	bool hasFocus;
 	Selection sel;
 	bool primarySelection;

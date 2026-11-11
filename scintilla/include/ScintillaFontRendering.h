@@ -63,4 +63,26 @@
 #define SCI_SETFONTFALLBACK 5108
 #define SCI_GETFONTFALLBACK 5109
 
+/* SCI_SETINDENTGUIDESOLID(bool solid) draws the indentation guides as solid lines instead of dotted ones;
+   SCI_GETINDENTGUIDESOLID returns it. Whatever the technology. */
+#define SCI_SETINDENTGUIDESOLID 5110
+#define SCI_GETINDENTGUIDESOLID 5111
+
+/* SCI_UPDATEACTIVEINDENTGUIDE(int update) highlights the indentation guide of the main caret's block, in
+   SC_ELEMENT_ACTIVEINDENTGUIDE's colour (else STYLE_BRACELIGHT's foreground, as a brace's guide): the guide at the
+   indentation of the line the block hangs from (the line before it indented less; the caret's line itself when the next
+   non-blank line is indented further), on the block's lines up to its last non-blank one. A blank line takes the larger
+   indentation of the non-blank lines around it. Up to 10,000 lines beyond the view are read. update 1: the block found
+   again (after the caret moved, the text or the tab width changed); 2: only if the last block found depended on the view,
+   reaching the lines not read (after the view moved); 0: no highlight. The lines of the guide redrawn when it changes.
+   Returns the guide's column (0: none). SCI_GETACTIVEINDENTGUIDE(int what) returns its column (0), first line (1) or last
+   line (2). */
+#define SCI_UPDATEACTIVEINDENTGUIDE 5112
+#define SCI_GETACTIVEINDENTGUIDE 5113
+
+/* Elements of SCI_SETELEMENTCOLOUR: the number of the main caret's line in the line number margin (else drawn as the
+   other numbers), and the active indentation guide (SCI_UPDATEACTIVEINDENTGUIDE). */
+#define SC_ELEMENT_CARETLINENUMBER 5120
+#define SC_ELEMENT_ACTIVEINDENTGUIDE 5121
+
 #endif

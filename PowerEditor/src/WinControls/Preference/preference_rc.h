@@ -583,3 +583,7 @@
 #define IDC_FONTFALLBACK_STATIC                        7212
 #define IDC_EDIT_FONTFALLBACK                          7213
 #define IDC_FONTFALLBACK_NOTE_STATIC                   7214
+
+// Pyre909 build: Preferences > Margins/Border/Edge, the indentation guides
+#define IDC_INDENTGUIDES_GB_STATIC                     7215
+#define IDC_COMBO_INDENTGUIDES                         7216

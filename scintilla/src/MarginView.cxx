@@ -25,6 +25,7 @@
 
 #include "ScintillaTypes.h"
 #include "ScintillaMessages.h"
+#include "ScintillaFontRendering.h"	// N++ (Pyre909 build): SC_ELEMENT_CARETLINENUMBER
 #include "ScintillaStructures.h"
 #include "ILoader.h"
 #include "ILexer.h"
@@ -305,6 +306,11 @@ void MarginView::PaintOneMargin(Surface *surface, PRectangle rc, PRectangle rcOn
 	const MarkerOutline folderEnd = SubstituteMarkerIfEmpty(MarkerOutline::FolderEnd,
 		MarkerOutline::Folder, vs);
 
+	// N++ (Pyre909 build): the number of the main caret's line in SC_ELEMENT_CARETLINENUMBER's colour, when set
+	const ColourOptional caretLineNumberFore = (marginStyle.style == MarginType::Number) ?
+		vs.ElementColour(static_cast<Element>(SC_ELEMENT_CARETLINENUMBER)) : ColourOptional();
+	const Sci::Line lineCaret = caretLineNumberFore ? model.pdoc->SciLineFromPosition(model.sel.MainCaret()) : -1;
+
 	while ((visibleLine < model.pcs->LinesDisplayed()) && yposScreen < rc.bottom) {
 
 		PLATFORM_ASSERT(visibleLine < model.pcs->LinesDisplayed());
@@ -393,8 +399,15 @@ void MarginView::PaintOneMargin(Surface *surface, PRectangle rc, PRectangle rcOn
 				const XYPOSITION width = surface->WidthText(vs.styles[StyleLineNumber].font.get(), sNumber);
 				const XYPOSITION xpos = rcNumber.right - width - vs.marginNumberPadding;
 				rcNumber.left = xpos;
-				DrawTextNoClipPhase(surface, rcNumber, vs.styles[StyleLineNumber],
-					rcNumber.top + vs.maxAscent, sNumber, DrawPhase::all);
+				if (caretLineNumberFore && (lineDoc == lineCaret)) {	// N++ (Pyre909 build)
+					Style styleCaretLine = vs.styles[StyleLineNumber];
+					styleCaretLine.fore = *caretLineNumberFore;
+					DrawTextNoClipPhase(surface, rcNumber, styleCaretLine,
+						rcNumber.top + vs.maxAscent, sNumber, DrawPhase::all);
+				} else {
+					DrawTextNoClipPhase(surface, rcNumber, vs.styles[StyleLineNumber],
+						rcNumber.top + vs.maxAscent, sNumber, DrawPhase::all);
+				}
 			} else if (FlagSet(vs.wrap.visualFlags, WrapVisualFlag::Margin)) {
 				PRectangle rcWrapMarker = rcMarker;
 				rcWrapMarker.right -= wrapMarkerPaddingRight;

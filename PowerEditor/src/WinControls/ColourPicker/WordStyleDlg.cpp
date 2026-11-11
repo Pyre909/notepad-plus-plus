@@ -1136,10 +1136,15 @@ std::pair<intptr_t, intptr_t> WordStyleDlg::goToPreferencesSettings()
 		result.first = margins;
 		result.second = IDC_COLUMNPOS_EDIT;
 	}
-	else if (style._styleDesc == L"Line number margin")
+	else if (style._styleDesc == L"Line number margin" || style._styleDesc == L"Current line number") // Pyre909 build: the caret line's
 	{
 		result.first = margins;
 		result.second = IDC_CHECK_LINENUMBERMARGE;
+	}
+	else if (style._styleDesc == L"Active indent guideline") // Pyre909 build
+	{
+		result.first = margins;
+		result.second = IDC_COMBO_INDENTGUIDES;
 	}
 	else if (style._styleDesc == L"Bookmark margin")
 	{

@@ -390,6 +390,13 @@ BOOL Notepad_plus::notify(SCNotification *notification)
 		{
 			if (!notifyView) return FALSE;
 
+			// Pyre909 build: the guide of the caret's block (Preferences > Margins/Border/Edge > Indent Guides), in the view the
+			// update is from, focused or not, before what returns early (Scintilla doesn't send an update again)
+			if (notification->updated & (SC_UPDATE_SELECTION | SC_UPDATE_TEXT))
+				notifyView->updateActiveIndentGuide();
+			else if (notification->updated & SC_UPDATE_V_SCROLL)
+				notifyView->updateActiveIndentGuide(true);
+
 			NppParameters& nppParam = NppParameters::getInstance();
 			NppGUI& nppGui = nppParam.getNppGUI();
 

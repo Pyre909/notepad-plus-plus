@@ -113,6 +113,13 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   a tab, an accented or a CJK character; bytes of the file's encoding, UTF-16's too), and a selection's bytes beside its
   characters. "Caret position" shows the column, the offset in the line in hex (0-based, in bytes: `Off: X'24'`), or
   both; "Line length" adds the line's length (with its bytes when they differ), for fixed-length records.
+- **Solid indent guides, the caret's block highlighted** (Preferences > Margins/Border/Edge > Indent Guides): thin solid
+  lines instead of dotted ones, and the guide of the block the caret is in drawn in a stronger colour, in any language
+  (found from the lines' indentation, as other editors do; "Active indent guideline" in the Style Configurator's Global
+  Styles). Dotted, as official Notepad++, is still a choice.
+- **The current line's number stands out**: the number of the caret's line drawn in the text's colour (or black or
+  white where that wouldn't stand out), the others in the line numbers' colour ("Current line number" in the Style
+  Configurator's Global Styles; its colour cleared there: drawn as the others).
 - **Fold markers and highlighting boxes drawn for the scale**: the fold margin's boxes and lines, the change history
   marks, the link underline and the boxes of Mark All, Find and smart highlighting are 2 pixels wide from 150% scale
   (3 from 250%) instead of 1 pixel at any scale.

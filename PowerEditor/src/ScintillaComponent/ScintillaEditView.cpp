@@ -686,6 +686,37 @@ void ScintillaEditView::applyTextRenderingSettings()
 	execute(SCI_SETFONTFALLBACK, 0, reinterpret_cast<LPARAM>(fallbackFamilies.c_str()));
 
 	applyLineSpacing();
+	applyIndentGuideStyle();
+}
+
+// Pyre909 build: the indentation guides of Preferences > Margins/Border/Edge, in the edit views: solid lines or dotted
+// (upstream's), and with "Solid, the caret's block highlighted" the guide of the caret's block in the "Active indent
+// guideline" colour (Scintilla finds the block from the lines' indentation: pyre's SCI_UPDATEACTIVEINDENTGUIDE)
+void ScintillaEditView::applyIndentGuideStyle()
+{
+	if (!_isMainEditZone)
+		return;
+	const bool isSolid = NppParameters::getInstance().getSVP()._indentGuideStyle != ScintillaViewParams::IndentGuideStyle::dotted;
+	if ((execute(SCI_GETINDENTGUIDESOLID) != 0) != isSolid)
+		execute(SCI_SETINDENTGUIDESOLID, isSolid);
+	updateActiveIndentGuide();
+}
+
+void ScintillaEditView::applyIndentGuideStyleToAll()
+{
+	for (ScintillaEditView* pView : _liveViews)
+		pView->applyIndentGuideStyle();
+}
+
+// Pyre909 build: at each caret or text change (SCN_UPDATEUI), when the tab width changes, when the guides are shown or
+// hidden; after a scroll (isScrollOnly) Scintilla reads the lines again only if the block reached its limit of 10,000
+// lines beyond the view. The lines of the guide are redrawn when it changes.
+void ScintillaEditView::updateActiveIndentGuide(bool isScrollOnly) const
+{
+	if (!_isMainEditZone)
+		return;
+	const bool isActive = NppParameters::getInstance().getSVP()._indentGuideStyle == ScintillaViewParams::IndentGuideStyle::solidActive;
+	execute(SCI_UPDATEACTIVEINDENTGUIDE, isActive ? (isScrollOnly ? 2 : 1) : 0);
 }
 
 // Pyre909 build: the line spacing of Preferences > Editing 1, for the edit views only (not the Finders, Document Map or
@@ -3902,6 +3933,22 @@ void ScintillaEditView::performGlobalStyles()
 	execute(SCI_SETFOLDMARGINCOLOUR, true, foldMarginColor);
 	execute(SCI_SETFOLDMARGINHICOLOUR, true, foldMarginHiColor);
 
+	// Pyre909 build: the number of the caret's line and the guide of the caret's block (applyIndentGuideStyle) in their
+	// own colours; a theme without them gets them from NppParameters::addDefaultStyles (the Default Style's text, the line
+	// numbers' colour)
+	const std::pair<const wchar_t*, int> pyreElements[]{
+		{ L"Current line number", SC_ELEMENT_CARETLINENUMBER },
+		{ L"Active indent guideline", SC_ELEMENT_ACTIVEINDENTGUIDE }
+	};
+	for (const auto& [name, element] : pyreElements)
+	{
+		const Style* pElementStyle = stylers.findByName(name); // its colour cleared in the Style Configurator (right-click): none
+		if (pElementStyle && (pElementStyle->_fgColor != static_cast<COLORREF>(STYLE_NOT_USED)) && (pElementStyle->_colorStyle & COLORSTYLE_FOREGROUND))
+			setElementColour(element, pElementStyle->_fgColor);
+		else
+			execute(SCI_RESETELEMENTCOLOUR, element);
+	}
+
 	COLORREF bookmarkMarginColor = veryLiteGrey;
 	pStyle = stylers.findByName(L"Bookmark margin");
 	if (!pStyle)
@@ -4135,6 +4182,7 @@ void ScintillaEditView::showIndentGuideLine(bool willBeShown)
 	auto typeDoc = _currentBuffer->getLangType();
 	const int docIndentMode = isPythonStyleIndentation(typeDoc) ? SC_IV_LOOKFORWARD : SC_IV_LOOKBOTH;
 	execute(SCI_SETINDENTATIONGUIDES, willBeShown ? docIndentMode : SC_IV_NONE);
+	updateActiveIndentGuide(); // Pyre909 build
 }
 
 void ScintillaEditView::setLineIndent(size_t line, size_t indent) const
@@ -5107,6 +5155,7 @@ void ScintillaEditView::setTabSettings(Lang* lang)
 		execute(SCI_SETUSETABS, !nppgui._tabReplacedBySpace);
 		execute(SCI_SETBACKSPACEUNINDENTS, nppgui._backspaceUnindent);
 	}
+	updateActiveIndentGuide(); // Pyre909 build: the columns of tab-indented lines change with the tab width
 }
 
 void ScintillaEditView::insertNewLineAboveCurrentLine()

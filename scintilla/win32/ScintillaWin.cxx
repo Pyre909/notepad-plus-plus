@@ -2488,6 +2488,98 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 			return std::lround(ll->XInLine(pos - pdoc->LineStart(line)) / vs.spaceWidth);
 		}
 
+		// N++ (Pyre909 build): solid indentation guides, the active block's guide (ScintillaFontRendering.h)
+		case SCI_SETINDENTGUIDESOLID:
+			if (vs.indentGuideSolid != (wParam != 0)) {
+				vs.indentGuideSolid = wParam != 0;
+				InvalidateStyleRedraw();
+			}
+			return 0;
+
+		case SCI_GETINDENTGUIDESOLID:
+			return vs.indentGuideSolid;
+
+		case SCI_UPDATEACTIVEINDENTGUIDE: {	// from the lines' indentation, as editors highlight the active guide
+			if ((wParam == 2) && !activeGuideViewDependent)
+				return activeGuideColumn;	// the view moved, and the block found didn't depend on it
+			int column = 0;
+			Sci::Line first = 0;
+			Sci::Line last = -1;
+			bool viewDependent = false;
+			if (wParam && (vs.viewIndentationGuides != IndentView::None)) {
+				constexpr Sci::Line reach = 10000;	// lines read beyond the view, each way
+				const Sci::Line lines = pdoc->LinesTotal();
+				const Sci::Line top = std::max<Sci::Line>(0, pcs->DocFromDisplay(TopLineOfMain()) - reach);
+				const Sci::Line bottom = std::min(lines - 1, pcs->DocFromDisplay(TopLineOfMain() + LinesOnScreen()) + reach);
+				const auto indentOf = [this](Sci::Line line) -> int {	// -1: a blank line
+					return pdoc->IsWhiteLine(line) ? -1 : pdoc->GetLineIndentation(line);
+				};
+				// a line not read: beyond the document's ends, or beyond the reach (then the result depends on the view)
+				const auto beyond = [&](Sci::Line line) noexcept {
+					if (((line < top) && (top > 0)) || ((line > bottom) && (bottom < lines - 1)))
+						viewDependent = true;
+					return (line < top) || (line > bottom);
+				};
+				const Sci::Line caretLine = pdoc->SciLineFromPosition(sel.MainCaret());
+				Sci::Line header = -1;	// the line the block hangs from
+				if (!beyond(caretLine)) {
+					Sci::Line below = caretLine + 1;
+					while (!beyond(below) && (indentOf(below) < 0))
+						below++;
+					const int indentBelow = !beyond(below) ? indentOf(below) : -1;
+					int indent = indentOf(caretLine);
+					if (indent < 0) {	// blank: in the deeper of the blocks around it
+						Sci::Line above = caretLine - 1;
+						while (!beyond(above) && (indentOf(above) < 0))
+							above--;
+						indent = std::max(!beyond(above) ? indentOf(above) : -1, indentBelow);
+					} else if (indentBelow > indent) {	// the next line hangs from the caret's: its block
+						header = caretLine;
+					}
+					for (Sci::Line line = caretLine - 1; (header < 0) && (indent > 0) && !beyond(line); line--) {
+						const int indentLine = indentOf(line);
+						if ((indentLine >= 0) && (indentLine < indent))
+							header = line;
+					}
+				}
+				const int indentHeader = (header >= 0) ? indentOf(header) : 0;
+				if (indentHeader > 0) {	// (no guide is drawn at column 0)
+					for (Sci::Line line = header + 1; !beyond(line); line++) {
+						const int indentLine = indentOf(line);
+						if (indentLine < 0)
+							continue;
+						if (indentLine <= indentHeader)
+							break;
+						last = line;
+					}
+					if (last > header) {
+						column = indentHeader;
+						first = header + 1;
+					} else {
+						last = -1;
+					}
+				}
+			}
+			activeGuideViewDependent = viewDependent;
+			if ((column != activeGuideColumn) || (first != activeGuideFirst) || (last != activeGuideLast)) {
+				// the lines of the guide before and after drawn again
+				const auto redrawLines = [this](int lineColumn, Sci::Line lineFirst, Sci::Line lineLast) {
+					const Sci::Line lineMax = pdoc->LinesTotal() - 1;
+					if ((lineColumn > 0) && (lineFirst <= lineLast) && (lineFirst <= lineMax))
+						InvalidateRange(pdoc->LineStart(lineFirst), pdoc->LineEnd(std::min(lineLast, lineMax)));
+				};
+				redrawLines(activeGuideColumn, activeGuideFirst, activeGuideLast);
+				activeGuideColumn = column;
+				activeGuideFirst = first;
+				activeGuideLast = last;
+				redrawLines(column, first, last);
+			}
+			return column;
+		}
+
+		case SCI_GETACTIVEINDENTGUIDE:
+			return (wParam == 1) ? activeGuideFirst : ((wParam == 2) ? activeGuideLast : activeGuideColumn);
+
 		case SCI_SETFONTFEATURES: {	// N++ (Pyre909 build): the fonts' OpenType features, drawn with DirectWrite
 			const char *features = ConstCharPtrFromSPtr(lParam);
 			const std::string value = features ? features : "";

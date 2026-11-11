@@ -236,6 +236,7 @@ ViewStyle::ViewStyle(size_t stylesSize_) :
 	viewWhitespace = WhiteSpace::Invisible;
 	tabDrawMode = TabDrawMode::LongArrow;
 	characterGrid = false;	// N++ (Pyre909 build)
+	indentGuideSolid = false;	// N++ (Pyre909 build)
 	whitespaceSize = 1;
 	elementAllowsTranslucent.insert(Element::WhiteSpace);
 
@@ -311,6 +312,7 @@ ViewStyle::ViewStyle(const ViewStyle &source) : ViewStyle(source.styles.size()) 
 	viewWhitespace = source.viewWhitespace;
 	tabDrawMode = source.tabDrawMode;
 	characterGrid = source.characterGrid;	// N++ (Pyre909 build)
+	indentGuideSolid = source.indentGuideSolid;	// N++ (Pyre909 build)
 	fontFeatures = source.fontFeatures;	// N++ (Pyre909 build)
 	fontFallback = source.fontFallback;	// N++ (Pyre909 build)
 	whitespaceSize = source.whitespaceSize;

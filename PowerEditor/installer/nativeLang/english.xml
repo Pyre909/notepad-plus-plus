@@ -1185,6 +1185,12 @@ Translation note:
 					<Item id="6209" name="Left"/>
 					<Item id="6210" name="Right"/>
 					<Item id="6212" name="Distraction Free"/>
+					<Item id="7215" name="Indent Guides"/>
+					<ComboBox id="7216">
+						<Element name="Dotted"/>
+						<Element name="Solid"/>
+						<Element name="Solid, the caret's block highlighted"/>
+					</ComboBox>
 				</MarginsBorderEdge>
 
 				<NewDoc title="New Document">

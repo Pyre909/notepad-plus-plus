@@ -33,6 +33,7 @@
 
 #include "ScintillaTypes.h"
 #include "ScintillaMessages.h"
+#include "ScintillaFontRendering.h"	// N++ (Pyre909 build): SC_ELEMENT_CARETLINENUMBER
 #include "ScintillaStructures.h"
 #include "ILoader.h"
 #include "ILexer.h"
@@ -2624,6 +2625,27 @@ void Editor::NotifyHotSpotReleaseClick(Sci::Position position, KeyMod modifiers)
 
 bool Editor::NotifyUpdateUI() {
 	if (needUpdateUI != Update::None) {
+		// N++ (Pyre909 build): the number of the caret's line in its own colour (SC_ELEMENT_CARETLINENUMBER): every caret move
+		// and edit raises an update, and when the caret is on another line both lines' numbers are drawn again (their margin
+		// rows invalidated, not RedrawSelMargin: from Paint, it would abandon the paint)
+		if (vs.ElementColour(static_cast<Element>(SC_ELEMENT_CARETLINENUMBER))) {
+			const Sci::Line lineCaret = pdoc->SciLineFromPosition(sel.MainCaret());
+			if (lineCaret != caretLineNumberDrawn) {
+				for (const Sci::Line line : { caretLineNumberDrawn, lineCaret }) {
+					if ((line >= 0) && (line < pdoc->LinesTotal())) {
+						if (HasMarginWindow()) {
+							RedrawSelMargin(line);
+						} else {
+							PRectangle rcNumber = RectangleFromRange(Range(pdoc->LineStart(line)), 0);
+							rcNumber.left = 0;
+							rcNumber.right = static_cast<XYPOSITION>(vs.fixedColumnWidth);
+							wMain.InvalidateRectangle(rcNumber);
+						}
+					}
+				}
+				caretLineNumberDrawn = lineCaret;
+			}
+		}
 		NotificationData scn = {};
 		scn.nmhdr.code = Notification::UpdateUI;
 		scn.updated = needUpdateUI;

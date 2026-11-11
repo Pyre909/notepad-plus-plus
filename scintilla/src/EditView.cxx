@@ -34,6 +34,7 @@
 
 #include "ScintillaTypes.h"
 #include "ScintillaMessages.h"
+#include "ScintillaFontRendering.h"	// N++ (Pyre909 build): SC_ELEMENT_ACTIVEINDENTGUIDE
 #include "ScintillaStructures.h"
 #include "ILoader.h"
 #include "ILexer.h"
@@ -276,24 +277,33 @@ void EditView::DropGraphics() noexcept {
 	pixmapLine.reset();
 	pixmapIndentGuide.reset();
 	pixmapIndentGuideHighlight.reset();
+	pixmapIndentGuideActive.reset();	// N++ (Pyre909 build)
 	InvalidateSingles();
 }
 
 void EditView::RefreshPixMaps(Surface *surfaceWindow, const ViewStyle &vsDraw) {
-	if (!(pixmapIndentGuide && pixmapIndentGuideHighlight)) {
+	if (!(pixmapIndentGuide && pixmapIndentGuideHighlight && pixmapIndentGuideActive)) {	// N++ (Pyre909 build): pixmapIndentGuideActive
 		// 1 extra pixel in height so can handle odd/even positions and so produce a continuous line
 		pixmapIndentGuide = surfaceWindow->AllocatePixMap(1, vsDraw.lineHeight + 1);
 		pixmapIndentGuideHighlight = surfaceWindow->AllocatePixMap(1, vsDraw.lineHeight + 1);
+		pixmapIndentGuideActive = surfaceWindow->AllocatePixMap(1, vsDraw.lineHeight + 1);	// N++ (Pyre909 build)
+		const ColourRGBA activeFore = vsDraw.ElementColour(	// N++ (Pyre909 build)
+			static_cast<Element>(SC_ELEMENT_ACTIVEINDENTGUIDE)).value_or(vsDraw.styles[StyleBraceLight].fore);
 		const PRectangle rcIG = PRectangle::FromInts(0, 0, 1, vsDraw.lineHeight);
 		pixmapIndentGuide->FillRectangle(rcIG, vsDraw.styles[StyleIndentGuide].back);
 		pixmapIndentGuideHighlight->FillRectangle(rcIG, vsDraw.styles[StyleBraceLight].back);
-		for (int stripe = 1; stripe < vsDraw.lineHeight + 1; stripe += 2) {
+		pixmapIndentGuideActive->FillRectangle(rcIG, vsDraw.styles[StyleIndentGuide].back);	// N++ (Pyre909 build)
+		// N++ (Pyre909 build): solid, every pixel of the guide (SCI_SETINDENTGUIDESOLID); dotted, one in two
+		const int step = vsDraw.indentGuideSolid ? 1 : 2;
+		for (int stripe = vsDraw.indentGuideSolid ? 0 : 1; stripe < vsDraw.lineHeight + 1; stripe += step) {
 			const PRectangle rcPixel = PRectangle::FromInts(0, stripe, 1, stripe + 1);
 			pixmapIndentGuide->FillRectangle(rcPixel, vsDraw.styles[StyleIndentGuide].fore);
 			pixmapIndentGuideHighlight->FillRectangle(rcPixel, vsDraw.styles[StyleBraceLight].fore);
+			pixmapIndentGuideActive->FillRectangle(rcPixel, activeFore);	// N++ (Pyre909 build)
 		}
 		pixmapIndentGuide->FlushDrawing();
 		pixmapIndentGuideHighlight->FlushDrawing();
+		pixmapIndentGuideActive->FlushDrawing();	// N++ (Pyre909 build)
 	}
 }
 
@@ -2433,12 +2443,13 @@ ColourRGBA InvertedLight(ColourRGBA orig) noexcept {
 
 }
 
-void EditView::DrawIndentGuide(Surface *surface, XYPOSITION start, PRectangle rcSegment, bool highlight, bool offset) const {
+void EditView::DrawIndentGuide(Surface *surface, XYPOSITION start, PRectangle rcSegment, LineLayout::GuideKind kind, bool offset) const {	// N++ (Pyre909 build): kind
 	const Point from = Point::FromInts(0, offset ? 1 : 0);
 	const PRectangle rcCopyArea(start + 1, rcSegment.top,
 		start + 2, rcSegment.bottom);
-	surface->Copy(rcCopyArea, from,
-		highlight ? *pixmapIndentGuideHighlight : *pixmapIndentGuide);
+	Surface &pixmap = (kind == LineLayout::GuideKind::brace) ? *pixmapIndentGuideHighlight :
+		((kind == LineLayout::GuideKind::active) ? *pixmapIndentGuideActive : *pixmapIndentGuide);
+	surface->Copy(rcCopyArea, from, pixmap);
 }
 
 void EditView::DrawForeground(Surface *surface, const EditModel &model, const ViewStyle &vsDraw, const LineLayout *ll,
@@ -2537,7 +2548,7 @@ void EditView::DrawForeground(Surface *surface, const EditModel &model, const Vi
 							indentCount++) {
 							if (indentCount > 0) {
 								const XYPOSITION xIndent = std::floor(indentCount * indentWidth);
-								DrawIndentGuide(surface, xIndent + xStart, rcSegment, ll->xHighlightGuide == xIndent, offsetGuide);
+								DrawIndentGuide(surface, xIndent + xStart, rcSegment, ll->KindOfGuide(xIndent), offsetGuide);	// N++ (Pyre909 build): KindOfGuide
 							}
 						}
 					}
@@ -2634,7 +2645,7 @@ void EditView::DrawForeground(Surface *surface, const EditModel &model, const Vi
 									indentCount++) {
 									if (indentCount > 0) {
 										const XYPOSITION xIndent = std::floor(indentCount * indentWidth);
-										DrawIndentGuide(surface, xIndent + xStart, rcSegment, ll->xHighlightGuide == xIndent, offsetGuide);
+										DrawIndentGuide(surface, xIndent + xStart, rcSegment, ll->KindOfGuide(xIndent), offsetGuide);	// N++ (Pyre909 build): KindOfGuide
 									}
 								}
 							}
@@ -2712,7 +2723,7 @@ void EditView::DrawIndentGuidesOverEmpty(Surface *surface, const EditModel &mode
 		for (int indentPos = model.pdoc->IndentSize(); indentPos < indentSpace; indentPos += model.pdoc->IndentSize()) {
 			const XYPOSITION xIndent = std::floor(indentPos * vsDraw.spaceWidth);
 			if (xIndent < xStartText) {
-				DrawIndentGuide(surface, xIndent + xStart, rcLine,	ll->xHighlightGuide == xIndent, offsetGuide);
+				DrawIndentGuide(surface, xIndent + xStart, rcLine,	ll->KindOfGuide(xIndent), offsetGuide);	// N++ (Pyre909 build): KindOfGuide
 			}
 		}
 	}
@@ -2917,6 +2928,9 @@ void EditView::PaintText(Surface *surfaceWindow, const EditModel &model, const V
 					// Highlight the current braces if any
 					ll->SetBracesHighlight(rangeLine, model.braces, static_cast<char>(model.bracesMatchStyle),
 						static_cast<int>(model.highlightGuideColumn * vsDraw.spaceWidth), bracesIgnoreStyle);
+					// N++ (Pyre909 build): the active block's guide, at its column as the guides are drawn (floored)
+					ll->xActiveGuide = ((model.activeGuideColumn > 0) && (lineDoc >= model.activeGuideFirst) && (lineDoc <= model.activeGuideLast)) ?
+						static_cast<int>(std::floor(model.activeGuideColumn * vsDraw.spaceWidth)) : 0;
 
 					if (leftTextOverlap && (bufferedDraw || ((phasesDraw < PhasesDraw::Multiple) && (FlagSet(phase, DrawPhase::back))))) {
 						// Clear the left margin
@@ -2932,6 +2946,7 @@ void EditView::PaintText(Surface *surfaceWindow, const EditModel &model, const V
 #endif
 					// Restore the previous styles for the brace highlights in case layout is in cache.
 					ll->RestoreBracesHighlight(rangeLine, model.braces, bracesIgnoreStyle);
+					ll->xActiveGuide = 0;	// N++ (Pyre909 build)
 
 					if (FlagSet(phase, DrawPhase::foldLines)) {
 						DrawFoldLines(surface, model, vsDraw, ll.get(), lineDoc, rcLine, subLine);

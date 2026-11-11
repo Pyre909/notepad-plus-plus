@@ -3666,6 +3666,7 @@ void MarginsBorderEdgeSubDlg::initScintParam()
 	::SendDlgItemMessage(_hSelf, IDC_CHECK_CHANGHISTORYMARGIN, BM_SETCHECK, svp._isChangeHistoryMarginEnabled, 0);
 	::SendDlgItemMessage(_hSelf, IDC_CHECK_CHANGHISTORYINDICATOR, BM_SETCHECK, svp._isChangeHistoryIndicatorEnabled, 0);
 	::SendDlgItemMessage(_hSelf, IDC_CHECK_NOEDGE, BM_SETCHECK, !svp._showBorderEdge, 0);
+	::SendDlgItemMessage(_hSelf, IDC_COMBO_INDENTGUIDES, CB_SETCURSEL, static_cast<WPARAM>(svp._indentGuideStyle), 0); // Pyre909 build
 	
 	bool canBeBg = svp._edgeMultiColumnPos.size() == 1;
 	if (!canBeBg)
@@ -3728,6 +3729,11 @@ intptr_t CALLBACK MarginsBorderEdgeSubDlg::run_dlgProc(UINT message, WPARAM wPar
 			wstring tipNote2Show = pNativeSpeaker->getLocalizedStrFromID("verticalEdge-tip",	L"Add your column marker by indicating its position with a decimal number. You can define several column markers by using white space to separate the different numbers.");
 
 			_verticalEdgeTip = createToolTip(IDC_BUTTON_VES_TIP, _hSelf, _hInst, tipNote2Show.data(), pNativeSpeaker->isRTL());
+
+			// Pyre909 build: the indentation guides, in IndentGuideStyle's order, translated by english.xml's ComboBox 7216
+			const HWND hIndentGuides = ::GetDlgItem(_hSelf, IDC_COMBO_INDENTGUIDES);
+			for (const wchar_t* style : { L"Dotted", L"Solid", L"Solid, the caret's block highlighted" })
+				::SendMessage(hIndentGuides, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(style));
 
 			initScintParam();
 
@@ -3807,6 +3813,18 @@ intptr_t CALLBACK MarginsBorderEdgeSubDlg::run_dlgProc(UINT message, WPARAM wPar
 		{
 			auto& svp = const_cast<ScintillaViewParams&>(nppParam.getSVP());
 			static bool changeHistoryWarningHasBeenGiven = false;
+
+			// Pyre909 build: the indentation guides, applied at once to the edit views
+			if ((LOWORD(wParam) == IDC_COMBO_INDENTGUIDES) && (HIWORD(wParam) == CBN_SELCHANGE))
+			{
+				const auto index = ::SendDlgItemMessage(_hSelf, IDC_COMBO_INDENTGUIDES, CB_GETCURSEL, 0, 0);
+				if ((index >= 0) && (index <= static_cast<LRESULT>(ScintillaViewParams::IndentGuideStyle::solidActive)))
+				{
+					svp._indentGuideStyle = static_cast<ScintillaViewParams::IndentGuideStyle>(index);
+					ScintillaEditView::applyIndentGuideStyleToAll();
+				}
+				return TRUE;
+			}
 
 			switch (wParam)
 			{

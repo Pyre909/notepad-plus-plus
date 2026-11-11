@@ -834,7 +834,7 @@ static std::string cutUtf8(const char* text, size_t maxLength)
 
 // Pyre909 build: the Text Rendering settings (Preferences > Editing 1) of <GUIConfig name="ScintillaPrimaryView">,
 // fontAntialiasing="0" fontRenderingMode="0" fontContrast="0" fontLigatures="yes" fontFeatures="" boldWeight="700"
-// fontFallback="" (Preferences > Fonts) lineSpacing="0". smoothFont="yes"
+// fontFallback="" (Preferences > Fonts) lineSpacing="0" indentGuideStyle="solidActive". smoothFont="yes"
 // was ClearType, and a smoothFont that disagrees with fontAntialiasing was changed since by a Notepad++ without these
 // settings sharing config.xml: the newer. Without smoothFont (written by hand), fontAntialiasing.
 static void readTextRenderingParams(const NppXml::Element& elem, ScintillaViewParams& svp)
@@ -863,6 +863,17 @@ static void readTextRenderingParams(const NppXml::Element& elem, ScintillaViewPa
 	if (const char* fallback = NppXml::attribute(elem, "fontFallback"))
 		svp._fontFallback = cutUtf8(fallback, ScintillaViewParams::maxFontFallbackLength);
 	svp._lineSpacing = getRangeClampAttribute(elem, "lineSpacing", 0, ScintillaViewParams::maxLineSpacing, svp._lineSpacing);
+	// indentGuideStyle="dotted|solid|solidActive" (Preferences > Margins/Border/Edge)
+	if (const char* guides = NppXml::attribute(elem, "indentGuideStyle"))
+	{
+		const std::string_view value = guides;
+		if (value == "dotted")
+			svp._indentGuideStyle = ScintillaViewParams::IndentGuideStyle::dotted;
+		else if (value == "solid")
+			svp._indentGuideStyle = ScintillaViewParams::IndentGuideStyle::solid;
+		else if (value == "solidActive")
+			svp._indentGuideStyle = ScintillaViewParams::IndentGuideStyle::solidActive;
+	}
 }
 
 static void writeTextRenderingParams(NppXml::Element& elem, const ScintillaViewParams& svp)
@@ -875,6 +886,8 @@ static void writeTextRenderingParams(NppXml::Element& elem, const ScintillaViewP
 	NppXml::setAttribute(elem, "boldWeight", svp._boldWeight);
 	NppXml::setAttribute(elem, "fontFallback", svp._fontFallback.c_str());
 	NppXml::setAttribute(elem, "lineSpacing", svp._lineSpacing);
+	constexpr const char* indentGuideStyles[]{ "dotted", "solid", "solidActive" };
+	NppXml::setAttribute(elem, "indentGuideStyle", indentGuideStyles[static_cast<int>(svp._indentGuideStyle)]);
 	// the advanced overrides of the former Pyre909 builds
 	for (const char* name : { "fontGamma", "fontEnhancedContrast", "fontGrayscaleEnhancedContrast", "fontClearTypeLevel", "fontPixelGeometry", "fontLightTextGamma" })
 		NppXml::removeAttribute(elem, name);
@@ -5523,6 +5536,34 @@ void NppParameters::addDefaultStyles(const NppXml::Element& element)
 
 	addStyleDefaultColors(globalStyleRoot, L"Multi-selected text color", "", "C0C0C0", L"Selected text colour"); // liteGrey
 	addStyleDefaultColors(globalStyleRoot, L"Multi-edit carets color", "404040", "", L"Caret colour"); // darkGrey
+
+	// Pyre909 build: "Current line number" and "Active indent guideline" for a theme without them, made to stand out
+	// (ScintillaEditView::performGlobalStyles): the number in the text's colour where it stands out from the margin clearly
+	// more than the other numbers, else black or white; the guide between the guides' colour and the text's
+	const Style* pText = _widgetStyleArray.findByID(STYLE_DEFAULT);
+	const Style* pNumbers = _widgetStyleArray.findByID(STYLE_LINENUMBER);
+	const Style* pGuides = _widgetStyleArray.findByID(STYLE_INDENTGUIDE);
+	const auto isColour = [](COLORREF colour) { return colour != static_cast<COLORREF>(STYLE_NOT_USED); };
+	if (pText && pNumbers && pGuides && isColour(pText->_fgColor) && isColour(pNumbers->_fgColor) && isColour(pNumbers->_bgColor) && isColour(pGuides->_fgColor))
+	{
+		const auto luminance = [](COLORREF colour) { return (GetRValue(colour) * 299 + GetGValue(colour) * 587 + GetBValue(colour) * 114) / 1000; };
+		const auto hex = [](COLORREF colour) {
+			char text[7]{};
+			std::snprintf(text, sizeof(text), "%.6lX", RGBHEX(colour));
+			return std::string(text);
+		};
+		const int margin = luminance(pNumbers->_bgColor);
+		COLORREF number = pText->_fgColor;
+		constexpr int clearly = 40;
+		if (std::abs(luminance(number) - margin) < std::abs(luminance(pNumbers->_fgColor) - margin) + clearly)
+			number = (margin > 128) ? RGB(0, 0, 0) : RGB(255, 255, 255);
+		const auto mix = [](COLORREF from, COLORREF to, int percent) {
+			const auto channel = [&](int shift) { return static_cast<BYTE>(((((from >> shift) & 0xFF) * (100 - percent)) + (((to >> shift) & 0xFF) * percent) + 50) / 100); };
+			return RGB(channel(0), channel(8), channel(16));
+		};
+		addStyleDefaultColors(globalStyleRoot, L"Current line number", hex(number), "");
+		addStyleDefaultColors(globalStyleRoot, L"Active indent guideline", hex(mix(pGuides->_fgColor, pText->_fgColor, 45)), "");
+	}
 
 	addStyleDefaultColors(globalStyleRoot, L"Bookmark margin", "", "C0C0C0", L"Line number margin");
 	addStyleDefaultColors(globalStyleRoot, L"Change History margin", "", "C0C0C0", L"Line number margin");

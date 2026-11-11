@@ -94,6 +94,7 @@ public:
 	enum class ValidLevel { invalid, checkTextAndStyle, positions, lines };
 	ValidLevel validity = ValidLevel::invalid;
 	int xHighlightGuide = 0;
+	int xActiveGuide = 0;	// N++ (Pyre909 build): SCI_UPDATEACTIVEINDENTGUIDE's guide on this line, while painting
 	bool highlightColumn = false;
 	bool containsCaret = false;
 	unsigned char bracePreviousStyles[2]{};
@@ -131,6 +132,13 @@ public:
 	void SetBracesHighlight(ForwardRange rangeLine, const Sci::Position braces[],
 		char bracesMatchStyle, int xHighlight, bool ignoreStyle);
 	void RestoreBracesHighlight(ForwardRange rangeLine, const Sci::Position braces[], bool ignoreStyle);
+	// N++ (Pyre909 build): the guide at xIndent: a brace's (highlighted), the active block's, or another
+	enum class GuideKind { normal, brace, active };
+	[[nodiscard]] GuideKind KindOfGuide(XYPOSITION xIndent) const noexcept {
+		if (xHighlightGuide == xIndent)
+			return GuideKind::brace;
+		return ((xActiveGuide > 0) && (xActiveGuide == xIndent)) ? GuideKind::active : GuideKind::normal;
+	}
 	int FindBefore(XYPOSITION x, Range range) const noexcept;
 	int FindPositionFromX(XYPOSITION x, Range range, bool charPosition) const noexcept;
 	Point PointFromPosition(int posInLine, int lineHeight, PointEnd pe) const noexcept;
