@@ -159,6 +159,15 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
         zones (as dark mode's), a 1-pixel border at any DPI. Harness on the three commits (ARM64, x64, Win32, all
         tests) before these fixes: 0 FAIL, 42 PASS, 9 WARN (explained); after them the three tests concerned, the
         static checks and GCC/Clang (UCRT64, CLANG64) of `09ca678`: clean.
+      - `57dae03` **Tab icons redrawn** (Pyre909: "take cues from the renders for the icons in the tabs?"): the light
+        set's 15 icons as line drawings with a frame a scale (16-48 px, buttons 11-33), the same meanings and colours;
+        `icons/tabbar-hidpi` (generator, SVGs, ICOs, review sheets). No code.
+    - **Pushed** with Pyre909's OK: `pyre` at `eed6707`, this branch at `4e8fec2` and this note. Actions enabled again
+      by Pyre909: CI run 42960426526 on `57dae03`, 11/13 (MINGW32 Release and Debug: `redrawUiText`'s lambda passed to
+      `EnumThreadWindows`, not convertible to a stdcall WNDENUMPROC by 32-bit GCC; the local GCC/Clang are 64-bit), fixed
+      in `eed6707` (a CALLBACK function); run 42961465552 on `eed6707`: **all 13 jobs pass**.
+    - Next: a release (`pyre-release.yml`, PGO) so Pyre909's installed 8.9.8.1 gets the work since October; first a
+      look at the PGO build's startup (454 ms against 404 for the plain build, 5 rounds of bench.ps1).
 
 - **The review round (2026-10-20, evening)**, asked by Pyre909: sync with upstream (the fork's `master` brought to
   `b661c2b` with `gh repo sync`; `pyre` had it), a preview (`C:\npp-preview-49de091`, a portable copy of the installation
