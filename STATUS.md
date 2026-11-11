@@ -99,6 +99,34 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
       attributes, GDI widths, the redraw); its Ctrl+Tab finding (buffered paint shifting the DC: mixed GDI text) didn't
       reproduce on Windows 11 (4 colours with DirectWrite, 141 with GDI, Antialiasing None), the fix kept. A tab bar of
       30 tabs: 1.6 ms a repaint (GDI 0.9). `pyre-ui-text.ps1` 8 checks.
+    - **Performance round** (Pyre909 asked: is what we wrote the best and fastest way; chose all 7 items; `b45b6c7` and
+      the review's fixes `07b826e`, not pushed). "Keep GDI?" answered: yes, it isn't run while DirectWrite is (printing,
+      right-to-left views, Wine, an older setting need it). Measured before and after (CPU, not wall time: DirectWrite's
+      paints wait for the display's refresh, ~17 ms wall for 2.3 ms of CPU):
+      - WM_SETTINGCHANGE: each forwarded broadcast restyles and re-wraps every document (2.1 s of CPU, 4.5 MB wrapped with
+        the Document Map, for a "Policy" broadcast, which Windows sends often): now only the `SPI_` settings Scintilla reads
+        and named areas other than those it never reads. `pyre-setting-change.ps1`; `vm/settingchange-cost.ps1`.
+      - The grid with DirectWrite: batches take the line layout's advances (the spacing set before the layout, one layout),
+        more scripts batched (U+1E00-2BFF of a cell or more, halfwidth forms): CJK 16.7 -> 11.5 ms a screen, ASCII code
+        6.8 -> 4.7; pixels identical to the build before (`vm/grid-pixels.ps1`, DirectWrite and GDI); a zero-width
+        RLO first batched reversed the text (caught by the grid test, fixed: the range needs a cell). `vm/grid-cpu.ps1`.
+      - Bookmarked lines (100,000 lines, a third marked): copy 3.0 s -> 18 ms, cut 3.7 -> 0.7 s, remove unmarked 1.4 ->
+        0.7 s, the same text and clipboard (`vm/marked-lines.ps1`).
+      - Status bar counts in one pass without moving the gap: a caret move at the end of a 1 MB line 5.7 -> 4.8 ms, 8.0
+        -> 4.4 with Len: (`vm/caret-longline.ps1`). Auto-completion's scan without moving the gap: the same lists
+        (`vm/autoc-compare.ps1`, flaky reads in both builds). Document Map margins, `markEntry`, `drawUiText`'s formats,
+        `getFontFeatures` cached per family.
+      - PGO training (`bench.ps1 -Train`): caret and selection moves, document switches, typing with completion, and a
+        features run (dark mode, the grid, all characters, features and fallback, a 200-file session, SQL). Run on a
+        normal build only: the instrumented build not made yet.
+      - Independent review (one agent): fixed `SPI_SETMOUSEVANISH` / `SPI_SETCURSORS` dropped (Scintilla's
+        GetMouseParameters reads them) and `ImmersiveColorSet` compared with its case (the test failed before the fix);
+        noncharacters (Scintilla counts them as invalid bytes: `pyre-status-position.ps1` U+FFFF check); no scan for the
+        hex offset alone; a completion prefix with a delimiter, or a run over 1 MB, searched in the whole text as before;
+        a failed GetTextMetrics not cached. Rejected: call tips reused (Notepad++ cancels a tip before showing the next).
+        Tests: the grid's box drawing and quote lines (21 checks). Harness on the three commits (ARM64, x64, Win32, all
+        tests): 0 FAIL, 38 PASS, 4 WARN (the Scintilla patch, code moved into blocks, Scintilla's braces; a literal
+        U+2028 U+2029 in DirectWriteText.cpp, written as escapes since).
 
 - **The review round (2026-10-20, evening)**, asked by Pyre909: sync with upstream (the fork's `master` brought to
   `b661c2b` with `gh repo sync`; `pyre` had it), a preview (`C:\npp-preview-49de091`, a portable copy of the installation

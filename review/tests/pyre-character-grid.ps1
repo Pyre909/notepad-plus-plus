@@ -216,11 +216,12 @@ try {
 	# an emoji with its skin tone (its parts: 2 + 2 cells), a keycap (# U+FE0F U+20E3), a decomposed Hangul syllable (U+1112
 	# U+1161 U+11AB: its vowel and final consonant with the first), a combining accent after a tab (one cell: seen);
 	# lines 13 and 14: "ab cd ef", then the same after a hidden RLO (U+202E): drawn alike, in the characters' order;
-	# line 15: 24 zeros, each drawn alike (whole-pixel cells)
+	# line 15: 24 zeros, each drawn alike (whole-pixel cells); lines 16 and 17: 24 box drawing lines (U+2500) and 24 quotes
+	# (U+201C), drawn in a batch since 2026-11-10, each alike too
 	$widthLines = @(([string][char]0xFF76 + [char]0xFF80 + 'x'), ('e' + [char]0x301 + 'x'), ([string][char]0x2764 + [char]0xFE0F + 'x'),
 		([char]::ConvertFromUtf32(0x1F600) + 'x'), ([char]::ConvertFromUtf32(0x1F44D) + [char]::ConvertFromUtf32(0x1F3FD) + 'x'),
 		('#' + [char]0xFE0F + [char]0x20E3 + 'x'), ([string][char]0x1112 + [char]0x1161 + [char]0x11AB + 'x'), ($T + [char]0x301 + 'x'),
-		'ab cd ef', ([string][char]0x202E + 'ab cd ef'), ('0' * 24))
+		'ab cd ef', ([string][char]0x202E + 'ab cd ef'), ('0' * 24), ([string][char]0x2500 * 24), ([string][char]0x201C * 24))
 	[IO.File]::WriteAllText($ccFile, ($gridLines[0] + "`r`na" + [char]0 + "b`r`n" + ('x' * 2500) + [char]0 + "b`r`nab${T}c`r`n0123456789`r`n" + ($widthLines -join "`r`n") + "`r`n"), $utf8)
 	$p = Start-Npp 'Consolas' $ccFile
 	if (-not (Grid-On)) { [void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID) }
@@ -264,18 +265,19 @@ try {
 		[void](Send $script:sc $SCI.SETZOOM $z); $advance = Get-Cell
 		if ((($advance - [Math]::Floor($advance)) -gt 0.25) -and (($advance - [Math]::Floor($advance)) -lt 0.75)) { $zoom = $z; break }
 	}
-	$zeros = Send $script:sc $SCI.POSITIONFROMLINE 15
-	function Zero-Renderings { # the cell measured on line 0, then the zeros' line scrolled to the top (zoomed, it's low)
-		$w = [int][Math]::Floor((Get-Cell)); [void](Send $script:sc 2613 15); Start-Sleep -Milliseconds 400 # SCI_SETFIRSTVISIBLELINE
-		$capture = Get-Capture
-		$n = @(0..23 | ForEach-Object { Cell-Pixels $capture ($zeros + $_) $w (Send $script:sc 2279 15) } | Sort-Object -Unique).Count
+	# the line's characters from the first counted (a box drawing line reaches into the next cell: from the second)
+	function Line-Renderings([int] $line, [int] $from = 0) { # the cell measured on line 0, then the line scrolled to the top (zoomed, it's low)
+		$w = [int][Math]::Floor((Get-Cell)); [void](Send $script:sc 2613 $line); Start-Sleep -Milliseconds 400 # SCI_SETFIRSTVISIBLELINE
+		$capture = Get-Capture; $start = Send $script:sc $SCI.POSITIONFROMLINE $line
+		$n = @($from..23 | ForEach-Object { Cell-Pixels $capture (Send $script:sc 2670 $start $_) $w (Send $script:sc 2279 $line) } | Sort-Object -Unique).Count
 		$capture.Bitmap.Dispose(); [void](Send $script:sc 2613 0); $n
 	}
-	$kindsOff = Zero-Renderings
+	$kindsOff = Line-Renderings 15; $boxKindsOff = Line-Renderings 16 1; $quoteKindsOff = Line-Renderings 17
 	[void](Send $script:main 0x0111 $IDM_VIEW_CHARACTER_GRID) # on
-	$cell = Get-Cell; $kinds = Zero-Renderings
+	$cell = Get-Cell; $kinds = Line-Renderings 15; $boxKinds = Line-Renderings 16 1; $quoteKinds = Line-Renderings 17
 	[void](Send $script:sc $SCI.SETZOOM 0)
 	Check 'DirectWrite: the cell a whole number of pixels, and each 0 of a line drawn alike in its cell' (($cell -eq [Math]::Round($cell)) -and ($kinds -eq 1) -and ($kindsOff -gt 1)) ("zoom {0}: Consolas' advance {1:N3} px, the cell {2} px; 24 zeros drawn {3} way(s) (without the grid: {4})" -f $zoom, $advance, $cell, $kinds, $kindsOff)
+	Check '  each box drawing line (U+2500) and each quote (U+201C) of a line too (drawn in a batch)' (($boxKinds -eq 1) -and ($quoteKinds -eq 1) -and ($boxKindsOff -gt 1) -and ($quoteKindsOff -gt 1)) "24 box lines drawn $boxKinds way(s), 24 quotes $quoteKinds (without the grid: $boxKindsOff, $quoteKindsOff)"
 	Stop-Npp $p
 
 	# --- an ANSI document: every byte one cell, also those the font gives no width (C1 controls in windows-1252); in GBK

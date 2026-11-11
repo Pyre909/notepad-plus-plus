@@ -139,6 +139,13 @@ try {
 	$wide = Caret-At 0 4
 	Check 'a UTF-16 file: the bytes of UTF-16 (2 a character here), not of the UTF-8 held inside' ((Has $wide 'Col: 4 (ch 4, byte 7)') -and (Has $wide "Off: X'06'") -and (Has $wide 'Len: 5 (10 bytes)')) $wide
 	Stop-Npp $p
+	# a noncharacter (U+FFFF: EF BF BF), which Scintilla takes as 3 invalid bytes: counted as Scintilla counts it (2026-11-10:
+	# the status bar's one-pass count leaves it to Scintilla)
+	$fileNonChar = Join-Path $root 'nonchar.txt'; [IO.File]::WriteAllBytes($fileNonChar, [byte[]](0xEF, 0xBB, 0xBF, 0x61, 0xEF, 0xBF, 0xBF, 0x62, 0x0D, 0x0A))
+	$p = Start-Npp 'default' $fileNonChar
+	$nonChar = Caret-At 0 5
+	Check 'U+FFFF (a noncharacter): its 3 bytes 3 characters, as Scintilla counts them ("a", U+FFFF, "b": ch 6, byte 6, Len 5)' ((Has $nonChar '(ch 6, byte 6)') -and (Has $nonChar 'Len: 5') -and -not $nonChar.Contains('Len: 5 (')) $nonChar
+	Stop-Npp $p
 
 	# --- a CJK character in a 2:1 font, with the grid: two cells, three bytes
 	if ([Drawing.Text.InstalledFontCollection]::new().Families.Name -contains 'BIZ UDGothic') {
