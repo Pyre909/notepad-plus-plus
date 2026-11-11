@@ -92,7 +92,7 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
       own drawing with DirectWrite (chosen); 2. right-to-left views (stage 2, only if Pyre909 edits RTL text); 3.
       printing (stage 3, Scintilla's to solve if GDI goes); 4. a WinUI 3 interface (a mockup shown; a rewrite: plugins,
       translations, startup time, no more upstream merges: no). XAML Islands mentioned, not recommended.
-    - **Option 1 done** (`fd753d3`, not pushed): `drawUiText` (DirectWriteText.cpp) at the tab bar, the panels'
+    - **Option 1 done** (`fd753d3`): `drawUiText` (DirectWriteText.cpp) at the tab bar, the panels'
       captions and tabs, the dark mode status bar and the Ctrl+Tab list; GDI's line and widths, the editor's rendering
       parameters, an ID2D1DCRenderTarget over GDI's background (a probe showed it keeps the pixels under the text).
       Independent review: 6 findings fixed (rendering parameters as the editor's, shifted DCs, line breaks, font
@@ -100,7 +100,8 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
       reproduce on Windows 11 (4 colours with DirectWrite, 141 with GDI, Antialiasing None), the fix kept. A tab bar of
       30 tabs: 1.6 ms a repaint (GDI 0.9). `pyre-ui-text.ps1` 8 checks.
     - **Performance round** (Pyre909 asked: is what we wrote the best and fastest way; chose all 7 items; `b45b6c7` and
-      the review's fixes `07b826e`, not pushed). "Keep GDI?" answered: yes, it isn't run while DirectWrite is (printing,
+      the review's fixes `07b826e`; `pyre` pushed at `07b826e` with Pyre909's OK, CI still refused: HTTP 422 "Actions
+      has been disabled for this repository"). "Keep GDI?" answered: yes, it isn't run while DirectWrite is (printing,
       right-to-left views, Wine, an older setting need it). Measured before and after (CPU, not wall time: DirectWrite's
       paints wait for the display's refresh, ~17 ms wall for 2.3 ms of CPU):
       - WM_SETTINGCHANGE: each forwarded broadcast restyles and re-wraps every document (2.1 s of CPU, 4.5 MB wrapped with
