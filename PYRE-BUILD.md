@@ -79,6 +79,10 @@ Features that look worthwhile to upstream are offered there as pull requests, on
 - **Redrawn "Standard icons"** (Preferences > General > Toolbar): the 32 standard toolbar icons drawn again as
   flat vector art, sharp at every scale from 100% to 300% instead of 16x16 bitmaps stretched (official issue
   #16110, where the icons alone are offered).
+- **Redrawn tab icons** (light mode): the document's state (saved, unsaved, read-only, monitoring, and the alternate
+  icons), the close button and the pin drawn again as clean line drawings, sharp at every scale from 100% to 300%
+  instead of 16-pixel images stretched; the same meanings and colours (blue saved, red-orange unsaved, the pink close
+  box).
 - **Rounded corners on Windows 11** for the popups Windows leaves square: call tips, the About box, the colour
   picker and the document peeker (Preferences > Dark Mode, on by default).
 - **Ctrl+click opens links** (Preferences > Cloud & Link > "Open with Ctrl+click", off by default): a Ctrl+click on a
