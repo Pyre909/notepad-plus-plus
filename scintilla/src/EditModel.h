@@ -69,6 +69,7 @@ public:
 	Sci::Line activeGuideFirst = 0;
 	Sci::Line activeGuideLast = -1;
 	bool activeGuideViewDependent = false;
+	int activeGuideTabWidth = 0;	// the tab width it was found with (a tab-indented line's columns)
 	Sci::Line caretLineNumberDrawn = -1;
 	bool hasFocus;
 	Selection sel;

@@ -7069,10 +7069,21 @@ void Notepad_plus::drawTabbarColoursFromStylerArray()
 	if (stInact && static_cast<long>(stInact->_bgColor) != -1)
 		TabBarPlus::setColour(stInact->_bgColor, TabBarPlus::inactiveBg, &(_mainDocTab.dpiManager()));
 
-	// Pyre909 build: the editor's colours, for the light tab bar painted in them (TabBarPlus::setEditorColours)
+	// Pyre909 build: the editor's colours, for the light tab bar painted in them (TabBarPlus::setEditorColours): the Default
+	// Style's, or Global override's where enabled (as ScintillaEditView::setStyle sets STYLE_DEFAULT)
 	const Style* stDefault = getStyleFromName(L"Default Style");
 	if (stDefault && (static_cast<long>(stDefault->_fgColor) != -1) && (static_cast<long>(stDefault->_bgColor) != -1))
-		TabBarPlus::setEditorColours(stDefault->_fgColor, stDefault->_bgColor);
+	{
+		COLORREF text = stDefault->_fgColor;
+		COLORREF background = stDefault->_bgColor;
+		const GlobalOverride& go = NppParameters::getInstance().getGlobalOverrideStyle();
+		const Style* stOverride = go.isEnable() ? getStyleFromName(L"Global override") : nullptr;
+		if (stOverride && go.enableFg && (stOverride->_colorStyle & COLORSTYLE_FOREGROUND) && (static_cast<long>(stOverride->_fgColor) != -1))
+			text = stOverride->_fgColor;
+		if (stOverride && go.enableBg && (stOverride->_colorStyle & COLORSTYLE_BACKGROUND) && (static_cast<long>(stOverride->_bgColor) != -1))
+			background = stOverride->_bgColor;
+		TabBarPlus::setEditorColours(text, background);
+	}
 }
 
 void Notepad_plus::drawAutocompleteColoursFromTheme(COLORREF fgColor, COLORREF bgColor)

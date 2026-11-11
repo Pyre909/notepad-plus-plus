@@ -23,8 +23,9 @@ Features that look worthwhile to upstream are offered there as pull requests, on
   tabs and right-to-left languages stay with GDI.
 - **Tabs in the editor's colours** (light mode, a light theme): the active tab on the editor's background, as if part
   of it, under its coloured bar, with a thin border; the other tabs a shade darker on a lighter strip, a gap between
-  tabs, the icons clear of the edges. They follow the theme (its Default Style); a dark theme in light mode keeps
-  official Notepad++'s tabs, and dark mode its own.
+  tabs, the icons clear of the edges. They follow the theme (its Default Style, or Global override's colours where
+  enabled), so the Style Configurator's "Inactive tabs" background isn't used there (its text colour is); a dark theme
+  in light mode keeps official Notepad++'s tabs, and dark mode its own.
 - **Line spacing and font ligatures** (Preferences > Editing 1 > Text Rendering): extra space between the lines
   of the editor, +1 to +10 pixels at 100% scale (official issue #971), and the fonts' ligatures, such as the
   arrows and operators of Cascadia Code or Fira Code, turned off when unwanted (DirectWrite; official issue #14764).

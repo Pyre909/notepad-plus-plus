@@ -2625,9 +2625,15 @@ void Editor::NotifyHotSpotReleaseClick(Sci::Position position, KeyMod modifiers)
 
 bool Editor::NotifyUpdateUI() {
 	if (needUpdateUI != Update::None) {
+		NotificationData scn = {};
+		scn.nmhdr.code = Notification::UpdateUI;
+		scn.updated = needUpdateUI;
+		scn.position = updateTextStart;
+		NotifyParent(scn);
 		// N++ (Pyre909 build): the number of the caret's line in its own colour (SC_ELEMENT_CARETLINENUMBER): every caret move
 		// and edit raises an update, and when the caret is on another line both lines' numbers are drawn again (their margin
-		// rows invalidated, not RedrawSelMargin: from Paint, it would abandon the paint)
+		// rows invalidated, not RedrawSelMargin: from Paint, it would abandon the paint); after the notification, for a caret
+		// its handlers moved
 		if (vs.ElementColour(static_cast<Element>(SC_ELEMENT_CARETLINENUMBER))) {
 			const Sci::Line lineCaret = pdoc->SciLineFromPosition(sel.MainCaret());
 			if (lineCaret != caretLineNumberDrawn) {
@@ -2646,11 +2652,6 @@ bool Editor::NotifyUpdateUI() {
 				caretLineNumberDrawn = lineCaret;
 			}
 		}
-		NotificationData scn = {};
-		scn.nmhdr.code = Notification::UpdateUI;
-		scn.updated = needUpdateUI;
-		scn.position = updateTextStart;
-		NotifyParent(scn);
 		needUpdateUI = Update::None;
 		updateTextStart = InvalidPosition;
 		return true;

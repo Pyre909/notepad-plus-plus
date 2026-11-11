@@ -99,7 +99,10 @@ void TabBarPlus::setEditorColours(COLORREF text, COLORREF background)
 	_editorTextColour = text;
 	_editorBgColour = background;
 	for (int i = 0; i < _nbCtrl; ++i)
-		::InvalidateRect(_tabbrPlusInstanceHwndArray[i], nullptr, TRUE);
+	{
+		if (_tabbrPlusInstanceHwndArray[i])
+			::InvalidateRect(_tabbrPlusInstanceHwndArray[i], nullptr, TRUE);
+	}
 }
 
 // in light mode, with a light background (the light mode's close and pin buttons are drawn for one)
@@ -1527,7 +1530,7 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode, bool
 	
 	COLORREF colorActiveBg = isDarkMode ? NppDarkMode::getCtrlBackgroundColor() : ::GetSysColor(COLOR_BTNFACE);
 	COLORREF colorInactiveBgBase = isDarkMode ? NppDarkMode::getBackgroundColor() : ::GetSysColor(COLOR_BTNFACE);
-
+	
 	COLORREF colorInactiveBg = _inactiveBgColour;
 	if (isInEditorColours) // Pyre909 build: the editor's colours (setEditorColours)
 	{
@@ -1625,12 +1628,17 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode, bool
 		if (hasMultipleLines)
 		{
 			::InflateRect(&tabRect, -gap, -gap);
+			if (isVertical) // the icon and text clear of the border
+				rect.bottom -= paddingDynamicTwoY;
+			else
+				rect.left += paddingDynamicTwoX;
 		}
 		else if (isVertical)
 		{
 			tabRect.top += gap;
 			tabRect.bottom -= gap;
 			tabRect.left += isSelected ? 0 : paddingDynamicTwoX;
+			rect.bottom -= 2 * paddingDynamicTwoY; // the icon (drawn from the bottom) and text clear of the border
 		}
 		else
 		{
@@ -1708,8 +1716,15 @@ void TabBarPlus::drawItem(DRAWITEMSTRUCT* pDrawItemStruct, bool isDarkMode, bool
 		
 		if (_currentHoverTabItem == nTab && brushColour != colorActiveBg && !_isDragging) // hover on a "darker" inactive tab
 		{
-			HLSColour hls(brushColour);
-			brushColour = hls.toRGB4DarkModeWithTuning(15, 0); // make it lighter slightly
+			if (isInEditorColours && (brushColour == colorInactiveBg)) // Pyre909 build: between the strip and the inactive
+			{                                                          // tabs (HLS lightness past 240 would overflow)
+				brushColour = mixColour(_editorBgColour, _editorTextColour, (stripShade + inactiveTabShade) / 2);
+			}
+			else
+			{
+				HLSColour hls(brushColour);
+				brushColour = hls.toRGB4DarkModeWithTuning(15, 0); // make it lighter slightly
+			}
 		}
 		
 		hBrush = ::CreateSolidBrush(brushColour);

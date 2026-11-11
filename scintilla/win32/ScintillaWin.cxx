@@ -2500,8 +2500,9 @@ sptr_t ScintillaWin::WndProc(Message iMessage, uptr_t wParam, sptr_t lParam) {
 			return vs.indentGuideSolid;
 
 		case SCI_UPDATEACTIVEINDENTGUIDE: {	// from the lines' indentation, as editors highlight the active guide
-			if ((wParam == 2) && !activeGuideViewDependent)
-				return activeGuideColumn;	// the view moved, and the block found didn't depend on it
+			if ((wParam == 2) && !activeGuideViewDependent && (activeGuideTabWidth == pdoc->tabInChars))
+				return activeGuideColumn;	// the view moved, and the block found didn't depend on it (nor on a tab width since changed)
+			activeGuideTabWidth = pdoc->tabInChars;
 			int column = 0;
 			Sci::Line first = 0;
 			Sci::Line last = -1;
