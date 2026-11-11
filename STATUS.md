@@ -128,6 +128,37 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
         Tests: the grid's box drawing and quote lines (21 checks). Harness on the three commits (ARM64, x64, Win32, all
         tests): 0 FAIL, 38 PASS, 4 WARN (the Scintilla patch, code moved into blocks, Scintilla's braces; a literal
         U+2028 U+2029 in DirectWriteText.cpp, written as escapes since).
+    - **PGO checked locally** (ARM64, `pgo.ps1` Instrument / Train / Optimize on `07b826e`): the three training runs
+      (main, Function List, the new features run) closed normally and wrote their .pgc; 100% of the functions optimized
+      with the profile. `bench.ps1`, plain against PGO, 5 rounds: lexing 76% of the time (CPU 67%), fold all 87%
+      (CPU 67%), Style Configurator 92%, Preferences 93%, scrolling CPU 83-95%; startup 112% (404 -> 454 ms, to look at
+      again).
+    - **Visual round** (Pyre909: "anything we can improve visually?", then: the app doesn't look as good as the mockup's
+      "Now" panel). A preview (`C:\npp-preview-07b826e`, a portable copy of the installation with a copy of their
+      settings and the build) shown with the mockup's look by settings alone: Show All Characters off (the line ends'
+      dark labels on every line were most of the difference), line spacing 3, bold Medium, the Pyre Daylight margins on
+      the text's background (in the preview's theme copy only; `make_themes.py` in their settings folder not changed).
+      Their real settings untouched: theirs to change.
+      - `4018689` **Indent guides solid, the caret's block highlighted; the caret line's number** (Preferences >
+        Margins/Border/Edge > Indent Guides; Global Styles "Current line number", "Active indent guideline"; Scintilla
+        local patch, see CLAUDE.md). Independent review: 10 findings; fixed: the number redrawn from `NotifyUpdateUI`
+        (all caret moves; its Left-at-line-start repro didn't reproduce in Notepad++, other redraws cover it, fixed by
+        construction), the view without focus updated before the early returns, the tab width, updates on text changes
+        only and scrolls only when the block reached the reach's limit, only the old and new block's lines redrawn,
+        defaults that stand out (Solarized, Deep Black...), a colour cleared in the Style Configurator honoured,
+        english_customizable.xml, markers, an enum. Not changed: brace-on-own-line headers and 2-space indentation with
+        indent size 4 (no guide drawn at those columns). `pyre-indent-guides.ps1` 27 checks.
+      - `09ca678` **Tabs in the editor's colours** (the mockup's "Now" tabs; Pyre909 preferred them to a rounded
+        Windows 11 style): light mode, light theme, painted as dark mode does, in shades of the Default Style.
+        `pyre-editor-tabs.ps1` 6 checks; `pyre-ui-text.ps1` still 8/8.
+      - `3fa2f07` **the second independent review's fixes** (both features; it found no crash, leak or broken paint
+        path): Global override's colours for the tabs, a hovered inactive tab's colour (HLS lightness past 240 overflowed
+        to near black with light grey text), the icon inset on vertical and multi-line tabs, a null tab bar; the caret
+        line's number checked after the UpdateUI notification (a caret a plugin moves there); the active guide found
+        again after a tab width change from a plugin. Not changed: the content's 2-pixel offset from the buttons' hit
+        zones (as dark mode's), a 1-pixel border at any DPI. Harness on the three commits (ARM64, x64, Win32, all
+        tests) before these fixes: 0 FAIL, 42 PASS, 9 WARN (explained); after them the three tests concerned, the
+        static checks and GCC/Clang (UCRT64, CLANG64) of `09ca678`: clean.
 
 - **The review round (2026-10-20, evening)**, asked by Pyre909: sync with upstream (the fork's `master` brought to
   `b661c2b` with `gh repo sync`; `pyre` had it), a preview (`C:\npp-preview-49de091`, a portable copy of the installation
