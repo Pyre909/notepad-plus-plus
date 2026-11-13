@@ -46,7 +46,7 @@ public:
 
 	virtual void create(DockedWidgetData* data, bool isRTL = false) {
 		assert(data != nullptr);
-		StaticDialog::create(_dlgID, isRTL);
+		StaticDialog::create(_dlgID, isRTL, false, 9, StaticDialog::getSystemFontFaceName());
 		wchar_t temp[MAX_PATH];
 		::GetWindowText(_hSelf, temp, MAX_PATH);
 		_pluginName = temp;
@@ -94,6 +94,19 @@ public:
 		return _iconIDs;
 	}
 
+	static void setFontForChild(HWND hChild, HFONT hFont) noexcept {
+		if (hChild != nullptr)
+		{
+			::SendMessage(hChild, WM_SETFONT, reinterpret_cast<WPARAM>(hFont), MAKELPARAM(TRUE, 0));
+		}
+	}
+
+	HFONT setFontForChild(HWND hChild) const noexcept {
+		const auto hFont = reinterpret_cast<HFONT>(::SendMessage(_hSelf, WM_GETFONT, 0, 0));
+		setFontForChild(hChild, hFont);
+		return hFont;
+	}
+
 protected :
 	int	_dlgID = -1;
 	int _iDockedPos = 0;
@@ -106,6 +119,7 @@ protected :
 	using StaticDialog::create;
 
 	// the panel rescales its fonts, images... for its new DPI (_dpiManager), its container relayouts it
+	// (Pyre909 build: upstream's onDpiChanged() has no argument; one virtual, else either hides the other)
 	virtual void onDpiChanged([[maybe_unused]] UINT prevDpi) {}
 
 	// with the per-monitor DPI awareness, calls onDpiChanged() if the DPI of the panel has changed (also docked in a
@@ -151,6 +165,19 @@ protected :
 				::FillRect(reinterpret_cast<HDC>(wParam), &rc, NppDarkMode::getDlgBackgroundBrush());
 				return TRUE;
 			}
+
+			case WM_DPICHANGED:
+			{
+				// Pyre909 build: a top-level panel only (a docked one, a child window, receives WM_DPICHANGED_AFTERPARENT)
+				const UINT prevDpi = _dpiManager.getDpi();
+				_dpiManager.setDpiWP(wParam);
+				if (_dpiManager.getDpi() != prevDpi)
+				{
+					onDpiChanged(prevDpi);
+				}
+				return TRUE;
+			}
+
 			case WM_NOTIFY:
 			{
 				auto* pnmh = reinterpret_cast<LPNMHDR>(lParam);

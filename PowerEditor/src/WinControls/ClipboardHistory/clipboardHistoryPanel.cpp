@@ -321,7 +321,7 @@ intptr_t CALLBACK ClipboardHistoryPanel::run_dlgProc(UINT message, WPARAM wParam
 			_hwndNextCbViewer = ::SetClipboardViewer(_hSelf);
 
 			_listView.init(_hInst, _hSelf);
-			DPIManagerV2::initIconTitleFont(_listView.getHSelf(), _dpiManager.getDpi(), _hFontDpi); // Pyre909 build
+			DPIManagerV2::initIconTitleFont(_listView.getHSelf(), _dpiManager.getDpi(), _hFontDpi); // Pyre909 build: a font for the DPI (onDpiChanged), not upstream's setFontForChild
 			_listView.display();
 
 			return TRUE;
