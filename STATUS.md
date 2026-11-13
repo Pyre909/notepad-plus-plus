@@ -10,6 +10,24 @@ ours) is `scintilla/MAINTAINER-SURVEY.md`; the tools are described in `README.md
 This file is long: read it by section (grep the headings), not whole. One session per phase: start a fresh Claude Code
 session from `CLAUDE.md` and this block, and run `/compact` with a keep-note before a break of an hour or more.
 
+- **2026-11-12: upstream 8.9.9.1 and a release.** The fork's `master` synced to upstream `066c93a` (`gh repo sync`:
+  Notepad++ 8.9.9.1, 13 commits: Lao translation, Go to Line made per-monitor aware, Folder as Workspace with symlinks,
+  Scintilla's paste into virtual space in `SC_MULTIPASTE_EACH` mode (a fix upstream carries in `scintilla/`), and
+  ozone10's `eeee3d4`, "Use system font for docking panel for handling dpi changes", Ref #14959); merged into `pyre` as
+  `1d94758`, `CLAUDE.md` note `0a844c0`, pushed. Two conflicts, both from `eeee3d4`: `DockingDlgInterface.h` keeps one
+  virtual, pyre's `onDpiChanged(UINT prevDpi)` (upstream's argument-less one dropped: either would hide the other, GCC's
+  `-Woverloaded-virtual`), upstream's new `WM_DPICHANGED` case calls it when the DPI changed (a docked panel, a child
+  window, never gets that message: pyre's `WM_DPICHANGED_AFTERPARENT` / `checkDpiChange()` path is the one that runs),
+  `setFontForChild` and the system font, 9 pt, for panels taken (the panels' lists, trees and toolbars set their fonts
+  in code: side-by-side captures of the seven panels against 8.9.9.0 the same); the Clipboard History keeps pyre's list
+  font for the DPI (`initIconTitleFont`). Harness on the merge (clean ARM64 and x64 rebuilds, 0 warnings): 34 app tests
+  pass, `pyre-dpi-scale` skipped (needs a person); its FAIL "version line changed" and 4 WARNs are upstream's lines.
+  CI on `0a844c0`: all 13 jobs pass. Release `pyre-8.9.9.1-0a844c0` (PGO, unsigned) published, Latest: 8 files, each
+  installer's and zip's GitHub digest the SHA-256 the release job printed; plugins, updater and Explorer menu of v8.9.9.1.
+  - Upstream is doing panel DPI itself now ("prepare Clipboard History Panel": more panels to come): the
+    `per-monitor-dpi` branch's next rebase conflicts the same way, and its PR may be moot; watch upstream's next commits.
+  - The code signing commit (`c280cff`, Azure Artifact Signing, on hold by Pyre909's choice) is kept in the local branch
+    `code-signing_20261110` of the clone (not pushed).
 - **2026-11-10: upstream 8.9.9, fonts, DirectWrite.** Pyre909 asked: sync with upstream; better OpenType and static font
   support (they use MonoLisa); "full DirectWrite" (GDI said to be deprecated); other improvements.
   - Sync: the fork's `master` synced to upstream `37482a9` (`gh repo sync`: Notepad++ 8.9.9, Scintilla 5.6.9, 16
