@@ -24,6 +24,8 @@ session from `CLAUDE.md` and this block, and run `/compact` with a keep-note bef
   pass, `pyre-dpi-scale` skipped (needs a person); its FAIL "version line changed" and 4 WARNs are upstream's lines.
   CI on `0a844c0`: all 13 jobs pass. Release `pyre-8.9.9.1-0a844c0` (PGO, unsigned) published, Latest: 8 files, each
   installer's and zip's GitHub digest the SHA-256 the release job printed; plugins, updater and Explorer menu of v8.9.9.1.
+  Cleanup afterwards: the fork's 399 Actions artifacts deleted (4.2 GB, every CI and release run since 2026-10-20), the
+  `doclist-column-width_20261020` worktree removed (its branch kept, local and on GitHub; upstream fixed it itself).
   - Upstream is doing panel DPI itself now ("prepare Clipboard History Panel": more panels to come): the
     `per-monitor-dpi` branch's next rebase conflicts the same way, and its PR may be moot; watch upstream's next commits.
   - The code signing commit (`c280cff`, Azure Artifact Signing, on hold by Pyre909's choice) is kept in the local branch
